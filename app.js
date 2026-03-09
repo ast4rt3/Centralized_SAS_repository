@@ -5,6 +5,9 @@
   const loadingPage = document.getElementById('loading');
   const systemViewPage = document.getElementById('system-view');
   const systemFrame = document.getElementById('system-frame');
+  const sidebar = document.querySelector('.sidebar');
+  const navToggle = document.getElementById('nav-toggle');
+  const navOverlay = document.getElementById('nav-overlay');
 
   let systems = [];
 
@@ -32,6 +35,7 @@
     if (pageId === 'home') {
       setActiveNav(document.querySelector('.nav-item[data-page="home"]'));
       document.body.classList.remove('system-mode');
+      closeNav();
       if (systemFrame) systemFrame.src = 'about:blank';
       showPage('home');
       return;
@@ -41,6 +45,7 @@
     if (!sys) {
       setActiveNav(document.querySelector('.nav-item[data-page="home"]'));
       document.body.classList.remove('system-mode');
+      closeNav();
       if (systemFrame) systemFrame.src = 'about:blank';
       showPage('home');
       return;
@@ -50,8 +55,23 @@
     if (el) setActiveNav(el);
 
     document.body.classList.add('system-mode');
+    closeNav();
     showPage('system-view');
     if (systemFrame) systemFrame.src = sys.url;
+  }
+
+  function openNav() {
+    if (!sidebar || !navOverlay || !navToggle) return;
+    sidebar.classList.add('is-open');
+    navOverlay.hidden = false;
+    navToggle.setAttribute('aria-expanded', 'true');
+  }
+
+  function closeNav() {
+    if (!sidebar || !navOverlay || !navToggle) return;
+    sidebar.classList.remove('is-open');
+    navOverlay.hidden = true;
+    navToggle.setAttribute('aria-expanded', 'false');
   }
 
   function groupBySection(items) {
@@ -88,6 +108,7 @@
         a.addEventListener('click', function (e) {
           e.preventDefault();
           window.location.hash = this.getAttribute('data-page');
+          closeNav();
         });
       } else {
         a.addEventListener('click', function () { setActiveNav(null); });
@@ -105,7 +126,20 @@
     document.querySelector('.nav-item[data-page="home"]').addEventListener('click', function (e) {
       e.preventDefault();
       window.location.hash = 'home';
+      closeNav();
     });
+
+    if (navToggle) {
+      navToggle.addEventListener('click', function () {
+        if (!sidebar) return;
+        if (sidebar.classList.contains('is-open')) closeNav();
+        else openNav();
+      });
+    }
+
+    if (navOverlay) {
+      navOverlay.addEventListener('click', closeNav);
+    }
 
     // If user opens a deep link (/#some-system), show loading page until config loads.
     if (getHashPageId() !== 'home') {
