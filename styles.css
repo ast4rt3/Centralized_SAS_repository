@@ -192,7 +192,7 @@ body {
 .page-content {
   flex: 1;
   min-height: 0;
-  padding: 1.5rem;
+  padding: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -201,7 +201,7 @@ body {
 /* Home hero (match Attendance Scanner login vibe) */
 .home-hero {
   min-height: 100%;
-  border-radius: 18px;
+  border-radius: 0;
   padding: 28px 22px;
   color: #ffffff;
   text-align: center;
@@ -210,7 +210,7 @@ body {
   align-items: center;
   justify-content: center;
   background: linear-gradient(180deg, var(--nbsc-mid) 0%, var(--nbsc-dark) 100%);
-  box-shadow: var(--shadow);
+  box-shadow: none;
 }
 
 .home-hero-logo {
