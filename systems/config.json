@@ -1,0 +1,23 @@
+[
+  {
+    "id": "pwa-gas-app",
+    "name": "PWA (HTML + GAS)",
+    "description": "Progressive web app with HTML, CSS, and Google Apps Script backend.",
+    "url": "apps/pwa-gas-app/index.html",
+    "external": false
+  },
+  {
+    "id": "example-reporting",
+    "name": "Example Reporting",
+    "description": "Sample reporting system. Replace with your SAS system details.",
+    "url": "#",
+    "external": false
+  },
+  {
+    "id": "example-analytics",
+    "name": "Example Analytics",
+    "description": "Sample analytics system. Add your SAS Viya or local report URL.",
+    "url": "#",
+    "external": false
+  }
+]

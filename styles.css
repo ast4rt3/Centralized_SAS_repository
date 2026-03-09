@@ -1,0 +1,252 @@
+/* Centralized SAS Repository - Layout & theme */
+:root {
+  --sidebar-width: 260px;
+  --header-height: 56px;
+  --bg-main: #0f1419;
+  --bg-sidebar: #161d26;
+  --bg-card: #1c242e;
+  --border: #2d3844;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --accent: #3b82f6;
+  --accent-hover: #60a5fa;
+  --nav-hover: rgba(59, 130, 246, 0.12);
+  --font-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--bg-main);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+}
+
+/* Sidebar */
+.sidebar {
+  width: var(--sidebar-width);
+  min-height: 100vh;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.sidebar-header {
+  padding: 1.25rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.logo {
+  display: inline-block;
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+}
+
+.repo-title {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+}
+
+.nav {
+  flex: 1;
+  padding: 0.75rem 0;
+  overflow-y: auto;
+}
+
+.nav-section-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  padding: 0.75rem 1rem 0.35rem;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.6rem 1rem;
+  margin: 0 0.5rem;
+  color: var(--text);
+  text-decoration: none;
+  border-radius: 6px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.nav-item:hover {
+  background: var(--nav-hover);
+  color: var(--accent-hover);
+}
+
+.nav-item.active {
+  background: var(--nav-hover);
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.nav-icon {
+  font-size: 1.1rem;
+  opacity: 0.9;
+}
+
+.nav-label {
+  font-size: 0.9rem;
+}
+
+.sidebar-footer {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.sidebar-footer code {
+  background: var(--bg-card);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+}
+
+/* Main content */
+.content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.content-header {
+  height: var(--header-height);
+  padding: 0 1.5rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  background: var(--bg-main);
+}
+
+.content-header h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.page-content {
+  flex: 1;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+/* Pages */
+.page {
+  display: none;
+}
+
+.page.active {
+  display: block;
+}
+
+/* Home page */
+.welcome-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.welcome-card h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.welcome-card p {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.quick-stats {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  min-width: 120px;
+}
+
+.stat-value {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.info-section {
+  margin-top: 1.5rem;
+}
+
+.info-section h3 {
+  font-size: 1rem;
+  margin: 0 0 0.5rem;
+  color: var(--text-muted);
+}
+
+.info-section ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.info-section code {
+  background: var(--bg-card);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+
+/* System page */
+.system-page .system-link-box {
+  display: inline-block;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  color: var(--accent);
+  text-decoration: none;
+  margin-top: 0.5rem;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.system-page .system-link-box:hover {
+  border-color: var(--accent);
+  background: var(--nav-hover);
+}
+
+.system-page .system-desc {
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-top: 0.5rem;
+}
