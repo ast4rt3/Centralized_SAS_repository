@@ -164,6 +164,7 @@
         systems = Array.isArray(data) ? data : (data.systems || []);
         statSystems.textContent = systems.length;
         renderNav();
+        initHomeNewsCarousel();
         window.addEventListener('hashchange', syncFromHash);
         syncFromHash();
       })
@@ -173,6 +174,58 @@
         navDynamic.innerHTML = '<div class="nav-section-label" style="padding: 0.5rem 1rem; color: rgba(255,255,255,0.72);">No systems loaded</div>';
       });
 
+  }
+
+  function initHomeNewsCarousel() {
+    var slides = Array.prototype.slice.call(document.querySelectorAll('.home-news-slide'));
+    var dots = Array.prototype.slice.call(document.querySelectorAll('.home-news-dot'));
+    if (!slides.length || !dots.length) return;
+
+    var current = 0;
+    var intervalMs = 7000;
+    var timer;
+
+    function setActive(index) {
+      slides.forEach(function (s, i) {
+        if (i === index) s.classList.add('is-active');
+        else s.classList.remove('is-active');
+      });
+      dots.forEach(function (d, i) {
+        if (i === index) d.classList.add('is-active');
+        else d.classList.remove('is-active');
+      });
+      current = index;
+    }
+
+    function next() {
+      var nextIndex = (current + 1) % slides.length;
+      setActive(nextIndex);
+    }
+
+    function start() {
+      stop();
+      timer = window.setInterval(next, intervalMs);
+    }
+
+    function stop() {
+      if (timer) {
+        window.clearInterval(timer);
+        timer = null;
+      }
+    }
+
+    dots.forEach(function (dot) {
+      dot.addEventListener('click', function () {
+        var index = parseInt(this.getAttribute('data-index') || '0', 10);
+        if (!isNaN(index)) {
+          setActive(index);
+          start();
+        }
+      });
+    });
+
+    setActive(0);
+    start();
   }
 
   init();

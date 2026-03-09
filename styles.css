@@ -194,11 +194,13 @@ body {
   min-height: 0;
   padding: 1.5rem;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Home hero (match Attendance Scanner login vibe) */
 .home-hero {
-  min-height: calc(100vh - 3rem);
+  min-height: 100%;
   border-radius: 18px;
   padding: 28px 22px;
   color: #ffffff;
@@ -248,6 +250,7 @@ body {
   width: 100%;
   max-width: 380px;
   margin-top: 22px;
+  margin-bottom: 18px;
 }
 
 .home-hero-stat {
@@ -268,6 +271,88 @@ body {
   font-size: 0.85rem;
   letter-spacing: 0.4px;
   opacity: 0.9;
+}
+
+.home-news {
+  width: 100%;
+  max-width: 920px;
+  margin-top: 18px;
+}
+
+.home-news-track {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(15, 23, 42, 0.72);
+  box-shadow: var(--shadow-soft);
+}
+
+.home-news-slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: translateX(6px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.home-news-slide.is-active {
+  opacity: 1;
+  transform: translateX(0);
+  position: relative;
+}
+
+.home-news-image-wrap {
+  width: 100%;
+  aspect-ratio: 16 / 7;
+  overflow: hidden;
+}
+
+.home-news-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.home-news-caption {
+  padding: 14px 16px 16px;
+  text-align: left;
+}
+
+.home-news-caption h3 {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.home-news-caption p {
+  margin: 0;
+  font-size: 0.8rem;
+  opacity: 0.92;
+}
+
+.home-news-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.home-news-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  border: 0;
+  background: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  padding: 0;
+}
+
+.home-news-dot.is-active {
+  width: 20px;
+  background: var(--nbsc-gold);
 }
 
 /* When viewing a system, show only the embedded HTML */
