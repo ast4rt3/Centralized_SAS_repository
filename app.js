@@ -131,6 +131,51 @@
   }
 
   function init() {
+    // Basic Session Management
+    const loginOverlay = document.getElementById('login-overlay');
+    const loginForm = document.getElementById('login-form');
+    const loginError = document.getElementById('login-error');
+    
+    // Check if user is already logged in
+    const activeSession = sessionStorage.getItem('sas_user');
+    if (!activeSession) {
+      // Must authenticate
+      document.body.classList.remove('system-mode');
+      if (loginOverlay) loginOverlay.classList.remove('hidden');
+      if (navToggle) navToggle.hidden = true;
+    } else {
+      // Already authenticated
+      if (loginOverlay) loginOverlay.classList.add('hidden');
+      if (navToggle) navToggle.hidden = false;
+      setupUserMenu(activeSession);
+      finishInit();
+    }
+
+    // Handle Login Submit (Placeholder until GAS is ready)
+    if (loginForm) {
+      loginForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        const user = document.getElementById('login-username').value;
+        const pass = document.getElementById('login-password').value;
+        
+        // --- TODO: Replace with real Google Apps Script Fetch ---
+        // Right now, any password works so the USER can verify the aesthetic
+        if (user.trim() !== '') {
+          sessionStorage.setItem('sas_user', user);
+          loginOverlay.classList.add('hidden');
+          if (navToggle) navToggle.hidden = false;
+          loginError.classList.add('hidden');
+          setupUserMenu(user);
+          finishInit();
+        } else {
+          loginError.classList.remove('hidden');
+        }
+      });
+    }
+
+  }
+
+  function finishInit() {
     document.querySelector('.nav-item[data-page="home"]').addEventListener('click', function (e) {
       e.preventDefault();
       window.location.hash = 'home';
@@ -163,7 +208,7 @@
       })
       .then(function (data) {
         systems = Array.isArray(data) ? data : (data.systems || []);
-        statSystems.textContent = systems.length;
+        if (statSystems) statSystems.textContent = systems.length;
         renderNav();
         initHomeNewsCarousel();
         window.addEventListener('hashchange', syncFromHash);
@@ -171,10 +216,39 @@
       })
       .catch(function () {
         systems = [];
-        statSystems.textContent = '0';
+        if (statSystems) statSystems.textContent = '0';
         navDynamic.innerHTML = '<div class="nav-section-label" style="padding: 0.5rem 1rem; color: rgba(255,255,255,0.72);">No systems loaded</div>';
       });
+  }
 
+  function setupUserMenu(username) {
+    const displayName = document.getElementById('user-display-name');
+    const dropName = document.getElementById('user-dropdown-name');
+    if (displayName) displayName.textContent = username;
+    if (dropName) dropName.textContent = username;
+
+    const userMenu = document.getElementById('user-menu');
+    const userBtn = document.getElementById('user-menu-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+
+    if (userBtn && userMenu) {
+      userBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        userMenu.classList.toggle('is-open');
+      });
+      document.addEventListener('click', function(e) {
+        if (!userMenu.contains(e.target)) {
+          userMenu.classList.remove('is-open');
+        }
+      });
+    }
+
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', function() {
+        sessionStorage.removeItem('sas_user');
+        window.location.reload();
+      });
+    }
   }
 
   function initHomeNewsCarousel() {
