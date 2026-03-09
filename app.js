@@ -155,7 +155,8 @@
       showPage('loading');
     }
 
-    fetch('systems/config.json')
+    // Fetch config with cache bypassing
+    fetch('systems/config.json?v=' + new Date().getTime())
       .then(function (r) {
         if (!r.ok) throw new Error('Config not found');
         return r.json();

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Foundation Day Attendance</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <div class="header-brand">
+                <img src="https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png" class="header-logo" alt="NBSC Logo">
+                <div class="header-text">
+                    <h1>Foundation Day</h1>
+                    <p>Live Attendance Masterlist</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="searchInput" placeholder="Search by name or ID..." aria-label="Search students">
+                </div>
+                <button id="refreshBtn" class="primary-btn" title="Refresh Data">
+                    <span class="btn-icon">🔄</span> Refresh
+                </button>
+            </div>
+        </header>
+
+        <main class="app-content">
+            <div id="loading" class="state-container">
+                <div class="spinner"></div>
+                <p>Loading Masterlist from Google Sheets...</p>
+            </div>
+
+            <div id="error" class="state-container hidden">
+                <div class="error-icon">⚠️</div>
+                <p id="error-message">Failed to load data.</p>
+                <button id="retryBtn" class="secondary-btn">Try Again</button>
+            </div>
+
+            <div class="table-container hidden" id="tableContainer">
+                <div class="table-scroll-wrapper">
+                    <table id="attendanceTable">
+                        <thead>
+                            <tr id="tableHeaderRow">
+                                <!-- Headers injected via JS -->
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            <!-- Rows injected via JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="table-footer">
+                    <span id="recordCount">0</span> records found
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

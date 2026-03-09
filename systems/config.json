@@ -16,12 +16,12 @@
     "section": "Attendance"
   },
   {
-    "id": "sas-file-hub",
-    "name": "SAS Project File Hub",
-    "description": "File hub for SAS projects (hosted on Vercel).",
-    "url": "https://sas-file-eq4jz52df-ast4rt3s-projects.vercel.app/",
+    "id": "foundation-day-attendance",
+    "name": "Foundation Day Attendance",
+    "description": "Live masterlist viewer connected to Google Sheets.",
+    "url": "apps/attendance-viewer/index.html",
     "external": false,
-    "section": "Tools"
+    "section": "Attendance"
   },
   {
     "id": "example-reporting",
