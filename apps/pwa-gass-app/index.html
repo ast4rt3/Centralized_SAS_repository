@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="NBSC SAS">
+
+    <title>NBSC SAS Entrance Scanner</title>
+
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <link rel="stylesheet" href="stylesheet.css">
+
+    <script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+
+<body>
+    <div id="syncModal">
+        <div class="modal-content">
+            <span id="modal-icon">✅</span>
+            <h3 id="modal-title">Success!</h3>
+            <p id="modal-text">Action completed.</p>
+
+            <div id="modal-progress-section" style="margin-top: 15px;">
+                <span id="progressText">0%</span>
+                <div class="progress-container" id="progressBarContainer">
+                    <div id="syncProgressBar"></div>
+                </div>
+            </div>
+
+            <button class="modal-btn" id="modalCloseBtn" onclick="closeModal()">OK</button>
+        </div>
+    </div>
+
+    <div id="loginOverlay">
+        <img src="https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png" class="login-logo"
+            alt="NBSC Logo">
+        <div class="login-title">NBSC SAS</div>
+        <div class="login-subtitle">Attendance System</div>
+        <div class="login-divider"></div>
+        <input type="text" id="user" class="login-input" placeholder="Username" autocomplete="username">
+        <div class="password-container">
+            <input type="password" id="pass" class="login-input" placeholder="Password" autocomplete="current-password">
+            <i class="bx bx-hide toggle-password" id="icon"></i>
+        </div>
+        <button class="login-btn" onclick="attemptLogin()">Login</button>
+        <p id="loginErr"></p>
+        <div id="installBannerLogin" class="install-banner" style="display:none;">
+            <button id="installBtn" class="install-btn">📲 Install App</button>
+            <p id="installHintIos" class="install-hint-ios" style="display:none;">Tap Share → Add to Home Screen</p>
+        </div>
+    </div>
+
+    <div id="homeScreen">
+        <img src="https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png" class="home-logo"
+            alt="NBSC Logo">
+        <div class="home-content">
+            <h1>NBSC SAS</h1>
+            <p>Attendance System</p>
+            <button class="btn-primary get-started-btn" onclick="enterScanner()">Start Scanning</button>
+            <br><br><br>
+            <button class="home-secondary-btn" onclick="downloadMasterlist()">⬇️ UPDATE OFFLINE DATA</button>
+            <div id="installBannerHome" class="install-banner" style="display:none;">
+                <button id="installBtnHome" class="install-btn">📲 Install App</button>
+                <p id="installHintIosHome" class="install-hint-ios" style="display:none;">Tap Share → Add to Home Screen</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="scannerScreen">
+        <div class="banner-container">
+            <img src="https://nbsc.edu.ph/wp-content/uploads/2025/01/SAS.png" class="banner-img" alt="SAS Banner">
+        </div>
+
+        <div id="windowStatus" class="status-loading">
+            <div class="status-dot loading" id="statusDot"></div>
+            <span id="statusText">Checking window...</span>
+        </div>
+
+        <div class="scanner-content">
+            <div class="qr-wrapper">
+                <div id="reader"></div>
+            </div>
+
+            <div id="manual-entry">
+                <div class="manual-card">
+                    <div class="manual-label">Manual Entry</div>
+                    <input type="text" id="tokenInput" class="token-input" placeholder="Enter Token Manually">
+                    <button class="submit-token-btn" onclick="submitManualToken()">Submit Token</button>
+                </div>
+            </div>
+            <div id="result"></div>
+        </div>
+
+        <div class="recent-scans-card">
+            <div class="recent-header">
+                <span><i class='bx bx-history'></i> Recent Scans</span>
+                <button onclick="clearRecentScans()" class="clear-history-btn">Clear</button>
+            </div>
+            <div id="recentScansList">
+                <p style="padding: 20px; text-align: center; color: #cbd5e1; font-size: 0.8rem;">No scans in this
+                    session</p>
+            </div>
+        </div>
+
+        <div id="offline-status"
+            style="display:none; padding: 15px; background: #fff3cd; border-top: 2px solid #ffeeba;">
+            <div class="offline-inner">
+                <div class="offline-label" style="font-weight:bold; color:#856404; margin-bottom:10px;">
+                    ⚠️ <span id="pending-count">0</span> Pending Scans
+                </div>
+                <div class="offline-actions" style="display: flex; gap: 10px;">
+                    <button class="sync-btn-main" onclick="syncOfflineData()"
+                        style="flex:2; background:#28a745; color:white; border:none; padding:12px; border-radius:5px; font-weight:bold;">🔄
+                        SYNC NOW</button>
+                    <button class="delete-btn-main" onclick="clearOfflineQueue()"
+                        style="flex:1; background:#dc3545; color:white; border:none; padding:12px; border-radius:5px; font-size:12px;">CLEAR</button>
+                </div>
+            </div>
+            <button onclick="toggleOfflineLog()" class="info-btn"
+                style="margin-top: 10px; background: #607d8b; color: white; border: none; padding: 12px; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold;">
+                📋 VIEW PENDING NAMES
+            </button>
+        </div>
+
+        <div id="offline-log-container"
+            style="display:none; margin: 15px auto; width: 90%; background: #fff; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); padding: 15px; border: 1px solid #ddd;">
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f0f0f0; padding-bottom: 8px;">
+                <h4 style="margin: 0; color: #333;">Pending List</h4>
+                <button onclick="toggleOfflineLog()"
+                    style="background: none; border: none; cursor: pointer; font-size: 20px;">✖️</button>
+            </div>
+            <div id="offline-list-names" style="max-height: 250px; overflow-y: auto; margin-top: 10px;"></div>
+        </div>
+    </div>
+
+    <script>
+        // ══════════════════════════════════════════════════
+        // ⚙️  PASTE YOUR GAS DEPLOYMENT URL HERE
+        // ══════════════════════════════════════════════════
+        const GAS_URL = "https://script.google.com/a/macros/nbsc.edu.ph/s/AKfycbwif9UQu1T_beROIwj4ZiJY_f0SlIDoUxt5p6xiAcO6nqEmpVyY2HygOJCxBR4YcGuRjw/exec";
+        // e.g. "https://script.google.com/macros/s/AKfycbx.../exec"
+
+        // ── Global state ──
+        const resultDiv = document.getElementById('result');
+        const manualEntryDiv = document.getElementById('manual-entry');
+        let html5QrcodeScanner;
+        let windowStatusInterval;
+        let currentWindowInfo = null;
+
+        // ── Backend helper — replaces ALL google.script.run calls ──
+        async function callBackend(action, params) {
+            const res = await fetch(GAS_URL, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain" },
+                body: JSON.stringify({ action, ...params })
+            });
+            if (!res.ok) throw new Error("HTTP " + res.status);
+            return res.json();
+        }
+
+        // --- Password toggle ---
+        const passwordField = document.querySelector("#pass");
+        const eyeIcon = document.querySelector("#icon");
+        eyeIcon.addEventListener("click", function () {
+            const type = passwordField.getAttribute("type") === "password" ? "text" : "password";
+            passwordField.setAttribute("type", type);
+            this.classList.toggle("bx-hide");
+            this.classList.toggle("bx-show");
+        });
+
+        // --- LOGIN ---
+        async function attemptLogin() {
+            const user = document.getElementById('user').value;
+            const pass = document.getElementById('pass').value;
+            const btn = event.target;
+            if (!user || !pass) return;
+            btn.innerText = "Verifying...";
+            document.getElementById('loginErr').innerText = "";
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            const deviceInfo = (isMobile ? "Mobile: " : "PC: ") + navigator.platform;
+            try {
+                const response = await callBackend("loginUser", { username: user, password: pass, deviceInfo });
+                if (response.success) {
+                    sessionStorage.setItem('isLoggedIn', 'true');
+                    sessionStorage.setItem('scannerUser', user);
+                    document.getElementById('loginOverlay').style.display = 'none';
+                } else {
+                    btn.innerText = "Login";
+                    document.getElementById('loginErr').innerText = response.message;
+                }
+            } catch (e) {
+                btn.innerText = "Login";
+                document.getElementById('loginErr').innerText = "Connection error. Try again.";
+            }
+        }
+
+        window.onload = function () {
+            if (sessionStorage.getItem('isLoggedIn') === 'true') {
+                document.getElementById('loginOverlay').style.display = 'none';
+            }
+        };
+
+        // --- NAVIGATION ---
+        function enterScanner() {
+            document.getElementById("homeScreen").style.display = "none";
+            document.getElementById("scannerScreen").style.display = "flex";
+            updateQueueUI();
+            startScanner();
+            checkWindowStatus();
+            windowStatusInterval = setInterval(checkWindowStatus, 60000);
+        }
+
+        // --- WINDOW STATUS ---
+        async function checkWindowStatus() {
+            try {
+                const res = await callBackend("getWindowStatus", {});
+                currentWindowInfo = res;
+
+                const bar = document.getElementById('windowStatus');
+                const dot = document.getElementById('statusDot');
+                const text = document.getElementById('statusText');
+
+                if (!res) {
+                    bar.className = 'status-closed';
+                    dot.className = 'status-dot closed';
+                    text.innerText = 'Connection Error';
+                    return;
+                }
+
+                if (res.isOpen) {
+                    bar.className = 'status-open';
+                    dot.className = 'status-dot open';
+                    text.innerText = 'OPEN — ' + res.type
+                        + ' · ' + res.start + ' – ' + res.end
+                        + ' · Col ' + res.col
+                        + (res.isLate ? ' · LATE' : '');
+                } else {
+                    bar.className = 'status-closed';
+                    dot.className = 'status-dot closed';
+                    text.innerText = res.nextType
+                        ? 'CLOSED — Next: ' + res.nextType + ' · ' + res.nextStart + ' – ' + res.nextEnd
+                        : 'CLOSED — No more windows today';
+                }
+            } catch (e) {
+                document.getElementById('windowStatus').className = 'status-closed';
+                document.getElementById('statusDot').className = 'status-dot closed';
+                document.getElementById('statusText').innerText = 'Connection Error';
+            }
+        }
+
+        // --- SCANNER ---
+        function startScanner() {
+            let screenWidth = window.innerWidth || document.documentElement.clientWidth;
+            let qrBoxSize = screenWidth < 400 ? 200 : 250;
+            html5QrcodeScanner = new Html5QrcodeScanner("reader", {
+                fps: 15,
+                qrbox: { width: qrBoxSize, height: qrBoxSize }
+            });
+            html5QrcodeScanner.render(processToken);
+        }
+
+        function resetScanner() {
+            resultDiv.style.display = 'none';
+            manualEntryDiv.style.display = 'block';
+            if (html5QrcodeScanner) html5QrcodeScanner.render(processToken);
+        }
+
+        async function processToken(decodedText) {
+            if (html5QrcodeScanner) { html5QrcodeScanner.clear().catch(e => { }); }
+            manualEntryDiv.style.display = 'none';
+            resultDiv.style.display = 'block';
+
+            const token = extractID(decodedText);
+            const scannerUser = sessionStorage.getItem('scannerUser') || 'Unknown';
+
+            // ── OFFLINE ──
+            if (!navigator.onLine) {
+                const master = JSON.parse(localStorage.getItem('nbsc_offline_master') || "{}");
+                const entry = master[token.replace(/\s+/g, "").toLowerCase()] || master[token];
+                const name = entry ? (entry.name || entry) : "UNKNOWN STUDENT";
+                const isConsented = entry && entry.consented === true;
+
+                saveToOfflineQueue(token, name);
+
+                const winName = (currentWindowInfo && currentWindowInfo.isOpen) ? currentWindowInfo.type : "OFFLINE";
+                addToRecentScans(name.toUpperCase(), token, winName + " (SAVED)", isConsented);
+
+                resultDiv.className = isConsented ? "offline-consented" : "warning";
+                resultDiv.innerHTML =
+                    "<span class=\"result-icon\">" + (isConsented ? "🔵" : "📴") + "</span>" +
+                    "<h3>" + (isConsented ? "OFFLINE SCAN — CONSENTED" : "OFFLINE SAVED") + "</h3>" +
+                    "<p><b>" + name.toUpperCase() + "</b></p>" +
+                    "<button class=\"scan-btn-next\" onclick=\"resetScanner()\">NEXT SCAN</button>" +
+                    "<button class=\"flag-btn\" onclick=\"toggleFlagBox()\">🚩 FLAG THIS STUDENT</button>" +
+                    "<div id=\"flagReasonBox\" style=\"display:none;background:rgba(0,0,0,0.15);border-radius:10px;padding:12px;margin-top:10px;\">" +
+                    "<select id=\"flagReasonSelect\" style=\"width:100%;padding:12px;border-radius:8px;border:none;font-family:Montserrat,sans-serif;margin-bottom:10px;\">" +
+                    "<option value=\"\">— Select Reason —</option>" +
+                    "<option value=\"Using someone else's QR\">Using someone else's QR</option>" +
+                    "<option value=\"Suspicious behavior\">Suspicious behavior</option>" +
+                    "<option value=\"Not the student in the QR\">Not the student in the QR</option>" +
+                    "<option value=\"Already scanned elsewhere\">Already scanned elsewhere</option>" +
+                    "<option value=\"Other\">Other</option>" +
+                    "</select>" +
+                    "<p style=\"font-size:0.7rem;color:rgba(255,255,255,0.6);margin-bottom:8px;font-style:italic;\">⚠ Offline: flag syncs when online</p>" +
+                    "<button onclick=\"confirmOfflineFlag('" + token.replace(/'/g, "\\'") + "', '" + name.replace(/'/g, "\\'") + "')\" style=\"width:100%;padding:14px;background:#dc2626;color:white;border:none;border-radius:8px;font-weight:800;font-family:Montserrat,sans-serif;cursor:pointer;\">🚩 CONFIRM FLAG</button>" +
+                    "</div>";
+                return;
+            }
+
+            // ── ONLINE ──
+            resultDiv.className = "processing";
+            resultDiv.innerHTML = "<span class=\"result-icon\">🔄</span><h3>Verifying...</h3>";
+
+            try {
+                const response = await callBackend("checkTicket", { scannedID: decodedText, scannerUser });
+
+                let colorClass = response.status === "success" ? "success" : response.status === "warning" ? "warning" : "error";
+                let icon = response.status === "success" ? "✅" : response.status === "warning" ? "⚠️" : "❌";
+
+                if (response.status === "success") {
+                    addToRecentScans(response.studentName, token, response.windowType || "RECORDED", false);
+                }
+
+                const showFlag = response.status === "success" || response.status === "warning";
+                resultDiv.className = colorClass;
+                resultDiv.innerHTML =
+                    "<span class=\"result-icon\">" + icon + "</span>" +
+                    "<p>" + response.message + "</p>" +
+                    "<button class=\"scan-btn-next\" onclick=\"resetScanner()\">NEXT SCAN</button>" +
+                    (showFlag ?
+                        "<button class=\"flag-btn\" onclick=\"toggleFlagBox()\">🚩 FLAG THIS STUDENT</button>" +
+                        "<div id=\"flagReasonBox\" style=\"display:none;background:rgba(0,0,0,0.15);border-radius:10px;padding:12px;margin-top:10px;\">" +
+                        "<select id=\"flagReasonSelect\" style=\"width:100%;padding:12px;border-radius:8px;border:none;font-family:Montserrat,sans-serif;margin-bottom:10px;\">" +
+                        "<option value=\"\">— Select Reason —</option>" +
+                        "<option value=\"Using someone else's QR\">Using someone else's QR</option>" +
+                        "<option value=\"Suspicious behavior\">Suspicious behavior</option>" +
+                        "<option value=\"Not the student in the QR\">Not the student in the QR</option>" +
+                        "<option value=\"Already scanned elsewhere\">Already scanned elsewhere</option>" +
+                        "<option value=\"Other\">Other</option>" +
+                        "</select>" +
+                        "<button onclick=\"confirmOnlineFlag('" + token.replace(/'/g, "\\'") + "')\" style=\"width:100%;padding:14px;background:#dc2626;color:white;border:none;border-radius:8px;font-weight:800;font-family:Montserrat,sans-serif;cursor:pointer;\">🚩 CONFIRM FLAG</button>" +
+                        "</div>"
+                        : "");
+            } catch (e) {
+                resultDiv.className = "error";
+                resultDiv.innerHTML = "<span class=\"result-icon\">❌</span><h3>Connection Error</h3><p>Could not reach server.</p><button class=\"scan-btn-next\" onclick=\"resetScanner()\">NEXT SCAN</button>";
+            }
+        }
+
+        // --- HELPERS ---
+        function getMinutesHelper(timeStr) {
+            if (!timeStr) return null;
+            const timeParts = timeStr.toString().match(/(\d+):(\d+)\s*(AM|PM)?/i);
+            if (!timeParts) return null;
+            let hours = parseInt(timeParts[1]);
+            let minutes = parseInt(timeParts[2]);
+            let mod = timeParts[3] ? timeParts[3].toUpperCase() : null;
+            if (mod === 'PM' && hours < 12) hours += 12;
+            if (mod === 'AM' && hours === 12) hours = 0;
+            return (hours * 60) + minutes;
+        }
+
+        function getRecordedMinutes(cellValue) {
+            if (!cellValue) return null;
+            const timePart = cellValue.split('[')[0].trim();
+            return getMinutesHelper(timePart);
+        }
+
+        function extractID(raw) {
+            if (!raw) return "";
+            let id = raw.toString().trim();
+            if (id.includes("auth_key=")) id = id.split("auth_key=")[1].split("&")[0];
+            else if (id.includes("ACCESS_KEY=")) id = id.split("ACCESS_KEY=")[1].split("/")[0];
+            return id.split(",")[0].replace(/\s+/g, "");
+        }
+
+        function submitManualToken() {
+            const input = document.getElementById('tokenInput');
+            if (input.value) processToken(input.value);
+            input.value = "";
+        }
+
+        // --- OFFLINE QUEUE ---
+        function saveToOfflineQueue(code, name, isFlagged = false, reason = "") {
+            let queue = JSON.parse(localStorage.getItem('nbsc_offline_scans') || "[]");
+            if (isFlagged) {
+                queue = queue.filter(item => !(item.code === code && !item.isFlagged));
+            } else {
+                if (queue.some(item => item.code === code && !item.isFlagged)) return;
+            }
+            queue.push({ code, name, timestamp: new Date().toISOString(), isFlagged, reason });
+            localStorage.setItem('nbsc_offline_scans', JSON.stringify(queue));
+            updateQueueUI();
+        }
+
+        async function syncOfflineData() {
+            if (!navigator.onLine) return showCustomModal("📶", "Offline", "No internet connection.");
+            let queue = JSON.parse(localStorage.getItem('nbsc_offline_scans') || "[]");
+            if (queue.length === 0) return showCustomModal("✅", "Nothing to Sync", "Queue is empty.");
+
+            const total = queue.length;
+            const CHUNK_SIZE = 10;
+            const scannerUser = sessionStorage.getItem('scannerUser') || 'Unknown';
+            let uploaded = 0;
+
+            document.getElementById('modal-icon').innerText = "🔄";
+            document.getElementById('modal-title').innerText = "Syncing";
+            document.getElementById('modal-text').innerText = "";
+            document.getElementById('progressBarContainer').style.display = 'block';
+            document.getElementById('progressText').innerText = "0%";
+            document.getElementById('syncProgressBar').style.width = "0%";
+            document.getElementById('modalCloseBtn').style.display = 'none';
+
+            let logBox = document.getElementById('syncLogBox');
+            if (!logBox) {
+                logBox = document.createElement('div');
+                logBox.id = 'syncLogBox';
+                logBox.style.cssText = "max-height:140px;overflow-y:auto;background:rgba(0,0,0,0.3);border-radius:8px;padding:8px 10px;margin-top:10px;font-size:0.7rem;font-family:monospace;color:#a3e635;text-align:left;line-height:1.6;";
+                document.getElementById('modal-progress-section').after(logBox);
+            }
+            logBox.innerHTML = "";
+            logBox.style.display = 'block';
+            document.getElementById('syncModal').style.display = 'flex';
+
+            function log(msg) { logBox.innerHTML += msg + "<br>"; logBox.scrollTop = logBox.scrollHeight; }
+            log("▶ Starting upload of " + total + " record(s)...");
+
+            const remaining = [...queue];
+            while (remaining.length > 0) {
+                const chunk = remaining.splice(0, CHUNK_SIZE);
+                const formatted = chunk.map(item => ({
+                    scannedID: item.code,
+                    timestamp: item.timestamp,
+                    isFlagged: item.isFlagged || false,
+                    reason: item.reason || ""
+                }));
+                chunk.forEach(item => log("↑ " + item.name + (item.isFlagged ? " 🚩 [FLAG]" : "")));
+
+                try {
+                    const res = await callBackend("syncOfflineScans", { scansArray: formatted, scannerUser });
+                    if (res.status !== "success") throw new Error(res.message || "Server error");
+                    uploaded += chunk.length;
+                    const pct = Math.round((uploaded / total) * 100);
+                    document.getElementById('syncProgressBar').style.width = pct + "%";
+                    document.getElementById('progressText').innerText = pct + "% — " + uploaded + " / " + total;
+                    log("✔ Chunk done (" + uploaded + "/" + total + ")");
+                } catch (err) {
+                    log("✖ Error: " + err);
+                    document.getElementById('modalCloseBtn').style.display = 'block';
+                    document.getElementById('modal-title').innerText = "Sync Paused";
+                    return;
+                }
+            }
+
+            localStorage.removeItem('nbsc_offline_scans');
+            updateQueueUI();
+            log("✅ All " + total + " records uploaded successfully.");
+            document.getElementById('progressText').innerText = "100% — Complete";
+            document.getElementById('modal-title').innerText = "Done";
+            document.getElementById('modalCloseBtn').style.display = 'block';
+            document.getElementById('modalCloseBtn').onclick = function () {
+                document.getElementById('syncModal').style.display = 'none';
+                logBox.style.display = 'none';
+                document.getElementById('syncProgressBar').style.width = "0%";
+                document.getElementById('progressBarContainer').style.display = 'none';
+            };
+        }
+
+        // --- FLAGS ---
+        function toggleFlagBox() {
+            const box = document.getElementById('flagReasonBox');
+            if (box) box.style.display = box.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function confirmOfflineFlag(token, name) {
+            const reason = document.getElementById('flagReasonSelect')?.value;
+            if (!reason) { alert("Please select a reason."); return; }
+            saveToOfflineQueue(token, name, true, reason);
+            resultDiv.className = "error";
+            resultDiv.innerHTML =
+                "<span class=\"result-icon\">🚩</span>" +
+                "<h3>FLAGGED (Offline)</h3>" +
+                "<p><b>" + name.toUpperCase() + "</b><br><small>Reason: " + reason + " — syncs when online.</small></p>" +
+                "<button class=\"scan-btn-next\" onclick=\"resetScanner()\">NEXT SCAN</button>";
+        }
+
+        function clearOfflineQueue() {
+            if (!confirm("Delete all " + JSON.parse(localStorage.getItem('nbsc_offline_scans') || '[]').length + " pending scans? This cannot be undone.")) return;
+            localStorage.removeItem('nbsc_offline_scans');
+            updateQueueUI();
+            showCustomModal("🗑️", "Cleared", "Offline queue has been cleared.");
+        }
+
+        async function confirmOnlineFlag(token) {
+            const reason = document.getElementById('flagReasonSelect')?.value;
+            if (!reason) { alert("Please select a reason."); return; }
+            const scannerUser = sessionStorage.getItem('scannerUser') || 'Unknown';
+            try {
+                await callBackend("flagStudent", { scannedToken: token, reason, scannerUser });
+                resultDiv.className = "error";
+                resultDiv.innerHTML =
+                    "<span class=\"result-icon\">🚩</span>" +
+                    "<h3>STUDENT FLAGGED</h3>" +
+                    "<p>Reason: " + reason + "</p>" +
+                    "<button class=\"scan-btn-next\" onclick=\"resetScanner()\">NEXT SCAN</button>";
+            } catch (e) { alert("Flag failed: " + e.message); }
+        }
+
+        function updateQueueUI() {
+            let queue = JSON.parse(localStorage.getItem('nbsc_offline_scans') || "[]");
+            const bar = document.getElementById('offline-status');
+            if (bar) bar.style.display = queue.length > 0 ? 'block' : 'none';
+            const count = document.getElementById('pending-count');
+            if (count) count.innerText = queue.length;
+            const list = document.getElementById('offline-list-names');
+            if (!list) return;
+            if (queue.length === 0) { list.innerHTML = "<p>Queue is empty</p>"; return; }
+            let html = "<ul>";
+            queue.slice().reverse().forEach(item => { html += "<li><b>" + item.name + "</b></li>"; });
+            list.innerHTML = html + "</ul>";
+        }
+
+        function toggleOfflineLog() {
+            const log = document.getElementById('offline-log-container');
+            log.style.display = log.style.display === 'none' ? 'block' : 'none';
+            updateQueueUI();
+        }
+
+        // --- DOWNLOAD MASTERLIST ---
+        async function downloadMasterlist() {
+            if (!navigator.onLine) return showCustomModal("📶", "Offline", "You need internet to update offline data.");
+
+            document.getElementById('modal-icon').innerText = "⬇️";
+            document.getElementById('modal-title').innerText = "Updating";
+            document.getElementById('modal-text').innerText = "";
+            document.getElementById('progressBarContainer').style.display = 'block';
+            document.getElementById('progressText').innerText = "Downloading...";
+            document.getElementById('syncProgressBar').style.width = "0%";
+            document.getElementById('modalCloseBtn').style.display = 'none';
+            document.getElementById('syncModal').style.display = 'flex';
+
+            let logBox = document.getElementById('syncLogBox');
+            if (!logBox) {
+                logBox = document.createElement('div');
+                logBox.id = 'syncLogBox';
+                logBox.style.cssText = "max-height:140px;overflow-y:auto;background:rgba(0,0,0,0.3);border-radius:8px;padding:8px 10px;margin-top:10px;font-size:0.7rem;font-family:monospace;color:#a3e635;text-align:left;line-height:1.6;";
+                document.getElementById('modal-progress-section').after(logBox);
+            }
+            logBox.innerHTML = "";
+            logBox.style.display = 'block';
+
+            function log(msg) { logBox.innerHTML += msg + "<br>"; logBox.scrollTop = logBox.scrollHeight; }
+            log("▶ Connecting to server...");
+            document.getElementById('syncProgressBar').style.width = "20%";
+
+            try {
+                const data = await callBackend("getOfflineMasterlist", {});
+                log("✔ Data received from server.");
+                document.getElementById('syncProgressBar').style.width = "60%";
+                document.getElementById('progressText').innerText = "Processing...";
+
+                const entries = Object.keys(data).length;
+                log("↓ Processing " + entries + " token entries...");
+                localStorage.setItem('nbsc_offline_master', JSON.stringify(data));
+                document.getElementById('syncProgressBar').style.width = "100%";
+                document.getElementById('progressText').innerText = "100% — Complete";
+
+                const uniqueNames = new Set(Object.values(data).map(v => v.name || v)).size;
+                log("✅ Saved " + uniqueNames + " students (" + entries + " tokens) to offline storage.");
+                log("✔ Offline data is up to date.");
+                document.getElementById('modal-icon').innerText = "✅";
+                document.getElementById('modal-title').innerText = "Done";
+                document.getElementById('modalCloseBtn').style.display = 'block';
+                document.getElementById('modalCloseBtn').onclick = function () {
+                    document.getElementById('syncModal').style.display = 'none';
+                    logBox.style.display = 'none';
+                    document.getElementById('syncProgressBar').style.width = "0%";
+                    document.getElementById('progressBarContainer').style.display = 'none';
+                    document.getElementById('modalCloseBtn').onclick = closeModal;
+                };
+            } catch (err) {
+                log("✖ Error: " + err.toString());
+                document.getElementById('modal-icon').innerText = "❌";
+                document.getElementById('modal-title').innerText = "Failed";
+                document.getElementById('modalCloseBtn').style.display = 'block';
+            }
+        }
+
+        // --- RECENT SCANS ---
+        function addToRecentScans(name, token, windowName, isConsented) {
+            const list = document.getElementById('recentScansList');
+            if (!list) return;
+            const emptyMsg = list.querySelector('p');
+            if (emptyMsg) emptyMsg.remove();
+
+            const item = document.createElement('div');
+            const isOut = windowName.toLowerCase().includes('out');
+            const typeClass = isConsented ? 'type-blue' : (isOut ? 'type-out' : 'type-in');
+            item.className = "recent-item " + typeClass;
+            item.innerHTML =
+                "<span class=\"recent-window\">" + windowName + (isConsented ? " 🔵 CONSENTED" : "") + "</span>" +
+                "<div class=\"recent-flex\">" +
+                "<span class=\"recent-name\">" + name + "</span>" +
+                "<span class=\"recent-token\">" + token + "</span>" +
+                "</div>";
+
+            list.insertBefore(item, list.firstChild);
+            if (list.children.length > 5) list.removeChild(list.lastChild);
+        }
+
+        function clearRecentScans() {
+            const list = document.getElementById('recentScansList');
+            if (list) list.innerHTML = '<p style="padding: 20px; text-align: center; color: #cbd5e1; font-size: 0.8rem;">No scans in this session</p>';
+        }
+
+        function showCustomModal(icon, title, text) {
+            document.getElementById('modal-icon').innerText = icon;
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-text').innerText = text;
+            document.getElementById('syncModal').style.display = 'flex';
+        }
+        function closeModal() { document.getElementById('syncModal').style.display = 'none'; }
+
+        // PWA: register service worker for install & offline
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(function () {});
+            });
+        }
+
+        // PWA: custom install prompt (browsers rarely show automatic popup)
+        (function () {
+            var isStandalone = window.matchMedia('(display-mode: standalone)').matches
+                || window.navigator.standalone === true;
+            if (isStandalone) return; // Already installed
+
+            var isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            var deferredPrompt;
+
+            function showBanner() {
+                var loginB = document.getElementById('installBannerLogin');
+                var homeB = document.getElementById('installBannerHome');
+                if (loginB) loginB.style.display = 'block';
+                if (homeB) homeB.style.display = 'block';
+            }
+
+            function hideBanner() {
+                var loginB = document.getElementById('installBannerLogin');
+                var homeB = document.getElementById('installBannerHome');
+                if (loginB) loginB.style.display = 'none';
+                if (homeB) homeB.style.display = 'none';
+            }
+
+            if (isIos) {
+                document.getElementById('installBtn').style.display = 'none';
+                document.getElementById('installBtnHome').style.display = 'none';
+                var hint1 = document.getElementById('installHintIos');
+                var hint2 = document.getElementById('installHintIosHome');
+                if (hint1) hint1.style.display = 'block';
+                if (hint2) hint2.style.display = 'block';
+                showBanner();
+            } else {
+                window.addEventListener('beforeinstallprompt', function (e) {
+                    e.preventDefault();
+                    deferredPrompt = e;
+                    showBanner();
+                });
+                window.addEventListener('appinstalled', hideBanner);
+            }
+
+            function doInstall() {
+                if (!deferredPrompt) return;
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then(function (r) {
+                    if (r.outcome === 'accepted') hideBanner();
+                    deferredPrompt = null;
+                });
+            }
+            document.getElementById('installBtn').addEventListener('click', doInstall);
+            document.getElementById('installBtnHome').addEventListener('click', doInstall);
+        })();
+    </script>
+</body>
+
+</html>

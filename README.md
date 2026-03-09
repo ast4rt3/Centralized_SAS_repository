@@ -59,6 +59,30 @@ You can also use an object with a `systems` array:
   `python -m http.server 8000` or `npx serve .`  
   Then open `http://localhost:8000`.
 
+## Deploying to Vercel
+
+This repo is a static site, so Vercel deployment is straightforward.
+
+- **What gets deployed**: the dashboard at `/` (`index.html`), plus any apps under `/apps/` (like your PWA).
+- **PWA shortcut route**: `vercel.json` adds rewrites so your PWA is also reachable at `/pwa/` (it maps to `/apps/pwa-gas-app/`).
+
+### Steps
+
+1. Push this repository to GitHub/GitLab/Bitbucket.
+2. In Vercel, click **New Project** and import the repo.
+3. Configure as:
+   - **Framework Preset**: Other
+   - **Build Command**: None
+   - **Output Directory**: `.`
+4. Deploy.
+
+After deploy:
+
+- **Dashboard**: `/`
+- **PWA**:
+  - `/apps/pwa-gas-app/` (direct folder)
+  - `/pwa/` (friendly shortcut)
+
 ## Structure
 
 ```
@@ -67,6 +91,7 @@ Centralized_SAS_repository/
 ├── styles.css      # Layout and theme
 ├── app.js          # Loads config, renders nav and system pages
 ├── README.md
+├── vercel.json     # Vercel rewrites + service-worker cache headers
 └── systems/
     └── config.json # List of systems (edit this to add/change systems)
 ```
