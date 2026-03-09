@@ -1,23 +1,34 @@
 [
   {
-    "id": "pwa-gas-app",
-    "name": "PWA (HTML + GAS)",
+    "id": "attendance-scanner",
+    "name": "Attendance Scanner",
     "description": "Progressive web app with HTML, CSS, and Google Apps Script backend.",
-    "url": "apps/pwa-gas-app/index.html",
-    "external": false
+    "url": "apps/attendance-scanner/index.html",
+    "external": false,
+    "section": "Attendance"
+  },
+  {
+    "id": "schedule-manager",
+    "name": "Schedule Manager",
+    "description": "Google Apps Script schedule manager connected to Attendance Scanner.",
+    "url": "https://script.google.com/a/macros/nbsc.edu.ph/s/AKfycbyKLYEUfTct6AG91A7hTrD3qf62ti9qBbvLiLGdNYRStaVK6mRIwyqqfkCgQZnbeUIECQ/exec",
+    "external": false,
+    "section": "Attendance"
   },
   {
     "id": "example-reporting",
     "name": "Example Reporting",
     "description": "Sample reporting system. Replace with your SAS system details.",
     "url": "#",
-    "external": false
+    "external": false,
+    "section": "Systems"
   },
   {
     "id": "example-analytics",
     "name": "Example Analytics",
     "description": "Sample analytics system. Add your SAS Viya or local report URL.",
     "url": "#",
-    "external": false
+    "external": false,
+    "section": "Systems"
   }
 ]

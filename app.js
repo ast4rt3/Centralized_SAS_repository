@@ -1,9 +1,10 @@
 (function () {
-  const navSystems = document.getElementById('nav-systems');
-  const systemPages = document.getElementById('system-pages');
-  const pageTitle = document.getElementById('page-title');
+  const navDynamic = document.getElementById('nav-dynamic');
   const statSystems = document.getElementById('stat-systems');
   const homePage = document.getElementById('home');
+  const loadingPage = document.getElementById('loading');
+  const systemViewPage = document.getElementById('system-view');
+  const systemFrame = document.getElementById('system-frame');
 
   let systems = [];
 
@@ -14,42 +15,84 @@
 
   function showPage(pageId) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    const page = pageId === 'home' ? homePage : document.getElementById('page-' + pageId);
+    const page = pageId === 'home'
+      ? homePage
+      : (pageId === 'loading' ? loadingPage : (pageId === 'system-view' ? systemViewPage : null));
     if (page) page.classList.add('active');
-    const system = systems.find(s => s.id === pageId);
-    pageTitle.textContent = system ? system.name : 'Home';
+  }
+
+  function getHashPageId() {
+    var hash = (window.location.hash || '#home').replace('#', '');
+    if (!hash) return 'home';
+    return hash;
+  }
+
+  function syncFromHash() {
+    var pageId = getHashPageId();
+    if (pageId === 'home') {
+      setActiveNav(document.querySelector('.nav-item[data-page="home"]'));
+      document.body.classList.remove('system-mode');
+      if (systemFrame) systemFrame.src = 'about:blank';
+      showPage('home');
+      return;
+    }
+
+    var sys = systems.find(function (s) { return s.id === pageId; });
+    if (!sys) {
+      setActiveNav(document.querySelector('.nav-item[data-page="home"]'));
+      document.body.classList.remove('system-mode');
+      if (systemFrame) systemFrame.src = 'about:blank';
+      showPage('home');
+      return;
+    }
+
+    var el = document.querySelector('.nav-item[data-page="' + pageId + '"]');
+    if (el) setActiveNav(el);
+
+    document.body.classList.add('system-mode');
+    showPage('system-view');
+    if (systemFrame) systemFrame.src = sys.url;
+  }
+
+  function groupBySection(items) {
+    var groups = {};
+    items.forEach(function (s) {
+      var section = s.section || 'Systems';
+      if (!groups[section]) groups[section] = [];
+      groups[section].push(s);
+    });
+    return groups;
   }
 
   function renderNav() {
-    navSystems.innerHTML = systems
-      .map(
-        (s) =>
-          '<a href="' + (s.external ? s.url : '#' + s.id) + '" class="nav-item" data-page="' + s.id + '"' + (s.external ? ' target="_blank" rel="noopener"' : '') + '>' +
-          '<span class="nav-icon">▣</span><span class="nav-label">' + escapeHtml(s.name) + '</span></a>'
-      )
+    var groups = groupBySection(systems);
+    var sectionNames = Object.keys(groups).sort(function (a, b) { return a.localeCompare(b); });
+
+    navDynamic.innerHTML = sectionNames
+      .map(function (sectionName) {
+        var itemsHtml = groups[sectionName]
+          .map(function (s) {
+            return (
+              '<a href="' + (s.external ? s.url : '#' + s.id) + '" class="nav-item" data-page="' + s.id + '"' +
+              (s.external ? ' target="_blank" rel="noopener"' : '') + '>' +
+              '<span class="nav-icon">▣</span><span class="nav-label">' + escapeHtml(s.name) + '</span></a>'
+            );
+          })
+          .join('');
+        return '<div class="nav-section-label">' + escapeHtml(sectionName) + '</div>' + itemsHtml;
+      })
       .join('');
 
-    navSystems.querySelectorAll('.nav-item').forEach(function (a) {
+    navDynamic.querySelectorAll('.nav-item').forEach(function (a) {
       if (a.getAttribute('target') !== '_blank') {
         a.addEventListener('click', function (e) {
           e.preventDefault();
-          setActiveNav(this);
-          showPage(this.getAttribute('data-page'));
+          window.location.hash = this.getAttribute('data-page');
         });
       } else {
         a.addEventListener('click', function () { setActiveNav(null); });
       }
     });
-  }
-
-  function renderSystemPages() {
-    systemPages.innerHTML = systems
-      .map(function (s) {
-        var link = (s.url && s.url !== '#') ? '<a href="' + escapeHtml(s.url) + '" class="system-link-box"' + (s.external ? ' target="_blank" rel="noopener"' : '') + '>Open system →</a>' : '';
-        var desc = s.description ? '<p class="system-desc">' + escapeHtml(s.description) + '</p>' : '';
-        return '<section id="page-' + s.id + '" class="page system-page"><h2>' + escapeHtml(s.name) + '</h2>' + desc + link + '</section>';
-      })
-      .join('');
   }
 
   function escapeHtml(text) {
@@ -61,9 +104,14 @@
   function init() {
     document.querySelector('.nav-item[data-page="home"]').addEventListener('click', function (e) {
       e.preventDefault();
-      setActiveNav(this);
-      showPage('home');
+      window.location.hash = 'home';
     });
+
+    // If user opens a deep link (/#some-system), show loading page until config loads.
+    if (getHashPageId() !== 'home') {
+      setActiveNav(null);
+      showPage('loading');
+    }
 
     fetch('systems/config.json')
       .then(function (r) {
@@ -74,20 +122,13 @@
         systems = Array.isArray(data) ? data : (data.systems || []);
         statSystems.textContent = systems.length;
         renderNav();
-        renderSystemPages();
-        var hash = (window.location.hash || '#home').replace('#', '');
-        if (hash && hash !== 'home') {
-          var sys = systems.find(function (s) { return s.id === hash; });
-          if (sys) {
-            var el = document.querySelector('.nav-item[data-page="' + hash + '"]');
-            if (el) { setActiveNav(el); showPage(hash); }
-          }
-        }
+        window.addEventListener('hashchange', syncFromHash);
+        syncFromHash();
       })
       .catch(function () {
         systems = [];
         statSystems.textContent = '0';
-        navSystems.innerHTML = '<span class="nav-section-label" style="padding: 0.5rem 1rem; color: var(--text-muted);">No systems loaded. Add systems/config.json</span>';
+        navDynamic.innerHTML = '<div class="nav-section-label" style="padding: 0.5rem 1rem; color: rgba(255,255,255,0.72);">No systems loaded</div>';
       });
 
   }

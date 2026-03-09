@@ -3,20 +3,32 @@
   "rewrites": [
     {
       "source": "/pwa",
-      "destination": "/apps/pwa-gas-app/index.html"
+      "destination": "/apps/attendance-scanner/index.html"
     },
     {
       "source": "/pwa/",
-      "destination": "/apps/pwa-gas-app/index.html"
+      "destination": "/apps/attendance-scanner/index.html"
     },
     {
       "source": "/pwa/(.*)",
-      "destination": "/apps/pwa-gas-app/$1"
+      "destination": "/apps/attendance-scanner/$1"
+    },
+    {
+      "source": "/attendance-scanner",
+      "destination": "/apps/attendance-scanner/index.html"
+    },
+    {
+      "source": "/attendance-scanner/",
+      "destination": "/apps/attendance-scanner/index.html"
+    },
+    {
+      "source": "/attendance-scanner/(.*)",
+      "destination": "/apps/attendance-scanner/$1"
     }
   ],
   "headers": [
     {
-      "source": "/apps/pwa-gas-app/sw.js",
+      "source": "/apps/attendance-scanner/sw.js",
       "headers": [
         { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
         { "key": "Pragma", "value": "no-cache" },
@@ -32,13 +44,27 @@
       ]
     },
     {
-      "source": "/apps/pwa-gas-app/manifest.json",
+      "source": "/attendance-scanner/sw.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+        { "key": "Pragma", "value": "no-cache" },
+        { "key": "Expires", "value": "0" }
+      ]
+    },
+    {
+      "source": "/apps/attendance-scanner/manifest.json",
       "headers": [
         { "key": "Cache-Control", "value": "no-cache" }
       ]
     },
     {
       "source": "/pwa/manifest.json",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache" }
+      ]
+    },
+    {
+      "source": "/attendance-scanner/manifest.json",
       "headers": [
         { "key": "Cache-Control", "value": "no-cache" }
       ]

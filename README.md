@@ -64,7 +64,7 @@ You can also use an object with a `systems` array:
 This repo is a static site, so Vercel deployment is straightforward.
 
 - **What gets deployed**: the dashboard at `/` (`index.html`), plus any apps under `/apps/` (like your PWA).
-- **PWA shortcut route**: `vercel.json` adds rewrites so your PWA is also reachable at `/pwa/` (it maps to `/apps/pwa-gas-app/`).
+- **PWA shortcut route**: `vercel.json` adds rewrites so your Attendance Scanner is reachable at `/pwa/` and `/attendance-scanner/` (they map to `/apps/attendance-scanner/`).
 
 ### Steps
 
@@ -80,8 +80,9 @@ After deploy:
 
 - **Dashboard**: `/`
 - **PWA**:
-  - `/apps/pwa-gas-app/` (direct folder)
-  - `/pwa/` (friendly shortcut)
+  - `/apps/attendance-scanner/` (direct folder)
+  - `/attendance-scanner/` (friendly shortcut)
+  - `/pwa/` (legacy shortcut)
 
 ## Structure
 
