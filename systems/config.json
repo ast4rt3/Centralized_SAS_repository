@@ -16,6 +16,14 @@
     "section": "Attendance"
   },
   {
+    "id": "sas-file-hub",
+    "name": "SAS Project File Hub",
+    "description": "File hub for SAS projects (hosted on Vercel).",
+    "url": "https://sas-file-eq4jz52df-ast4rt3s-projects.vercel.app/",
+    "external": false,
+    "section": "Tools"
+  },
+  {
     "id": "example-reporting",
     "name": "Example Reporting",
     "description": "Sample reporting system. Replace with your SAS system details.",

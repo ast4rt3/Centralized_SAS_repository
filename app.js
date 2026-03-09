@@ -51,6 +51,14 @@
       return;
     }
 
+    // If user navigates to an external system via hash, open it in a new tab
+    // and return them to home (so the iframe view isn't used for external apps).
+    if (sys.external) {
+      window.open(sys.url, '_blank', 'noopener');
+      window.location.hash = 'home';
+      return;
+    }
+
     var el = document.querySelector('.nav-item[data-page="' + pageId + '"]');
     if (el) setActiveNav(el);
 
