@@ -257,11 +257,16 @@ tbody tr:last-child td { border-bottom: none; }
             <div class="header-brand">
                 <img src="https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png" class="header-logo" alt="NBSC Logo">
                 <div class="header-text">
-                    <h1>Foundation Day</h1>
-                    <p>Live Attendance Masterlist</p>
+                    <h1>Attendance</h1>
+                    <p>Live Masterlist Tracker</p>
                 </div>
             </div>
             <div class="header-actions">
+                <div class="filter-box" style="margin-right: 10px;">
+                    <select id="columnFilter" style="padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: white; font-family: var(--font-sans); font-size: 0.9rem;">
+                        <option value="all" style="color: black;">All Columns</option>
+                    </select>
+                </div>
                 <div class="search-box">
                     <span class="search-icon">🔍</span>
                     <input type="text" id="searchInput" placeholder="Search by name or ID..." aria-label="Search students">
