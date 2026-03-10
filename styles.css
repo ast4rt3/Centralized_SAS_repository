@@ -669,6 +669,38 @@ body.system-mode .content {
 }
 
 /* User Menu */
+.icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  margin-right: 8px;
+}
+
+.icon-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.icon-btn.active-setting {
+  color: var(--nbsc-gold);
+  background: rgba(249, 168, 38, 0.1);
+}
+
+.tv-settings {
+  display: flex;
+  align-items: center;
+  margin-right: 16px;
+  padding-right: 16px;
+  border-right: 1px solid var(--border);
+}
+
 .user-menu {
   position: relative;
 }
@@ -1102,6 +1134,36 @@ body.tv-mode .home-news-ticker {
 body.tv-mode .ticker-wrap {
   display: inline-flex;
   animation: marquee 25s linear infinite;
+}
+
+/* ======================================================== */
+/* TV Theater Mode                                          */
+/* ======================================================== */
+
+body.video-fullscreen-active .home-header {
+  display: none !important;
+}
+
+body.video-fullscreen-active .home-content-area {
+  padding: 0 !important;
+}
+
+body.video-fullscreen-active .home-news-image-wrap {
+  height: 100vh !important;
+  border-radius: 0 !important;
+}
+
+body.video-fullscreen-active .home-news-ticker {
+  display: none !important;
+}
+
+body.video-fullscreen-active .home-news-track {
+  border-radius: 0 !important;
+  border: none !important;
+}
+
+body.video-fullscreen-active .home-news-dots {
+  display: none !important;
 }
 
 body.tv-mode .ticker-content {

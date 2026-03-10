@@ -1,7 +1,19 @@
 // REPLACE THIS WITH YOUR NEW SPREADSHEET DEPLOYMENT URL
-const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5NorparafTXZSNdUDFkvsAUjjAcCc1mJZAlooP1BPIeMvFiclGM2VwsA/exec";
+const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbyj18L5_tHOfQeNnU-tH6nOf_gYgG5f_a51yM9nS6qgQONy-57Z1aON7_EerqN3sL4k/exec"; // <-- Update with new URL
 
-(function () {
+// Load YouTube IFrame API
+if (!window.YT) {
+  var tag = document.createElement('script');
+  tag.src = "https://www.youtube.com/iframe_api";
+  var firstScriptTag = document.getElementsByTagName('script')[0];
+  firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+}
+
+// Global TV Settings State
+let tvAudioEnabled = false;
+let tvTheaterEnabled = false;
+
+document.addEventListener('DOMContentLoaded', () => {
   const navDynamic = document.getElementById('nav-dynamic');
   const statSystems = document.getElementById('stat-systems');
   const homePage = document.getElementById('home');
@@ -11,6 +23,21 @@ const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5N
   const sidebar = document.querySelector('.sidebar');
   const navToggle = document.getElementById('nav-toggle');
   const navOverlay = document.getElementById('nav-overlay');
+
+  // New UI elements for login/user menu
+  const loginOverlay = document.getElementById('login-overlay');
+  const loginForm = document.getElementById('login-form');
+  const loginError = document.getElementById('login-error');
+  const userMenuBtn = document.getElementById('user-menu-btn');
+  const userMenuDropdown = document.getElementById('user-menu-dropdown');
+  const userDisplayName = document.getElementById('user-display-name');
+  const userDropdownName = document.getElementById('user-dropdown-name');
+  const logoutBtn = document.getElementById('logout-btn');
+
+  // TV Settings UI Elements
+  const tvSettingsBox = document.getElementById('tv-settings');
+  const btnTvAudio = document.getElementById('tv-audio-toggle');
+  const btnTvTheater = document.getElementById('tv-fullscreen-toggle');
 
   let systems = [];
 
@@ -133,92 +160,116 @@ const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5N
     return div.innerHTML;
   }
 
-  function init() {
-    // Basic Session Management
-    const loginOverlay = document.getElementById('login-overlay');
-    const loginForm = document.getElementById('login-form');
-    const loginError = document.getElementById('login-error');
+  // Helper functions for UI state
+  function showLoginUI() {
+    document.body.classList.remove('system-mode');
+    if (loginOverlay) loginOverlay.classList.remove('hidden');
+    if (navToggle) navToggle.hidden = true;
+    if (userMenuBtn) userMenuBtn.hidden = true;
+    if (tvSettingsBox) tvSettingsBox.classList.add('hidden');
+  }
 
-    // Check if user is already logged in
-    const sessionData = sessionStorage.getItem('sas_user_data');
-    if (!sessionData) {
-      // Must authenticate
-      document.body.classList.remove('system-mode');
-      if (loginOverlay) loginOverlay.classList.remove('hidden');
-      if (navToggle) navToggle.hidden = true;
-    } else {
-      // Already authenticated
-      const userObj = JSON.parse(sessionData);
+  function showAppUI(userObj) {
+    if (loginOverlay) loginOverlay.classList.add('hidden');
+    if (navToggle) navToggle.hidden = false;
+    if (userMenuBtn) userMenuBtn.hidden = false;
+    setupUserMenu(userObj);
+    finishInit();
+  }
 
-      if (loginOverlay) loginOverlay.classList.add('hidden');
-      if (navToggle) navToggle.hidden = false;
-      setupUserMenu(userObj);
-      finishInit();
-    }
+  // Check login state on load
+  const sessionData = sessionStorage.getItem('sas_user_data');
+  if (sessionData) {
+    const userObj = JSON.parse(sessionData);
+    showAppUI(userObj);
+  } else {
+    showLoginUI();
+  }
 
-    // Handle Login Submit
-    if (loginForm) {
-      loginForm.addEventListener('submit', async function (e) {
-        e.preventDefault();
-        const user = document.getElementById('login-username').value;
-        const pass = document.getElementById('login-password').value;
-        const btn = loginForm.querySelector('.login-btn');
-        const origBtnText = btn.textContent;
+  // Bind TV Settings Toggles
+  if (btnTvAudio) {
+    btnTvAudio.addEventListener('click', () => {
+      tvAudioEnabled = !tvAudioEnabled;
+      if (tvAudioEnabled) {
+        btnTvAudio.classList.add('active-setting');
+        btnTvAudio.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`; // Unmuted Icon
+      } else {
+        btnTvAudio.classList.remove('active-setting');
+        btnTvAudio.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>`; // Muted Icon
+      }
+    });
+  }
 
-        if (user.trim() !== '' && pass.trim() !== '') {
-          btn.textContent = 'Authenticating...';
-          btn.disabled = true;
-          loginError.classList.add('hidden');
+  if (btnTvTheater) {
+    btnTvTheater.addEventListener('click', () => {
+      tvTheaterEnabled = !tvTheaterEnabled;
+      if (tvTheaterEnabled) {
+        btnTvTheater.classList.add('active-setting');
+      } else {
+        btnTvTheater.classList.remove('active-setting');
+        document.body.classList.remove('video-fullscreen-active'); // Force exit if disabling
+      }
+    });
+  }
 
-          if (BACKEND_GAS_URL === "YOUR_NEW_BACKEND_GAS_URL_HERE" || !BACKEND_GAS_URL.startsWith("https://")) {
-            loginError.textContent = "Developer Error: Please paste your deployed Backend.gs URL into app.js Line 2!";
-            loginError.classList.remove('hidden');
-            btn.textContent = origBtnText;
-            btn.disabled = false;
-            return;
-          }
+  // Handle Login Submit
+  if (loginForm) {
+    loginForm.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const user = document.getElementById('login-username').value;
+      const pass = document.getElementById('login-password').value;
+      const btn = loginForm.querySelector('.login-btn');
+      const origBtnText = btn.textContent;
 
-          try {
-            const formData = new URLSearchParams();
-            formData.append('action', 'login');
-            formData.append('username', user);
-            formData.append('password', pass);
+      if (user.trim() !== '' && pass.trim() !== '') {
+        btn.textContent = 'Authenticating...';
+        btn.disabled = true;
+        loginError.classList.add('hidden');
 
-            const r = await fetch(BACKEND_GAS_URL, {
-              method: 'POST',
-              // Using x-www-form-urlencoded to avoid CORS preflight issues with GAS
-              body: formData
-            });
-
-            const responseData = await r.json();
-
-            if (responseData.success) {
-              const sessionObj = { username: responseData.username, role: responseData.role };
-              sessionStorage.setItem('sas_user_data', JSON.stringify(sessionObj));
-
-              loginOverlay.classList.add('hidden');
-              if (navToggle) navToggle.hidden = false;
-              setupUserMenu(sessionObj);
-              finishInit();
-            } else {
-              loginError.textContent = responseData.message || "Invalid credentials.";
-              loginError.classList.remove('hidden');
-            }
-          } catch (err) {
-            loginError.textContent = "Check network. Could not connect to Google Servers.";
-            loginError.classList.remove('hidden');
-            console.error(err);
-          } finally {
-            btn.textContent = origBtnText;
-            btn.disabled = false;
-          }
-        } else {
-          loginError.textContent = "Please fill in all fields.";
+        if (BACKEND_GAS_URL === "YOUR_NEW_BACKEND_GAS_URL_HERE" || !BACKEND_GAS_URL.startsWith("https://")) {
+          loginError.textContent = "Developer Error: Please paste your deployed Backend.gs URL into app.js Line 2!";
           loginError.classList.remove('hidden');
+          btn.textContent = origBtnText;
+          btn.disabled = false;
+          return;
         }
-      });
-    }
 
+        try {
+          const formData = new URLSearchParams();
+          formData.append('action', 'login');
+          formData.append('username', user);
+          formData.append('password', pass);
+
+          const r = await fetch(BACKEND_GAS_URL, {
+            method: 'POST',
+            // Using x-www-form-urlencoded to avoid CORS preflight issues with GAS
+            body: formData
+          });
+
+          const responseData = await r.json();
+
+          if (responseData.success) {
+            const sessionObj = { username: responseData.username, role: responseData.role };
+            sessionStorage.setItem('sas_user_data', JSON.stringify(sessionObj));
+
+            showAppUI(sessionObj);
+          } else {
+            loginError.textContent = responseData.message || "Invalid credentials.";
+            loginError.classList.remove('hidden');
+          }
+        } catch (err) {
+          loginError.textContent = "Check network. Could not connect to Google Servers.";
+          loginError.classList.remove('hidden');
+          console.error(err);
+        } finally {
+          btn.textContent = origBtnText;
+          btn.disabled = false;
+        }
+      } else {
+        loginError.textContent = "Please fill in all fields.";
+        loginError.classList.remove('hidden');
+      }
+    });
   }
 
   function finishInit() {
@@ -269,8 +320,26 @@ const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5N
   }
 
   function setupUserMenu(userObj) {
-    const displayName = document.getElementById('user-display-name');
-    const dropName = document.getElementById('user-dropdown-name');
+    // Adjust UI based on TV Mode
+    if (userObj.role === 'tv') {
+      document.body.classList.add('tv-mode');
+      tvSettingsBox.classList.remove('hidden');
+
+      // Attempt actual fullscreen via API explicitly for the TV role
+      try {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(err => {
+            console.log("Auto-fullscreen blocked by browser. User gesture needed.");
+          });
+        }
+      } catch (err) { }
+    } else {
+      document.body.classList.remove('tv-mode');
+      tvSettingsBox.classList.add('hidden');
+    }
+
+    const displayName = userDisplayName;
+    const dropName = userDropdownName;
 
     // Check if role is admin and format text
     const displayStr = userObj.username;
@@ -282,26 +351,17 @@ const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5N
       roleBadge = '<span style="background:#10b981; color:white; padding:2px 6px; border-radius:4px; font-size:0.7em; margin-left:8px;">TV</span>';
 
       // Trigger TV Mode DOM manipulation
-      document.body.classList.add('tv-mode');
       const homeTitle = document.querySelector('.home-header-title');
       const homeSub = document.querySelector('.home-header-subtitle');
       if (homeTitle) homeTitle.textContent = "ANNOUNCEMENT";
       if (homeSub) homeSub.style.display = 'none';
-
-      // Attempt Fullscreen
-      try {
-        if (document.documentElement.requestFullscreen) {
-          document.documentElement.requestFullscreen();
-        }
-      } catch (e) { console.log("Fullscreen request failed", e); }
     }
 
     if (displayName) displayName.innerHTML = displayStr;
     if (dropName) dropName.innerHTML = `${displayStr} ${roleBadge}`;
 
-    const userMenu = document.getElementById('user-menu');
-    const userBtn = document.getElementById('user-menu-btn');
-    const logoutBtn = document.getElementById('logout-btn');
+    const userMenu = userMenuDropdown;
+    const userBtn = userMenuBtn;
 
     if (userBtn && userMenu) {
       userBtn.addEventListener('click', function (e) {
@@ -573,6 +633,7 @@ const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5N
 
   function renderPosts(posts, container, role) {
     container.innerHTML = '';
+    ytPlayers = {}; // Clear previous instances
 
     if (role === 'tv') {
       let tvPosts = posts.filter(p => String(p.showOnTv).toLowerCase() !== 'false');
@@ -608,12 +669,12 @@ const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5N
           if (ytId) {
             imgHtml = `
               <img src="https://img.youtube.com/vi/${ytId}/maxresdefault.jpg" class="home-news-image-blur" style="position: absolute; top: -10%; left: -10%; width: 120%; height: 120%; object-fit: cover; filter: blur(40px); opacity: 0.5; z-index: 0; pointer-events: none;" aria-hidden="true" loading="lazy" onerror="this.src='https://img.youtube.com/vi/${ytId}/hqdefault.jpg'">
-              <iframe src="https://www.youtube.com/embed/${ytId}?autoplay=1&mute=1&loop=1&playlist=${ytId}&controls=0" class="home-news-image" style="position: relative; z-index: 1; border: none; width: 100%; height: 100%; object-position: ${objPos}; object-fit: ${objSize};" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+              <iframe id="ytplayer-${post.timestamp}" src="https://www.youtube.com/embed/${ytId}?autoplay=1&mute=1&controls=0&enablejsapi=1" class="home-news-image yt-video-frame" style="position: relative; z-index: 1; border: none; width: 100%; height: 100%; object-position: ${objPos}; object-fit: ${objSize};" allow="autoplay; encrypted-media" allowfullscreen></iframe>
             `;
           } else if (urlLower.endsWith('.mp4') || urlLower.endsWith('.webm')) {
             imgHtml = `
-              <video src="${post.imageUrl}" class="home-news-image-blur" style="position: absolute; top: -10%; left: -10%; width: 120%; height: 120%; object-fit: cover; filter: blur(40px); opacity: 0.5; z-index: 0; pointer-events: none;" autoplay muted loop playsinline></video>
-              <video src="${post.imageUrl}" class="home-news-image" style="position: relative; z-index: 1; object-position: ${objPos}; object-fit: ${objSize};" autoplay muted loop playsinline></video>
+              <video src="${post.imageUrl}" class="home-news-image-blur" style="position: absolute; top: -10%; left: -10%; width: 120%; height: 120%; object-fit: cover; filter: blur(40px); opacity: 0.5; z-index: 0; pointer-events: none;" autoplay muted playsinline></video>
+              <video src="${post.imageUrl}" class="home-news-image" style="position: relative; z-index: 1; object-position: ${objPos}; object-fit: ${objSize};" autoplay muted playsinline></video>
             `;
           } else {
             imgHtml = `
@@ -831,6 +892,8 @@ const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5N
     }
   }
 
+  let ytPlayers = {}; // Global store for YT players
+
   function initCarousel(container) {
     var slides = Array.prototype.slice.call(container.querySelectorAll('.home-news-slide'));
     var dots = Array.prototype.slice.call(container.querySelectorAll('.home-news-dot'));
@@ -839,6 +902,11 @@ const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5N
     var current = 0;
     var intervalMs = 7000;
     var timer;
+
+    function next() {
+      var nextIndex = (current + 1) % slides.length;
+      setActive(nextIndex);
+    }
 
     function setActive(index) {
       slides.forEach(function (s, i) {
@@ -850,11 +918,60 @@ const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5N
         else d.classList.remove('is-active');
       });
       current = index;
-    }
 
-    function next() {
-      var nextIndex = (current + 1) % slides.length;
-      setActive(nextIndex);
+      // Check for video auto-advance logic
+      stop(); // Stop the standard interval timer
+
+      const activeSlide = slides[index];
+      const videoEl = activeSlide.querySelector('video.home-news-image');
+      const iframeEl = activeSlide.querySelector('iframe.home-news-image');
+
+      // Handle CSS Theater Mode
+      if ((videoEl || iframeEl) && tvTheaterEnabled) {
+        document.body.classList.add('video-fullscreen-active');
+      } else {
+        document.body.classList.remove('video-fullscreen-active');
+      }
+
+      if (videoEl) {
+        videoEl.currentTime = 0;
+        videoEl.muted = !tvAudioEnabled;
+        videoEl.play().catch(e => console.error("Video play prevented:", e));
+        videoEl.onended = function () {
+          if (slides.length > 1) next();
+        };
+      } else if (iframeEl && window.YT && window.YT.Player) {
+        const iframeId = iframeEl.id;
+        if (!ytPlayers[iframeId]) {
+          ytPlayers[iframeId] = new YT.Player(iframeId, {
+            events: {
+              'onReady': function (event) {
+                if (tvAudioEnabled) event.target.unMute();
+                else event.target.mute();
+                event.target.playVideo();
+              },
+              'onStateChange': function (event) {
+                // When video naturally ends (State 0), go to next slide
+                if (event.data === YT.PlayerState.ENDED) {
+                  if (slides.length > 1) next();
+                }
+              }
+            }
+          });
+        } else {
+          try {
+            if (tvAudioEnabled) ytPlayers[iframeId].unMute();
+            else ytPlayers[iframeId].mute();
+            ytPlayers[iframeId].seekTo(0);
+            ytPlayers[iframeId].playVideo();
+          } catch (e) {
+            console.warn("YT Player not fully ready yet.");
+          }
+        }
+      } else {
+        // Standard static image slide
+        start();
+      }
     }
 
     function start() {
@@ -885,5 +1002,4 @@ const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5N
     start();
   }
 
-  init();
-})();
+});

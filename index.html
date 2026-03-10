@@ -90,6 +90,27 @@
             </div>
           </div>
           <div class="home-header-meta">
+            <!-- TV Mode Custom Settings -->
+            <div class="tv-settings hidden" id="tv-settings">
+              <button id="tv-audio-toggle" class="icon-btn" aria-label="Toggle Audio" title="Unmute Videos">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                  <line x1="23" y1="9" x2="17" y2="15"></line>
+                  <line x1="17" y1="9" x2="23" y2="15"></line>
+                </svg>
+              </button>
+              <button id="tv-fullscreen-toggle" class="icon-btn" aria-label="Auto Fullscreen"
+                title="Auto-Theater Mode (Off)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                  <line x1="8" y1="21" x2="16" y2="21"></line>
+                  <line x1="12" y1="17" x2="12" y2="21"></line>
+                </svg>
+              </button>
+            </div>
+
             <div class="user-menu" id="user-menu">
               <button class="user-menu-btn" id="user-menu-btn" aria-haspopup="true" aria-expanded="false">
                 <span class="user-menu-avatar" style="display:flex; align-items:center;">
@@ -169,7 +190,8 @@
             </div>
             <input type="hidden" id="post-img-pos" value="50% 50%">
             <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; text-align: right;">Position:
-              <span id="post-preview-coords">50% 50%</span></div>
+              <span id="post-preview-coords">50% 50%</span>
+            </div>
           </div>
           <div class="input-group" id="post-img-size-group">
             <label for="post-img-size">Image Size on TV</label>
