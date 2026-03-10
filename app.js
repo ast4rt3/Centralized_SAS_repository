@@ -1,3 +1,6 @@
+// REPLACE THIS WITH YOUR NEW SPREADSHEET DEPLOYMENT URL
+const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5NorparafTXZSNdUDFkvsAUjjAcCc1mJZAlooP1BPIeMvFiclGM2VwsA/exec";
+
 (function () {
   const navDynamic = document.getElementById('nav-dynamic');
   const statSystems = document.getElementById('stat-systems');
@@ -135,39 +138,82 @@
     const loginOverlay = document.getElementById('login-overlay');
     const loginForm = document.getElementById('login-form');
     const loginError = document.getElementById('login-error');
-    
+
     // Check if user is already logged in
-    const activeSession = sessionStorage.getItem('sas_user');
-    if (!activeSession) {
+    const sessionData = sessionStorage.getItem('sas_user_data');
+    if (!sessionData) {
       // Must authenticate
       document.body.classList.remove('system-mode');
       if (loginOverlay) loginOverlay.classList.remove('hidden');
       if (navToggle) navToggle.hidden = true;
     } else {
       // Already authenticated
+      const userObj = JSON.parse(sessionData);
+
       if (loginOverlay) loginOverlay.classList.add('hidden');
       if (navToggle) navToggle.hidden = false;
-      setupUserMenu(activeSession);
+      setupUserMenu(userObj);
       finishInit();
     }
 
-    // Handle Login Submit (Placeholder until GAS is ready)
+    // Handle Login Submit
     if (loginForm) {
-      loginForm.addEventListener('submit', function (e) {
+      loginForm.addEventListener('submit', async function (e) {
         e.preventDefault();
         const user = document.getElementById('login-username').value;
         const pass = document.getElementById('login-password').value;
-        
-        // --- TODO: Replace with real Google Apps Script Fetch ---
-        // Right now, any password works so the USER can verify the aesthetic
-        if (user.trim() !== '') {
-          sessionStorage.setItem('sas_user', user);
-          loginOverlay.classList.add('hidden');
-          if (navToggle) navToggle.hidden = false;
+        const btn = loginForm.querySelector('.login-btn');
+        const origBtnText = btn.textContent;
+
+        if (user.trim() !== '' && pass.trim() !== '') {
+          btn.textContent = 'Authenticating...';
+          btn.disabled = true;
           loginError.classList.add('hidden');
-          setupUserMenu(user);
-          finishInit();
+
+          if (BACKEND_GAS_URL === "YOUR_NEW_BACKEND_GAS_URL_HERE" || !BACKEND_GAS_URL.startsWith("https://")) {
+            loginError.textContent = "Developer Error: Please paste your deployed Backend.gs URL into app.js Line 2!";
+            loginError.classList.remove('hidden');
+            btn.textContent = origBtnText;
+            btn.disabled = false;
+            return;
+          }
+
+          try {
+            const formData = new URLSearchParams();
+            formData.append('action', 'login');
+            formData.append('username', user);
+            formData.append('password', pass);
+
+            const r = await fetch(BACKEND_GAS_URL, {
+              method: 'POST',
+              // Using x-www-form-urlencoded to avoid CORS preflight issues with GAS
+              body: formData
+            });
+
+            const responseData = await r.json();
+
+            if (responseData.success) {
+              const sessionObj = { username: responseData.username, role: responseData.role };
+              sessionStorage.setItem('sas_user_data', JSON.stringify(sessionObj));
+
+              loginOverlay.classList.add('hidden');
+              if (navToggle) navToggle.hidden = false;
+              setupUserMenu(sessionObj);
+              finishInit();
+            } else {
+              loginError.textContent = responseData.message || "Invalid credentials.";
+              loginError.classList.remove('hidden');
+            }
+          } catch (err) {
+            loginError.textContent = "Check network. Could not connect to Google Servers.";
+            loginError.classList.remove('hidden');
+            console.error(err);
+          } finally {
+            btn.textContent = origBtnText;
+            btn.disabled = false;
+          }
         } else {
+          loginError.textContent = "Please fill in all fields.";
           loginError.classList.remove('hidden');
         }
       });
@@ -210,7 +256,8 @@
         systems = Array.isArray(data) ? data : (data.systems || []);
         if (statSystems) statSystems.textContent = systems.length;
         renderNav();
-        initHomeNewsCarousel();
+        initPostSetup();
+        fetchPosts(); // Load dynamic posts
         window.addEventListener('hashchange', syncFromHash);
         syncFromHash();
       })
@@ -221,22 +268,27 @@
       });
   }
 
-  function setupUserMenu(username) {
+  function setupUserMenu(userObj) {
     const displayName = document.getElementById('user-display-name');
     const dropName = document.getElementById('user-dropdown-name');
-    if (displayName) displayName.textContent = username;
-    if (dropName) dropName.textContent = username;
+
+    // Check if role is admin and format text
+    const displayStr = userObj.username;
+    const roleBadge = userObj.role === 'admin' ? '<span style="background:var(--nbsc-gold); color:var(--nbsc-dark); padding:2px 6px; border-radius:4px; font-size:0.7em; margin-left:8px;">ADMIN</span>' : '';
+
+    if (displayName) displayName.innerHTML = displayStr;
+    if (dropName) dropName.innerHTML = `${displayStr} ${roleBadge}`;
 
     const userMenu = document.getElementById('user-menu');
     const userBtn = document.getElementById('user-menu-btn');
     const logoutBtn = document.getElementById('logout-btn');
 
     if (userBtn && userMenu) {
-      userBtn.addEventListener('click', function(e) {
+      userBtn.addEventListener('click', function (e) {
         e.stopPropagation();
         userMenu.classList.toggle('is-open');
       });
-      document.addEventListener('click', function(e) {
+      document.addEventListener('click', function (e) {
         if (!userMenu.contains(e.target)) {
           userMenu.classList.remove('is-open');
         }
@@ -244,17 +296,193 @@
     }
 
     if (logoutBtn) {
-      logoutBtn.addEventListener('click', function() {
-        sessionStorage.removeItem('sas_user');
+      logoutBtn.addEventListener('click', function () {
+        sessionStorage.removeItem('sas_user_data');
         window.location.reload();
+      });
+    }
+
+    // Admin check for "Add Post" button
+    const addPostBtn = document.getElementById('add-post-btn');
+    if (addPostBtn && userObj.role === 'admin') {
+      addPostBtn.classList.remove('hidden');
+    }
+  }
+
+  function initPostSetup() {
+    const addPostBtn = document.getElementById('add-post-btn');
+    const modal = document.getElementById('add-post-modal');
+    const cancelBtn = document.getElementById('cancel-post-btn');
+    const form = document.getElementById('add-post-form');
+    const errorMsg = document.getElementById('post-error');
+
+    if (addPostBtn && modal) {
+      addPostBtn.addEventListener('click', () => {
+        modal.classList.remove('hidden');
+        if (errorMsg) errorMsg.classList.add('hidden');
+      });
+
+      cancelBtn.addEventListener('click', () => {
+        modal.classList.add('hidden');
+        form.reset();
+      });
+    }
+
+    if (form) {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const sessionData = sessionStorage.getItem('sas_user_data');
+        if (!sessionData) return;
+
+        const title = document.getElementById('post-title').value;
+        const desc = document.getElementById('post-desc').value;
+        const img = document.getElementById('post-img').value;
+        const submitBtn = document.getElementById('submit-post-btn');
+        const origText = submitBtn.textContent;
+
+        submitBtn.textContent = "Posting...";
+        submitBtn.disabled = true;
+        if (errorMsg) errorMsg.classList.add('hidden');
+
+        try {
+          const userObj = JSON.parse(sessionData);
+          const confirmPass = prompt("Please re-enter your admin password to confirm this post:");
+          if (!confirmPass) {
+            submitBtn.textContent = origText;
+            submitBtn.disabled = false;
+            return;
+          }
+
+          const payload = {
+            action: "addPost",
+            username: userObj.username,
+            password: confirmPass,
+            title: title,
+            description: desc,
+            imageUrl: img
+          };
+
+          const r = await fetch(BACKEND_GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
+
+          const responseData = await r.json();
+          if (responseData.success) {
+            modal.classList.add('hidden');
+            form.reset();
+            fetchPosts(); // Refresh the feed
+          } else {
+            if (errorMsg) {
+              errorMsg.textContent = responseData.message || "Failed to post.";
+              errorMsg.classList.remove('hidden');
+            }
+          }
+        } catch (err) {
+          if (errorMsg) {
+            errorMsg.textContent = "Network error. Could not post.";
+            errorMsg.classList.remove('hidden');
+          }
+        } finally {
+          submitBtn.textContent = origText;
+          submitBtn.disabled = false;
+        }
       });
     }
   }
 
-  function initHomeNewsCarousel() {
-    var slides = Array.prototype.slice.call(document.querySelectorAll('.home-news-slide'));
-    var dots = Array.prototype.slice.call(document.querySelectorAll('.home-news-dot'));
-    if (!slides.length || !dots.length) return;
+  async function fetchPosts() {
+    const loading = document.getElementById('posts-loading');
+    const container = document.getElementById('posts-container');
+    const empty = document.getElementById('posts-empty');
+    if (!loading || !container || !empty) return;
+
+    if (BACKEND_GAS_URL === "YOUR_NEW_BACKEND_GAS_URL_HERE" || !BACKEND_GAS_URL.startsWith("https://")) {
+      loading.classList.add('hidden');
+      empty.innerHTML = "<p><i>Cannot fetch posts until Backend.gs URL is set.</i></p>";
+      empty.classList.remove('hidden');
+      return;
+    }
+
+    loading.classList.remove('hidden');
+    container.classList.add('hidden');
+    empty.classList.add('hidden');
+
+    try {
+      const r = await fetch(BACKEND_GAS_URL);
+      const data = await r.json();
+
+      loading.classList.add('hidden');
+
+      if (data.success && data.posts && data.posts.length > 0) {
+        renderPosts(data.posts, container);
+        container.className = 'home-news'; // Override container grid settings to fit carousel
+      } else {
+        empty.classList.remove('hidden');
+      }
+    } catch (err) {
+      loading.classList.add('hidden');
+      empty.innerHTML = "<p>Error loading posts. Please try again later.</p>";
+      empty.classList.remove('hidden');
+      console.error("Fetch Posts Error:", err);
+    }
+  }
+
+  function renderPosts(posts, container) {
+    container.innerHTML = '';
+
+    const track = document.createElement('div');
+    track.className = 'home-news-track';
+
+    const dotsContainer = document.createElement('div');
+    dotsContainer.className = 'home-news-dots';
+    dotsContainer.setAttribute('role', 'tablist');
+
+    posts.forEach((post, index) => {
+      const slide = document.createElement('article');
+      slide.className = 'home-news-slide' + (index === 0 ? ' is-active' : '');
+      slide.setAttribute('data-index', index);
+
+      let imgHtml = '';
+      if (post.imageUrl && post.imageUrl.trim() !== '') {
+        imgHtml = `<img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="home-news-image" loading="lazy">`;
+      } else {
+        imgHtml = `<div class="home-news-image" style="background:var(--nbsc-dark); display:flex; flex-direction:column; align-items:center; justify-content:center; color:white; padding: 20px; text-align: center;"><img src="https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png" style="height:60px; margin-bottom:10px; opacity:0.3"></div>`;
+      }
+
+      slide.innerHTML = `
+        <div class="home-news-image-wrap">
+          ${imgHtml}
+        </div>
+        <div class="home-news-caption">
+          <h3>${escapeHtml(post.title)}</h3>
+          <p>${escapeHtml(post.description)}</p>
+          <div style="font-size:0.75rem; color:var(--text-muted); margin-top:8px">${escapeHtml(post.timestamp)}</div>
+        </div>
+      `;
+      track.appendChild(slide);
+
+      const dot = document.createElement('button');
+      dot.className = 'home-news-dot' + (index === 0 ? ' is-active' : '');
+      dot.type = 'button';
+      dot.setAttribute('data-index', index);
+      dot.setAttribute('aria-label', 'Slide ' + (index + 1));
+      dotsContainer.appendChild(dot);
+    });
+
+    container.appendChild(track);
+    if (posts.length > 1) {
+      container.appendChild(dotsContainer);
+    }
+
+    initCarousel(container);
+  }
+
+  function initCarousel(container) {
+    var slides = Array.prototype.slice.call(container.querySelectorAll('.home-news-slide'));
+    var dots = Array.prototype.slice.call(container.querySelectorAll('.home-news-dot'));
+    if (!slides.length) return;
 
     var current = 0;
     var intervalMs = 7000;
@@ -279,7 +507,9 @@
 
     function start() {
       stop();
-      timer = window.setInterval(next, intervalMs);
+      if (slides.length > 1) {
+        timer = window.setInterval(next, intervalMs);
+      }
     }
 
     function stop() {
