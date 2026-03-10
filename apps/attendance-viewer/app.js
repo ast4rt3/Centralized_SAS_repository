@@ -16,12 +16,70 @@ const els = {
 
 let masterData = [];
 
+const CACHE_KEY = 'attendance_masterlist_cache';
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes cache
+
+let searchTimeout;
+
 function init() {
-  els.refreshBtn.addEventListener('click', fetchData);
-  els.retryBtn.addEventListener('click', fetchData);
-  els.searchInput.addEventListener('input', () => renderTable(els.searchInput.value, els.columnFilter.value));
+  els.refreshBtn.addEventListener('click', () => fetchData(true));
+  els.retryBtn.addEventListener('click', () => fetchData(true));
+  
+  // Debounce the search input to prevent lag on every keystroke
+  els.searchInput.addEventListener('input', () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      renderTable(els.searchInput.value, els.columnFilter.value);
+    }, 300); // 300ms delay
+  });
+  
   els.columnFilter.addEventListener('change', () => renderTable(els.searchInput.value, els.columnFilter.value));
-  fetchData();
+  
+  loadInitialData(); // Load cache first if available
+}
+
+function loadInitialData() {
+  const cached = localStorage.getItem(CACHE_KEY);
+  if (cached) {
+    try {
+      const parsed = JSON.parse(cached);
+      const isExpired = (Date.now() - parsed.timestamp) > CACHE_TTL_MS;
+      
+      // If valid cache, load instantly without network request
+      if (!isExpired && parsed.data && parsed.headers) {
+        masterData = parsed.data;
+        buildHeaders(parsed.headers);
+        setState('loaded');
+        renderTable();
+        return;
+      }
+    } catch (e) {
+      console.warn('Cache could not be parsed', e);
+    }
+  }
+  
+  // If no cache or expired, fetch fresh data
+  fetchData(true);
+}
+
+function buildHeaders(headersArr) {
+  els.thead.innerHTML = '';
+  els.columnFilter.innerHTML = '<option value="all" style="color: black;">All Columns</option>';
+  
+  headersArr.forEach((h, i) => {
+    const th = document.createElement('th');
+    th.textContent = h || `Column ${i+1}`;
+    th.dataset.colIndex = i;
+    els.thead.appendChild(th);
+
+    if (i > 0) { 
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = h || `Column ${i+1}`;
+        opt.style.color = "black";
+        els.columnFilter.appendChild(opt);
+    }
+  });
 }
 
 function setState(state, msg = '') {
@@ -54,6 +112,28 @@ function processTimeValue(v) {
   return `<span class="status-badge present" title="${str}">${time}</span>`;
 }
 
+function processYearValue(v) {
+  if (!v) return '';
+  const str = v.toString().trim();
+  const lowerStr = str.toLowerCase();
+  
+  if (lowerStr.includes('first') || lowerStr.includes('1st')) {
+    return `<span class="status-badge year-1" title="${str}">${str}</span>`;
+  }
+  if (lowerStr.includes('second') || lowerStr.includes('2nd')) {
+    return `<span class="status-badge year-2" title="${str}">${str}</span>`;
+  }
+  if (lowerStr.includes('third') || lowerStr.includes('3rd')) {
+    return `<span class="status-badge year-3" title="${str}">${str}</span>`;
+  }
+  if (lowerStr.includes('fourth') || lowerStr.includes('4th')) {
+    return `<span class="status-badge year-4" title="${str}">${str}</span>`;
+  }
+  
+  // Default fallback if it doesn't match standard year naming
+  return `<span class="status-badge year-default" title="${str}">${str}</span>`;
+}
+
 function renderTable(filter = '', selectedColumnIndex = 'all') {
   els.tbody.innerHTML = '';
   const term = filter.toLowerCase().trim();
@@ -84,6 +164,9 @@ function renderTable(filter = '', selectedColumnIndex = 'all') {
       // Let's assume indices > 2 are timestamps (adjust if needed based on data)
       if (i > 2) {
         td.innerHTML = processTimeValue(cell);
+      } else if (i === 2) {
+        // Column E (Index 2) is Year/Level
+        td.innerHTML = processYearValue(cell);
       } else {
         td.textContent = cell || '';
         if (i === 0) td.style.fontWeight = '600'; // Make Name bold
@@ -96,7 +179,7 @@ function renderTable(filter = '', selectedColumnIndex = 'all') {
   els.recordCount.textContent = count;
 }
 
-function fetchData() {
+function fetchData(forceRefresh = false) {
   setState('loading');
   masterData = [];
   els.thead.innerHTML = '';
@@ -125,26 +208,15 @@ function fetchData() {
         throw new Error(data.message || "Unknown server error");
       }
 
-      // Build Headers AND populate Dropdown Filter
-      els.columnFilter.innerHTML = '<option value="all" style="color: black;">All Columns</option>';
-      data.headers.forEach((h, i) => {
-        const th = document.createElement('th');
-        th.textContent = h || `Column ${i+1}`;
-        // Store index so we can filter by it
-        th.dataset.colIndex = i;
-        els.thead.appendChild(th);
+      // Save to Cache
+      localStorage.setItem(CACHE_KEY, JSON.stringify({
+         timestamp: Date.now(),
+         headers: data.headers,
+         data: data.rows
+      }));
 
-        // Populate dropdown with options (skip Name/ID columns if you only want to filter by specific events)
-        if (i > 0) { // Assuming 0 is Name
-            const opt = document.createElement('option');
-            opt.value = i;
-            opt.textContent = h || `Column ${i+1}`;
-            opt.style.color = "black";
-            els.columnFilter.appendChild(opt);
-        }
-      });
-
-      // Build Rows
+      // Build interface
+      buildHeaders(data.headers);
       masterData = data.rows;
 
       setState('loaded');
