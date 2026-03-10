@@ -1,5 +1,5 @@
 // REPLACE THIS WITH YOUR NEW SPREADSHEET DEPLOYMENT URL
-const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbyj18L5_tHOfQeNnU-tH6nOf_gYgG5f_a51yM9nS6qgQONy-57Z1aON7_EerqN3sL4k/exec"; // <-- Update with new URL
+const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5NorparafTXZSNdUDFkvsAUjjAcCc1mJZAlooP1BPIeMvFiclGM2VwsA/exec";
 
 // Load YouTube IFrame API
 if (!window.YT) {
