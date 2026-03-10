@@ -274,7 +274,20 @@ const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5N
 
     // Check if role is admin and format text
     const displayStr = userObj.username;
-    const roleBadge = userObj.role === 'admin' ? '<span style="background:var(--nbsc-gold); color:var(--nbsc-dark); padding:2px 6px; border-radius:4px; font-size:0.7em; margin-left:8px;">ADMIN</span>' : '';
+    let roleBadge = '';
+
+    if (userObj.role === 'admin') {
+      roleBadge = '<span style="background:var(--nbsc-gold); color:var(--nbsc-dark); padding:2px 6px; border-radius:4px; font-size:0.7em; margin-left:8px;">ADMIN</span>';
+    } else if (userObj.role === 'tv') {
+      roleBadge = '<span style="background:#10b981; color:white; padding:2px 6px; border-radius:4px; font-size:0.7em; margin-left:8px;">TV</span>';
+
+      // Trigger TV Mode DOM manipulation
+      document.body.classList.add('tv-mode');
+      const homeTitle = document.querySelector('.home-header-title');
+      const homeSub = document.querySelector('.home-header-subtitle');
+      if (homeTitle) homeTitle.textContent = "ANNOUNCEMENT";
+      if (homeSub) homeSub.style.display = 'none';
+    }
 
     if (displayName) displayName.innerHTML = displayStr;
     if (dropName) dropName.innerHTML = `${displayStr} ${roleBadge}`;
