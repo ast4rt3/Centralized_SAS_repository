@@ -353,7 +353,8 @@ body {
 }
 
 .home-news-image,
-video.home-news-image {
+video.home-news-image,
+iframe.home-news-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -862,7 +863,9 @@ body.system-mode .content {
   box-shadow: var(--shadow);
 }
 
-.post-image {
+.post-image,
+video.post-image,
+iframe.post-image {
   width: 100%;
   aspect-ratio: 16 / 7;
   object-fit: cover;
@@ -1081,7 +1084,8 @@ body.tv-mode .home-news-image-wrap {
 }
 
 body.tv-mode .home-news-image,
-body.tv-mode video.home-news-image {
+body.tv-mode video.home-news-image,
+body.tv-mode iframe.home-news-image {
   object-fit: contain !important;
 }
 

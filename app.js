@@ -564,6 +564,13 @@ const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5N
     }
   }
 
+  function getYouTubeVideoId(url) {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  }
+
   function renderPosts(posts, container, role) {
     container.innerHTML = '';
 
@@ -596,8 +603,14 @@ const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5N
           const objPos = post.imagePosition || 'center';
           const objSize = post.imageSize || 'cover';
           const urlLower = post.imageUrl.toLowerCase();
+          const ytId = getYouTubeVideoId(post.imageUrl);
 
-          if (urlLower.endsWith('.mp4') || urlLower.endsWith('.webm')) {
+          if (ytId) {
+            imgHtml = `
+              <img src="https://img.youtube.com/vi/${ytId}/maxresdefault.jpg" class="home-news-image-blur" style="position: absolute; top: -10%; left: -10%; width: 120%; height: 120%; object-fit: cover; filter: blur(40px); opacity: 0.5; z-index: 0; pointer-events: none;" aria-hidden="true" loading="lazy" onerror="this.src='https://img.youtube.com/vi/${ytId}/hqdefault.jpg'">
+              <iframe src="https://www.youtube.com/embed/${ytId}?autoplay=1&mute=1&loop=1&playlist=${ytId}&controls=0" class="home-news-image" style="position: relative; z-index: 1; border: none; width: 100%; height: 100%; object-position: ${objPos}; object-fit: ${objSize};" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+            `;
+          } else if (urlLower.endsWith('.mp4') || urlLower.endsWith('.webm')) {
             imgHtml = `
               <video src="${post.imageUrl}" class="home-news-image-blur" style="position: absolute; top: -10%; left: -10%; width: 120%; height: 120%; object-fit: cover; filter: blur(40px); opacity: 0.5; z-index: 0; pointer-events: none;" autoplay muted loop playsinline></video>
               <video src="${post.imageUrl}" class="home-news-image" style="position: relative; z-index: 1; object-position: ${objPos}; object-fit: ${objSize};" autoplay muted loop playsinline></video>
@@ -659,8 +672,11 @@ const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5N
           const objPos = post.imagePosition || 'center';
           const objSize = post.imageSize || 'cover';
           const urlLower = post.imageUrl.toLowerCase();
+          const ytId = getYouTubeVideoId(post.imageUrl);
 
-          if (urlLower.endsWith('.mp4') || urlLower.endsWith('.webm')) {
+          if (ytId) {
+            imgHtml = `<iframe src="https://www.youtube.com/embed/${ytId}?autoplay=0&mute=1&loop=1&playlist=${ytId}&controls=1" class="post-image" style="border: none; object-position: ${objPos}; object-fit: ${objSize};" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+          } else if (urlLower.endsWith('.mp4') || urlLower.endsWith('.webm')) {
             imgHtml = `<video src="${post.imageUrl}" class="post-image" style="object-position: ${objPos}; object-fit: ${objSize};" autoplay muted loop playsinline></video>`;
           } else {
             imgHtml = `<img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="post-image" style="object-position: ${objPos}; object-fit: ${objSize};" loading="lazy">`;
