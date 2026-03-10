@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>NBSC Mailer</title>
+  <!-- Use exact same viewport limits as Attendance Scanner -->
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;700;800&family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      /* Core NBSC Colors matching the Hub */
+      --nbsc-dark: #001a33;
+      --nbsc-blue: #004a99;
+      --nbsc-gold: #f0ad4e;
+      --nbsc-light: #f8fafc;
+
+      --bg-main: var(--nbsc-dark);
+      --bg-card: #ffffff;
+      --border: rgba(0, 26, 51, 0.1);
+      --text-main: #1f2937;
+      --text-muted: #6b7280;
+
+      --font-display: 'DM Sans', sans-serif;
+      --font-sans: 'Inter', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg-main);
+      background: linear-gradient(135deg, var(--nbsc-dark) 0%, #001224 100%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 30px 20px;
+    }
+
+    .mailer-container {
+      width: 100%;
+      max-width: 640px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Header */
+    .mailer-header {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 24px;
+      border-radius: 20px;
+      backdrop-filter: blur(10px);
+    }
+
+    .mailer-logo {
+      width: 60px;
+      height: auto;
+      filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
+    }
+
+    .mailer-title {
+      color: #ffffff;
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 1.8rem;
+      letter-spacing: -0.5px;
+      line-height: 1.2;
+    }
+
+    .mailer-subtitle {
+      color: var(--nbsc-gold);
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* Card styling */
+    .mailer-card {
+      background: var(--bg-card);
+      border-radius: 24px;
+      padding: 32px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Mode Toggle */
+    .mailer-mode-toggle {
+      display: flex;
+      background: #f1f5f9;
+      border-radius: 12px;
+      padding: 6px;
+      margin-bottom: 28px;
+    }
+
+    .mailer-mode-toggle input {
+      display: none;
+    }
+
+    .mode-label {
+      flex: 1;
+      text-align: center;
+      padding: 12px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+    }
+
+    .mailer-mode-toggle input:checked+.mode-label {
+      background: var(--nbsc-blue);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(0, 74, 153, 0.2);
+    }
+
+    /* Forms */
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .input-group.hidden {
+      display: none;
+    }
+
+    .input-group label {
+      font-family: var(--font-display);
+      font-weight: 700;
+      color: var(--nbsc-dark);
+      font-size: 0.95rem;
+    }
+
+    .input-hint {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .input-group input,
+    .input-group textarea {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      font-family: var(--font-sans);
+      font-size: 1rem;
+      transition: all 0.2s;
+      background: #f8fafc;
+      resize: vertical;
+    }
+
+    .input-group input:focus,
+    .input-group textarea:focus {
+      outline: none;
+      border-color: var(--nbsc-gold);
+      background: #ffffff;
+      box-shadow: 0 0 0 4px rgba(240, 173, 78, 0.15);
+    }
+
+    /* Batch Box Info */
+    .batch-info-box {
+      background: #f0f7ff;
+      border: 1px dashed var(--nbsc-blue);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      color: var(--nbsc-dark);
+    }
+
+    .batch-icon {
+      font-size: 1.5rem;
+    }
+
+    /* Send Button */
+    .send-btn {
+      width: 100%;
+      background: var(--nbsc-gold);
+      color: var(--nbsc-dark);
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 1.1rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 16px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.2s;
+      margin-top: 10px;
+    }
+
+    .send-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(240, 173, 78, 0.4);
+      background: #f39c12;
+    }
+
+    .send-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Status Messages */
+    .status-message {
+      padding: 16px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-align: center;
+    }
+
+    .status-message.hidden {
+      display: none;
+    }
+
+    .status-success {
+      background: #f0fdf4;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+
+    .status-error {
+      background: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+
+    /* Loading Spin Animation */
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .spin {
+      display: inline-block;
+      animation: spin 1s linear infinite;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="mailer-container">
+    <header class="mailer-header">
+      <img src="https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png" alt="NBSC Logo"
+        class="mailer-logo">
+      <div class="mailer-title-wrap">
+        <h1 class="mailer-title">NBSC Mailer</h1>
+        <p class="mailer-subtitle">Official Communications Portal</p>
+      </div>
+    </header>
+
+    <main class="mailer-main">
+      <div class="mailer-card">
+        <div class="mailer-mode-toggle">
+          <input type="radio" id="mode-single" name="mailMode" value="single" checked>
+          <label for="mode-single" class="mode-label">Single Email</label>
+          <input type="radio" id="mode-batch" name="mailMode" value="batch">
+          <label for="mode-batch" class="mode-label">Batch Send</label>
+        </div>
+
+        <form id="mailerForm">
+
+          <div class="input-group" id="recipient-group">
+            <label for="toEmail">Recipient Email</label>
+            <input type="email" id="toEmail" placeholder="student@nbsc.edu.ph" required>
+            <p class="input-hint">Who are you sending this to?</p>
+          </div>
+
+          <div class="input-group hidden" id="batch-group">
+            <label>Masterlist Batch Settings</label>
+            <div class="batch-info-box">
+              <span class="batch-icon">📊</span>
+              <p>Emails will be dynamically sent to users on the <strong>Masterlist</strong> who meet the consent
+                criteria.</p>
+            </div>
+          </div>
+
+          <div class="input-group">
+            <label for="subject">Email Subject</label>
+            <input type="text" id="subject" placeholder="OFFICIAL: NBSC Registration Pass" required>
+          </div>
+
+          <div class="input-group">
+            <label for="body">Message Body (HTML Supported)</label>
+            <textarea id="body" rows="8"
+              placeholder="Dear Student,&#10;&#10;Your validation is confirmed...&#10;&#10;Regards,&#10;SAS Office"
+              required></textarea>
+            <p class="input-hint">You can use standard HTML tags like &lt;strong&gt;, &lt;p&gt;, &lt;br&gt; for
+              formatting.</p>
+          </div>
+
+          <div class="status-message hidden" id="statusMessage"></div>
+
+          <button class="send-btn" id="sendBtn" type="submit">
+            <span class="send-icon">✉️</span>
+            <span id="sendText">Send Email</span>
+          </button>
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // IMPORTANT: Replace this with your newly deployed Mailer Google Apps Script URL
+      const GAS_URL = "https://script.google.com/macros/s/AKfycbwjd458Xj3RoPvzfRgXxWxzWO81rKEtiS3QQBt5OnPz8Itin_w_ph42olVq1c5A-0Y-/exec";
+
+      const modeSingle = document.getElementById('mode-single');
+      const modeBatch = document.getElementById('mode-batch');
+      const recipientGroup = document.getElementById('recipient-group');
+      const toEmailInput = document.getElementById('toEmail');
+      const batchGroup = document.getElementById('batch-group');
+      const mailerForm = document.getElementById('mailerForm');
+      const statusMessage = document.getElementById('statusMessage');
+      const sendBtn = document.getElementById('sendBtn');
+      const sendIcon = document.querySelector('.send-icon');
+      const sendText = document.getElementById('sendText');
+
+      // Toggle Single vs Batch Mode
+      function updateMode() {
+        if (modeSingle.checked) {
+          recipientGroup.classList.remove('hidden');
+          toEmailInput.required = true;
+          batchGroup.classList.add('hidden');
+        } else {
+          recipientGroup.classList.add('hidden');
+          toEmailInput.required = false;
+          toEmailInput.value = ''; // clear out
+          batchGroup.classList.remove('hidden');
+        }
+
+        // Reset status
+        statusMessage.className = 'status-message hidden';
+        statusMessage.textContent = '';
+      }
+
+      modeSingle.addEventListener('change', updateMode);
+      modeBatch.addEventListener('change', updateMode);
+
+      mailerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        // Require URL to be set
+        if (GAS_URL === "https://script.google.com/macros/s/AKfycbwjd458Xj3RoPvzfRgXxWxzWO81rKEtiS3QQBt5OnPz8Itin_w_ph42olVq1c5A-0Y-" || GAS_URL.trim() === "") {
+          showStatus("Please deploy and set your Google Apps Script URL first.", "error");
+          return;
+        }
+
+        const payload = {
+          action: modeSingle.checked ? "sendSingleEmail" : "sendBatchEmail",
+          subject: document.getElementById('subject').value,
+          body: document.getElementById('body').value
+        };
+
+        if (modeSingle.checked) {
+          payload.toEmail = toEmailInput.value;
+        }
+
+        setLoading(true);
+
+        try {
+          // POST to Google Apps Script.
+          // Note on CORS: GAS returns a 302 redirect for POST requests.
+          // We must read the text output to prevent strict JSON parsing from failing on hidden HTML.
+          const response = await fetch(GAS_URL, {
+            method: "POST",
+            body: JSON.stringify(payload)
+          });
+
+          // Read as text first to avoid JSON.parse throwing nasty errors if Google gives us HTML
+          const text = await response.text();
+          let res;
+
+          try {
+            res = JSON.parse(text);
+          } catch (e) {
+            console.error("Non-JSON response received:", text);
+            throw new Error("Invalid response from Google Servers. Check console.");
+          }
+
+          if (res && res.success) {
+            showStatus(res.message + " (Quota remaining: " + res.remainingQuota + ")", "success");
+            mailerForm.reset();
+            updateMode();
+          } else {
+            showStatus((res && res.message) || "Failed to send email.", "error");
+          }
+        } catch (err) {
+          showStatus("Network Error: " + err.message + ". Check console for details.", "error");
+          console.error(err);
+        } finally {
+          setLoading(false);
+        }
+      });
+
+      function showStatus(text, type) {
+        statusMessage.textContent = text;
+        statusMessage.className = `status-message status-${type}`;
+      }
+
+      function setLoading(isLoading) {
+        if (isLoading) {
+          sendBtn.disabled = true;
+          sendIcon.textContent = "⏳";
+          sendIcon.classList.add('spin');
+          sendText.textContent = "Sending...";
+          statusMessage.className = 'status-message hidden';
+        } else {
+          sendBtn.disabled = false;
+          sendIcon.textContent = "✉️";
+          sendIcon.classList.remove('spin');
+          sendText.textContent = "Send Email";
+        }
+      }
+    });
+  </script>
+</body>
+
+</html>

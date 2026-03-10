@@ -24,6 +24,14 @@
     "section": "Attendance"
   },
   {
+    "id": "nbsc-mailer",
+    "name": "NBSC Mailer",
+    "description": "Official communications portal for single and batch emails.",
+    "url": "apps/mailer/index.html",
+    "external": false,
+    "section": "Communications"
+  },
+  {
     "id": "example-reporting",
     "name": "Example Reporting",
     "description": "Sample reporting system. Replace with your SAS system details.",
