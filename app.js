@@ -336,12 +336,97 @@ const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5N
     const form = document.getElementById('add-post-form');
     const errorMsg = document.getElementById('post-error');
 
+    // Elements for Interactive TV Preview
+    const imgInput = document.getElementById('post-img');
+    const previewGroup = document.getElementById('post-img-preview-group');
+    const previewImg = document.getElementById('post-preview-img');
+    const previewContainer = document.getElementById('post-preview-container');
+    const posInput = document.getElementById('post-img-pos');
+    const coordsDisplay = document.getElementById('post-preview-coords');
+    const sizeSelect = document.getElementById('post-img-size');
+
+    if (imgInput && previewGroup && previewImg && previewContainer) {
+      imgInput.addEventListener('input', () => {
+        const url = imgInput.value.trim();
+        if (url) {
+          previewImg.src = url;
+          previewGroup.style.display = 'block';
+        } else {
+          previewGroup.style.display = 'none';
+        }
+      });
+
+      previewImg.addEventListener('error', () => {
+        previewGroup.style.display = 'none';
+      });
+
+      previewImg.addEventListener('load', () => {
+        previewGroup.style.display = 'block';
+      });
+
+      if (sizeSelect) {
+        sizeSelect.addEventListener('change', () => {
+          previewImg.style.objectFit = sizeSelect.value;
+        });
+      }
+
+      let isDragging = false;
+      let startX = 0, startY = 0;
+      let initialPosX = 50, initialPosY = 50;
+
+      previewContainer.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+
+        const currentPos = posInput.value || '50% 50%';
+        const parts = currentPos.split(' ');
+        initialPosX = parseFloat(parts[0]) || 50;
+        initialPosY = parseFloat(parts[1]) || 50;
+
+        previewContainer.style.cursor = 'grabbing';
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+
+        const deltaX = e.clientX - startX;
+        const deltaY = e.clientY - startY;
+        const rect = previewContainer.getBoundingClientRect();
+
+        const pctX = (deltaX / rect.width) * 100 * -1;
+        const pctY = (deltaY / rect.height) * 100 * -1;
+
+        let newX = Math.max(0, Math.min(100, initialPosX + pctX));
+        let newY = Math.max(0, Math.min(100, initialPosY + pctY));
+
+        const posStr = `${Math.round(newX)}% ${Math.round(newY)}%`;
+
+        previewImg.style.objectPosition = posStr;
+        posInput.value = posStr;
+        coordsDisplay.textContent = posStr;
+      });
+
+      window.addEventListener('mouseup', () => {
+        if (isDragging) {
+          isDragging = false;
+          previewContainer.style.cursor = 'grab';
+        }
+      });
+    }
+
     if (addPostBtn && modal) {
       addPostBtn.addEventListener('click', () => {
         form.removeAttribute('data-edit-timestamp');
         document.querySelector('.modal-title').textContent = "Create New Update";
         document.getElementById('submit-post-btn').textContent = "Post Update";
         form.reset();
+
+        if (previewGroup) previewGroup.style.display = 'none';
+        if (posInput) posInput.value = '50% 50%';
+        if (previewImg) previewImg.style.objectPosition = '50% 50%';
+        if (coordsDisplay) coordsDisplay.textContent = '50% 50%';
+
         modal.classList.remove('hidden');
         if (errorMsg) errorMsg.classList.add('hidden');
       });
@@ -350,6 +435,7 @@ const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5N
         modal.classList.add('hidden');
         form.removeAttribute('data-edit-timestamp');
         form.reset();
+        if (previewGroup) previewGroup.style.display = 'none';
       });
     }
 
@@ -363,7 +449,7 @@ const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5N
         const title = document.getElementById('post-title').value;
         const desc = document.getElementById('post-desc').value;
         const img = document.getElementById('post-img').value;
-        const imgPos = document.getElementById('post-img-pos') ? document.getElementById('post-img-pos').value : 'center';
+        const imgPos = document.getElementById('post-img-pos') ? document.getElementById('post-img-pos').value : '50% 50%';
         const imgSize = document.getElementById('post-img-size') ? document.getElementById('post-img-size').value : 'cover';
         const submitBtn = document.getElementById('submit-post-btn');
         const origText = submitBtn.textContent;
@@ -567,14 +653,79 @@ const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5N
 
             document.getElementById('post-title').value = post.title;
             document.getElementById('post-desc').value = post.description;
-            document.getElementById('post-img').value = post.imageUrl;
-            if (document.getElementById('post-img-pos')) document.getElementById('post-img-pos').value = post.imagePosition || 'center';
-            if (document.getElementById('post-img-size')) document.getElementById('post-img-size').value = post.imageSize || 'cover';
+
+            const imgInput = document.getElementById('post-img');
+            if (imgInput) {
+              imgInput.value = post.imageUrl;
+              imgInput.dispatchEvent(new Event('input'));
+            }
+
+            const posInput = document.getElementById('post-img-pos');
+            if (posInput) {
+              const p = post.imagePosition || '50% 50%';
+              posInput.value = p;
+              const previewImg = document.getElementById('post-preview-img');
+              const coordsDisplay = document.getElementById('post-preview-coords');
+              if (previewImg) previewImg.style.objectPosition = p;
+              if (coordsDisplay) coordsDisplay.textContent = p;
+            }
+
+            const sizeSelect = document.getElementById('post-img-size');
+            if (sizeSelect) {
+              sizeSelect.value = post.imageSize || 'cover';
+              sizeSelect.dispatchEvent(new Event('change'));
+            }
 
             form.setAttribute('data-edit-timestamp', post.timestamp);
             modal.classList.remove('hidden');
           };
           card.appendChild(editBtn);
+
+          const deleteBtn = document.createElement('button');
+          deleteBtn.className = 'secondary-btn delete-post-btn';
+          deleteBtn.style.cssText = 'position: absolute; top: 12px; right: 80px; padding: 6px 16px; font-size: 0.8rem; background: rgba(220, 38, 38, 0.8); color: white; border-radius: 6px; backdrop-filter: blur(4px); cursor: pointer; border: none;';
+          deleteBtn.textContent = 'Delete';
+          deleteBtn.onclick = async () => {
+            const confirmAction = confirm("Are you sure you want to delete this specific post?");
+            if (!confirmAction) return;
+
+            const sessionData = sessionStorage.getItem('sas_user_data');
+            if (!sessionData) return;
+
+            const userObj = JSON.parse(sessionData);
+            const confirmPass = prompt("Please enter your admin password to confirm deletion:");
+            if (!confirmPass) return;
+
+            deleteBtn.textContent = "Deleting...";
+            deleteBtn.disabled = true;
+
+            try {
+              const payload = {
+                action: "deletePost",
+                username: userObj.username,
+                password: confirmPass,
+                timestamp: post.timestamp
+              };
+
+              const r = await fetch(BACKEND_GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+              });
+
+              const responseData = await r.json();
+              if (responseData.success) {
+                fetchPosts(); // Refresh UI instantly
+              } else {
+                alert(responseData.message || "Failed to delete post.");
+              }
+            } catch (e) {
+              alert("Network error. Could not delete post.");
+            } finally {
+              deleteBtn.textContent = "Delete";
+              deleteBtn.disabled = false;
+            }
+          };
+          card.appendChild(deleteBtn);
         }
 
         container.appendChild(card);

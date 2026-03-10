@@ -99,6 +99,9 @@ function doPost(e) {
     else if (action === "editPost") {
       return handleEditPost(payload);
     }
+    else if (action === "deletePost") {
+      return handleDeletePost(payload);
+    }
     else {
       return respondJSON({ success: false, message: "Invalid action or no payload mapped correctly. Raw body: " + (e.postData ? e.postData.contents : 'null') });
     }
@@ -229,6 +232,54 @@ function handleEditPost(payload) {
   sheet.getRange(rowIndex, 1, 1, 6).setValues([[targetTimestamp, title, desc, imageUrl, imagePos, imageSize]]);
 
   return respondJSON({ success: true, message: "Post updated successfully!" });
+}
+
+function handleDeletePost(payload) {
+  const authResponse = handleLogin(payload.username, payload.password);
+  const authObj = JSON.parse(authResponse.getContent());
+  
+  if (!authObj.success) {
+    return respondJSON({ success: false, message: "Unauthorized: Invalid credentials." });
+  }
+  if (authObj.role !== "admin") {
+    return respondJSON({ success: false, message: "Unauthorized: You must be an admin to delete posts." });
+  }
+  
+  const targetTimestamp = payload.timestamp;
+  if (!targetTimestamp) {
+    return respondJSON({ success: false, message: "Missing timestamp for deletion." });
+  }
+  
+  const ss = SpreadsheetApp.openById(masterDatabaseID);
+  const sheet = ss.getSheetByName("Posts");
+  
+  if (!sheet) {
+    return respondJSON({ success: false, message: "Posts database not initialized." });
+  }
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) {
+    return respondJSON({ success: false, message: "No posts to delete." });
+  }
+
+  const timestamps = sheet.getRange(2, 1, lastRow - 1, 1).getDisplayValues();
+  let rowIndex = -1;
+
+  for (let i = 0; i < timestamps.length; i++) {
+    if (timestamps[i][0] === targetTimestamp) {
+      rowIndex = i + 2; // +2 because range starts at row 2
+      break;
+    }
+  }
+
+  if (rowIndex === -1) {
+    return respondJSON({ success: false, message: "Post not found." });
+  }
+
+  // Delete the specific row
+  sheet.deleteRow(rowIndex);
+
+  return respondJSON({ success: true, message: "Post deleted successfully!" });
 }
 
 function respondJSON(dataObject) {

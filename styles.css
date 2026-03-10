@@ -377,7 +377,7 @@ body {
   display: flex;
   justify-content: center;
   gap: 6px;
-  margin-top: 10px;
+  margin-top: 24px;
 }
 
 .home-news-dot {
@@ -1089,6 +1089,7 @@ body.tv-mode .home-news-caption div {
 
 body.tv-mode .home-news-dots {
   padding-bottom: 24px;
+  padding-top: 32px;
   margin-top: auto;
-  /* Push dots to the bottom if there's extra space */
+  /* Push dots to the bottom if there's extra space, but guarantee at least 32px gap */
 }
