@@ -30,8 +30,8 @@ function doGet(e) {
       return respondJSON({ success: true, posts: [] });
     }
     
-    // Fetch all posts (A2 to F[lastRow])
-    const data = sheet.getRange(2, 1, lastRow - 1, 6).getDisplayValues();
+    // Fetch all posts (A2 to G[lastRow])
+    const data = sheet.getRange(2, 1, lastRow - 1, 7).getDisplayValues();
     
     // Format into an array of objects
     const posts = data.map(row => {
@@ -41,7 +41,8 @@ function doGet(e) {
         description: row[2] || "",
         imageUrl: row[3] || "",
         imagePosition: row[4] || "center",
-        imageSize: row[5] || "cover"
+        imageSize: row[5] || "cover",
+        showOnTv: row[6] === "" ? "true" : row[6].toLowerCase()
       };
     });
     
@@ -101,6 +102,9 @@ function doPost(e) {
     }
     else if (action === "deletePost") {
       return handleDeletePost(payload);
+    }
+    else if (action === "toggleTvVisible") {
+      return handleToggleTvVisible(payload);
     }
     else {
       return respondJSON({ success: false, message: "Invalid action or no payload mapped correctly. Raw body: " + (e.postData ? e.postData.contents : 'null') });
@@ -165,6 +169,7 @@ function handleAddPost(payload) {
   const imageUrl = payload.imageUrl || "";
   const imagePos = payload.imagePosition || "center";
   const imageSize = payload.imageSize || "cover";
+  const showOnTv = "true"; // Default to true for new posts
   const timestamp = new Date().toLocaleString();
   
   const ss = SpreadsheetApp.openById(masterDatabaseID);
@@ -175,7 +180,7 @@ function handleAddPost(payload) {
   }
   
   // Append new post as a row
-  sheet.appendRow([timestamp, title, desc, imageUrl, imagePos, imageSize]);
+  sheet.appendRow([timestamp, title, desc, imageUrl, imagePos, imageSize, showOnTv]);
   
   return respondJSON({ success: true, message: "Post added successfully!" });
 }
@@ -201,6 +206,8 @@ function handleEditPost(payload) {
   const imageUrl = payload.imageUrl || "";
   const imagePos = payload.imagePosition || "center";
   const imageSize = payload.imageSize || "cover";
+  // For Edit, we ideally don't want to change the current showOnTv state unless passed
+  // To keep it simple, we preserve it by reading the 7th column during the overwrite block
   
   const ss = SpreadsheetApp.openById(masterDatabaseID);
   const sheet = ss.getSheetByName("Posts");
@@ -227,9 +234,11 @@ function handleEditPost(payload) {
   if (rowIndex === -1) {
     return respondJSON({ success: false, message: "Post not found." });
   }
+  
+  const currentShowOnTv = sheet.getRange(rowIndex, 7).getDisplayValue() || "true";
 
-  // Overwrite the row (keep the original timestamp)
-  sheet.getRange(rowIndex, 1, 1, 6).setValues([[targetTimestamp, title, desc, imageUrl, imagePos, imageSize]]);
+  // Overwrite the row (keep the original timestamp and showOnTv status)
+  sheet.getRange(rowIndex, 1, 1, 7).setValues([[targetTimestamp, title, desc, imageUrl, imagePos, imageSize, currentShowOnTv]]);
 
   return respondJSON({ success: true, message: "Post updated successfully!" });
 }
@@ -280,6 +289,57 @@ function handleDeletePost(payload) {
   sheet.deleteRow(rowIndex);
 
   return respondJSON({ success: true, message: "Post deleted successfully!" });
+}
+
+function handleToggleTvVisible(payload) {
+  const authResponse = handleLogin(payload.username, payload.password);
+  const authObj = JSON.parse(authResponse.getContent());
+  
+  if (!authObj.success) {
+    return respondJSON({ success: false, message: "Unauthorized: Invalid credentials." });
+  }
+  if (authObj.role !== "admin") {
+    return respondJSON({ success: false, message: "Unauthorized: You must be an admin to modify posts." });
+  }
+  
+  const targetTimestamp = payload.timestamp;
+  if (!targetTimestamp) {
+    return respondJSON({ success: false, message: "Missing timestamp for toggling visibility." });
+  }
+  
+  const ss = SpreadsheetApp.openById(masterDatabaseID);
+  const sheet = ss.getSheetByName("Posts");
+  
+  if (!sheet) {
+    return respondJSON({ success: false, message: "Posts database not initialized." });
+  }
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) {
+    return respondJSON({ success: false, message: "No posts found to toggle." });
+  }
+
+  const timestamps = sheet.getRange(2, 1, lastRow - 1, 1).getDisplayValues();
+  let rowIndex = -1;
+
+  for (let i = 0; i < timestamps.length; i++) {
+    if (timestamps[i][0] === targetTimestamp) {
+      rowIndex = i + 2; 
+      break;
+    }
+  }
+
+  if (rowIndex === -1) {
+    return respondJSON({ success: false, message: "Post not found." });
+  }
+
+  const toggleCell = sheet.getRange(rowIndex, 7);
+  const currentVal = toggleCell.getDisplayValue().toLowerCase();
+  const newVal = currentVal === "false" ? "true" : "false";
+  
+  toggleCell.setValue(newVal);
+
+  return respondJSON({ success: true, message: "TV Visibility toggled to " + newVal, newState: newVal });
 }
 
 function respondJSON(dataObject) {

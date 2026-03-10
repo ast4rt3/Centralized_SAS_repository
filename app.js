@@ -568,6 +568,16 @@ const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5N
     container.innerHTML = '';
 
     if (role === 'tv') {
+      let tvPosts = posts.filter(p => String(p.showOnTv).toLowerCase() !== 'false');
+
+      if (tvPosts.length === 0) {
+        tvPosts = [{
+          title: "No Announcements",
+          description: "There are currently no announcements scheduled for TV display.",
+          timestamp: new Date().toLocaleString()
+        }];
+      }
+
       // Build Full-screen TV Carousel
       const track = document.createElement('div');
       track.className = 'home-news-track';
@@ -576,7 +586,7 @@ const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5N
       dotsContainer.className = 'home-news-dots';
       dotsContainer.setAttribute('role', 'tablist');
 
-      posts.forEach((post, index) => {
+      tvPosts.forEach((post, index) => {
         const slide = document.createElement('article');
         slide.className = 'home-news-slide' + (index === 0 ? ' is-active' : '');
         slide.setAttribute('data-index', index);
@@ -726,6 +736,52 @@ const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5N
             }
           };
           card.appendChild(deleteBtn);
+
+          const toggleTvBtn = document.createElement('button');
+          toggleTvBtn.className = 'secondary-btn toggle-tv-btn';
+          const isHidden = String(post.showOnTv).toLowerCase() === 'false';
+          toggleTvBtn.textContent = isHidden ? 'Show on TV' : 'Hide from TV';
+          const btnColor = isHidden ? 'rgba(34, 197, 94, 0.8)' : 'rgba(249, 115, 22, 0.8)';
+          toggleTvBtn.style.cssText = `position: absolute; top: 12px; right: 155px; padding: 6px 16px; font-size: 0.8rem; background: ${btnColor}; color: white; border-radius: 6px; backdrop-filter: blur(4px); cursor: pointer; border: none;`;
+
+          toggleTvBtn.onclick = async () => {
+            const sessionData = sessionStorage.getItem('sas_user_data');
+            if (!sessionData) return;
+            const userObj = JSON.parse(sessionData);
+
+            const confirmPass = prompt(`Please enter your admin password to ${isHidden ? 'show this on TV' : 'hide this from TV'}:`);
+            if (!confirmPass) return;
+
+            toggleTvBtn.textContent = "Updating...";
+            toggleTvBtn.disabled = true;
+
+            try {
+              const payload = {
+                action: "toggleTvVisible",
+                username: userObj.username,
+                password: confirmPass,
+                timestamp: post.timestamp
+              };
+
+              const r = await fetch(BACKEND_GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+              });
+
+              const responseData = await r.json();
+              if (responseData.success) {
+                fetchPosts(); // Refresh UI instantly
+              } else {
+                alert(responseData.message || "Failed to toggle visibility.");
+              }
+            } catch (e) {
+              alert("Network error. Could not toggle visibility.");
+            } finally {
+              toggleTvBtn.disabled = false;
+              // fetchPosts will re-render anyway, so button text will be corrected
+            }
+          };
+          card.appendChild(toggleTvBtn);
         }
 
         container.appendChild(card);
