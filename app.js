@@ -287,6 +287,13 @@ const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5N
       const homeSub = document.querySelector('.home-header-subtitle');
       if (homeTitle) homeTitle.textContent = "ANNOUNCEMENT";
       if (homeSub) homeSub.style.display = 'none';
+
+      // Attempt Fullscreen
+      try {
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen();
+        }
+      } catch (e) { console.log("Fullscreen request failed", e); }
     }
 
     if (displayName) displayName.innerHTML = displayStr;
@@ -331,12 +338,17 @@ const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5N
 
     if (addPostBtn && modal) {
       addPostBtn.addEventListener('click', () => {
+        form.removeAttribute('data-edit-timestamp');
+        document.querySelector('.modal-title').textContent = "Create New Update";
+        document.getElementById('submit-post-btn').textContent = "Post Update";
+        form.reset();
         modal.classList.remove('hidden');
         if (errorMsg) errorMsg.classList.add('hidden');
       });
 
       cancelBtn.addEventListener('click', () => {
         modal.classList.add('hidden');
+        form.removeAttribute('data-edit-timestamp');
         form.reset();
       });
     }
@@ -351,30 +363,41 @@ const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5N
         const title = document.getElementById('post-title').value;
         const desc = document.getElementById('post-desc').value;
         const img = document.getElementById('post-img').value;
+        const imgPos = document.getElementById('post-img-pos') ? document.getElementById('post-img-pos').value : 'center';
+        const imgSize = document.getElementById('post-img-size') ? document.getElementById('post-img-size').value : 'cover';
         const submitBtn = document.getElementById('submit-post-btn');
         const origText = submitBtn.textContent;
 
-        submitBtn.textContent = "Posting...";
+        submitBtn.textContent = "Saving...";
         submitBtn.disabled = true;
         if (errorMsg) errorMsg.classList.add('hidden');
 
         try {
           const userObj = JSON.parse(sessionData);
-          const confirmPass = prompt("Please re-enter your admin password to confirm this post:");
+          const confirmPass = prompt("Please re-enter your admin password to confirm this action:");
           if (!confirmPass) {
             submitBtn.textContent = origText;
             submitBtn.disabled = false;
             return;
           }
 
+          const editTimestamp = form.getAttribute('data-edit-timestamp');
+          const isEdit = !!editTimestamp;
+
           const payload = {
-            action: "addPost",
+            action: isEdit ? "editPost" : "addPost",
             username: userObj.username,
             password: confirmPass,
             title: title,
             description: desc,
-            imageUrl: img
+            imageUrl: img,
+            imagePosition: imgPos,
+            imageSize: imgSize
           };
+
+          if (isEdit) {
+            payload.timestamp = editTimestamp;
+          }
 
           const r = await fetch(BACKEND_GAS_URL, {
             method: 'POST',
@@ -429,8 +452,21 @@ const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5N
       loading.classList.add('hidden');
 
       if (data.success && data.posts && data.posts.length > 0) {
-        renderPosts(data.posts, container);
-        container.className = 'home-news'; // Override container grid settings to fit carousel
+        // Determine role to decide which renderer to use
+        let role = 'user';
+        const sessionData = sessionStorage.getItem('sas_user_data');
+        if (sessionData) {
+          try { role = JSON.parse(sessionData).role; } catch (e) { }
+        }
+
+        renderPosts(data.posts, container, role);
+
+        if (role === 'tv') {
+          container.className = 'home-news'; // Override container grid settings to fit carousel
+        } else {
+          container.className = 'posts-container'; // Restore grid for admin/user
+        }
+        container.classList.remove('hidden');
       } else {
         empty.classList.remove('hidden');
       }
@@ -442,29 +478,33 @@ const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5N
     }
   }
 
-  function renderPosts(posts, container) {
+  function renderPosts(posts, container, role) {
     container.innerHTML = '';
 
-    const track = document.createElement('div');
-    track.className = 'home-news-track';
+    if (role === 'tv') {
+      // Build Full-screen TV Carousel
+      const track = document.createElement('div');
+      track.className = 'home-news-track';
 
-    const dotsContainer = document.createElement('div');
-    dotsContainer.className = 'home-news-dots';
-    dotsContainer.setAttribute('role', 'tablist');
+      const dotsContainer = document.createElement('div');
+      dotsContainer.className = 'home-news-dots';
+      dotsContainer.setAttribute('role', 'tablist');
 
-    posts.forEach((post, index) => {
-      const slide = document.createElement('article');
-      slide.className = 'home-news-slide' + (index === 0 ? ' is-active' : '');
-      slide.setAttribute('data-index', index);
+      posts.forEach((post, index) => {
+        const slide = document.createElement('article');
+        slide.className = 'home-news-slide' + (index === 0 ? ' is-active' : '');
+        slide.setAttribute('data-index', index);
 
-      let imgHtml = '';
-      if (post.imageUrl && post.imageUrl.trim() !== '') {
-        imgHtml = `<img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="home-news-image" loading="lazy">`;
-      } else {
-        imgHtml = `<div class="home-news-image" style="background:var(--nbsc-dark); display:flex; flex-direction:column; align-items:center; justify-content:center; color:white; padding: 20px; text-align: center;"><img src="https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png" style="height:60px; margin-bottom:10px; opacity:0.3"></div>`;
-      }
+        let imgHtml = '';
+        if (post.imageUrl && post.imageUrl.trim() !== '') {
+          const objPos = post.imagePosition || 'center';
+          const objSize = post.imageSize || 'cover';
+          imgHtml = `<img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="home-news-image" style="object-position: ${objPos}; object-fit: ${objSize};" loading="lazy">`;
+        } else {
+          imgHtml = `<div class="home-news-image" style="background:var(--nbsc-dark); display:flex; flex-direction:column; align-items:center; justify-content:center; color:white; padding: 20px; text-align: center;"><img src="https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png" style="height:60px; margin-bottom:10px; opacity:0.3"></div>`;
+        }
 
-      slide.innerHTML = `
+        slide.innerHTML = `
         <div class="home-news-image-wrap">
           ${imgHtml}
         </div>
@@ -474,22 +514,72 @@ const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5N
           <div style="font-size:0.75rem; color:var(--text-muted); margin-top:8px">${escapeHtml(post.timestamp)}</div>
         </div>
       `;
-      track.appendChild(slide);
+        track.appendChild(slide);
 
-      const dot = document.createElement('button');
-      dot.className = 'home-news-dot' + (index === 0 ? ' is-active' : '');
-      dot.type = 'button';
-      dot.setAttribute('data-index', index);
-      dot.setAttribute('aria-label', 'Slide ' + (index + 1));
-      dotsContainer.appendChild(dot);
-    });
+        const dot = document.createElement('button');
+        dot.className = 'home-news-dot' + (index === 0 ? ' is-active' : '');
+        dot.type = 'button';
+        dot.setAttribute('data-index', index);
+        dot.setAttribute('aria-label', 'Slide ' + (index + 1));
+        dotsContainer.appendChild(dot);
+      });
 
-    container.appendChild(track);
-    if (posts.length > 1) {
-      container.appendChild(dotsContainer);
+      container.appendChild(track);
+      if (posts.length > 1) {
+        container.appendChild(dotsContainer);
+      }
+
+      initCarousel(container);
+    } else {
+      // Build Standard Vertical Card Feed for Admins & Users
+      posts.forEach(post => {
+        const card = document.createElement('article');
+        card.className = 'post-card';
+        card.style.position = 'relative';
+
+        let imgHtml = '';
+        if (post.imageUrl && post.imageUrl.trim() !== '') {
+          const objPos = post.imagePosition || 'center';
+          const objSize = post.imageSize || 'cover';
+          imgHtml = `<img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="post-image" style="object-position: ${objPos}; object-fit: ${objSize};" loading="lazy">`;
+        }
+
+        card.innerHTML = `
+          ${imgHtml}
+          <div class="post-content">
+            <div class="post-meta">${escapeHtml(post.timestamp)}</div>
+            <h3 class="post-title">${escapeHtml(post.title)}</h3>
+            <p class="post-desc">${escapeHtml(post.description)}</p>
+          </div>
+        `;
+
+        if (role === 'admin') {
+          const editBtn = document.createElement('button');
+          editBtn.className = 'secondary-btn edit-post-btn';
+          editBtn.style.cssText = 'position: absolute; top: 12px; right: 12px; padding: 6px 16px; font-size: 0.8rem; background: rgba(0,0,0,0.6); color: white; border-radius: 6px; backdrop-filter: blur(4px); cursor: pointer;';
+          editBtn.textContent = 'Edit';
+          editBtn.onclick = () => {
+            const form = document.getElementById('add-post-form');
+            const modal = document.getElementById('add-post-modal');
+
+            document.querySelector('.modal-title').textContent = "Edit Update";
+            document.getElementById('submit-post-btn').textContent = "Save Changes";
+
+            document.getElementById('post-title').value = post.title;
+            document.getElementById('post-desc').value = post.description;
+            document.getElementById('post-img').value = post.imageUrl;
+            if (document.getElementById('post-img-pos')) document.getElementById('post-img-pos').value = post.imagePosition || 'center';
+            if (document.getElementById('post-img-size')) document.getElementById('post-img-size').value = post.imageSize || 'cover';
+
+            form.setAttribute('data-edit-timestamp', post.timestamp);
+            modal.classList.remove('hidden');
+          };
+          card.appendChild(editBtn);
+        }
+
+        container.appendChild(card);
+      });
     }
-
-    initCarousel(container);
   }
 
   function initCarousel(container) {

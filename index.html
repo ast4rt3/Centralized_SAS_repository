@@ -124,23 +124,23 @@
               <span class="plus-icon">+</span> Add Post
             </button>
           </div>
-          
+
           <div id="posts-loading" class="posts-state">
             <div class="spinner"></div>
             <p>Loading updates...</p>
           </div>
-          
+
           <div id="posts-container" class="posts-container hidden">
             <!-- Dynamic Posts injected here via app.js -->
           </div>
-          
+
           <div id="posts-empty" class="posts-state hidden">
             <p>No recent updates.</p>
           </div>
         </div>
       </section>
     </div>
-    
+
     <!-- Admin Add Post Modal -->
     <div id="add-post-modal" class="modal-overlay hidden">
       <div class="modal-card">
@@ -157,6 +157,23 @@
           <div class="input-group">
             <label for="post-img">Image URL (Optional)</label>
             <input type="url" id="post-img" placeholder="https://example.com/image.png">
+          </div>
+          <div class="input-group" id="post-img-pos-group">
+            <label for="post-img-pos">Image Alignment on TV</label>
+            <select id="post-img-pos"
+              style="padding: 12px 16px; border: 2px solid var(--border); border-radius: 8px; font-family: var(--font-sans); color: var(--text); background: #fafafa;">
+              <option value="center" selected>Center (Default)</option>
+              <option value="top">Top</option>
+              <option value="bottom">Bottom</option>
+            </select>
+          </div>
+          <div class="input-group" id="post-img-size-group">
+            <label for="post-img-size">Image Size on TV</label>
+            <select id="post-img-size"
+              style="padding: 12px 16px; border: 2px solid var(--border); border-radius: 8px; font-family: var(--font-sans); color: var(--text); background: #fafafa;">
+              <option value="cover" selected>Fill / Cover (Crop edges to fit screen)</option>
+              <option value="contain">Fit / Contain (Show entire image, keep original ratio)</option>
+            </select>
           </div>
           <div id="post-error" class="login-error hidden">Error submitting post.</div>
           <div class="modal-actions">

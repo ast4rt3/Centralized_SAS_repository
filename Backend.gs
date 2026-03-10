@@ -30,8 +30,8 @@ function doGet(e) {
       return respondJSON({ success: true, posts: [] });
     }
     
-    // Fetch all posts (A2 to D[lastRow])
-    const data = sheet.getRange(2, 1, lastRow - 1, 4).getDisplayValues();
+    // Fetch all posts (A2 to F[lastRow])
+    const data = sheet.getRange(2, 1, lastRow - 1, 6).getDisplayValues();
     
     // Format into an array of objects
     const posts = data.map(row => {
@@ -39,7 +39,9 @@ function doGet(e) {
         timestamp: row[0] || new Date().toISOString(),
         title: row[1] || "",
         description: row[2] || "",
-        imageUrl: row[3] || ""
+        imageUrl: row[3] || "",
+        imagePosition: row[4] || "center",
+        imageSize: row[5] || "cover"
       };
     });
     
@@ -94,6 +96,9 @@ function doPost(e) {
     else if (action === "addPost") {
       return handleAddPost(payload);
     } 
+    else if (action === "editPost") {
+      return handleEditPost(payload);
+    }
     else {
       return respondJSON({ success: false, message: "Invalid action or no payload mapped correctly. Raw body: " + (e.postData ? e.postData.contents : 'null') });
     }
@@ -155,6 +160,8 @@ function handleAddPost(payload) {
   const title = payload.title || "Untitled Post";
   const desc = payload.description || "";
   const imageUrl = payload.imageUrl || "";
+  const imagePos = payload.imagePosition || "center";
+  const imageSize = payload.imageSize || "cover";
   const timestamp = new Date().toLocaleString();
   
   const ss = SpreadsheetApp.openById(masterDatabaseID);
@@ -165,9 +172,63 @@ function handleAddPost(payload) {
   }
   
   // Append new post as a row
-  sheet.appendRow([timestamp, title, desc, imageUrl]);
+  sheet.appendRow([timestamp, title, desc, imageUrl, imagePos, imageSize]);
   
   return respondJSON({ success: true, message: "Post added successfully!" });
+}
+
+function handleEditPost(payload) {
+  const authResponse = handleLogin(payload.username, payload.password);
+  const authObj = JSON.parse(authResponse.getContent());
+  
+  if (!authObj.success) {
+    return respondJSON({ success: false, message: "Unauthorized: Invalid credentials." });
+  }
+  if (authObj.role !== "admin") {
+    return respondJSON({ success: false, message: "Unauthorized: You must be an admin to edit posts." });
+  }
+  
+  const targetTimestamp = payload.timestamp;
+  if (!targetTimestamp) {
+    return respondJSON({ success: false, message: "Missing timestamp for editing." });
+  }
+
+  const title = payload.title || "Untitled Post";
+  const desc = payload.description || "";
+  const imageUrl = payload.imageUrl || "";
+  const imagePos = payload.imagePosition || "center";
+  const imageSize = payload.imageSize || "cover";
+  
+  const ss = SpreadsheetApp.openById(masterDatabaseID);
+  const sheet = ss.getSheetByName("Posts");
+  
+  if (!sheet) {
+    return respondJSON({ success: false, message: "Posts database not initialized." });
+  }
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) {
+    return respondJSON({ success: false, message: "No posts found." });
+  }
+
+  const timestamps = sheet.getRange(2, 1, lastRow - 1, 1).getDisplayValues();
+  let rowIndex = -1;
+
+  for (let i = 0; i < timestamps.length; i++) {
+    if (timestamps[i][0] === targetTimestamp) {
+      rowIndex = i + 2; // +2 because range starts at row 2
+      break;
+    }
+  }
+
+  if (rowIndex === -1) {
+    return respondJSON({ success: false, message: "Post not found." });
+  }
+
+  // Overwrite the row (keep the original timestamp)
+  sheet.getRange(rowIndex, 1, 1, 6).setValues([[targetTimestamp, title, desc, imageUrl, imagePos, imageSize]]);
+
+  return respondJSON({ success: true, message: "Post updated successfully!" });
 }
 
 function respondJSON(dataObject) {
