@@ -352,7 +352,8 @@ body {
   background-color: #1a1a1a;
 }
 
-.home-news-image {
+.home-news-image,
+video.home-news-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -1079,7 +1080,8 @@ body.tv-mode .home-news-image-wrap {
   /* Ensure backdrop matches dark theme when contained */
 }
 
-body.tv-mode .home-news-image {
+body.tv-mode .home-news-image,
+body.tv-mode video.home-news-image {
   object-fit: contain !important;
 }
 
