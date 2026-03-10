@@ -595,7 +595,19 @@ const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5N
         if (post.imageUrl && post.imageUrl.trim() !== '') {
           const objPos = post.imagePosition || 'center';
           const objSize = post.imageSize || 'cover';
-          imgHtml = `<img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="home-news-image" style="object-position: ${objPos}; object-fit: ${objSize};" loading="lazy">`;
+          const urlLower = post.imageUrl.toLowerCase();
+
+          if (urlLower.endsWith('.mp4') || urlLower.endsWith('.webm')) {
+            imgHtml = `
+              <video src="${post.imageUrl}" class="home-news-image-blur" style="position: absolute; top: -10%; left: -10%; width: 120%; height: 120%; object-fit: cover; filter: blur(40px); opacity: 0.5; z-index: 0; pointer-events: none;" autoplay muted loop playsinline></video>
+              <video src="${post.imageUrl}" class="home-news-image" style="position: relative; z-index: 1; object-position: ${objPos}; object-fit: ${objSize};" autoplay muted loop playsinline></video>
+            `;
+          } else {
+            imgHtml = `
+              <img src="${post.imageUrl}" class="home-news-image-blur" style="position: absolute; top: -10%; left: -10%; width: 120%; height: 120%; object-fit: cover; filter: blur(40px); opacity: 0.5; z-index: 0; pointer-events: none;" aria-hidden="true" loading="lazy">
+              <img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="home-news-image" style="position: relative; z-index: 1; object-position: ${objPos}; object-fit: ${objSize};" loading="lazy">
+            `;
+          }
         } else {
           imgHtml = `<div class="home-news-image" style="background:var(--nbsc-dark); display:flex; flex-direction:column; align-items:center; justify-content:center; color:white; padding: 20px; text-align: center;"><img src="https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png" style="height:60px; margin-bottom:10px; opacity:0.3"></div>`;
         }
@@ -604,10 +616,19 @@ const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5N
         <div class="home-news-image-wrap">
           ${imgHtml}
         </div>
-        <div class="home-news-caption">
-          <h3>${escapeHtml(post.title)}</h3>
-          <p>${escapeHtml(post.description)}</p>
-          <div style="font-size:0.75rem; color:var(--text-muted); margin-top:8px">${escapeHtml(post.timestamp)}</div>
+        <div class="home-news-ticker">
+          <div class="ticker-wrap">
+            <div class="ticker-content">
+              <span class="ticker-title">${escapeHtml(post.title)}</span>
+              <span class="ticker-separator"> &nbsp;&bull;&nbsp;&bull;&nbsp; </span>
+              <span class="ticker-desc">${escapeHtml(post.description)}</span>
+            </div>
+            <div class="ticker-content" aria-hidden="true">
+              <span class="ticker-title">${escapeHtml(post.title)}</span>
+              <span class="ticker-separator"> &nbsp;&bull;&nbsp;&bull;&nbsp; </span>
+              <span class="ticker-desc">${escapeHtml(post.description)}</span>
+            </div>
+          </div>
         </div>
       `;
         track.appendChild(slide);
@@ -637,13 +658,18 @@ const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5N
         if (post.imageUrl && post.imageUrl.trim() !== '') {
           const objPos = post.imagePosition || 'center';
           const objSize = post.imageSize || 'cover';
-          imgHtml = `<img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="post-image" style="object-position: ${objPos}; object-fit: ${objSize};" loading="lazy">`;
+          const urlLower = post.imageUrl.toLowerCase();
+
+          if (urlLower.endsWith('.mp4') || urlLower.endsWith('.webm')) {
+            imgHtml = `<video src="${post.imageUrl}" class="post-image" style="object-position: ${objPos}; object-fit: ${objSize};" autoplay muted loop playsinline></video>`;
+          } else {
+            imgHtml = `<img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="post-image" style="object-position: ${objPos}; object-fit: ${objSize};" loading="lazy">`;
+          }
         }
 
         card.innerHTML = `
           ${imgHtml}
           <div class="post-content">
-            <div class="post-meta">${escapeHtml(post.timestamp)}</div>
             <h3 class="post-title">${escapeHtml(post.title)}</h3>
             <p class="post-desc">${escapeHtml(post.description)}</p>
           </div>

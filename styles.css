@@ -344,10 +344,12 @@ body {
 }
 
 .home-news-image-wrap {
+  position: relative;
   width: 100%;
   aspect-ratio: 16 / 6.8;
   /* Slightly taller aspect ratio */
   overflow: hidden;
+  background-color: #1a1a1a;
 }
 
 .home-news-image {
@@ -1038,6 +1040,18 @@ body.tv-mode .posts-header {
   display: none !important;
 }
 
+body.tv-mode .home-header {
+  padding: 8px 16px;
+}
+
+body.tv-mode .home-header-logo {
+  width: 40px;
+}
+
+body.tv-mode .home-header-title {
+  font-size: 1.1rem;
+}
+
 body.tv-mode .home-news {
   max-width: 100%;
   height: 100%;
@@ -1057,34 +1071,65 @@ body.tv-mode .home-news-track {
 }
 
 body.tv-mode .home-news-image-wrap {
-  height: 65vh;
-  /* Taller image so it takes up more space */
-  aspect-ratio: auto;
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 220px);
+  /* Fill available space exactly, accounting for header/footer */
+  background: var(--nbsc-dark);
+  /* Ensure backdrop matches dark theme when contained */
 }
 
-body.tv-mode .home-news-caption {
-  flex: 0 1 auto;
-  /* Prevent caption from stretching unnecessarily */
-  padding: 16px 32px;
-  /* Tighter padding to save space */
+body.tv-mode .home-news-image {
+  object-fit: contain !important;
 }
 
-body.tv-mode .home-news-caption h3 {
-  font-size: 1.8rem;
-  /* Slightly smaller title */
-  margin-bottom: 8px;
+body.tv-mode .home-news-ticker {
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  background: rgba(15, 23, 42, 0.85);
+  /* Slightly darker, solid bar look now that it is below */
+  padding: 16px 24px;
+  display: flex;
 }
 
-body.tv-mode .home-news-caption p {
+body.tv-mode .ticker-wrap {
+  display: inline-flex;
+  animation: marquee 25s linear infinite;
+}
+
+body.tv-mode .ticker-content {
+  display: flex;
+  align-items: center;
+  padding-right: 50px;
+}
+
+body.tv-mode .ticker-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+
+body.tv-mode .ticker-desc {
   font-size: 1.3rem;
-  /* Slightly smaller text */
-  line-height: 1.4;
-  margin: 0;
+  color: rgba(255, 255, 255, 0.85);
 }
 
-body.tv-mode .home-news-caption div {
-  font-size: 1.1rem !important;
-  margin-top: 12px !important;
+body.tv-mode .ticker-separator {
+  color: var(--nbsc-gold);
+  font-size: 1.6rem;
+  margin: 0 16px;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
 }
 
 body.tv-mode .home-news-dots {
