@@ -909,9 +909,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function setActive(index) {
+      // First, iterate over all slides to pause videos that are no longer active
       slides.forEach(function (s, i) {
-        if (i === index) s.classList.add('is-active');
-        else s.classList.remove('is-active');
+        if (i === index) {
+          s.classList.add('is-active');
+        } else {
+          s.classList.remove('is-active');
+          // Perform cleanup for inactive slides
+          const oldVideo = s.querySelector('video.home-news-image');
+          const oldIframe = s.querySelector('iframe.home-news-image');
+
+          if (oldVideo) {
+            oldVideo.pause();
+            oldVideo.muted = true; // Force mute to prevent bleed
+          }
+          if (oldIframe && window.YT && ytPlayers[oldIframe.id]) {
+            try {
+              ytPlayers[oldIframe.id].pauseVideo();
+            } catch (e) { } // Ignore if not ready
+          }
+        }
       });
       dots.forEach(function (d, i) {
         if (i === index) d.classList.add('is-active');

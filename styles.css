@@ -701,6 +701,15 @@ body.system-mode .content {
   border-right: 1px solid var(--border);
 }
 
+body.tv-mode .tv-settings .icon-btn {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+body.tv-mode .tv-settings .icon-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .user-menu {
   position: relative;
 }
