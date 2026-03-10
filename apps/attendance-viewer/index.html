@@ -5,7 +5,251 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Foundation Day Attendance</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+    <style>
+:root {
+  --nbsc-blue: #004a99;
+  --nbsc-dark: #001a33;
+  --nbsc-mid: #003366;
+  --nbsc-gold: #f0ad4e;
+  --bg-main: #f0f2f5;
+  --bg-card: #ffffff;
+  --border: rgba(0, 26, 51, 0.12);
+  --text: #0b1220;
+  --text-muted: rgba(0, 26, 51, 0.7);
+  --shadow-soft: 0 4px 15px rgba(0, 0, 0, 0.08);
+  --font-sans: 'Montserrat', system-ui, -apple-system, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--bg-main);
+  color: var(--text);
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, var(--nbsc-mid) 0%, var(--nbsc-dark) 100%);
+  color: #ffffff;
+  box-shadow: var(--shadow-soft);
+  flex-wrap: wrap;
+  gap: 16px;
+  z-index: 10;
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.header-logo {
+  width: 48px;
+  height: auto;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));
+}
+
+.header-text h1 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.header-text p {
+  margin: 2px 0 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--nbsc-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  max-width: 300px;
+  width: 100%;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  font-size: 1rem;
+  opacity: 0.7;
+}
+
+#searchInput {
+  width: 100%;
+  padding: 10px 14px 10px 36px;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  transition: background 0.2s;
+}
+
+#searchInput::placeholder { color: rgba(255,255,255,0.6); }
+#searchInput:focus {
+  background: rgba(255, 255, 255, 0.15);
+  outline: 1px solid var(--nbsc-gold);
+}
+
+.primary-btn {
+  background: var(--nbsc-gold);
+  color: var(--nbsc-dark);
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 800;
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: transform 0.1s, filter 0.2s;
+}
+.primary-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+.app-content {
+  flex: 1;
+  padding: 24px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.state-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.hidden { display: none !important; }
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--border);
+  border-top-color: var(--nbsc-blue);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.error-icon { font-size: 3rem; margin-bottom: 16px; }
+
+.table-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.table-scroll-wrapper {
+  overflow: auto;
+  flex: 1;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  white-space: nowrap;
+}
+
+thead {
+  position: sticky;
+  top: 0;
+  background: var(--bg-main);
+  z-index: 2;
+  box-shadow: 0 1px 0 var(--border);
+}
+
+th, td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+
+th {
+  font-weight: 800;
+  color: var(--nbsc-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 0.75rem;
+}
+
+tbody tr:hover {
+  background: rgba(0, 74, 153, 0.04);
+}
+
+tbody tr:last-child td { border-bottom: none; }
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  background: var(--bg-main);
+  color: var(--text-muted);
+}
+.status-badge.present { background: rgba(46, 204, 113, 0.15); color: #27ae60; }
+.status-badge.late { background: rgba(243, 156, 18, 0.15); color: #d35400; }
+.status-badge.flagged { background: rgba(231, 76, 60, 0.15); color: #c0392b; }
+
+.table-footer {
+  padding: 12px 16px;
+  background: var(--bg-main);
+  border-top: 1px solid var(--border);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+@media (max-width: 600px) {
+  .app-content { padding: 12px; }
+  .header-actions { width: 100%; justify-content: space-between; flex-wrap: wrap; }
+  .search-box { max-width: none; }
+}
+    </style>
 </head>
 <body>
     <div class="app-container">
@@ -60,6 +304,139 @@
         </main>
     </div>
 
-    <script src="app.js"></script>
+    <script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbz3cjgDKFw4CrDdB0dETT4SPyU7Xvh6szAFB_Iz8AiwCpbDNRGVPsuwnjr-0HFDbxaZ2g/exec'; // Your deployed App Script URL
+
+const els = {
+  loading: document.getElementById('loading'),
+  error: document.getElementById('error'),
+  errMsg: document.getElementById('error-message'),
+  tableContainer: document.getElementById('tableContainer'),
+  thead: document.getElementById('tableHeaderRow'),
+  tbody: document.getElementById('tableBody'),
+  recordCount: document.getElementById('recordCount'),
+  searchInput: document.getElementById('searchInput'),
+  refreshBtn: document.getElementById('refreshBtn'),
+  retryBtn: document.getElementById('retryBtn')
+};
+
+let masterData = [];
+
+function init() {
+  els.refreshBtn.addEventListener('click', fetchData);
+  els.retryBtn.addEventListener('click', fetchData);
+  els.searchInput.addEventListener('input', () => renderTable(els.searchInput.value));
+  fetchData();
+}
+
+function setState(state, msg = '') {
+  els.loading.classList.add('hidden');
+  els.error.classList.add('hidden');
+  els.tableContainer.classList.add('hidden');
+
+  if (state === 'loading') els.loading.classList.remove('hidden');
+  if (state === 'error') {
+    els.errMsg.textContent = msg;
+    els.error.classList.remove('hidden');
+  }
+  if (state === 'loaded') els.tableContainer.classList.remove('hidden');
+}
+
+function processTimeValue(v) {
+  if (!v) return '<span class="status-badge">Empty</span>';
+  const str = v.toString();
+  if (str.toLowerCase() === 'not checked in') return '<span class="status-badge">Not Checked In</span>';
+  if (str.includes('Flagged')) {
+    const reason = str.split('(')[0].replace('Flagged:', '').trim();
+    return `<span class="status-badge flagged" title="${str}">Flagged: ${reason}</span>`;
+  }
+  if (str.includes('(LATE)')) {
+    const time = str.split('(LATE)')[0].trim();
+    return `<span class="status-badge late" title="${str}">${time} (Late)</span>`;
+  }
+  // Standard entry e.g. "8:45 AM [StaffName]"
+  const time = str.split('[')[0].trim();
+  return `<span class="status-badge present" title="${str}">${time}</span>`;
+}
+
+function renderTable(filter = '') {
+  els.tbody.innerHTML = '';
+  const term = filter.toLowerCase().trim();
+  let count = 0;
+
+  masterData.forEach(row => {
+    // Basic search checks first few columns (Name, Course/Section)
+    const searchable = row.slice(0, 3).map(c => (c || '').toString().toLowerCase()).join(' ');
+    if (term && !searchable.includes(term)) return;
+
+    count++;
+    const tr = document.createElement('tr');
+
+    row.forEach((cell, i) => {
+      const td = document.createElement('td');
+      // If column is past the ID column (index 3), it's likely a timestamp column
+      if (i > 3) {
+        td.innerHTML = processTimeValue(cell);
+      } else {
+        td.textContent = cell || '';
+        if (i === 0) td.style.fontWeight = '600'; // Make Name bold
+      }
+      tr.appendChild(td);
+    });
+    els.tbody.appendChild(tr);
+  });
+
+  els.recordCount.textContent = count;
+}
+
+function fetchData() {
+  setState('loading');
+  masterData = [];
+  els.thead.innerHTML = '';
+  els.tbody.innerHTML = '';
+
+  // Require URL to be set
+  if (GAS_URL === "YOUR_NEW_GAS_WEB_APP_URL_HERE" || !GAS_URL.startsWith("https://")) {
+    setState('error', 'Please set the valid Google Apps Script URL in Javascript first.');
+    return;
+  }
+
+  // Use fetch to trigger a simple GET request.
+  fetch(GAS_URL)
+    .then(res => res.text()) // Use text() first to catch unexpected HTML redirects
+    .then(text => {
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (err) {
+        console.error("Non-JSON response received:", text);
+        throw new Error("Invalid response from Google Servers (HTML redirect). Please check Web App URL & sharing settings.");
+      }
+
+      if (!data.success) {
+        throw new Error(data.message || "Unknown server error");
+      }
+
+      // Build Headers
+      data.headers.forEach(h => {
+        const th = document.createElement('th');
+        th.textContent = h || '';
+        els.thead.appendChild(th);
+      });
+
+      // Build Rows
+      masterData = data.rows;
+
+      setState('loaded');
+      renderTable();
+    })
+    .catch(err => {
+      console.error(err);
+      setState('error', err.message || 'Failed to fetch Masterlist');
+    });
+}
+
+document.addEventListener('DOMContentLoaded', init);
+    </script>
 </body>
 </html>

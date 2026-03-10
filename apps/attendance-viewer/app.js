@@ -1,4 +1,4 @@
-const URL = 'https://docs.google.com/spreadsheets/d/1ROXUAlBt1bYx4ftNqG-HBwH2GzCyH9bix2pilzEMDEs/gviz/tq?tqx=out:json&gid=1786390592&tq=SELECT%20C%2CD%2CE%2CF%2CG%2CH%2CI%2CJ%2CK%2CL%2CM%2CN%2CO%2CP%2CQ%2CR%2CS';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbz3cjgDKFw4CrDdB0dETT4SPyU7Xvh6szAFB_Iz8AiwCpbDNRGVPsuwnjr-0HFDbxaZ2g/exec';
 
 const els = {
   loading: document.getElementById('loading'),
@@ -26,7 +26,7 @@ function setState(state, msg = '') {
   els.loading.classList.add('hidden');
   els.error.classList.add('hidden');
   els.tableContainer.classList.add('hidden');
-  
+
   if (state === 'loading') els.loading.classList.remove('hidden');
   if (state === 'error') {
     els.errMsg.textContent = msg;
@@ -64,7 +64,7 @@ function renderTable(filter = '') {
 
     count++;
     const tr = document.createElement('tr');
-    
+
     row.forEach((cell, i) => {
       const td = document.createElement('td');
       // If column is past the ID column (index 3), it's likely a timestamp column
@@ -88,29 +88,38 @@ function fetchData() {
   els.thead.innerHTML = '';
   els.tbody.innerHTML = '';
 
-  fetch(URL)
-    .then(res => res.text())
+  // Require URL to be set
+  if (!GAS_URL.startsWith("https://") || GAS_URL.includes("YOUR_NEW_GAS_WEB_APP_URL_HERE")) {
+    setState('error', 'Please set the Google Apps Script URL in app.js first.');
+    return;
+  }
+
+  // Use fetch to trigger a simple GET request.
+  // Google Apps Script doGet() will redirect and return JSON.
+  fetch(GAS_URL)
+    .then(res => res.text()) // Use text() first to catch unexpected HTML redirects
     .then(text => {
-      // The response is wrapped in a google callback function: google.visualization.Query.setResponse(...)
-      const match = text.match(/google\.visualization\.Query\.setResponse\((.+)\);/);
-      if (!match) throw new Error("Invalid response format from Google Sheets");
-      
-      const data = JSON.parse(match[1]);
-      if (data.status === 'error') {
-        throw new Error(data.errors[0].message + " (" + data.errors[0].detailed_message + ")");
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (err) {
+        console.error("Non-JSON response received:", text);
+        throw new Error("Invalid response from Google Servers: " + text.slice(0, 100)); // slice to avoid massive error block
+      }
+
+      if (!data.success) {
+        throw new Error(data.message || "Unknown server error");
       }
 
       // Build Headers
-      const cols = data.table.cols;
-      cols.forEach(c => {
+      data.headers.forEach(h => {
         const th = document.createElement('th');
-        th.textContent = c.label || c.id || '';
+        th.textContent = h || '';
         els.thead.appendChild(th);
       });
 
       // Build Rows
-      const rows = data.table.rows;
-      masterData = rows.map(r => r.c.map(c => c ? (c.f || c.v) : ''));
+      masterData = data.rows;
 
       setState('loaded');
       renderTable();
