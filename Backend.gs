@@ -49,7 +49,14 @@ function doGet(e) {
     // Reverse so newest posts show first
     posts.reverse();
     
-    return respondJSON({ success: true, posts: posts });
+    // Fetch Global TV Settings from Script Properties
+    const scriptProperties = PropertiesService.getScriptProperties();
+    const tvSettings = {
+      tvAudioEnabled: scriptProperties.getProperty('tvAudio') === 'true',
+      tvTheaterEnabled: scriptProperties.getProperty('tvTheater') === 'true'
+    };
+    
+    return respondJSON({ success: true, posts: posts, tvSettings: tvSettings });
     
   } catch (err) {
     return respondJSON({ success: false, message: "Error reading Data: " + err.message });
@@ -105,6 +112,9 @@ function doPost(e) {
     }
     else if (action === "toggleTvVisible") {
       return handleToggleTvVisible(payload);
+    }
+    else if (action === "updateTvSettings") {
+      return handleUpdateTvSettings(payload);
     }
     else {
       return respondJSON({ success: false, message: "Invalid action or no payload mapped correctly. Raw body: " + (e.postData ? e.postData.contents : 'null') });
@@ -340,6 +350,33 @@ function handleToggleTvVisible(payload) {
   toggleCell.setValue(newVal);
 
   return respondJSON({ success: true, message: "TV Visibility toggled to " + newVal, newState: newVal });
+}
+
+function handleUpdateTvSettings(payload) {
+  const authResponse = handleLogin(payload.username, payload.password);
+  const authObj = JSON.parse(authResponse.getContent());
+  
+  if (!authObj.success) {
+    return respondJSON({ success: false, message: "Unauthorized: Invalid credentials." });
+  }
+  if (authObj.role !== "admin") {
+    return respondJSON({ success: false, message: "Unauthorized: You must be an admin to modify settings." });
+  }
+  
+  try {
+    // Convert boolean payloads to strings for PropertiesService
+    const audioSetting = String(payload.tvAudioEnabled) === "true" ? "true" : "false";
+    const theaterSetting = String(payload.tvTheaterEnabled) === "true" ? "true" : "false";
+    
+    const scriptProperties = PropertiesService.getScriptProperties();
+    scriptProperties.setProperty("tvAudio", audioSetting);
+    scriptProperties.setProperty("tvTheater", theaterSetting);
+    
+    return respondJSON({ success: true, message: "TV defaults updated successfully." });
+    
+  } catch (err) {
+    return respondJSON({ success: false, message: "Error updating settings: " + err.message });
+  }
 }
 
 function respondJSON(dataObject) {

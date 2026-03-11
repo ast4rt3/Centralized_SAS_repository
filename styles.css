@@ -693,6 +693,12 @@ body.system-mode .content {
   background: rgba(249, 168, 38, 0.1);
 }
 
+.admin-tv-settings .icon-btn.active-setting {
+  color: #fff;
+  background: var(--nbsc-blue);
+  box-shadow: 0 2px 4px rgba(0, 74, 153, 0.3);
+}
+
 .tv-settings {
   display: flex;
   align-items: center;

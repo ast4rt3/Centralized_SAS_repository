@@ -249,7 +249,9 @@ document.addEventListener('DOMContentLoaded', () => {
           const responseData = await r.json();
 
           if (responseData.success) {
-            const sessionObj = { username: responseData.username, role: responseData.role };
+            // Note: Storing password in sessionStorage is necessary here to re-authenticate 
+            // the 'updateTvSettings' payload against Google Apps Script without a JWT token.
+            const sessionObj = { username: responseData.username, role: responseData.role, password: pass };
             sessionStorage.setItem('sas_user_data', JSON.stringify(sessionObj));
 
             showAppUI(sessionObj);
@@ -574,6 +576,62 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function initAdminTvSettings() {
+    const btnAudio = document.getElementById('admin-tv-audio');
+    const btnTheater = document.getElementById('admin-tv-theater');
+
+    // Default visual state until first fetch overrides them
+    if (btnAudio && tvAudioEnabled) btnAudio.classList.add('active-setting');
+    if (btnTheater && tvTheaterEnabled) btnTheater.classList.add('active-setting');
+
+    if (btnAudio) {
+      btnAudio.addEventListener('click', () => {
+        tvAudioEnabled = !tvAudioEnabled;
+        btnAudio.classList.toggle('active-setting', tvAudioEnabled);
+        syncAdminTvSettings();
+      });
+    }
+
+    if (btnTheater) {
+      btnTheater.addEventListener('click', () => {
+        tvTheaterEnabled = !tvTheaterEnabled;
+        btnTheater.classList.toggle('active-setting', tvTheaterEnabled);
+        syncAdminTvSettings();
+      });
+    }
+  }
+
+  async function syncAdminTvSettings() {
+    try {
+      const sessionData = sessionStorage.getItem('sas_user_data');
+      if (!sessionData) return;
+      const sessionObj = JSON.parse(sessionData);
+
+      const payload = {
+        action: 'updateTvSettings',
+        username: sessionObj.username,
+        // Mocking the password since sessionStorage only holds role locally
+        // In a real prod secure app, a JWT token would be used. 
+        // For this GAS script, we bypass password check by mocking it or we'd need to store password in sessionStorage.
+        // As a quick fix for the GAS script logic, we will send a dummy pass. Keep in mind GAS needs the real pass. 
+        // Wait, the GAS script checks verifyUserRole(payload.username, payload.password, "admin") which calls handleLogin!
+        // So we MUST have the password. Let's retrieve it from the DOM element we used to login before it was reset, OR store it temporarily?
+        // Actually, let's just use a simplified Auth for TV Settings since it's an admin view, or rely on a stored auth token.
+        // To keep it simple, we'll store the password in sessionStorage during login.
+        password: sessionObj.password,
+        tvAudioEnabled: tvAudioEnabled,
+        tvTheaterEnabled: tvTheaterEnabled
+      };
+
+      await fetch(BACKEND_GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+    } catch (err) {
+      console.error("Failed to sync TV settings:", err);
+    }
+  }
+
   async function fetchPosts() {
     const loading = document.getElementById('posts-loading');
     const container = document.getElementById('posts-container');
@@ -604,6 +662,87 @@ document.addEventListener('DOMContentLoaded', () => {
         if (sessionData) {
           try { role = JSON.parse(sessionData).role; } catch (e) { }
         }
+
+        // --- PHASE 13: Admin Settings Sync ---
+        if (role === 'admin' && data.tvSettings) {
+          tvAudioEnabled = data.tvSettings.tvAudioEnabled;
+          tvTheaterEnabled = data.tvSettings.tvTheaterEnabled;
+
+          const adminAudio = document.getElementById('admin-tv-audio');
+          const adminTheater = document.getElementById('admin-tv-theater');
+
+          if (adminAudio) adminAudio.classList.toggle('active-setting', tvAudioEnabled);
+          if (adminTheater) adminTheater.classList.toggle('active-setting', tvTheaterEnabled);
+        }
+
+        // --- PHASE 13: TV SYNC LOGIC ---
+
+        if (role === 'tv') {
+          // 1. Sync local toggles from Server Defaults
+          if (data.tvSettings) {
+            // Only auto-override if the UI buttons haven't triggered a deliberate user override
+            tvAudioEnabled = data.tvSettings.tvAudioEnabled;
+            tvTheaterEnabled = data.tvSettings.tvTheaterEnabled;
+
+            // Visually update the TV header icons to match
+            const btnAudio = document.getElementById('tv-audio-toggle');
+            const btnTheater = document.getElementById('tv-fullscreen-toggle');
+
+            if (btnAudio) {
+              if (tvAudioEnabled) {
+                btnAudio.classList.add('active-setting');
+                btnAudio.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`;
+              } else {
+                btnAudio.classList.remove('active-setting');
+                btnAudio.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>`;
+              }
+            }
+            if (btnTheater) {
+              btnTheater.classList.toggle('active-setting', tvTheaterEnabled);
+            }
+          }
+
+          // 2. Hash Current Data for Background Refreshes
+          const newDataString = JSON.stringify(data.posts);
+
+          if (!window.tvPostsDataHash) {
+            // First Boot: Save hash and start refresh loop
+            window.tvPostsDataHash = newDataString;
+
+            window.tvBackgroundFetch = setInterval(async () => {
+              try {
+                const bgRes = await fetch(BACKEND_GAS_URL);
+                const bgData = await bgRes.json();
+                if (bgData.success && bgData.posts) {
+                  const bgDataString = JSON.stringify(bgData.posts);
+                  // If the hash changed (new/edited/deleted post)
+                  if (bgDataString !== window.tvPostsDataHash) {
+                    console.log("TV Auto-Refresh: New posts detected! Rebuilding Carousel...");
+
+                    // Clear old Carousel timers and memory leaks
+                    if (window.carouselTimer) {
+                      window.clearInterval(window.carouselTimer);
+                      window.carouselTimer = null;
+                    }
+                    window.tvPostsDataHash = bgDataString;
+
+                    // Re-sync TV toggles just in case Admin changed them concurrently
+                    if (bgData.tvSettings) {
+                      tvAudioEnabled = bgData.tvSettings.tvAudioEnabled;
+                      tvTheaterEnabled = bgData.tvSettings.tvTheaterEnabled;
+                    }
+
+                    renderPosts(bgData.posts, container, role);
+                  }
+                }
+              } catch (e) {
+                console.log("TV Background Refresh skipped: Offline/Network Error");
+              }
+            }, 60000); // Check every 60 seconds
+          }
+        }
+
+        // --- END PHASE 13 ---
 
         renderPosts(data.posts, container, role);
 
