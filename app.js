@@ -576,62 +576,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function initAdminTvSettings() {
-    const btnAudio = document.getElementById('admin-tv-audio');
-    const btnTheater = document.getElementById('admin-tv-theater');
-
-    // Default visual state until first fetch overrides them
-    if (btnAudio && tvAudioEnabled) btnAudio.classList.add('active-setting');
-    if (btnTheater && tvTheaterEnabled) btnTheater.classList.add('active-setting');
-
-    if (btnAudio) {
-      btnAudio.addEventListener('click', () => {
-        tvAudioEnabled = !tvAudioEnabled;
-        btnAudio.classList.toggle('active-setting', tvAudioEnabled);
-        syncAdminTvSettings();
-      });
-    }
-
-    if (btnTheater) {
-      btnTheater.addEventListener('click', () => {
-        tvTheaterEnabled = !tvTheaterEnabled;
-        btnTheater.classList.toggle('active-setting', tvTheaterEnabled);
-        syncAdminTvSettings();
-      });
-    }
-  }
-
-  async function syncAdminTvSettings() {
-    try {
-      const sessionData = sessionStorage.getItem('sas_user_data');
-      if (!sessionData) return;
-      const sessionObj = JSON.parse(sessionData);
-
-      const payload = {
-        action: 'updateTvSettings',
-        username: sessionObj.username,
-        // Mocking the password since sessionStorage only holds role locally
-        // In a real prod secure app, a JWT token would be used. 
-        // For this GAS script, we bypass password check by mocking it or we'd need to store password in sessionStorage.
-        // As a quick fix for the GAS script logic, we will send a dummy pass. Keep in mind GAS needs the real pass. 
-        // Wait, the GAS script checks verifyUserRole(payload.username, payload.password, "admin") which calls handleLogin!
-        // So we MUST have the password. Let's retrieve it from the DOM element we used to login before it was reset, OR store it temporarily?
-        // Actually, let's just use a simplified Auth for TV Settings since it's an admin view, or rely on a stored auth token.
-        // To keep it simple, we'll store the password in sessionStorage during login.
-        password: sessionObj.password,
-        tvAudioEnabled: tvAudioEnabled,
-        tvTheaterEnabled: tvTheaterEnabled
-      };
-
-      await fetch(BACKEND_GAS_URL, {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-    } catch (err) {
-      console.error("Failed to sync TV settings:", err);
-    }
-  }
-
   async function fetchPosts() {
     const loading = document.getElementById('posts-loading');
     const container = document.getElementById('posts-container');
@@ -661,18 +605,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const sessionData = sessionStorage.getItem('sas_user_data');
         if (sessionData) {
           try { role = JSON.parse(sessionData).role; } catch (e) { }
-        }
-
-        // --- PHASE 13: Admin Settings Sync ---
-        if (role === 'admin' && data.tvSettings) {
-          tvAudioEnabled = data.tvSettings.tvAudioEnabled;
-          tvTheaterEnabled = data.tvSettings.tvTheaterEnabled;
-
-          const adminAudio = document.getElementById('admin-tv-audio');
-          const adminTheater = document.getElementById('admin-tv-theater');
-
-          if (adminAudio) adminAudio.classList.toggle('active-setting', tvAudioEnabled);
-          if (adminTheater) adminTheater.classList.toggle('active-setting', tvTheaterEnabled);
         }
 
         // --- PHASE 13: TV SYNC LOGIC ---
