@@ -1221,3 +1221,71 @@ body.tv-mode .home-news-dots {
   margin-top: auto;
   /* Push dots to the bottom if there's extra space, but guarantee at least 32px gap */
 }
+
+/* === File Upload UI === */
+.upload-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.upload-tab {
+  flex: 1;
+  padding: 8px 12px;
+  border: 2px solid var(--border);
+  background: #f8fafc;
+  color: var(--text-muted);
+  border-radius: 8px;
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.upload-tab.active {
+  border-color: var(--nbsc-blue);
+  background: var(--nbsc-blue);
+  color: #fff;
+}
+
+.upload-panel {
+  width: 100%;
+}
+
+.upload-panel.hidden {
+  display: none;
+}
+
+.file-upload-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 90px;
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  background: #f8fafc;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.file-upload-label:hover,
+.file-upload-label.drag-over {
+  border-color: var(--nbsc-blue);
+  background: #eef4ff;
+  color: var(--nbsc-blue);
+}
+
+.file-upload-label.file-selected {
+  border-color: #16a34a;
+  background: #f0fdf4;
+  color: #16a34a;
+}

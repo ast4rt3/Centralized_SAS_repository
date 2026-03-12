@@ -178,8 +178,23 @@
             <textarea id="post-desc" rows="4" required placeholder="Write your update here..."></textarea>
           </div>
           <div class="input-group">
-            <label for="post-img">Image URL (Optional)</label>
-            <input type="url" id="post-img" placeholder="https://example.com/image.png">
+            <label>Image / Video</label>
+            <div class="upload-tabs" id="upload-tabs">
+              <button type="button" class="upload-tab active" data-tab="upload">⬆ Upload File</button>
+              <button type="button" class="upload-tab" data-tab="url">🔗 Use URL</button>
+            </div>
+            <!-- File Upload Tab -->
+            <div id="upload-tab-upload" class="upload-panel">
+              <label for="post-file" class="file-upload-label" id="file-upload-label">
+                <span id="file-label-text">Click to choose an image or drag &amp; drop</span>
+                <span style="font-size:0.75rem; color:var(--text-muted); display:block; margin-top:4px;">JPG, PNG, GIF — Max 10MB &nbsp;|&nbsp; For videos, use the URL tab with a YouTube link</span>
+              </label>
+              <input type="file" id="post-file" accept="image/*" style="display:none;">
+            </div>
+            <!-- URL Tab -->
+            <div id="upload-tab-url" class="upload-panel hidden">
+              <input type="url" id="post-img" placeholder="https://example.com/image.png or YouTube link">
+            </div>
           </div>
           <div class="input-group" id="post-img-preview-group" style="display: none;">
             <label>TV Image Preview <span

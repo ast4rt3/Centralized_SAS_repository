@@ -1,5 +1,5 @@
 // REPLACE THIS WITH YOUR NEW SPREADSHEET DEPLOYMENT URL
-const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbw_oXLQzYrXgQ5NorparafTXZSNdUDFkvsAUjjAcCc1mJZAlooP1BPIeMvFiclGM2VwsA/exec";
+const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbza2QFzH0B3XkMFX9RITeSj1f3v4Ox8j5lYxBtxnTUTdqyTlWeE0SieK1n4fTdIRPmbvw/exec";
 
 // Load YouTube IFrame API
 if (!window.YT) {
@@ -407,6 +407,51 @@ document.addEventListener('DOMContentLoaded', () => {
     const coordsDisplay = document.getElementById('post-preview-coords');
     const sizeSelect = document.getElementById('post-img-size');
 
+    // === UPLOAD TAB SWITCHING ===
+    const uploadTabBtns = document.querySelectorAll('.upload-tab');
+    const uploadPanels = { upload: document.getElementById('upload-tab-upload'), url: document.getElementById('upload-tab-url') };
+    let activeUploadTab = 'upload'; // Default to file upload
+
+    uploadTabBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        uploadTabBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeUploadTab = btn.dataset.tab;
+        Object.values(uploadPanels).forEach(p => p && p.classList.add('hidden'));
+        if (uploadPanels[activeUploadTab]) uploadPanels[activeUploadTab].classList.remove('hidden');
+      });
+    });
+
+    // === FILE INPUT + DRAG/DROP FEEDBACK ===
+    const fileInput = document.getElementById('post-file');
+    const fileUploadLabel = document.getElementById('file-upload-label');
+    const fileLabelText = document.getElementById('file-label-text');
+
+    if (fileInput && fileUploadLabel) {
+      fileInput.addEventListener('change', () => {
+        if (fileInput.files && fileInput.files[0]) {
+          fileLabelText.textContent = '✅ ' + fileInput.files[0].name;
+          fileUploadLabel.classList.add('file-selected');
+          fileUploadLabel.classList.remove('drag-over');
+        }
+      });
+
+      fileUploadLabel.addEventListener('dragover', (ev) => {
+        ev.preventDefault();
+        fileUploadLabel.classList.add('drag-over');
+      });
+      fileUploadLabel.addEventListener('dragleave', () => fileUploadLabel.classList.remove('drag-over'));
+      fileUploadLabel.addEventListener('drop', (ev) => {
+        ev.preventDefault();
+        fileUploadLabel.classList.remove('drag-over');
+        if (ev.dataTransfer.files && ev.dataTransfer.files[0]) {
+          fileInput.files = ev.dataTransfer.files;
+          fileLabelText.textContent = '✅ ' + ev.dataTransfer.files[0].name;
+          fileUploadLabel.classList.add('file-selected');
+        }
+      });
+    }
+
     if (imgInput && previewGroup && previewImg && previewContainer) {
       imgInput.addEventListener('input', () => {
         const url = imgInput.value.trim();
@@ -484,6 +529,18 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('submit-post-btn').textContent = "Post Update";
         form.reset();
 
+        // Reset upload tab to default
+        uploadTabBtns.forEach(b => b.classList.remove('active'));
+        const defaultTabBtn = document.querySelector('.upload-tab[data-tab="upload"]');
+        if (defaultTabBtn) defaultTabBtn.classList.add('active');
+        activeUploadTab = 'upload';
+        Object.values(uploadPanels).forEach(p => p && p.classList.add('hidden'));
+        if (uploadPanels['upload']) uploadPanels['upload'].classList.remove('hidden');
+        if (fileUploadLabel) {
+          fileUploadLabel.classList.remove('file-selected');
+          if (fileLabelText) fileLabelText.textContent = 'Click to choose a file or drag & drop';
+        }
+
         if (previewGroup) previewGroup.style.display = 'none';
         if (posInput) posInput.value = '50% 50%';
         if (previewImg) previewImg.style.objectPosition = '50% 50%';
@@ -510,7 +567,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const title = document.getElementById('post-title').value;
         const desc = document.getElementById('post-desc').value;
-        const img = document.getElementById('post-img').value;
+        const imgUrl = document.getElementById('post-img') ? document.getElementById('post-img').value : '';
         const imgPos = document.getElementById('post-img-pos') ? document.getElementById('post-img-pos').value : '50% 50%';
         const imgSize = document.getElementById('post-img-size') ? document.getElementById('post-img-size').value : 'cover';
         const submitBtn = document.getElementById('submit-post-btn');
@@ -532,19 +589,39 @@ document.addEventListener('DOMContentLoaded', () => {
           const editTimestamp = form.getAttribute('data-edit-timestamp');
           const isEdit = !!editTimestamp;
 
+          // --- Build Payload ---
           const payload = {
             action: isEdit ? "editPost" : "addPost",
             username: userObj.username,
             password: confirmPass,
             title: title,
             description: desc,
-            imageUrl: img,
+            imageUrl: imgUrl, // Will be overwritten by Drive link if file upload is used
             imagePosition: imgPos,
             imageSize: imgSize
           };
 
-          if (isEdit) {
-            payload.timestamp = editTimestamp;
+          if (isEdit) payload.timestamp = editTimestamp;
+
+          // --- File Upload: Encode to Base64 and add to payload ---
+          if (activeUploadTab === 'upload' && fileInput && fileInput.files && fileInput.files[0]) {
+            const file = fileInput.files[0];
+            submitBtn.textContent = 'Uploading file...';
+            await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => {
+                // reader.result is like "data:image/png;base64,ABC123..."
+                const base64Part = reader.result.split(',')[1];
+                payload.fileData = base64Part;
+                payload.fileName = file.name;
+                payload.mimeType = file.type;
+                payload.imageUrl = ''; // Backend will replace this with Drive URL
+                resolve();
+              };
+              reader.onerror = reject;
+              reader.readAsDataURL(file);
+            });
+            submitBtn.textContent = 'Processing...';
           }
 
           const r = await fetch(BACKEND_GAS_URL, {
@@ -742,7 +819,13 @@ document.addEventListener('DOMContentLoaded', () => {
               <img src="https://img.youtube.com/vi/${ytId}/maxresdefault.jpg" class="home-news-image-blur" style="position: absolute; top: -10%; left: -10%; width: 120%; height: 120%; object-fit: cover; filter: blur(40px); opacity: 0.5; z-index: 0; pointer-events: none;" aria-hidden="true" loading="lazy" onerror="this.src='https://img.youtube.com/vi/${ytId}/hqdefault.jpg'">
               <iframe id="ytplayer-${post.timestamp}" src="https://www.youtube.com/embed/${ytId}?autoplay=1&mute=1&controls=0&enablejsapi=1" class="home-news-image yt-video-frame" style="position: relative; z-index: 1; border: none; width: 100%; height: 100%; object-position: ${objPos}; object-fit: ${objSize};" allow="autoplay; encrypted-media" allowfullscreen></iframe>
             `;
-          } else if (urlLower.endsWith('.mp4') || urlLower.endsWith('.webm')) {
+          } else if (urlLower.includes('drive.google.com/file/d/') && urlLower.includes('/preview')) {
+            // Google Drive video (uploaded via DriveApp) — embed as iframe
+            imgHtml = `
+              <div class="home-news-image-blur" style="position: absolute; top: -10%; left: -10%; width: 120%; height: 120%; background:#000; filter: blur(40px); opacity: 0.5; z-index: 0; pointer-events: none;"></div>
+              <iframe src="${post.imageUrl}" class="home-news-image drive-video-frame" style="position: relative; z-index: 1; border: none; width: 100%; height: 100%;" allow="autoplay" allowfullscreen></iframe>
+            `;
+          } else if (urlLower.endsWith('.mp4') || urlLower.endsWith('.webm') || (urlLower.includes('drive.google.com') && urlLower.includes('type=video'))) {
             imgHtml = `
               <video src="${post.imageUrl}" class="home-news-image-blur" style="position: absolute; top: -10%; left: -10%; width: 120%; height: 120%; object-fit: cover; filter: blur(40px); opacity: 0.5; z-index: 0; pointer-events: none;" autoplay muted playsinline></video>
               <video src="${post.imageUrl}" class="home-news-image" style="position: relative; z-index: 1; object-position: ${objPos}; object-fit: ${objSize};" autoplay muted playsinline></video>
@@ -988,16 +1071,14 @@ document.addEventListener('DOMContentLoaded', () => {
           s.classList.remove('is-active');
           // Perform cleanup for inactive slides
           const oldVideo = s.querySelector('video.home-news-image');
-          const oldIframe = s.querySelector('iframe.home-news-image');
+          const oldIframe = s.querySelector('iframe.yt-video-frame'); // Only YouTube iframes need pausing
 
           if (oldVideo) {
             oldVideo.pause();
-            oldVideo.muted = true; // Force mute to prevent bleed
+            oldVideo.muted = true;
           }
           if (oldIframe && window.YT && ytPlayers[oldIframe.id]) {
-            try {
-              ytPlayers[oldIframe.id].pauseVideo();
-            } catch (e) { } // Ignore if not ready
+            try { ytPlayers[oldIframe.id].pauseVideo(); } catch (e) { }
           }
         }
       });
@@ -1012,7 +1093,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const activeSlide = slides[index];
       const videoEl = activeSlide.querySelector('video.home-news-image');
-      const iframeEl = activeSlide.querySelector('iframe.home-news-image');
+      const iframeEl = activeSlide.querySelector('iframe.yt-video-frame'); // Only YouTube iframes
+      const driveIframeEl = activeSlide.querySelector('iframe.drive-video-frame'); // Drive video iframes
 
       // Handle CSS Theater Mode
       if ((videoEl || iframeEl) && tvTheaterEnabled) {
@@ -1056,8 +1138,14 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn("YT Player not fully ready yet.");
           }
         }
+      } else if (driveIframeEl) {
+        // Google Drive video iframe — we can't hook into its events due to CSP,
+        // so we use a fixed timer to advance after 15 seconds.
+        if (slides.length > 1) {
+          timer = window.setTimeout(next, 15000);
+        }
       } else {
-        // Standard static image slide
+        // Standard static image slide — use the normal interval timer
         start();
       }
     }

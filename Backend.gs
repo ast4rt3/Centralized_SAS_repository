@@ -1,385 +1,290 @@
 // ==============================================================
-// NBSC SAS REPOSITORY BACKEND (Users & Posts)
-// ==============================================================
-// 1. Create a new Google Spreadsheet named "SAS Backend Database".
-// 2. Create two Sheets (tabs) named EXACTLY: "Users" and "Posts".
-// 3. In the "Users" sheet, write headers in A1:C1 -> Username | Password | Role
-//    (Example Row 2:  admin | admin123 | admin)
-//    (Example Row 3:  student | password | user)
-// 4. In the "Posts" sheet, write headers in A1:D1 -> Timestamp | Title | Description | ImageURL
-// 5. Copy the Spreadsheet ID from the URL (the long string between /d/ and /edit).
-// 6. Paste that ID into the masterDatabaseID variable below.
-// 7. Click Deploy -> New Deployment -> Type: Web App -> Execute as: Me -> Access: Anyone.
+// NBSC SAS REPOSITORY BACKEND
+// All features: Login, Posts CRUD, TV Visibility, TV Settings,
+//               Google Drive File Uploads
 // ==============================================================
 
-const masterDatabaseID = "YOUR_SPREADSHEET_ID_HERE"; // <-- PASTE SPREADSHEET ID HERE
+const masterDatabaseID = "1PJ21kipAuQ_a0GzSkG8r9UFDRdCEDXwytIu7SZWm7cs";
+const DRIVE_FOLDER_ID = "1WJ9pa_ZcDWEz-t2MssgLE1gUB-kMZOyv"; // SAS_TV_Uploads (personal account)
 
+// --------------------------------------------------------------
+// doGet — Fetch all posts + global TV settings
+// --------------------------------------------------------------
 function doGet(e) {
-  // doGet handles fetching the list of Posts for the Home page
   try {
     const ss = SpreadsheetApp.openById(masterDatabaseID);
     const sheet = ss.getSheetByName("Posts");
-    
-    // If the sheet doesn't exist yet, return empty
-    if (!sheet) {
-      return respondJSON({ success: true, posts: [] });
-    }
-    
+
+    if (!sheet) return respondJSON({ success: true, posts: [] });
+
     const lastRow = sheet.getLastRow();
-    if (lastRow < 2) {
-      return respondJSON({ success: true, posts: [] });
-    }
-    
-    // Fetch all posts (A2 to G[lastRow])
+    if (lastRow < 2) return respondJSON({ success: true, posts: [] });
+
     const data = sheet.getRange(2, 1, lastRow - 1, 7).getDisplayValues();
-    
-    // Format into an array of objects
-    const posts = data.map(row => {
-      return {
-        timestamp: row[0] || new Date().toISOString(),
-        title: row[1] || "",
-        description: row[2] || "",
-        imageUrl: row[3] || "",
-        imagePosition: row[4] || "center",
-        imageSize: row[5] || "cover",
-        showOnTv: row[6] === "" ? "true" : row[6].toLowerCase()
-      };
-    });
-    
-    // Reverse so newest posts show first
-    posts.reverse();
-    
-    // Fetch Global TV Settings from Script Properties
-    const scriptProperties = PropertiesService.getScriptProperties();
+
+    const posts = data.map(row => ({
+      timestamp:     row[0] || new Date().toISOString(),
+      title:         row[1] || "",
+      description:   row[2] || "",
+      imageUrl:      row[3] || "",
+      imagePosition: row[4] || "center",
+      imageSize:     row[5] || "cover",
+      showOnTv:      row[6] === "" ? "true" : row[6].toLowerCase()
+    }));
+
+    posts.reverse(); // Newest first
+
+    const props = PropertiesService.getScriptProperties();
     const tvSettings = {
-      tvAudioEnabled: scriptProperties.getProperty('tvAudio') === 'true',
-      tvTheaterEnabled: scriptProperties.getProperty('tvTheater') === 'true'
+      tvAudioEnabled:   props.getProperty("tvAudio")   === "true",
+      tvTheaterEnabled: props.getProperty("tvTheater") === "true"
     };
-    
+
     return respondJSON({ success: true, posts: posts, tvSettings: tvSettings });
-    
+
   } catch (err) {
-    return respondJSON({ success: false, message: "Error reading Data: " + err.message });
+    return respondJSON({ success: false, message: "Error reading data: " + err.message });
   }
 }
 
+// --------------------------------------------------------------
+// doPost — Route incoming actions
+// --------------------------------------------------------------
 function doPost(e) {
-  // doPost handles Login attempts AND Adding New Posts
   try {
     let payload = {};
-    
-    // Sometimes GAS auto-parses URL encoded forms into e.parameter correctly
+
     if (e.parameter && Object.keys(e.parameter).length > 0) {
       payload = e.parameter;
-    } 
-    
-    // If e.parameter is empty (common for custom POSTs), we parse the raw body string
+    }
+
     if (e.postData && e.postData.contents) {
       if (e.postData.type === "application/json" || e.postData.contents.startsWith("{")) {
-        try {
-          payload = Object.assign(payload, JSON.parse(e.postData.contents));
-        } catch (e) {
-          // Ignore JSON fail
-        }
+        try { payload = Object.assign(payload, JSON.parse(e.postData.contents)); } catch (_) {}
       } else {
-        // Fallback: Manually parse x-www-form-urlencoded string
-        // e.g. "action=login&username=admin&password=123"
-        const params = e.postData.contents.split('&');
-        for (let p of params) {
-          const parts = p.split('=');
+        // x-www-form-urlencoded fallback
+        e.postData.contents.split("&").forEach(p => {
+          const parts = p.split("=");
           if (parts.length === 2) {
-             const key = decodeURIComponent(parts[0].replace(/\+/g, ' '));
-             const val = decodeURIComponent(parts[1].replace(/\+/g, ' '));
-             payload[key] = val;
+            payload[decodeURIComponent(parts[0].replace(/\+/g, " "))] =
+              decodeURIComponent(parts[1].replace(/\+/g, " "));
           }
-        }
+        });
       }
     }
-    
-    const action = payload.action;
-    
-    if (action === "login") {
-      return handleLogin(payload.username, payload.password);
-    } 
-    else if (action === "addPost") {
-      return handleAddPost(payload);
-    } 
-    else if (action === "editPost") {
-      return handleEditPost(payload);
+
+    switch (payload.action) {
+      case "login":            return handleLogin(payload.username, payload.password);
+      case "addPost":          return handleAddPost(payload);
+      case "editPost":         return handleEditPost(payload);
+      case "deletePost":       return handleDeletePost(payload);
+      case "toggleTvVisible":  return handleToggleTvVisible(payload);
+      case "updateTvSettings": return handleUpdateTvSettings(payload);
+      default:
+        return respondJSON({ success: false, message: "Unknown action: " + payload.action });
     }
-    else if (action === "deletePost") {
-      return handleDeletePost(payload);
-    }
-    else if (action === "toggleTvVisible") {
-      return handleToggleTvVisible(payload);
-    }
-    else if (action === "updateTvSettings") {
-      return handleUpdateTvSettings(payload);
-    }
-    else {
-      return respondJSON({ success: false, message: "Invalid action or no payload mapped correctly. Raw body: " + (e.postData ? e.postData.contents : 'null') });
-    }
-    
+
   } catch (err) {
     return respondJSON({ success: false, message: "Server Error: " + err.message });
   }
 }
 
+// --------------------------------------------------------------
+// Authentication
+// --------------------------------------------------------------
 function handleLogin(username, password) {
   if (!username || !password) {
     return respondJSON({ success: false, message: "Username and Password required." });
   }
-  
-  const ss = SpreadsheetApp.openById(masterDatabaseID);
-  const sheet = ss.getSheetByName("Users");
-  
-  if (!sheet) {
-    return respondJSON({ success: false, message: "Users database not initialized." });
-  }
-  
+
+  const sheet = SpreadsheetApp.openById(masterDatabaseID).getSheetByName("Users");
+  if (!sheet) return respondJSON({ success: false, message: "Users database not initialized." });
+
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return respondJSON({ success: false, message: "Invalid credentials." });
-  
-  // Read Usernames (Col A), Passwords (Col B), Roles (Col C)
+
   const users = sheet.getRange(2, 1, lastRow - 1, 3).getDisplayValues();
-  
-  for (let i = 0; i < users.length; i++) {
-    const dbUser = users[i][0].trim();
-    const dbPass = users[i][1].trim();
-    const dbRole = users[i][2].trim().toLowerCase() || "user"; // Default to 'user' if blank
-    
-    // Exact match (case sensitive for password)
-    if (dbUser === username && dbPass === password) {
+
+  for (const row of users) {
+    if (row[0].trim() === username && row[1].trim() === password) {
       return respondJSON({
         success: true,
-        username: dbUser,
-        role: dbRole
+        username: row[0].trim(),
+        role: (row[2].trim().toLowerCase() || "user")
       });
     }
   }
-  
+
   return respondJSON({ success: false, message: "Invalid credentials." });
 }
 
+function verifyAdmin(payload) {
+  const auth = JSON.parse(handleLogin(payload.username, payload.password).getContent());
+  if (!auth.success) throw new Error("Unauthorized: Invalid credentials.");
+  if (auth.role !== "admin") throw new Error("Unauthorized: Admin role required.");
+}
+
+// --------------------------------------------------------------
+// Add Post
+// --------------------------------------------------------------
 function handleAddPost(payload) {
-  // Very basic security: Client must pass the admin's username/pass to create a post!
-  // In a real prod environment, we would use JWT tokens, but for static HTML, this acts as an API Key.
-  const authResponse = handleLogin(payload.username, payload.password);
-  const authObj = JSON.parse(authResponse.getContent());
-  
-  if (!authObj.success) {
-    return respondJSON({ success: false, message: "Unauthorized: Invalid credentials." });
+  try { verifyAdmin(payload); } catch (e) { return respondJSON({ success: false, message: e.message }); }
+
+  let imageUrl = payload.imageUrl || "";
+
+  if (payload.fileData && payload.fileName) {
+    imageUrl = uploadFileToDrive(payload);
   }
-  if (authObj.role !== "admin") {
-    return respondJSON({ success: false, message: "Unauthorized: You must be an admin to post." });
-  }
-  
-  const title = payload.title || "Untitled Post";
-  const desc = payload.description || "";
-  const imageUrl = payload.imageUrl || "";
-  const imagePos = payload.imagePosition || "center";
-  const imageSize = payload.imageSize || "cover";
-  const showOnTv = "true"; // Default to true for new posts
-  const timestamp = new Date().toLocaleString();
-  
-  const ss = SpreadsheetApp.openById(masterDatabaseID);
-  const sheet = ss.getSheetByName("Posts");
-  
-  if (!sheet) {
-    return respondJSON({ success: false, message: "Posts database not initialized." });
-  }
-  
-  // Append new post as a row
-  sheet.appendRow([timestamp, title, desc, imageUrl, imagePos, imageSize, showOnTv]);
-  
+
+  const sheet = SpreadsheetApp.openById(masterDatabaseID).getSheetByName("Posts");
+  if (!sheet) return respondJSON({ success: false, message: "Posts database not initialized." });
+
+  sheet.appendRow([
+    new Date().toLocaleString(),
+    payload.title        || "Untitled Post",
+    payload.description  || "",
+    imageUrl,
+    payload.imagePosition || "center",
+    payload.imageSize     || "cover",
+    "true"
+  ]);
+
   return respondJSON({ success: true, message: "Post added successfully!" });
 }
 
+// --------------------------------------------------------------
+// Edit Post
+// --------------------------------------------------------------
 function handleEditPost(payload) {
-  const authResponse = handleLogin(payload.username, payload.password);
-  const authObj = JSON.parse(authResponse.getContent());
-  
-  if (!authObj.success) {
-    return respondJSON({ success: false, message: "Unauthorized: Invalid credentials." });
-  }
-  if (authObj.role !== "admin") {
-    return respondJSON({ success: false, message: "Unauthorized: You must be an admin to edit posts." });
-  }
-  
-  const targetTimestamp = payload.timestamp;
-  if (!targetTimestamp) {
-    return respondJSON({ success: false, message: "Missing timestamp for editing." });
+  try { verifyAdmin(payload); } catch (e) { return respondJSON({ success: false, message: e.message }); }
+
+  if (!payload.timestamp) return respondJSON({ success: false, message: "Missing timestamp." });
+
+  let imageUrl = payload.imageUrl || "";
+
+  if (payload.fileData && payload.fileName) {
+    imageUrl = uploadFileToDrive(payload);
   }
 
-  const title = payload.title || "Untitled Post";
-  const desc = payload.description || "";
-  const imageUrl = payload.imageUrl || "";
-  const imagePos = payload.imagePosition || "center";
-  const imageSize = payload.imageSize || "cover";
-  // For Edit, we ideally don't want to change the current showOnTv state unless passed
-  // To keep it simple, we preserve it by reading the 7th column during the overwrite block
-  
-  const ss = SpreadsheetApp.openById(masterDatabaseID);
-  const sheet = ss.getSheetByName("Posts");
-  
-  if (!sheet) {
-    return respondJSON({ success: false, message: "Posts database not initialized." });
-  }
+  const sheet = SpreadsheetApp.openById(masterDatabaseID).getSheetByName("Posts");
+  if (!sheet) return respondJSON({ success: false, message: "Posts database not initialized." });
 
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2) {
-    return respondJSON({ success: false, message: "No posts found." });
-  }
+  const rowIndex = findRowByTimestamp(sheet, payload.timestamp);
+  if (rowIndex === -1) return respondJSON({ success: false, message: "Post not found." });
 
-  const timestamps = sheet.getRange(2, 1, lastRow - 1, 1).getDisplayValues();
-  let rowIndex = -1;
-
-  for (let i = 0; i < timestamps.length; i++) {
-    if (timestamps[i][0] === targetTimestamp) {
-      rowIndex = i + 2; // +2 because range starts at row 2
-      break;
-    }
-  }
-
-  if (rowIndex === -1) {
-    return respondJSON({ success: false, message: "Post not found." });
-  }
-  
   const currentShowOnTv = sheet.getRange(rowIndex, 7).getDisplayValue() || "true";
 
-  // Overwrite the row (keep the original timestamp and showOnTv status)
-  sheet.getRange(rowIndex, 1, 1, 7).setValues([[targetTimestamp, title, desc, imageUrl, imagePos, imageSize, currentShowOnTv]]);
+  sheet.getRange(rowIndex, 1, 1, 7).setValues([[
+    payload.timestamp,
+    payload.title         || "Untitled Post",
+    payload.description   || "",
+    imageUrl,
+    payload.imagePosition || "center",
+    payload.imageSize     || "cover",
+    currentShowOnTv
+  ]]);
 
   return respondJSON({ success: true, message: "Post updated successfully!" });
 }
 
+// --------------------------------------------------------------
+// Delete Post
+// --------------------------------------------------------------
 function handleDeletePost(payload) {
-  const authResponse = handleLogin(payload.username, payload.password);
-  const authObj = JSON.parse(authResponse.getContent());
-  
-  if (!authObj.success) {
-    return respondJSON({ success: false, message: "Unauthorized: Invalid credentials." });
-  }
-  if (authObj.role !== "admin") {
-    return respondJSON({ success: false, message: "Unauthorized: You must be an admin to delete posts." });
-  }
-  
-  const targetTimestamp = payload.timestamp;
-  if (!targetTimestamp) {
-    return respondJSON({ success: false, message: "Missing timestamp for deletion." });
-  }
-  
-  const ss = SpreadsheetApp.openById(masterDatabaseID);
-  const sheet = ss.getSheetByName("Posts");
-  
-  if (!sheet) {
-    return respondJSON({ success: false, message: "Posts database not initialized." });
-  }
+  try { verifyAdmin(payload); } catch (e) { return respondJSON({ success: false, message: e.message }); }
 
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2) {
-    return respondJSON({ success: false, message: "No posts to delete." });
-  }
+  if (!payload.timestamp) return respondJSON({ success: false, message: "Missing timestamp." });
 
-  const timestamps = sheet.getRange(2, 1, lastRow - 1, 1).getDisplayValues();
-  let rowIndex = -1;
+  const sheet = SpreadsheetApp.openById(masterDatabaseID).getSheetByName("Posts");
+  if (!sheet) return respondJSON({ success: false, message: "Posts database not initialized." });
 
-  for (let i = 0; i < timestamps.length; i++) {
-    if (timestamps[i][0] === targetTimestamp) {
-      rowIndex = i + 2; // +2 because range starts at row 2
-      break;
-    }
-  }
+  const rowIndex = findRowByTimestamp(sheet, payload.timestamp);
+  if (rowIndex === -1) return respondJSON({ success: false, message: "Post not found." });
 
-  if (rowIndex === -1) {
-    return respondJSON({ success: false, message: "Post not found." });
-  }
-
-  // Delete the specific row
   sheet.deleteRow(rowIndex);
-
   return respondJSON({ success: true, message: "Post deleted successfully!" });
 }
 
+// --------------------------------------------------------------
+// Toggle TV Visibility
+// --------------------------------------------------------------
 function handleToggleTvVisible(payload) {
-  const authResponse = handleLogin(payload.username, payload.password);
-  const authObj = JSON.parse(authResponse.getContent());
-  
-  if (!authObj.success) {
-    return respondJSON({ success: false, message: "Unauthorized: Invalid credentials." });
-  }
-  if (authObj.role !== "admin") {
-    return respondJSON({ success: false, message: "Unauthorized: You must be an admin to modify posts." });
-  }
-  
-  const targetTimestamp = payload.timestamp;
-  if (!targetTimestamp) {
-    return respondJSON({ success: false, message: "Missing timestamp for toggling visibility." });
-  }
-  
-  const ss = SpreadsheetApp.openById(masterDatabaseID);
-  const sheet = ss.getSheetByName("Posts");
-  
-  if (!sheet) {
-    return respondJSON({ success: false, message: "Posts database not initialized." });
-  }
+  try { verifyAdmin(payload); } catch (e) { return respondJSON({ success: false, message: e.message }); }
 
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2) {
-    return respondJSON({ success: false, message: "No posts found to toggle." });
-  }
+  if (!payload.timestamp) return respondJSON({ success: false, message: "Missing timestamp." });
 
-  const timestamps = sheet.getRange(2, 1, lastRow - 1, 1).getDisplayValues();
-  let rowIndex = -1;
+  const sheet = SpreadsheetApp.openById(masterDatabaseID).getSheetByName("Posts");
+  if (!sheet) return respondJSON({ success: false, message: "Posts database not initialized." });
 
-  for (let i = 0; i < timestamps.length; i++) {
-    if (timestamps[i][0] === targetTimestamp) {
-      rowIndex = i + 2; 
-      break;
-    }
-  }
+  const rowIndex = findRowByTimestamp(sheet, payload.timestamp);
+  if (rowIndex === -1) return respondJSON({ success: false, message: "Post not found." });
 
-  if (rowIndex === -1) {
-    return respondJSON({ success: false, message: "Post not found." });
-  }
+  const cell = sheet.getRange(rowIndex, 7);
+  const newVal = cell.getDisplayValue().toLowerCase() === "false" ? "true" : "false";
+  cell.setValue(newVal);
 
-  const toggleCell = sheet.getRange(rowIndex, 7);
-  const currentVal = toggleCell.getDisplayValue().toLowerCase();
-  const newVal = currentVal === "false" ? "true" : "false";
-  
-  toggleCell.setValue(newVal);
-
-  return respondJSON({ success: true, message: "TV Visibility toggled to " + newVal, newState: newVal });
+  return respondJSON({ success: true, message: "TV visibility toggled to " + newVal, newState: newVal });
 }
 
+// --------------------------------------------------------------
+// Update Global TV Settings
+// --------------------------------------------------------------
 function handleUpdateTvSettings(payload) {
-  const authResponse = handleLogin(payload.username, payload.password);
-  const authObj = JSON.parse(authResponse.getContent());
-  
-  if (!authObj.success) {
-    return respondJSON({ success: false, message: "Unauthorized: Invalid credentials." });
+  try { verifyAdmin(payload); } catch (e) { return respondJSON({ success: false, message: e.message }); }
+
+  const props = PropertiesService.getScriptProperties();
+  props.setProperty("tvAudio",   String(payload.tvAudioEnabled)   === "true" ? "true" : "false");
+  props.setProperty("tvTheater", String(payload.tvTheaterEnabled) === "true" ? "true" : "false");
+
+  return respondJSON({ success: true, message: "TV defaults updated." });
+}
+
+// --------------------------------------------------------------
+// Upload file to Google Drive, return public view URL
+// --------------------------------------------------------------
+function uploadFileToDrive(payload) {
+  const folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+  const blob = Utilities.newBlob(
+    Utilities.base64Decode(payload.fileData),
+    payload.mimeType,
+    payload.fileName
+  );
+  const file = folder.createFile(blob);
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  const fileId = file.getId();
+  // Videos need the /preview embed URL (iframe-compatible, supports streaming)
+  // Images use the standard uc?export=view direct link
+  const isVideo = payload.mimeType && payload.mimeType.startsWith("video/");
+  return isVideo
+    ? "https://drive.google.com/file/d/" + fileId + "/preview"
+    : "https://drive.google.com/uc?export=view&id=" + fileId;
+}
+
+// --------------------------------------------------------------
+// ONE-TIME SETUP: Run this once in the Apps Script Editor to
+// grant Drive permissions. Select "authorizeDrive" in the
+// function dropdown and click Run ▶. Accept all permission pop-ups.
+// --------------------------------------------------------------
+function authorizeDrive() {
+  const folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+  Logger.log("Drive OK! Folder: " + folder.getName());
+}
+
+// --------------------------------------------------------------
+// Utilities
+// --------------------------------------------------------------
+function findRowByTimestamp(sheet, timestamp) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return -1;
+  const timestamps = sheet.getRange(2, 1, lastRow - 1, 1).getDisplayValues();
+  for (let i = 0; i < timestamps.length; i++) {
+    if (timestamps[i][0] === timestamp) return i + 2;
   }
-  if (authObj.role !== "admin") {
-    return respondJSON({ success: false, message: "Unauthorized: You must be an admin to modify settings." });
-  }
-  
-  try {
-    // Convert boolean payloads to strings for PropertiesService
-    const audioSetting = String(payload.tvAudioEnabled) === "true" ? "true" : "false";
-    const theaterSetting = String(payload.tvTheaterEnabled) === "true" ? "true" : "false";
-    
-    const scriptProperties = PropertiesService.getScriptProperties();
-    scriptProperties.setProperty("tvAudio", audioSetting);
-    scriptProperties.setProperty("tvTheater", theaterSetting);
-    
-    return respondJSON({ success: true, message: "TV defaults updated successfully." });
-    
-  } catch (err) {
-    return respondJSON({ success: false, message: "Error updating settings: " + err.message });
-  }
+  return -1;
 }
 
 function respondJSON(dataObject) {
-  return ContentService.createTextOutput(JSON.stringify(dataObject))
-                       .setMimeType(ContentService.MimeType.JSON);
+  return ContentService
+    .createTextOutput(JSON.stringify(dataObject))
+    .setMimeType(ContentService.MimeType.JSON);
 }
