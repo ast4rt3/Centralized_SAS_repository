@@ -250,15 +250,16 @@ function uploadFileToDrive(payload) {
     payload.fileName
   );
   const file = folder.createFile(blob);
-  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+  // Set to fully public (not just "anyone with link") so CDN links work without auth
+  file.setSharing(DriveApp.Access.ANYONE, DriveApp.Permission.VIEW);
+
   const fileId = file.getId();
-  // Videos need the /preview embed URL (iframe-compatible, supports streaming)
-  // Images use the standard uc?export=view direct link
-  const isVideo = payload.mimeType && payload.mimeType.startsWith("video/");
-  return isVideo
-    ? "https://drive.google.com/file/d/" + fileId + "/preview"
-    : "https://drive.google.com/uc?export=view&id=" + fileId;
+  // Use Drive's thumbnail CDN — works in external <img> tags without login redirects
+  return "https://drive.google.com/thumbnail?id=" + fileId + "&sz=w1600";
 }
+
+
 
 // --------------------------------------------------------------
 // ONE-TIME SETUP: Run this once in the Apps Script Editor to
