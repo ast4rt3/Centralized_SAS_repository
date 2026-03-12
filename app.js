@@ -352,7 +352,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (userObj.role === 'tv') {
       document.body.classList.add('tv-mode');
       tvSettingsBox.classList.remove('hidden');
-
+      
       // Attempt actual fullscreen via API explicitly for the TV role
       try {
         if (!document.fullscreenElement) {
@@ -361,9 +361,12 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         }
       } catch (err) { }
+    } else if (userObj.role === 'admin') {
+      document.body.classList.remove('tv-mode');
+      tvSettingsBox.classList.remove('hidden'); // Admin can change TV defaults
     } else {
       document.body.classList.remove('tv-mode');
-      tvSettingsBox.classList.add('hidden');
+      tvSettingsBox.classList.add('hidden'); // Uploader / Other restricted
     }
 
     const displayName = userDisplayName;
