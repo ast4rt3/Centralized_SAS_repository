@@ -13,6 +13,17 @@ if (!window.YT) {
 let tvAudioEnabled = false;
 let tvTheaterEnabled = false;
 
+// Offline banner — automatically shown/hidden based on connectivity
+(function () {
+  const banner = document.getElementById('offline-banner');
+  function updateBanner() {
+    if (banner) banner.style.display = navigator.onLine ? 'none' : 'block';
+  }
+  window.addEventListener('online', updateBanner);
+  window.addEventListener('offline', updateBanner);
+  updateBanner(); // Check immediately on page load
+})();
+
 document.addEventListener('DOMContentLoaded', () => {
   const navDynamic = document.getElementById('nav-dynamic');
   const statSystems = document.getElementById('stat-systems');
@@ -40,6 +51,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnTvTheater = document.getElementById('tv-fullscreen-toggle');
 
   let systems = [];
+  let ytPlayers = {}; // Persistent store for YT players
+  let globalCarouselTimer = null;
+  let globalSlideGeneration = 0;
 
   function setActiveNav(item) {
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -123,6 +137,18 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderNav() {
+    // Uploader role cannot access other services
+    const sessionData = sessionStorage.getItem('sas_user_data');
+    if (sessionData) {
+      try {
+        const role = JSON.parse(sessionData).role;
+        if (role === 'uploader') {
+          navDynamic.innerHTML = '<div class="nav-section-label">Restricted</div><div style="padding:10px 16px; font-size:0.85rem; color:var(--text-muted);">Uploader role has limited access to external systems.</div>';
+          return;
+        }
+      } catch (e) { }
+    }
+
     var groups = groupBySection(systems);
     var sectionNames = Object.keys(groups).sort(function (a, b) { return a.localeCompare(b); });
 
@@ -349,6 +375,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (userObj.role === 'admin') {
       roleBadge = '<span style="background:var(--nbsc-gold); color:var(--nbsc-dark); padding:2px 6px; border-radius:4px; font-size:0.7em; margin-left:8px;">ADMIN</span>';
+    } else if (userObj.role === 'uploader') {
+      roleBadge = '<span style="background:#3b82f6; color:white; padding:2px 6px; border-radius:4px; font-size:0.7em; margin-left:8px;">UPLOADER</span>';
     } else if (userObj.role === 'tv') {
       roleBadge = '<span style="background:#10b981; color:white; padding:2px 6px; border-radius:4px; font-size:0.7em; margin-left:8px;">TV</span>';
 
@@ -384,9 +412,9 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // Admin check for "Add Post" button
+    // Admin/Uploader check for "Add Post" button
     const addPostBtn = document.getElementById('add-post-btn');
-    if (addPostBtn && userObj.role === 'admin') {
+    if (addPostBtn && (userObj.role === 'admin' || userObj.role === 'uploader')) {
       addPostBtn.classList.remove('hidden');
     }
   }
@@ -817,7 +845,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (ytId) {
             imgHtml = `
               <img src="https://img.youtube.com/vi/${ytId}/maxresdefault.jpg" class="home-news-image-blur" style="position: absolute; top: -10%; left: -10%; width: 120%; height: 120%; object-fit: cover; filter: blur(40px); opacity: 0.5; z-index: 0; pointer-events: none;" aria-hidden="true" loading="lazy" onerror="this.src='https://img.youtube.com/vi/${ytId}/hqdefault.jpg'">
-              <iframe id="ytplayer-${post.timestamp}" src="https://www.youtube.com/embed/${ytId}?autoplay=1&mute=1&controls=0&enablejsapi=1" class="home-news-image yt-video-frame" style="position: relative; z-index: 1; border: none; width: 100%; height: 100%; object-position: ${objPos}; object-fit: ${objSize};" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+              <iframe id="ytplayer-${post.timestamp}" src="https://www.youtube.com/embed/${ytId}?autoplay=1&mute=1&controls=0&enablejsapi=1&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&showinfo=0&autohide=1" class="home-news-image yt-video-frame" style="position: relative; z-index: 1; border: none; width: 100%; height: 100%; object-position: ${objPos}; object-fit: ${objSize};" allow="autoplay; encrypted-media" allowfullscreen></iframe>
             `;
           } else if (urlLower.includes('drive.google.com/file/d/') && urlLower.includes('/preview')) {
             // Google Drive video (uploaded via DriveApp) — embed as iframe
@@ -890,7 +918,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const ytId = getYouTubeVideoId(post.imageUrl);
 
           if (ytId) {
-            imgHtml = `<iframe src="https://www.youtube.com/embed/${ytId}?autoplay=0&mute=1&loop=1&playlist=${ytId}&controls=1" class="post-image" style="border: none; object-position: ${objPos}; object-fit: ${objSize};" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+            imgHtml = `<iframe src="https://www.youtube.com/embed/${ytId}?autoplay=0&mute=1&loop=1&playlist=${ytId}&controls=0&rel=0" class="post-image" style="border: none; object-position: ${objPos}; object-fit: ${objSize}; pointer-events: none;" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
           } else if (urlLower.endsWith('.mp4') || urlLower.endsWith('.webm')) {
             imgHtml = `<video src="${post.imageUrl}" class="post-image" style="object-position: ${objPos}; object-fit: ${objSize};" autoplay muted loop playsinline></video>`;
           } else {
@@ -906,7 +934,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
         `;
 
-        if (role === 'admin') {
+        if (role === 'admin' || role === 'uploader') {
           const editBtn = document.createElement('button');
           editBtn.className = 'secondary-btn edit-post-btn';
           editBtn.style.cssText = 'position: absolute; top: 12px; right: 12px; padding: 6px 16px; font-size: 0.8rem; background: rgba(0,0,0,0.6); color: white; border-radius: 6px; backdrop-filter: blur(4px); cursor: pointer;';
@@ -960,7 +988,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!sessionData) return;
 
             const userObj = JSON.parse(sessionData);
-            const confirmPass = prompt("Please enter your admin password to confirm deletion:");
+            const confirmPass = prompt("Please enter your password to confirm deletion:");
             if (!confirmPass) return;
 
             deleteBtn.textContent = "Deleting...";
@@ -1006,7 +1034,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!sessionData) return;
             const userObj = JSON.parse(sessionData);
 
-            const confirmPass = prompt(`Please enter your admin password to ${isHidden ? 'show this on TV' : 'hide this from TV'}:`);
+            const confirmPass = prompt(`Please enter your password to ${isHidden ? 'show this on TV' : 'hide this from TV'}:`);
             if (!confirmPass) return;
 
             toggleTvBtn.textContent = "Updating...";
@@ -1046,16 +1074,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  let ytPlayers = {}; // Global store for YT players
-
   function initCarousel(container) {
     var slides = Array.prototype.slice.call(container.querySelectorAll('.home-news-slide'));
     var dots = Array.prototype.slice.call(container.querySelectorAll('.home-news-dot'));
     if (!slides.length) return;
 
+    // Clear ANY existing carousel timer/players to prevent leaks
+    if (globalCarouselTimer) clearInterval(globalCarouselTimer);
+    globalCarouselTimer = null;
+
+    Object.keys(ytPlayers).forEach(id => {
+      try { ytPlayers[id].destroy(); } catch (e) { }
+    });
+    ytPlayers = {};
+
     var current = 0;
     var intervalMs = 7000;
-    var timer;
 
     function next() {
       var nextIndex = (current + 1) % slides.length;
@@ -1071,14 +1105,11 @@ document.addEventListener('DOMContentLoaded', () => {
           s.classList.remove('is-active');
           // Perform cleanup for inactive slides
           const oldVideo = s.querySelector('video.home-news-image');
-          const oldIframe = s.querySelector('iframe.yt-video-frame'); // Only YouTube iframes need pausing
+          const oldIframe = s.querySelector('iframe.yt-video-frame');
 
           if (oldVideo) {
             oldVideo.pause();
             oldVideo.muted = true;
-          }
-          if (oldIframe && window.YT && ytPlayers[oldIframe.id]) {
-            try { ytPlayers[oldIframe.id].pauseVideo(); } catch (e) { }
           }
         }
       });
@@ -1087,17 +1118,19 @@ document.addEventListener('DOMContentLoaded', () => {
         else d.classList.remove('is-active');
       });
       current = index;
+      globalSlideGeneration++; // Invalidate any stale YT callbacks from the previous slide
+      var myGeneration = globalSlideGeneration;
 
-      // Check for video auto-advance logic
-      stop(); // Stop the standard interval timer
+      // Always stop the running timer first
+      stop();
 
       const activeSlide = slides[index];
       const videoEl = activeSlide.querySelector('video.home-news-image');
-      const iframeEl = activeSlide.querySelector('iframe.yt-video-frame'); // Only YouTube iframes
-      const driveIframeEl = activeSlide.querySelector('iframe.drive-video-frame'); // Drive video iframes
+      const iframeEl = activeSlide.querySelector('iframe.yt-video-frame');
+      const driveIframeEl = activeSlide.querySelector('iframe.drive-video-frame');
 
       // Handle CSS Theater Mode
-      if ((videoEl || iframeEl) && tvTheaterEnabled) {
+      if ((videoEl || iframeEl || driveIframeEl) && tvTheaterEnabled) {
         document.body.classList.add('video-fullscreen-active');
       } else {
         document.body.classList.remove('video-fullscreen-active');
@@ -1106,12 +1139,36 @@ document.addEventListener('DOMContentLoaded', () => {
       if (videoEl) {
         videoEl.currentTime = 0;
         videoEl.muted = !tvAudioEnabled;
-        videoEl.play().catch(e => console.error("Video play prevented:", e));
+        videoEl.play().catch(e => console.error('Video play prevented:', e));
         videoEl.onended = function () {
-          if (slides.length > 1) next();
+          if (myGeneration === globalSlideGeneration && slides.length > 1) next();
         };
+        // Safety fallback: advance after 3 minutes max even if video stalls
+        start(180000);
       } else if (iframeEl && window.YT && window.YT.Player) {
         const iframeId = iframeEl.id;
+        const myPlayerId = iframeId;
+        
+        function startYTPolling(player) {
+          const checkInterval = setInterval(() => {
+            if (myGeneration !== globalSlideGeneration) {
+              clearInterval(checkInterval);
+              return;
+            }
+            try {
+              const state = player.getPlayerState();
+              const duration = player.getDuration();
+              const currentTime = player.getCurrentTime();
+              // Advance if video is within 1.5s of end
+              if (state === 0 || (duration > 0 && currentTime >= (duration - 1.5))) {
+                console.log('YouTube auto-advancing slide:', myPlayerId);
+                clearInterval(checkInterval);
+                next();
+              }
+            } catch (e) { }
+          }, 250);
+        }
+
         if (!ytPlayers[iframeId]) {
           ytPlayers[iframeId] = new YT.Player(iframeId, {
             events: {
@@ -1119,48 +1176,50 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (tvAudioEnabled) event.target.unMute();
                 else event.target.mute();
                 event.target.playVideo();
+                startYTPolling(event.target);
               },
               'onStateChange': function (event) {
-                // When video naturally ends (State 0), go to next slide
                 if (event.data === YT.PlayerState.ENDED) {
-                  if (slides.length > 1) next();
+                  if (myGeneration === globalSlideGeneration && slides.length > 1) next();
                 }
               }
             }
           });
         } else {
+          // Player already exists, just restart it
           try {
-            if (tvAudioEnabled) ytPlayers[iframeId].unMute();
-            else ytPlayers[iframeId].mute();
-            ytPlayers[iframeId].seekTo(0);
-            ytPlayers[iframeId].playVideo();
+            const player = ytPlayers[iframeId];
+            if (tvAudioEnabled) player.unMute();
+            else player.mute();
+            player.seekTo(0);
+            player.playVideo();
+            startYTPolling(player);
           } catch (e) {
-            console.warn("YT Player not fully ready yet.");
+            console.warn('YT Player error on restart:', e);
           }
         }
+        // Safety fallback
+        start(300000);
       } else if (driveIframeEl) {
-        // Google Drive video iframe — we can't hook into its events due to CSP,
-        // so we use a fixed timer to advance after 15 seconds.
-        if (slides.length > 1) {
-          timer = window.setTimeout(next, 15000);
-        }
+        // Drive video iframe — can't hook into events, use standard timer
+        start();
       } else {
-        // Standard static image slide — use the normal interval timer
+        // Static image slide
         start();
       }
     }
 
-    function start() {
+    function start(customMs) {
       stop();
       if (slides.length > 1) {
-        timer = window.setInterval(next, intervalMs);
+        globalCarouselTimer = window.setInterval(next, customMs || intervalMs);
       }
     }
 
     function stop() {
-      if (timer) {
-        window.clearInterval(timer);
-        timer = null;
+      if (globalCarouselTimer) {
+        window.clearInterval(globalCarouselTimer);
+        globalCarouselTimer = null;
       }
     }
 

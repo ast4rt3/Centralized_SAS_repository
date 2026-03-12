@@ -8,9 +8,23 @@
   <title>Centralized SAS Repository</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css?v=2">
+  <script>
+    // Automatically register Service Worker for offline caching
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./serviceWorker.js')
+          .then(reg => console.log('SW registered:', reg.scope))
+          .catch(err => console.warn('SW registration failed:', err));
+      });
+    }
+  </script>
 </head>
 
 <body>
+  <!-- Offline indicator (auto-shown/hidden by JS) -->
+  <div id="offline-banner" style="display:none; position:fixed; top:0; left:0; right:0; z-index:9999; background:#b91c1c; color:#fff; font-size:0.8rem; font-weight:700; text-align:center; padding:6px; letter-spacing:0.5px;">
+    📡 No internet connection — showing cached content
+  </div>
   <!-- Global Login Overlay -->
   <!-- Recommit for redeployment -->
   <div id="login-overlay" class="login-overlay">

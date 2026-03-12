@@ -118,17 +118,31 @@ function handleLogin(username, password) {
   return respondJSON({ success: false, message: "Invalid credentials." });
 }
 
-function verifyAdmin(payload) {
+// Helper to verify if the user is authorized for post management (admin or uploader)
+function verifyAuthorized(payload) {
   const auth = JSON.parse(handleLogin(payload.username, payload.password).getContent());
   if (!auth.success) throw new Error("Unauthorized: Invalid credentials.");
-  if (auth.role !== "admin") throw new Error("Unauthorized: Admin role required.");
+  if (auth.role !== "admin" && auth.role !== "uploader") {
+    throw new Error("Unauthorized: You do not have permission to manage posts.");
+  }
+  return auth;
+}
+
+// Helper to verify if user is a full Admin (required for TV settings)
+function verifyAdminOnly(payload) {
+  const auth = JSON.parse(handleLogin(payload.username, payload.password).getContent());
+  if (!auth.success) throw new Error("Unauthorized: Invalid credentials.");
+  if (auth.role !== "admin") {
+    throw new Error("Unauthorized: Admin role required for this action.");
+  }
+  return auth;
 }
 
 // --------------------------------------------------------------
 // Add Post
 // --------------------------------------------------------------
 function handleAddPost(payload) {
-  try { verifyAdmin(payload); } catch (e) { return respondJSON({ success: false, message: e.message }); }
+  try { verifyAuthorized(payload); } catch (e) { return respondJSON({ success: false, message: e.message }); }
 
   let imageUrl = payload.imageUrl || "";
 
@@ -156,7 +170,7 @@ function handleAddPost(payload) {
 // Edit Post
 // --------------------------------------------------------------
 function handleEditPost(payload) {
-  try { verifyAdmin(payload); } catch (e) { return respondJSON({ success: false, message: e.message }); }
+  try { verifyAuthorized(payload); } catch (e) { return respondJSON({ success: false, message: e.message }); }
 
   if (!payload.timestamp) return respondJSON({ success: false, message: "Missing timestamp." });
 
@@ -191,7 +205,7 @@ function handleEditPost(payload) {
 // Delete Post
 // --------------------------------------------------------------
 function handleDeletePost(payload) {
-  try { verifyAdmin(payload); } catch (e) { return respondJSON({ success: false, message: e.message }); }
+  try { verifyAuthorized(payload); } catch (e) { return respondJSON({ success: false, message: e.message }); }
 
   if (!payload.timestamp) return respondJSON({ success: false, message: "Missing timestamp." });
 
@@ -209,7 +223,7 @@ function handleDeletePost(payload) {
 // Toggle TV Visibility
 // --------------------------------------------------------------
 function handleToggleTvVisible(payload) {
-  try { verifyAdmin(payload); } catch (e) { return respondJSON({ success: false, message: e.message }); }
+  try { verifyAuthorized(payload); } catch (e) { return respondJSON({ success: false, message: e.message }); }
 
   if (!payload.timestamp) return respondJSON({ success: false, message: "Missing timestamp." });
 
@@ -230,7 +244,7 @@ function handleToggleTvVisible(payload) {
 // Update Global TV Settings
 // --------------------------------------------------------------
 function handleUpdateTvSettings(payload) {
-  try { verifyAdmin(payload); } catch (e) { return respondJSON({ success: false, message: e.message }); }
+  try { verifyAdminOnly(payload); } catch (e) { return respondJSON({ success: false, message: e.message }); }
 
   const props = PropertiesService.getScriptProperties();
   props.setProperty("tvAudio",   String(payload.tvAudioEnabled)   === "true" ? "true" : "false");
