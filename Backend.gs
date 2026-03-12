@@ -121,7 +121,7 @@ function handleLogin(username, password) {
 // Helper to verify if the user is authorized for post management (admin or uploader)
 function verifyAuthorized(payload) {
   const auth = JSON.parse(handleLogin(payload.username, payload.password).getContent());
-  if (!auth.success) throw new Error("Unauthorized: Invalid credentials.");
+  if (!auth.success) throw new Error("Unauthorized: " + (auth.message || "Invalid credentials."));
   if (auth.role !== "admin" && auth.role !== "uploader") {
     throw new Error("Unauthorized: You do not have permission to manage posts.");
   }
@@ -131,7 +131,7 @@ function verifyAuthorized(payload) {
 // Helper to verify if user is a full Admin (required for TV settings)
 function verifyAdminOnly(payload) {
   const auth = JSON.parse(handleLogin(payload.username, payload.password).getContent());
-  if (!auth.success) throw new Error("Unauthorized: Invalid credentials.");
+  if (!auth.success) throw new Error("Unauthorized: " + (auth.message || "Invalid credentials."));
   if (auth.role !== "admin") {
     throw new Error("Unauthorized: Admin role required for this action.");
   }
@@ -269,7 +269,14 @@ function uploadFileToDrive(payload) {
   file.setSharing(DriveApp.Access.ANYONE, DriveApp.Permission.VIEW);
 
   const fileId = file.getId();
-  // Use Drive's thumbnail CDN — works in external <img> tags without login redirects
+  
+  // If it's a video, return the /preview link so it embeds and plays correctly.
+  // thumbnail?id=... only works for static images in <img> tags.
+  if (payload.mimeType && payload.mimeType.startsWith('video/')) {
+    return "https://drive.google.com/file/d/" + fileId + "/preview";
+  }
+  
+  // Use Drive's thumbnail CDN for images — works in external <img> tags without login redirects
   return "https://drive.google.com/thumbnail?id=" + fileId + "&sz=w1600";
 }
 

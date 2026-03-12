@@ -569,7 +569,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (uploadPanels['upload']) uploadPanels['upload'].classList.remove('hidden');
         if (fileUploadLabel) {
           fileUploadLabel.classList.remove('file-selected');
-          if (fileLabelText) fileLabelText.textContent = 'Click to choose a file or drag & drop';
+          if (fileLabelText) fileLabelText.textContent = 'Click to choose an image/video or drag & drop';
         }
 
         if (previewGroup) previewGroup.style.display = 'none';
@@ -610,7 +610,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
           const userObj = JSON.parse(sessionData);
-          const confirmPass = prompt("Please re-enter your admin password to confirm this action:");
+          const confirmPass = prompt(`Please re-enter your password to confirm this action:`);
           if (!confirmPass) {
             submitBtn.textContent = origText;
             submitBtn.disabled = false;
