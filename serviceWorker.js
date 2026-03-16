@@ -12,6 +12,7 @@ const CACHE_MEDIA = 'sas-media-v1';
 const APP_SHELL = [
   './',
   './index.html',
+  './manifest.json',
   './styles.css',
   './app.js'
 ];
@@ -88,6 +89,7 @@ self.addEventListener('fetch', event => {
     req.destination === 'image' ||
     url.hostname.includes('googleusercontent.com') ||
     url.hostname === 'drive.google.com' ||
+    url.hostname === 'res.cloudinary.com' ||
     url.hostname === 'img.youtube.com'
   ) {
     event.respondWith(

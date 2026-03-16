@@ -1,0 +1,26 @@
+{
+  "name": "SAS Portal",
+  "short_name": "SAS Portal",
+  "description": "Centralized Hub for NBSC Systems and Announcements",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#001a33",
+  "theme_color": "#003366",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "screenshots": []
+}
