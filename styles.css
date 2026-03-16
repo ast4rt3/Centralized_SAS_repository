@@ -1154,10 +1154,8 @@ body.tv-mode .home-news-track {
 body.tv-mode .home-news-image-wrap {
   position: relative;
   width: 100%;
-  height: calc(100vh - 220px);
-  /* Fill available space exactly, accounting for header/footer */
+  height: calc(100vh - 250px); /* Adjusted from 280px to move ticker down slightly */
   background: var(--nbsc-dark);
-  /* Ensure backdrop matches dark theme when contained */
 }
 
 body.tv-mode .home-news-image,
