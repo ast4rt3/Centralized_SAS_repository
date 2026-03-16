@@ -1,4 +1,4 @@
-# Centralized SAS Repository
+# SAS Portal
 
 A single entry point to access all your SAS systems. Open `index.html` in a browser to use the dashboard.
 

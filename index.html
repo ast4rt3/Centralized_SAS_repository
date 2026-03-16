@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#003366">
-  <title>Centralized SAS Repository</title>
+  <title>SAS Portal</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css?v=3">
   <script>
@@ -32,7 +32,7 @@
       <img src="https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png" alt="NBSC Logo"
         class="login-logo">
       <h2 class="login-title">NBSC SAS</h2>
-      <p class="login-subtitle">Centralized Systems Hub</p>
+      <p class="login-subtitle">SAS Portal Hub</p>
 
       <form id="login-form" class="login-form">
         <div class="login-input-group">
@@ -63,7 +63,7 @@
   <aside class="sidebar">
     <div class="sidebar-header">
       <span class="logo">SAS</span>
-      <span class="repo-title">Centralized Repository</span>
+      <span class="repo-title">SAS Portal</span>
     </div>
     <nav class="nav">
       <a href="#home" class="nav-item active" data-page="home">
@@ -100,7 +100,7 @@
               class="home-header-logo" alt="NBSC Logo">
             <div class="home-header-text">
               <h1 class="home-header-title">NBSC SAS</h1>
-              <p class="home-header-subtitle">Centralized Systems Hub</p>
+              <p class="home-header-subtitle">SAS Portal Hub</p>
             </div>
           </div>
           <div class="home-header-meta">
@@ -241,6 +241,26 @@
       </div>
     </div>
   </main>
+
+    <!-- Custom Confirmation Modal -->
+    <div id="confirm-modal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <h3 id="confirm-modal-title" class="modal-title">Confirm Action</h3>
+        <p id="confirm-modal-message" style="margin-bottom: 20px; color: var(--text-muted); line-height: 1.5;"></p>
+        
+        <div id="confirm-modal-input-group" class="input-group hidden">
+          <label for="confirm-modal-password">Confirm Password</label>
+          <input type="password" id="confirm-modal-password" placeholder="Enter password to confirm">
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" id="confirm-modal-cancel" class="secondary-btn">Cancel</button>
+          <button type="button" id="confirm-modal-ok" class="primary-btn">Confirm</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast-container" class="toast-container"></div>
 
   <script src="app.js?v=6"></script>
 </body>

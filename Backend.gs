@@ -218,19 +218,28 @@ function handleDeletePost(payload) {
   // --- AUTOMATIC CLOUDINARY CLEANUP ---
   const publicId = sheet.getRange(rowIndex, 8).getValue();
   const imageUrl = sheet.getRange(rowIndex, 4).getValue() || "";
+  let cloudMsg = "";
   
   if (publicId && CLOUDINARY_API_KEY && CLOUDINARY_API_SECRET) {
     try {
-      // Determine if it's a video or image based on URL
       const resourceType = imageUrl.includes("/video/") ? "video" : "image";
-      deleteFromCloudinary(publicId, resourceType);
+      const res = deleteFromCloudinary(publicId, resourceType);
+      const resData = JSON.parse(res.getContentText());
+      if (resData.result === "ok") {
+        cloudMsg = " (Cloudinary asset deleted)";
+      } else {
+        cloudMsg = " (Cloudinary Error: " + (resData.error ? resData.error.message : resData.result) + ")";
+      }
     } catch (err) {
-      Logger.log("Failed to delete from Cloudinary: " + err.message);
+      cloudMsg = " (Cloudinary script error: " + err.message + ")";
     }
+  } else {
+    if (!publicId) cloudMsg = " (Cloudinary Skip: No public_id found in row)";
+    else cloudMsg = " (Cloudinary Skip: API keys missing in Backend.gs)";
   }
 
   sheet.deleteRow(rowIndex);
-  return respondJSON({ success: true, message: "Post deleted successfully!" });
+  return respondJSON({ success: true, message: "Post deleted successfully!" + cloudMsg });
 }
 
 // --------------------------------------------------------------
@@ -296,10 +305,19 @@ function findRowByTimestamp(sheet, timestamp) {
 function deleteFromCloudinary(publicId, resourceType) {
   const type = resourceType || "image";
   const timestamp = Math.round(new Date().getTime() / 1000);
+  
+  // Cloudinary signature for Upload API 'destroy' must be SHA-1 of params sorted alphabetically + secret (no HMAC)
   const signatureString = `public_id=${publicId}&timestamp=${timestamp}${CLOUDINARY_API_SECRET}`;
-  const signature = Utilities.computeHmacSha256Signature(signatureString, CLOUDINARY_API_SECRET)
-    .map(byte => ('0' + (byte & 0xFF).toString(16)).slice(-2))
-    .join('');
+  const rawHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_1, signatureString);
+  
+  let signature = "";
+  for (let i = 0; i < rawHash.length; i++) {
+    let byte = rawHash[i];
+    if (byte < 0) byte += 256;
+    let hex = byte.toString(16);
+    if (hex.length === 1) hex = "0" + hex;
+    signature += hex;
+  }
 
   const formData = {
     public_id: publicId,
@@ -314,7 +332,7 @@ function deleteFromCloudinary(publicId, resourceType) {
     muteHttpExceptions: true
   };
 
-  // URL depends on resource type
+  // URL depends on resource type: image/destroy, video/destroy, etc.
   const url = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${type}/destroy`;
   const response = UrlFetchApp.fetch(url, options);
   Logger.log(`Cloudinary ${type} Deletion Response: ` + response.getContentText());
@@ -326,4 +344,34 @@ function respondJSON(dataObject) {
   return ContentService
     .createTextOutput(JSON.stringify(dataObject))
     .setMimeType(ContentService.MimeType.JSON);
+}
+// --------------------------------------------------------------
+// TEST FUNCTION: Run this in the Apps Script editor to check keys
+// --------------------------------------------------------------
+function testCloudinaryAuth() {
+  if (!CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET || !CLOUDINARY_CLOUD_NAME) {
+    Logger.log("❌ ERROR: Missing Cloudinary credentials in Backend.gs!");
+    return;
+  }
+  
+  const timestamp = Math.round(new Date().getTime() / 1000);
+  const signatureString = `timestamp=${timestamp}${CLOUDINARY_API_SECRET}`;
+  const rawHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_1, signatureString);
+  let signature = "";
+  for (let i = 0; i < rawHash.length; i++) {
+    let byte = rawHash[i];
+    if (byte < 0) byte += 256;
+    let hex = byte.toString(16);
+    if (hex.length === 1) hex = "0" + hex;
+    signature += hex;
+  }
+
+  const url = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/ping?api_key=${CLOUDINARY_API_KEY}&signature=${signature}&timestamp=${timestamp}`;
+  
+  try {
+    const res = UrlFetchApp.fetch(url);
+    Logger.log("✅ Cloudinary Auth Success! Result: " + res.getContentText());
+  } catch (e) {
+    Logger.log("❌ Cloudinary Auth Failed! Error: " + e.message);
+  }
 }

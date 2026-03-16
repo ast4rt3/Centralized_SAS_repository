@@ -191,6 +191,78 @@ document.addEventListener('DOMContentLoaded', () => {
     return div.innerHTML;
   }
 
+  function showToast(message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    
+    let icon = 'ℹ️';
+    if (type === 'success') icon = '✅';
+    if (type === 'error') icon = '❌';
+
+    toast.innerHTML = `
+      <span class="toast-icon">${icon}</span>
+      <span class="toast-message">${message}</span>
+    `;
+
+    container.appendChild(toast);
+
+    // Auto-remove after 4 seconds
+    setTimeout(() => {
+      toast.classList.add('hiding');
+      toast.addEventListener('animationend', () => {
+        toast.remove();
+      });
+    }, 4000);
+  }
+
+  function showConfirm(title, message, showPassword = false) {
+    return new Promise((resolve) => {
+      const modal = document.getElementById('confirm-modal');
+      const titleEl = document.getElementById('confirm-modal-title');
+      const messageEl = document.getElementById('confirm-modal-message');
+      const inputGroup = document.getElementById('confirm-modal-input-group');
+      const passwordInput = document.getElementById('confirm-modal-password');
+      const cancelBtn = document.getElementById('confirm-modal-cancel');
+      const okBtn = document.getElementById('confirm-modal-ok');
+
+      titleEl.textContent = title;
+      messageEl.textContent = message;
+      passwordInput.value = '';
+      
+      if (showPassword) {
+        inputGroup.classList.remove('hidden');
+      } else {
+        inputGroup.classList.add('hidden');
+      }
+
+      modal.classList.remove('hidden');
+
+      const cleanup = (result) => {
+        modal.classList.add('hidden');
+        cancelBtn.onclick = null;
+        okBtn.onclick = null;
+        resolve(result);
+      };
+
+      cancelBtn.onclick = () => cleanup(null);
+      okBtn.onclick = () => {
+        if (showPassword) {
+          const pass = passwordInput.value.trim();
+          if (!pass) {
+            showToast("Password is required", "error");
+            return;
+          }
+          cleanup(pass);
+        } else {
+          cleanup(true);
+        }
+      };
+    });
+  }
+
   // Helper functions for UI state
   function showLoginUI() {
     document.body.classList.remove('system-mode');
@@ -626,14 +698,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
           const userObj = JSON.parse(sessionData);
-          const confirmPass = prompt(`Please re-enter your password to confirm this action:`);
+
+          const editTimestamp = form.getAttribute('data-edit-timestamp');
+          const isEdit = !!editTimestamp;
+
+          const confirmPass = await showConfirm(
+            isEdit ? "Confirm Edit" : "Confirm Post", 
+            `Please enter your password to ${isEdit ? 'update' : 'publish'} this post:`, 
+            true
+          );
+          
           if (!confirmPass) {
             submitBtn.textContent = origText;
             submitBtn.disabled = false;
             return;
           }
-          const editTimestamp = form.getAttribute('data-edit-timestamp');
-          const isEdit = !!editTimestamp;
 
           // --- 1. PRE-VERIFY CREDENTIALS ---
           // This stops the process immediately if the password is wrong, before uploading files.
@@ -711,6 +790,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (responseData.success) {
             modal.classList.add('hidden');
             form.reset();
+            showToast(responseData.message || "Post updated successfully!", 'success');
             fetchPosts(); // Refresh the feed
           } else {
             if (errorMsg) {
@@ -979,10 +1059,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Admin/Uploader view: Show thumbnail instead of iframe
             imgHtml = `<img src="https://img.youtube.com/vi/${ytId}/hqdefault.jpg" class="post-image" style="object-position: ${objPos}; object-fit: ${objSize};" loading="lazy" onerror="this.src='https://img.youtube.com/vi/${ytId}/default.jpg'">`;
           } else if (
-            urlLower.includes('res.cloudinary.com') || urlLower.includes('cloudinary.com')
+            urlLower && (urlLower.includes('res.cloudinary.com') || urlLower.includes('cloudinary.com'))
           ) {
             // Cloudinary: Only transform to .jpg if it's a video file extension
-            const isVideo = /\.(mp4|webm|mov|mkv|avi)$/i.test(urlLower) || post.imageUrl.includes('/video/upload/');
+            const isVideo = /\.(mp4|webm|mov|mkv|avi)$/i.test(urlLower) || urlLower.includes('/video/upload/');
             const thumbUrl = isVideo ? post.imageUrl.replace(/\.[^.]+$/, '.jpg') : post.imageUrl;
             imgHtml = `<img src="${thumbUrl}" alt="${escapeHtml(post.title)}" class="post-image" style="object-position: ${objPos}; object-fit: ${objSize};" loading="lazy">`;
           } else if (
@@ -1054,16 +1134,14 @@ document.addEventListener('DOMContentLoaded', () => {
           deleteBtn.className = 'secondary-btn delete-post-btn';
           deleteBtn.style.cssText = 'position: absolute; top: 12px; right: 80px; padding: 6px 16px; font-size: 0.8rem; background: rgba(220, 38, 38, 0.8); color: white; border-radius: 6px; backdrop-filter: blur(4px); cursor: pointer; border: none;';
           deleteBtn.textContent = 'Delete';
-          deleteBtn.onclick = async () => {
-            const confirmAction = confirm("Are you sure you want to delete this specific post?");
-            if (!confirmAction) return;
+            deleteBtn.onclick = async () => {
+              const confirmPass = await showConfirm("Delete Post", "Are you sure you want to delete this specific post?", true);
+              if (!confirmPass) return;
 
-            const sessionData = sessionStorage.getItem('sas_user_data');
-            if (!sessionData) return;
+              const sessionData = sessionStorage.getItem('sas_user_data');
+              if (!sessionData) return;
 
-            const userObj = JSON.parse(sessionData);
-            const confirmPass = prompt("Please enter your password to confirm deletion:");
-            if (!confirmPass) return;
+              const userObj = JSON.parse(sessionData);
 
             deleteBtn.textContent = "Deleting...";
             deleteBtn.disabled = true;
@@ -1083,12 +1161,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
               const responseData = await r.json();
               if (responseData.success) {
+                showToast(responseData.message, 'success');
                 fetchPosts(); // Refresh UI instantly
               } else {
-                alert(responseData.message || "Failed to delete post.");
+                showToast(responseData.message || "Failed to delete post.", 'error');
               }
             } catch (e) {
-              alert("Network error. Could not delete post.");
+              showToast("Network error. Could not delete post.", 'error');
             } finally {
               deleteBtn.textContent = "Delete";
               deleteBtn.disabled = false;
@@ -1108,7 +1187,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!sessionData) return;
             const userObj = JSON.parse(sessionData);
 
-            const confirmPass = prompt(`Please enter your password to ${isHidden ? 'show this on TV' : 'hide this from TV'}:`);
+            const msg = isHidden ? 'Are you sure you want to show this on TV?' : 'Are you sure you want to hide this from TV?';
+            const confirmPass = await showConfirm("TV Visibility", msg, true);
             if (!confirmPass) return;
 
             toggleTvBtn.textContent = "Updating...";
@@ -1129,12 +1209,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
               const responseData = await r.json();
               if (responseData.success) {
+                showToast(responseData.message || "Visibility updated!", 'success');
                 fetchPosts(); // Refresh UI instantly
               } else {
-                alert(responseData.message || "Failed to toggle visibility.");
+                showToast(responseData.message || "Failed to toggle visibility.", 'error');
               }
             } catch (e) {
-              alert("Network error. Could not toggle visibility.");
+              showToast("Network error. Could not toggle visibility.", 'error');
             } finally {
               toggleTvBtn.disabled = false;
               // fetchPosts will re-render anyway, so button text will be corrected
