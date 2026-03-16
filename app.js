@@ -41,8 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
     timeEl.textContent = now.toLocaleTimeString('en-US', { 
       hour12: true, 
       hour: '2-digit', 
-      minute: '2-digit', 
-      second: '2-digit' 
+      minute: '2-digit'
     });
 
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };

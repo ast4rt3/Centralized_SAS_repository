@@ -962,6 +962,7 @@ iframe.post-image {
   z-index: 10000;
   padding: 20px;
   backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 .modal-overlay.hidden {
@@ -1337,6 +1338,7 @@ body.tv-mode .home-news-dots {
   max-width: 400px;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border-left: 4px solid var(--nbsc-blue);
   border-radius: 12px;
   padding: 16px 20px;
