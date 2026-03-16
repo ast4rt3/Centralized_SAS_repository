@@ -24,7 +24,7 @@ function doGet(e) {
     const lastRow = sheet.getLastRow();
     if (lastRow < 2) return respondJSON({ success: true, posts: [] });
 
-    const data = sheet.getRange(2, 1, lastRow - 1, 7).getDisplayValues();
+    const data = sheet.getRange(2, 1, lastRow - 1, 8).getDisplayValues();
 
     const posts = data.map(row => ({
       timestamp:     row[0] || new Date().toISOString(),
@@ -33,7 +33,8 @@ function doGet(e) {
       imageUrl:      row[3] || "",
       imagePosition: row[4] || "center",
       imageSize:     row[5] || "cover",
-      showOnTv:      row[6] === "" ? "true" : row[6].toLowerCase()
+      showOnTv:      row[6] === "" ? "true" : row[6].toLowerCase(),
+      publicId:      row[7] || ""
     }));
 
     posts.reverse(); // Newest first

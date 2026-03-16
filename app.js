@@ -466,9 +466,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if (fileInput && fileUploadLabel) {
       fileInput.addEventListener('change', () => {
         if (fileInput.files && fileInput.files[0]) {
-          fileLabelText.textContent = '✅ ' + fileInput.files[0].name;
+          const file = fileInput.files[0];
+          fileLabelText.textContent = '✅ ' + file.name;
           fileUploadLabel.classList.add('file-selected');
           fileUploadLabel.classList.remove('drag-over');
+
+          // --- Show Local Preview ---
+          if (file.type.startsWith('image/') && previewImg && previewGroup) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              previewImg.src = e.target.result;
+              previewGroup.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+          }
         }
       });
 
@@ -686,6 +697,7 @@ document.addEventListener('DOMContentLoaded', () => {
           };
 
           if (isEdit) payload.timestamp = editTimestamp;
+          console.log("Submitting Payload to Backend:", payload);
 
           submitBtn.textContent = 'Updating Spreadsheet...';
 
@@ -695,6 +707,7 @@ document.addEventListener('DOMContentLoaded', () => {
           });
 
           const responseData = await r.json();
+          console.log("Backend Response:", responseData);
           if (responseData.success) {
             modal.classList.add('hidden');
             form.reset();
@@ -886,9 +899,10 @@ document.addEventListener('DOMContentLoaded', () => {
               <iframe id="ytplayer-${post.timestamp}" src="https://www.youtube.com/embed/${ytId}?autoplay=1&mute=1&controls=0&enablejsapi=1&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&showinfo=0&autohide=1" class="home-news-image yt-video-frame" style="position: relative; z-index: 1; border: none; width: 100%; height: 100%; object-position: ${objPos}; object-fit: ${objSize};" allow="autoplay; encrypted-media" allowfullscreen></iframe>
             `;
           } else if (
+            urlLower.includes('/video/upload/') ||
             urlLower.includes('docs.google.com/uc?') ||
             urlLower.includes('drive.google.com/uc?id=') ||
-            urlLower.endsWith('.mp4') || urlLower.endsWith('.webm') ||
+            urlLower.endsWith('.mp4') || urlLower.endsWith('.webm') || urlLower.endsWith('.mov') ||
             (urlLower.includes('drive.google.com') && urlLower.includes('type=video'))
           ) {
             // Direct/stream URL — use native <video> with autoplay+muted for TV
@@ -965,10 +979,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Admin/Uploader view: Show thumbnail instead of iframe
             imgHtml = `<img src="https://img.youtube.com/vi/${ytId}/hqdefault.jpg" class="post-image" style="object-position: ${objPos}; object-fit: ${objSize};" loading="lazy" onerror="this.src='https://img.youtube.com/vi/${ytId}/default.jpg'">`;
           } else if (
-            urlLower.includes('res.cloudinary.com')
+            urlLower.includes('res.cloudinary.com') || urlLower.includes('cloudinary.com')
           ) {
-            // Cloudinary: Only transform to .jpg if it's a video file
-            const isVideo = /\.(mp4|webm|mov|mkv|avi)$/i.test(urlLower);
+            // Cloudinary: Only transform to .jpg if it's a video file extension
+            const isVideo = /\.(mp4|webm|mov|mkv|avi)$/i.test(urlLower) || post.imageUrl.includes('/video/upload/');
             const thumbUrl = isVideo ? post.imageUrl.replace(/\.[^.]+$/, '.jpg') : post.imageUrl;
             imgHtml = `<img src="${thumbUrl}" alt="${escapeHtml(post.title)}" class="post-image" style="object-position: ${objPos}; object-fit: ${objSize};" loading="lazy">`;
           } else if (
