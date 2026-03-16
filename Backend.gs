@@ -6,6 +6,11 @@
 const masterDatabaseID = "1PJ21kipAuQ_a0GzSkG8r9UFDRdCEDXwytIu7SZWm7cs";
 // Drive uploads are now handled by Cloudinary in the frontend for better reliability.
 
+// --- CLOUDINARY ADMIN CONFIG (For Deletion) ---
+const CLOUDINARY_CLOUD_NAME = "dj8ugtlrl";
+const CLOUDINARY_API_KEY    = "317748295364596"; // Paste your API Key here
+const CLOUDINARY_API_SECRET = "joU83X6PhU-gltP-USzsYqperzM"; // Paste your API Secret here
+
 // --------------------------------------------------------------
 // doGet — Fetch all posts + global TV settings
 // --------------------------------------------------------------
@@ -152,10 +157,11 @@ function handleAddPost(payload) {
     new Date().toLocaleString(),
     payload.title        || "Untitled Post",
     payload.description  || "",
-    imageUrl,
+    payload.imageUrl || "",
     payload.imagePosition || "center",
     payload.imageSize     || "cover",
-    "true"
+    "true",
+    payload.cloudinaryPublicId || "" // Column 8: Public ID for deletion
   ]);
 
   return respondJSON({ success: true, message: "Post added successfully!" });
@@ -178,15 +184,17 @@ function handleEditPost(payload) {
   if (rowIndex === -1) return respondJSON({ success: false, message: "Post not found." });
 
   const currentShowOnTv = sheet.getRange(rowIndex, 7).getDisplayValue() || "true";
+  const existingPublicId = sheet.getRange(rowIndex, 8).getValue() || "";
 
-  sheet.getRange(rowIndex, 1, 1, 7).setValues([[
+  sheet.getRange(rowIndex, 1, 1, 8).setValues([[
     payload.timestamp,
     payload.title         || "Untitled Post",
     payload.description   || "",
     imageUrl,
     payload.imagePosition || "center",
     payload.imageSize     || "cover",
-    currentShowOnTv
+    currentShowOnTv,
+    payload.cloudinaryPublicId || existingPublicId
   ]]);
 
   return respondJSON({ success: true, message: "Post updated successfully!" });
@@ -205,6 +213,20 @@ function handleDeletePost(payload) {
 
   const rowIndex = findRowByTimestamp(sheet, payload.timestamp);
   if (rowIndex === -1) return respondJSON({ success: false, message: "Post not found." });
+
+  // --- AUTOMATIC CLOUDINARY CLEANUP ---
+  const publicId = sheet.getRange(rowIndex, 8).getValue();
+  const imageUrl = sheet.getRange(rowIndex, 4).getValue() || "";
+  
+  if (publicId && CLOUDINARY_API_KEY && CLOUDINARY_API_SECRET) {
+    try {
+      // Determine if it's a video or image based on URL
+      const resourceType = imageUrl.includes("/video/") ? "video" : "image";
+      deleteFromCloudinary(publicId, resourceType);
+    } catch (err) {
+      Logger.log("Failed to delete from Cloudinary: " + err.message);
+    }
+  }
 
   sheet.deleteRow(rowIndex);
   return respondJSON({ success: true, message: "Post deleted successfully!" });
@@ -264,6 +286,38 @@ function findRowByTimestamp(sheet, timestamp) {
     if (timestamps[i][0] === timestamp) return i + 2;
   }
   return -1;
+}
+
+
+// --------------------------------------------------------------
+// Cloudinary Authenticated Deletion
+// --------------------------------------------------------------
+function deleteFromCloudinary(publicId, resourceType) {
+  const type = resourceType || "image";
+  const timestamp = Math.round(new Date().getTime() / 1000);
+  const signatureString = `public_id=${publicId}&timestamp=${timestamp}${CLOUDINARY_API_SECRET}`;
+  const signature = Utilities.computeHmacSha256Signature(signatureString, CLOUDINARY_API_SECRET)
+    .map(byte => ('0' + (byte & 0xFF).toString(16)).slice(-2))
+    .join('');
+
+  const formData = {
+    public_id: publicId,
+    timestamp: timestamp,
+    api_key: CLOUDINARY_API_KEY,
+    signature: signature
+  };
+
+  const options = {
+    method: "post",
+    payload: formData,
+    muteHttpExceptions: true
+  };
+
+  // URL depends on resource type
+  const url = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${type}/destroy`;
+  const response = UrlFetchApp.fetch(url, options);
+  Logger.log(`Cloudinary ${type} Deletion Response: ` + response.getContentText());
+  return response;
 }
 
 

@@ -641,9 +641,11 @@ document.addEventListener('DOMContentLoaded', () => {
           }
 
           let cloudinaryUrl = imgUrl;
+          let cloudinaryPublicId = ""; // Store for automatic deletion
 
           // --- 2. Cloudinary Upload ---
           if (activeUploadTab === 'upload' && fileInput && fileInput.files && fileInput.files[0]) {
+            console.log("Starting Cloudinary flow. Active Tab:", activeUploadTab);
             if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET) {
               throw new Error("Cloudinary not configured. Please add CLOUDINARY_CLOUD_NAME and CLOUDINARY_UPLOAD_PRESET in app.js.");
             }
@@ -664,6 +666,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const cloudData = await cloudRes.json();
             if (cloudData.secure_url) {
               cloudinaryUrl = cloudData.secure_url;
+              cloudinaryPublicId = cloudData.public_id; // Capture the ID for deletion
             } else {
               throw new Error("Cloudinary Upload Error: " + (cloudData.error ? cloudData.error.message : "Unknown error"));
             }
@@ -677,6 +680,7 @@ document.addEventListener('DOMContentLoaded', () => {
             title: title,
             description: desc,
             imageUrl: cloudinaryUrl,
+            cloudinaryPublicId: cloudinaryPublicId,
             imagePosition: imgPos,
             imageSize: imgSize
           };
@@ -958,15 +962,25 @@ document.addEventListener('DOMContentLoaded', () => {
           const ytId = getYouTubeVideoId(post.imageUrl);
 
           if (ytId) {
-            imgHtml = `<iframe src="https://www.youtube.com/embed/${ytId}?autoplay=0&mute=1&loop=1&playlist=${ytId}&controls=0&rel=0" class="post-image" style="border: none; object-position: ${objPos}; object-fit: ${objSize}; pointer-events: none;" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+            // Admin/Uploader view: Show thumbnail instead of iframe
+            imgHtml = `<img src="https://img.youtube.com/vi/${ytId}/hqdefault.jpg" class="post-image" style="object-position: ${objPos}; object-fit: ${objSize};" loading="lazy" onerror="this.src='https://img.youtube.com/vi/${ytId}/default.jpg'">`;
+          } else if (
+            urlLower.includes('res.cloudinary.com')
+          ) {
+            // Cloudinary: Only transform to .jpg if it's a video file
+            const isVideo = /\.(mp4|webm|mov|mkv|avi)$/i.test(urlLower);
+            const thumbUrl = isVideo ? post.imageUrl.replace(/\.[^.]+$/, '.jpg') : post.imageUrl;
+            imgHtml = `<img src="${thumbUrl}" alt="${escapeHtml(post.title)}" class="post-image" style="object-position: ${objPos}; object-fit: ${objSize};" loading="lazy">`;
           } else if (
             urlLower.includes('docs.google.com/uc?') ||
             urlLower.includes('drive.google.com/uc?id=') ||
             urlLower.endsWith('.mp4') || urlLower.endsWith('.webm')
           ) {
-            imgHtml = `<video src="${post.imageUrl}" class="post-image" style="object-position: ${objPos}; object-fit: ${objSize};" autoplay muted loop playsinline></video>`;
+            // Direct video link (non-Cloudinary): Remove autoplay to prevent multiple videos playing
+            imgHtml = `<video src="${post.imageUrl}" class="post-image" style="object-position: ${objPos}; object-fit: ${objSize};" preload="metadata"></video>`;
           } else if (urlLower.includes('drive.google.com/file/d/') && urlLower.includes('/preview')) {
-            imgHtml = `<iframe src="${post.imageUrl}" class="post-image" style="border: none; object-position: ${objPos}; object-fit: ${objSize};" allow="autoplay" allowfullscreen></iframe>`;
+            // Legacy preview (static iframe)
+            imgHtml = `<iframe src="${post.imageUrl}" class="post-image" style="border: none; object-position: ${objPos}; object-fit: ${objSize};"></iframe>`;
           } else {
             imgHtml = `<img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="post-image" style="object-position: ${objPos}; object-fit: ${objSize};" loading="lazy">`;
           }
