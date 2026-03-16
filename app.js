@@ -1,7 +1,12 @@
 // REPLACE THIS WITH YOUR NEW SPREADSHEET DEPLOYMENT URL
 const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbza2QFzH0B3XkMFX9RITeSj1f3v4Ox8j5lYxBtxnTUTdqyTlWeE0SieK1n4fTdIRPmbvw/exec";
 
-// Load YouTube IFrame API
+// --- CLOUDINARY CONFIGURATION ---
+// Get these from your Cloudinary Dashboard: https://cloudinary.com/console
+const CLOUDINARY_CLOUD_NAME = "dj8ugtlrl"; // e.g. "yourname"
+const CLOUDINARY_UPLOAD_PRESET = "sas_uploads"; // e.g. "sas_uploads" (Must be Unsigned)
+
+// Load YouTube IFrame APIs
 if (!window.YT) {
   var tag = document.createElement('script');
   tag.src = "https://www.youtube.com/iframe_api";
@@ -352,7 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (userObj.role === 'tv') {
       document.body.classList.add('tv-mode');
       tvSettingsBox.classList.remove('hidden');
-      
+
       // Attempt actual fullscreen via API explicitly for the TV role
       try {
         if (!document.fullscreenElement) {
@@ -616,9 +621,53 @@ document.addEventListener('DOMContentLoaded', () => {
             submitBtn.disabled = false;
             return;
           }
-
           const editTimestamp = form.getAttribute('data-edit-timestamp');
           const isEdit = !!editTimestamp;
+
+          // --- 1. PRE-VERIFY CREDENTIALS ---
+          // This stops the process immediately if the password is wrong, before uploading files.
+          submitBtn.textContent = 'Verifying credentials...';
+          const loginCheck = await fetch(BACKEND_GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+              action: "login",
+              username: userObj.username,
+              password: confirmPass
+            })
+          });
+          const loginRes = await loginCheck.json();
+          if (!loginRes.success) {
+            throw new Error("Invalid credentials. Action cancelled.");
+          }
+
+          let cloudinaryUrl = imgUrl;
+
+          // --- 2. Cloudinary Upload ---
+          if (activeUploadTab === 'upload' && fileInput && fileInput.files && fileInput.files[0]) {
+            if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET) {
+              throw new Error("Cloudinary not configured. Please add CLOUDINARY_CLOUD_NAME and CLOUDINARY_UPLOAD_PRESET in app.js.");
+            }
+
+            const file = fileInput.files[0];
+            submitBtn.textContent = 'Uploading to Cloudinary...';
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+            formData.append('folder', 'sas_repository'); // Organizes files into this folder
+
+            const cloudRes = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/upload`, {
+              method: 'POST',
+              body: formData
+            });
+
+            const cloudData = await cloudRes.json();
+            if (cloudData.secure_url) {
+              cloudinaryUrl = cloudData.secure_url;
+            } else {
+              throw new Error("Cloudinary Upload Error: " + (cloudData.error ? cloudData.error.message : "Unknown error"));
+            }
+          }
 
           // --- Build Payload ---
           const payload = {
@@ -627,33 +676,14 @@ document.addEventListener('DOMContentLoaded', () => {
             password: confirmPass,
             title: title,
             description: desc,
-            imageUrl: imgUrl, // Will be overwritten by Drive link if file upload is used
+            imageUrl: cloudinaryUrl,
             imagePosition: imgPos,
             imageSize: imgSize
           };
 
           if (isEdit) payload.timestamp = editTimestamp;
 
-          // --- File Upload: Encode to Base64 and add to payload ---
-          if (activeUploadTab === 'upload' && fileInput && fileInput.files && fileInput.files[0]) {
-            const file = fileInput.files[0];
-            submitBtn.textContent = 'Uploading file...';
-            await new Promise((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onload = () => {
-                // reader.result is like "data:image/png;base64,ABC123..."
-                const base64Part = reader.result.split(',')[1];
-                payload.fileData = base64Part;
-                payload.fileName = file.name;
-                payload.mimeType = file.type;
-                payload.imageUrl = ''; // Backend will replace this with Drive URL
-                resolve();
-              };
-              reader.onerror = reject;
-              reader.readAsDataURL(file);
-            });
-            submitBtn.textContent = 'Processing...';
-          }
+          submitBtn.textContent = 'Updating Spreadsheet...';
 
           const r = await fetch(BACKEND_GAS_URL, {
             method: 'POST',
@@ -673,9 +703,10 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         } catch (err) {
           if (errorMsg) {
-            errorMsg.textContent = "Network error. Could not post.";
+            errorMsg.textContent = err.message || "Network error. Could not post.";
             errorMsg.classList.remove('hidden');
           }
+          console.error("Upload Error:", err);
         } finally {
           submitBtn.textContent = origText;
           submitBtn.disabled = false;
@@ -850,16 +881,22 @@ document.addEventListener('DOMContentLoaded', () => {
               <img src="https://img.youtube.com/vi/${ytId}/maxresdefault.jpg" class="home-news-image-blur" style="position: absolute; top: -10%; left: -10%; width: 120%; height: 120%; object-fit: cover; filter: blur(40px); opacity: 0.5; z-index: 0; pointer-events: none;" aria-hidden="true" loading="lazy" onerror="this.src='https://img.youtube.com/vi/${ytId}/hqdefault.jpg'">
               <iframe id="ytplayer-${post.timestamp}" src="https://www.youtube.com/embed/${ytId}?autoplay=1&mute=1&controls=0&enablejsapi=1&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&showinfo=0&autohide=1" class="home-news-image yt-video-frame" style="position: relative; z-index: 1; border: none; width: 100%; height: 100%; object-position: ${objPos}; object-fit: ${objSize};" allow="autoplay; encrypted-media" allowfullscreen></iframe>
             `;
+          } else if (
+            urlLower.includes('docs.google.com/uc?') ||
+            urlLower.includes('drive.google.com/uc?id=') ||
+            urlLower.endsWith('.mp4') || urlLower.endsWith('.webm') ||
+            (urlLower.includes('drive.google.com') && urlLower.includes('type=video'))
+          ) {
+            // Direct/stream URL — use native <video> with autoplay+muted for TV
+            imgHtml = `
+              <video src="${post.imageUrl}" class="home-news-image-blur" style="position: absolute; top: -10%; left: -10%; width: 120%; height: 120%; object-fit: cover; filter: blur(40px); opacity: 0.5; z-index: 0; pointer-events: none;" autoplay muted playsinline loop></video>
+              <video src="${post.imageUrl}" class="home-news-image" style="position: relative; z-index: 1; object-position: ${objPos}; object-fit: ${objSize};" autoplay muted playsinline></video>
+            `;
           } else if (urlLower.includes('drive.google.com/file/d/') && urlLower.includes('/preview')) {
-            // Google Drive video (uploaded via DriveApp) — embed as iframe
+            // Fallback for existing preview iframes (Legacy)
             imgHtml = `
               <div class="home-news-image-blur" style="position: absolute; top: -10%; left: -10%; width: 120%; height: 120%; background:#000; filter: blur(40px); opacity: 0.5; z-index: 0; pointer-events: none;"></div>
               <iframe src="${post.imageUrl}" class="home-news-image drive-video-frame" style="position: relative; z-index: 1; border: none; width: 100%; height: 100%;" allow="autoplay" allowfullscreen></iframe>
-            `;
-          } else if (urlLower.endsWith('.mp4') || urlLower.endsWith('.webm') || (urlLower.includes('drive.google.com') && urlLower.includes('type=video'))) {
-            imgHtml = `
-              <video src="${post.imageUrl}" class="home-news-image-blur" style="position: absolute; top: -10%; left: -10%; width: 120%; height: 120%; object-fit: cover; filter: blur(40px); opacity: 0.5; z-index: 0; pointer-events: none;" autoplay muted playsinline></video>
-              <video src="${post.imageUrl}" class="home-news-image" style="position: relative; z-index: 1; object-position: ${objPos}; object-fit: ${objSize};" autoplay muted playsinline></video>
             `;
           } else {
             imgHtml = `
@@ -922,8 +959,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
           if (ytId) {
             imgHtml = `<iframe src="https://www.youtube.com/embed/${ytId}?autoplay=0&mute=1&loop=1&playlist=${ytId}&controls=0&rel=0" class="post-image" style="border: none; object-position: ${objPos}; object-fit: ${objSize}; pointer-events: none;" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
-          } else if (urlLower.endsWith('.mp4') || urlLower.endsWith('.webm')) {
+          } else if (
+            urlLower.includes('docs.google.com/uc?') ||
+            urlLower.includes('drive.google.com/uc?id=') ||
+            urlLower.endsWith('.mp4') || urlLower.endsWith('.webm')
+          ) {
             imgHtml = `<video src="${post.imageUrl}" class="post-image" style="object-position: ${objPos}; object-fit: ${objSize};" autoplay muted loop playsinline></video>`;
+          } else if (urlLower.includes('drive.google.com/file/d/') && urlLower.includes('/preview')) {
+            imgHtml = `<iframe src="${post.imageUrl}" class="post-image" style="border: none; object-position: ${objPos}; object-fit: ${objSize};" allow="autoplay" allowfullscreen></iframe>`;
           } else {
             imgHtml = `<img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="post-image" style="object-position: ${objPos}; object-fit: ${objSize};" loading="lazy">`;
           }
@@ -1151,7 +1194,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (iframeEl && window.YT && window.YT.Player) {
         const iframeId = iframeEl.id;
         const myPlayerId = iframeId;
-        
+
         function startYTPolling(player) {
           const checkInterval = setInterval(() => {
             if (myGeneration !== globalSlideGeneration) {

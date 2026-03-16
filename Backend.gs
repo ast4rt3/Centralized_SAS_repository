@@ -1,11 +1,10 @@
-// ==============================================================
 // NBSC SAS REPOSITORY BACKEND
 // All features: Login, Posts CRUD, TV Visibility, TV Settings,
-//               Google Drive File Uploads
+//               Media uploads via Cloudinary
 // ==============================================================
 
 const masterDatabaseID = "1PJ21kipAuQ_a0GzSkG8r9UFDRdCEDXwytIu7SZWm7cs";
-const DRIVE_FOLDER_ID = "1WJ9pa_ZcDWEz-t2MssgLE1gUB-kMZOyv"; // SAS_TV_Uploads (personal account)
+// Drive uploads are now handled by Cloudinary in the frontend for better reliability.
 
 // --------------------------------------------------------------
 // doGet — Fetch all posts + global TV settings
@@ -60,7 +59,7 @@ function doPost(e) {
 
     if (e.postData && e.postData.contents) {
       if (e.postData.type === "application/json" || e.postData.contents.startsWith("{")) {
-        try { payload = Object.assign(payload, JSON.parse(e.postData.contents)); } catch (_) {}
+        try { payload = Object.assign(payload, JSON.parse(e.postData.contents)); } catch (e) {}
       } else {
         // x-www-form-urlencoded fallback
         e.postData.contents.split("&").forEach(p => {
@@ -144,11 +143,7 @@ function verifyAdminOnly(payload) {
 function handleAddPost(payload) {
   try { verifyAuthorized(payload); } catch (e) { return respondJSON({ success: false, message: e.message }); }
 
-  let imageUrl = payload.imageUrl || "";
-
-  if (payload.fileData && payload.fileName) {
-    imageUrl = uploadFileToDrive(payload);
-  }
+  const imageUrl = payload.imageUrl || "";
 
   const sheet = SpreadsheetApp.openById(masterDatabaseID).getSheetByName("Posts");
   if (!sheet) return respondJSON({ success: false, message: "Posts database not initialized." });
@@ -174,11 +169,7 @@ function handleEditPost(payload) {
 
   if (!payload.timestamp) return respondJSON({ success: false, message: "Missing timestamp." });
 
-  let imageUrl = payload.imageUrl || "";
-
-  if (payload.fileData && payload.fileName) {
-    imageUrl = uploadFileToDrive(payload);
-  }
+  const imageUrl = payload.imageUrl || "";
 
   const sheet = SpreadsheetApp.openById(masterDatabaseID).getSheetByName("Posts");
   if (!sheet) return respondJSON({ success: false, message: "Posts database not initialized." });
@@ -254,42 +245,12 @@ function handleUpdateTvSettings(payload) {
 }
 
 // --------------------------------------------------------------
-// Upload file to Google Drive, return public view URL
+// TRIGGER AUTHORIZATION
+// (No longer needed for uploads, but useful for Spreadsheet access)
 // --------------------------------------------------------------
-function uploadFileToDrive(payload) {
-  const folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
-  const blob = Utilities.newBlob(
-    Utilities.base64Decode(payload.fileData),
-    payload.mimeType,
-    payload.fileName
-  );
-  const file = folder.createFile(blob);
-
-  // Set to fully public (not just "anyone with link") so CDN links work without auth
-  file.setSharing(DriveApp.Access.ANYONE, DriveApp.Permission.VIEW);
-
-  const fileId = file.getId();
-  
-  // If it's a video, return the /preview link so it embeds and plays correctly.
-  // thumbnail?id=... only works for static images in <img> tags.
-  if (payload.mimeType && payload.mimeType.startsWith('video/')) {
-    return "https://drive.google.com/file/d/" + fileId + "/preview";
-  }
-  
-  // Use Drive's thumbnail CDN for images — works in external <img> tags without login redirects
-  return "https://drive.google.com/thumbnail?id=" + fileId + "&sz=w1600";
-}
-
-
-
-// --------------------------------------------------------------
-// ONE-TIME SETUP: Run this once in the Apps Script Editor to
-// grant Drive permissions. Select "authorizeDrive" in the
-// function dropdown and click Run ▶. Accept all permission pop-ups.
-// --------------------------------------------------------------
-function authorizeDrive() {
-  const folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
-  Logger.log("Drive OK! Folder: " + folder.getName());
+function triggerAuthorization() {
+  const ssName = SpreadsheetApp.openById(masterDatabaseID).getName();
+  Logger.log("Authorization Successful for: " + ssName);
 }
 
 // --------------------------------------------------------------
@@ -304,6 +265,7 @@ function findRowByTimestamp(sheet, timestamp) {
   }
   return -1;
 }
+
 
 function respondJSON(dataObject) {
   return ContentService
