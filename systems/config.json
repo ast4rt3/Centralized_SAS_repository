@@ -30,5 +30,13 @@
     "url": "apps/mailer/index.html",
     "external": false,
     "section": "Communications"
+  },
+  {
+    "id": "lost-and-found",
+    "name": "Lost and Found",
+    "description": "NBSC Lost and Found reporting system.",
+    "url": "https://lost-and-found-liart-seven.vercel.app/",
+    "external": false,
+    "section": "General Services"
   }
 ]
