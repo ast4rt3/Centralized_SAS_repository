@@ -30,6 +30,27 @@ let tvTheaterEnabled = false;
 })();
 
 document.addEventListener('DOMContentLoaded', () => {
+  // --- TV Clock Logic ---
+  function updateClock() {
+    const clock = document.getElementById('tv-clock');
+    const timeEl = document.getElementById('tv-time');
+    const dateEl = document.getElementById('tv-date');
+    if (!clock || !timeEl || !dateEl) return;
+
+    const now = new Date();
+    timeEl.textContent = now.toLocaleTimeString('en-US', { 
+      hour12: true, 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      second: '2-digit' 
+    });
+
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    dateEl.textContent = now.toLocaleDateString('en-US', options);
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
   const navDynamic = document.getElementById('nav-dynamic');
   const statSystems = document.getElementById('stat-systems');
   const homePage = document.getElementById('home');
