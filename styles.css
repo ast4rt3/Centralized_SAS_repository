@@ -1233,23 +1233,70 @@ body.fullscreen-active .home-header {
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
-  width: 100% !important;
-  background: transparent !important;
+  width: 140px !important; /* Sidebar width */
+  height: 100vh !important;
+  background: rgba(0, 0, 0, 0.4) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: none !important;
   z-index: 2000 !important;
-  pointer-events: none;
-  padding: 32px 48px;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  padding: 40px 10px !important;
+  gap: 60px !important;
 }
 
-body.fullscreen-active .home-header-brand,
-body.fullscreen-active .home-header-text,
+body.fullscreen-active .home-header-brand {
+  flex-direction: column !important;
+  gap: 12px !important;
+  text-align: center !important;
+}
+
+body.fullscreen-active .home-header-title {
+  font-size: 0.8rem !important; /* Reduced from 0.95rem */
+  margin: 0 !important;
+}
+
+body.fullscreen-active .home-header-text {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 2px !important;
+}
+
+body.fullscreen-active .home-header-subtitle {
+  font-size: 0.6rem !important;
+}
+
 body.fullscreen-active .home-header-meta {
-  background: transparent !important;
-  box-shadow: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 15px !important;
+  margin-top: auto !important;
 }
 
-body.fullscreen-active .home-header * {
-  pointer-events: auto;
+body.fullscreen-active .admin-tv-settings {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  padding-right: 0 !important;
+  border-right: none !important;
+}
+
+body.fullscreen-active .tv-clock {
+  margin-top: auto !important;
+  margin-bottom: auto !important;
+}
+
+body.fullscreen-active .home-news-dots {
+  position: static !important;
+  transform: none !important;
+  flex-direction: column !important;
+  gap: 15px !important;
+  margin: 0 0 20px 0 !important;
 }
 
 /* TV Clock */
@@ -1273,6 +1320,11 @@ body.tv-mode .tv-clock {
   text-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
+body.fullscreen-active .tv-time {
+  flex-direction: column !important;
+  gap: 5px !important;
+}
+
 /* Rolling Counter Styles */
 .counter-column-wrapper {
   display: flex;
@@ -1281,6 +1333,15 @@ body.tv-mode .tv-clock {
   line-height: 1;
   height: 56px;
   /* Reduced from 70px */
+}
+
+body.fullscreen-active .counter-column-wrapper {
+  height: 32px !important; /* Smaller height */
+}
+
+body.fullscreen-active .counter-digit {
+  font-size: 28px !important; /* Significantly smaller digits */
+  height: 32px !important;
 }
 
 .counter-column-container {
@@ -1313,6 +1374,10 @@ body.tv-mode .tv-clock {
   padding: 0 4px;
 }
 
+body.fullscreen-active .counter-separator {
+  display: none !important; /* Hide colon in vertical time stack */
+}
+
 .tv-date {
   font-size: 0.9rem;
   font-weight: 600;
@@ -1320,6 +1385,10 @@ body.tv-mode .tv-clock {
   text-transform: uppercase;
   letter-spacing: 1px;
   margin-top: 4px;
+}
+
+body.fullscreen-active .tv-date {
+  font-size: 0.7rem !important; /* Smaller in sidebar */
 }
 
 body.tv-mode .home-news {
@@ -1411,9 +1480,7 @@ body.tv-mode .home-news-ticker {
 }
 
 body.fullscreen-active .home-news-ticker {
-  background: rgba(0, 0, 0, 0.25) !important;
-  backdrop-filter: blur(4px) !important;
-  -webkit-backdrop-filter: blur(4px) !important;
+  display: none !important;
 }
 
 body.tv-mode .ticker-wrap {
@@ -1433,7 +1500,7 @@ body.tv-mode .home-news-dots {
   gap: 12px;
   z-index: 2100;
   padding: 0 !important;
-  margin: 0 !important;
+  margin: 15px 0 0 0 !important;
   pointer-events: auto;
 }
 
@@ -1473,7 +1540,6 @@ body.video-fullscreen-active .home-news-track {
 
 /* 2. Manual Image Fullscreen (Persistent UI Overlay) */
 body.fullscreen-active .home-header,
-body.fullscreen-active .home-news-ticker,
 body.fullscreen-active .home-news-dots {
   display: flex !important;
 }
@@ -1672,4 +1738,51 @@ body.tv-mode .home-news-dots {
     opacity: 0;
     transform: translateX(40px) scale(0.9);
   }
+}
+
+/* Fullscreen Right Info Overlay */
+.fullscreen-info {
+  position: fixed;
+  top: 50%;
+  right: 60px;
+  transform: translateY(-50%);
+  z-index: 2005;
+  color: #fff;
+  max-width: 500px;
+  text-align: right;
+  pointer-events: none;
+  opacity: 0;
+  display: none; /* Hidden by default */
+  padding-left: 100px; /* Space on the left for the text on the right */
+  margin-left: 40px; /* Additional margin for breathing room */
+  transition: opacity 0.5s ease;
+}
+
+body.fullscreen-active .fullscreen-info {
+  display: block;
+  opacity: 1;
+}
+
+.fullscreen-info.hidden {
+  display: none !important;
+}
+
+.fs-info-title {
+  font-size: 3.5rem; /* Balanced size */
+  font-weight: 900;
+  margin: 0;
+  text-transform: uppercase;
+  line-height: 1;
+  letter-spacing: -1px;
+  text-shadow: 0 5px 20px rgba(0, 0, 0, 0.6);
+}
+
+.fs-info-desc {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--nbsc-gold);
+  margin-top: 15px;
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  line-height: 1.4;
+  white-space: pre-wrap;
 }

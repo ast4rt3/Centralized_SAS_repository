@@ -1503,6 +1503,12 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             t1.innerHTML = tickerHtml;
             t2.innerHTML = tickerHtml;
+
+            // Update Fullscreen Info Overlay
+            const fsTitle = document.getElementById('fs-post-title');
+            const fsDesc = document.getElementById('fs-post-desc');
+            if (fsTitle) fsTitle.textContent = tempTitle;
+            if (fsDesc) fsDesc.textContent = tempDesc;
           }
         } else {
           s.classList.remove('is-active');
