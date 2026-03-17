@@ -1010,8 +1010,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }];
       }
 
-      let combinedTickerContent = '';
-
       // Build Full-screen TV Carousel
       const track = document.createElement('div');
       track.className = 'home-news-track';
@@ -1024,6 +1022,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const slide = document.createElement('article');
         slide.className = 'home-news-slide' + (index === 0 ? ' is-active' : '');
         slide.setAttribute('data-index', index);
+        slide.setAttribute('data-title', escapeHtml(post.title || ''));
+        slide.setAttribute('data-desc', escapeHtml(post.description || ''));
 
         let imgHtml = '';
         if (post.imageUrl && post.imageUrl.trim() !== '') {
@@ -1098,12 +1098,6 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       `;
 
-        combinedTickerContent += `
-          <span class="ticker-title">${escapeHtml(post.title)}</span>
-          <span class="ticker-separator"> &nbsp;&bull;&nbsp;&bull;&nbsp; </span>
-          <span class="ticker-desc">${escapeHtml(post.description)}</span>
-          <span class="ticker-separator"> &nbsp;&bull;&nbsp;&bull;&nbsp; </span>
-        `;
         track.appendChild(slide);
 
         const dot = document.createElement('button');
@@ -1114,15 +1108,24 @@ document.addEventListener('DOMContentLoaded', () => {
         dotsContainer.appendChild(dot);
       });
 
+      const firstTitle = tvPosts.length > 0 ? escapeHtml(tvPosts[0].title || '') : '';
+      const firstDesc = tvPosts.length > 0 ? escapeHtml(tvPosts[0].description || '') : '';
+      const initialTickerContent = `
+        <span class="ticker-title">${firstTitle}</span>
+        <span class="ticker-separator"> &nbsp;&bull;&nbsp;&bull;&nbsp; </span>
+        <span class="ticker-desc">${firstDesc}</span>
+        <span class="ticker-separator"> &nbsp;&bull;&nbsp;&bull;&nbsp; </span>
+      `;
+
       const globalTicker = document.createElement('div');
       globalTicker.className = 'home-news-ticker';
       globalTicker.innerHTML = `
         <div class="ticker-wrap">
-          <div class="ticker-content">
-            ${combinedTickerContent}
+          <div class="ticker-content" id="global-ticker-content-1">
+            ${initialTickerContent}
           </div>
-          <div class="ticker-content" aria-hidden="true">
-            ${combinedTickerContent}
+          <div class="ticker-content" aria-hidden="true" id="global-ticker-content-2">
+            ${initialTickerContent}
           </div>
         </div>
       `;
@@ -1388,6 +1391,22 @@ document.addEventListener('DOMContentLoaded', () => {
       slides.forEach(function (s, i) {
         if (i === index) {
           s.classList.add('is-active');
+
+          // Update global ticker
+          const t1 = document.getElementById('global-ticker-content-1');
+          const t2 = document.getElementById('global-ticker-content-2');
+          if (t1 && t2) {
+            const tempTitle = s.getAttribute('data-title') || '';
+            const tempDesc = s.getAttribute('data-desc') || '';
+            const tickerHtml = `
+              <span class="ticker-title">${tempTitle}</span>
+              <span class="ticker-separator"> &nbsp;&bull;&nbsp;&bull;&nbsp; </span>
+              <span class="ticker-desc">${tempDesc}</span>
+              <span class="ticker-separator"> &nbsp;&bull;&nbsp;&bull;&nbsp; </span>
+            `;
+            t1.innerHTML = tickerHtml;
+            t2.innerHTML = tickerHtml;
+          }
         } else {
           s.classList.remove('is-active');
           // Perform cleanup for inactive slides
