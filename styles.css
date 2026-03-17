@@ -349,7 +349,7 @@ body {
   aspect-ratio: 16 / 6.8;
   /* Slightly taller aspect ratio */
   overflow: hidden;
-  background-color: #1a1a1a;
+  background-color: transparent;
 }
 
 .home-news-image,
@@ -1151,13 +1151,14 @@ body.tv-mode .home-news-track {
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.22);
   overflow: hidden;
+  background: transparent;
 }
 
 body.tv-mode .home-news-image-wrap {
   position: relative;
   width: 100%;
-  height: calc(100vh - 250px); /* Adjusted from 280px to move ticker down slightly */
-  background: var(--nbsc-dark);
+  height: 100%; /* Let flex-box control the vertical distribution natively */
+  background: transparent;
 }
 
 body.tv-mode .home-news-image,
@@ -1174,6 +1175,9 @@ body.tv-mode .home-news-ticker {
   /* Slightly darker, solid bar look now that it is below */
   padding: 16px 24px;
   display: flex;
+  margin-top: 24px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 body.tv-mode .ticker-wrap {

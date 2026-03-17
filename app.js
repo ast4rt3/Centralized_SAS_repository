@@ -1010,6 +1010,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }];
       }
 
+      let combinedTickerContent = '';
+
       // Build Full-screen TV Carousel
       const track = document.createElement('div');
       track.className = 'home-news-track';
@@ -1055,7 +1057,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
           if (ytId) {
             imgHtml = `
-              <img src="https://img.youtube.com/vi/${ytId}/maxresdefault.jpg" class="home-news-image-blur" style="position: absolute; top: -10%; left: -10%; width: 120%; height: 120%; object-fit: cover; filter: blur(40px); opacity: 0.5; z-index: 0; pointer-events: none;" aria-hidden="true" loading="lazy" onerror="this.src='https://img.youtube.com/vi/${ytId}/hqdefault.jpg'">
               <div style="position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden;">
                  <iframe id="ytplayer-${post.timestamp}" src="https://www.youtube.com/embed/${ytId}?autoplay=1&mute=1&controls=0&enablejsapi=1&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&showinfo=0&autohide=1" class="home-news-image yt-video-frame" style="border: none; width: 100%; height: 100%; ${styleStr}" allow="autoplay; encrypted-media" allowfullscreen></iframe>
               </div>
@@ -1069,7 +1070,6 @@ document.addEventListener('DOMContentLoaded', () => {
           ) {
             // Direct/stream URL — use native <video> with autoplay+muted for TV
             imgHtml = `
-              <video src="${post.imageUrl}" class="home-news-image-blur" style="position: absolute; top: -10%; left: -10%; width: 120%; height: 120%; object-fit: cover; filter: blur(40px); opacity: 0.5; z-index: 0; pointer-events: none;" autoplay muted playsinline loop></video>
               <div style="position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden;">
                 <video src="${post.imageUrl}" class="home-news-image" style="width: 100%; height: 100%; ${styleStr}" autoplay muted playsinline></video>
               </div>
@@ -1077,14 +1077,12 @@ document.addEventListener('DOMContentLoaded', () => {
           } else if (urlLower.includes('drive.google.com/file/d/') && urlLower.includes('/preview')) {
             // Fallback for existing preview iframes (Legacy)
             imgHtml = `
-              <div class="home-news-image-blur" style="position: absolute; top: -10%; left: -10%; width: 120%; height: 120%; background:#000; filter: blur(40px); opacity: 0.5; z-index: 0; pointer-events: none;"></div>
               <div style="position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden;">
                  <iframe src="${post.imageUrl}" class="home-news-image drive-video-frame" style="border: none; width: 100%; height: 100%; ${styleStr}" allow="autoplay" allowfullscreen></iframe>
               </div>
             `;
           } else {
             imgHtml = `
-              <img src="${post.imageUrl}" class="home-news-image-blur" style="position: absolute; top: -10%; left: -10%; width: 120%; height: 120%; object-fit: cover; filter: blur(40px); opacity: 0.5; z-index: 0; pointer-events: none;" aria-hidden="true" loading="lazy">
               <div style="position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden;">
                  <img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="home-news-image" style="width: 100%; height: 100%; ${styleStr}" loading="lazy">
               </div>
@@ -1098,21 +1096,14 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="home-news-image-wrap">
           ${imgHtml}
         </div>
-        <div class="home-news-ticker">
-          <div class="ticker-wrap">
-            <div class="ticker-content">
-              <span class="ticker-title">${escapeHtml(post.title)}</span>
-              <span class="ticker-separator"> &nbsp;&bull;&nbsp;&bull;&nbsp; </span>
-              <span class="ticker-desc">${escapeHtml(post.description)}</span>
-            </div>
-            <div class="ticker-content" aria-hidden="true">
-              <span class="ticker-title">${escapeHtml(post.title)}</span>
-              <span class="ticker-separator"> &nbsp;&bull;&nbsp;&bull;&nbsp; </span>
-              <span class="ticker-desc">${escapeHtml(post.description)}</span>
-            </div>
-          </div>
-        </div>
       `;
+
+        combinedTickerContent += `
+          <span class="ticker-title">${escapeHtml(post.title)}</span>
+          <span class="ticker-separator"> &nbsp;&bull;&nbsp;&bull;&nbsp; </span>
+          <span class="ticker-desc">${escapeHtml(post.description)}</span>
+          <span class="ticker-separator"> &nbsp;&bull;&nbsp;&bull;&nbsp; </span>
+        `;
         track.appendChild(slide);
 
         const dot = document.createElement('button');
@@ -1123,10 +1114,24 @@ document.addEventListener('DOMContentLoaded', () => {
         dotsContainer.appendChild(dot);
       });
 
+      const globalTicker = document.createElement('div');
+      globalTicker.className = 'home-news-ticker';
+      globalTicker.innerHTML = `
+        <div class="ticker-wrap">
+          <div class="ticker-content">
+            ${combinedTickerContent}
+          </div>
+          <div class="ticker-content" aria-hidden="true">
+            ${combinedTickerContent}
+          </div>
+        </div>
+      `;
+
       container.appendChild(track);
       if (posts.length > 1) {
         container.appendChild(dotsContainer);
       }
+      container.appendChild(globalTicker);
 
       initCarousel(container);
     } else {
