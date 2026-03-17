@@ -62,7 +62,8 @@ document.addEventListener('DOMContentLoaded', () => {
     update(newValue) {
       if (this.currentValue === newValue) return;
       this.currentValue = newValue;
-      const digitHeight = 56; // Matches fixed height in CSS (Further Reduced)
+      // Fixed 60px height to match modernized CSS perfectly
+      const digitHeight = 60;
       const offset = -parseInt(newValue, 10) * digitHeight;
       this.container.style.transform = `translateY(${offset}px)`;
     }
@@ -1580,7 +1581,25 @@ document.addEventListener('DOMContentLoaded', () => {
       if (document.body.classList.contains('tv-mode')) {
         const dotsEl = document.querySelector('.home-news-dots');
         const tvClock = document.getElementById('tv-clock');
-        if (dotsEl && tvClock) tvClock.appendChild(dotsEl);
+        const isFS = document.body.classList.contains('fullscreen-active');
+
+        if (dotsEl && tvClock) {
+          if (isFS) {
+            // In fullscreen, move dots back to the main home page container so they don't get clipped by the sidebar
+            const homePage = document.getElementById('home');
+            if (homePage && dotsEl.parentElement !== homePage) {
+              homePage.appendChild(dotsEl);
+            }
+            if (homePage && tvClock.parentElement !== homePage) {
+              homePage.appendChild(tvClock);
+            }
+          } else {
+            // Standard TV mode: keep dots in header
+            if (dotsEl.parentElement !== tvClock) {
+              tvClock.appendChild(dotsEl);
+            }
+          }
+        }
       }
 
       if (videoEl) {
