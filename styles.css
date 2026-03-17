@@ -974,6 +974,8 @@ iframe.post-image {
   border-radius: 16px;
   width: 100%;
   max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
   padding: 32px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
 }

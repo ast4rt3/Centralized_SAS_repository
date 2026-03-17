@@ -610,25 +610,55 @@ document.addEventListener('DOMContentLoaded', () => {
         previewGroup.style.display = 'block';
       });
 
-      if (sizeSelect) {
-        sizeSelect.addEventListener('change', () => {
-          previewImg.style.objectFit = sizeSelect.value;
+      const transformWrapper = document.getElementById('post-preview-transform-wrapper');
+      const zoomSlider = document.getElementById('post-img-zoom');
+      const zoomValDisplay = document.getElementById('post-preview-zoom-val');
+      const resetBtn = document.getElementById('post-preview-reset-btn');
+      const hiddenSizeVal = document.getElementById('post-img-size-val');
+
+      let currentZoom = 1;
+      let currentX = 0; // px
+      let currentY = 0; // px
+
+      function updateTransform() {
+        if (!transformWrapper) return;
+        transformWrapper.style.transform = `scale(${currentZoom}) translate(${currentX}px, ${currentY}px)`;
+        const posStr = `${Math.round(currentX)}px, ${Math.round(currentY)}px`;
+        
+        if (posInput) posInput.value = `${currentX} ${currentY}`;
+        if (hiddenSizeVal) hiddenSizeVal.value = currentZoom;
+        if (coordsDisplay) coordsDisplay.textContent = posStr;
+      }
+
+      if (zoomSlider) {
+        zoomSlider.addEventListener('input', (e) => {
+          currentZoom = parseFloat(e.target.value);
+          if (zoomValDisplay) zoomValDisplay.textContent = currentZoom.toFixed(2) + 'x';
+          updateTransform();
+        });
+      }
+
+      if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+          currentZoom = 1;
+          currentX = 0;
+          currentY = 0;
+          if (zoomSlider) zoomSlider.value = 1;
+          if (zoomValDisplay) zoomValDisplay.textContent = '1.00x';
+          updateTransform();
         });
       }
 
       let isDragging = false;
-      let startX = 0, startY = 0;
-      let initialPosX = 50, initialPosY = 50;
+      let startMouseX = 0, startMouseY = 0;
+      let initialDragX = 0, initialDragY = 0;
 
       previewContainer.addEventListener('mousedown', (e) => {
         isDragging = true;
-        startX = e.clientX;
-        startY = e.clientY;
-
-        const currentPos = posInput.value || '50% 50%';
-        const parts = currentPos.split(' ');
-        initialPosX = parseFloat(parts[0]) || 50;
-        initialPosY = parseFloat(parts[1]) || 50;
+        startMouseX = e.clientX;
+        startMouseY = e.clientY;
+        initialDragX = currentX;
+        initialDragY = currentY;
 
         previewContainer.style.cursor = 'grabbing';
       });
@@ -636,21 +666,14 @@ document.addEventListener('DOMContentLoaded', () => {
       window.addEventListener('mousemove', (e) => {
         if (!isDragging) return;
 
-        const deltaX = e.clientX - startX;
-        const deltaY = e.clientY - startY;
-        const rect = previewContainer.getBoundingClientRect();
+        // Account for current zoom scale so dragging feels 1:1 with mouse movement
+        const deltaX = (e.clientX - startMouseX) / currentZoom;
+        const deltaY = (e.clientY - startMouseY) / currentZoom;
 
-        const pctX = (deltaX / rect.width) * 100 * -1;
-        const pctY = (deltaY / rect.height) * 100 * -1;
+        currentX = initialDragX + deltaX;
+        currentY = initialDragY + deltaY;
 
-        let newX = Math.max(0, Math.min(100, initialPosX + pctX));
-        let newY = Math.max(0, Math.min(100, initialPosY + pctY));
-
-        const posStr = `${Math.round(newX)}% ${Math.round(newY)}%`;
-
-        previewImg.style.objectPosition = posStr;
-        posInput.value = posStr;
-        coordsDisplay.textContent = posStr;
+        updateTransform();
       });
 
       window.addEventListener('mouseup', () => {
@@ -988,15 +1011,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let imgHtml = '';
         if (post.imageUrl && post.imageUrl.trim() !== '') {
-          const objPos = post.imagePosition || 'center';
-          const objSize = post.imageSize || 'cover';
+          // Parse saved values. Check if it's a legacy value (cover/contain) or the new zoom format (scale number)
+          let parsedPos = post.imagePosition || '50% 50%'; // Legacy default
+          let isLegacySize = (post.imageSize === 'cover' || post.imageSize === 'contain' || !post.imageSize);
+          
+          let parsedScale = 1;
+          let parsedTrX = 0;
+          let parsedTrY = 0;
+          
+          let styleStr = '';
+          
+          if (!isLegacySize && !isNaN(parseFloat(post.imageSize))) {
+            parsedScale = parseFloat(post.imageSize);
+            // new pos format is "X Y" in pixels
+            const pParts = parsedPos.split(' ');
+            if (pParts.length >= 2) {
+              parsedTrX = parseFloat(pParts[0]) || 0;
+              parsedTrY = parseFloat(pParts[1]) || 0;
+            }
+            styleStr = `object-fit: contain; object-position: center; transform-origin: center center; transform: scale(${parsedScale}) translate(${parsedTrX}px, ${parsedTrY}px);`;
+          } else {
+             // Legacy
+             const objSizeStr = post.imageSize || 'cover';
+             styleStr = `object-position: ${parsedPos}; object-fit: ${objSizeStr};`;
+          }
+
           const urlLower = post.imageUrl.toLowerCase();
           const ytId = getYouTubeVideoId(post.imageUrl);
 
           if (ytId) {
             imgHtml = `
               <img src="https://img.youtube.com/vi/${ytId}/maxresdefault.jpg" class="home-news-image-blur" style="position: absolute; top: -10%; left: -10%; width: 120%; height: 120%; object-fit: cover; filter: blur(40px); opacity: 0.5; z-index: 0; pointer-events: none;" aria-hidden="true" loading="lazy" onerror="this.src='https://img.youtube.com/vi/${ytId}/hqdefault.jpg'">
-              <iframe id="ytplayer-${post.timestamp}" src="https://www.youtube.com/embed/${ytId}?autoplay=1&mute=1&controls=0&enablejsapi=1&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&showinfo=0&autohide=1" class="home-news-image yt-video-frame" style="position: relative; z-index: 1; border: none; width: 100%; height: 100%; object-position: ${objPos}; object-fit: ${objSize};" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+              <div style="position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden;">
+                 <iframe id="ytplayer-${post.timestamp}" src="https://www.youtube.com/embed/${ytId}?autoplay=1&mute=1&controls=0&enablejsapi=1&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&showinfo=0&autohide=1" class="home-news-image yt-video-frame" style="border: none; width: 100%; height: 100%; ${styleStr}" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+              </div>
             `;
           } else if (
             urlLower.includes('/video/upload/') ||
@@ -1008,18 +1056,24 @@ document.addEventListener('DOMContentLoaded', () => {
             // Direct/stream URL — use native <video> with autoplay+muted for TV
             imgHtml = `
               <video src="${post.imageUrl}" class="home-news-image-blur" style="position: absolute; top: -10%; left: -10%; width: 120%; height: 120%; object-fit: cover; filter: blur(40px); opacity: 0.5; z-index: 0; pointer-events: none;" autoplay muted playsinline loop></video>
-              <video src="${post.imageUrl}" class="home-news-image" style="position: relative; z-index: 1; object-position: ${objPos}; object-fit: ${objSize};" autoplay muted playsinline></video>
+              <div style="position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden;">
+                <video src="${post.imageUrl}" class="home-news-image" style="width: 100%; height: 100%; ${styleStr}" autoplay muted playsinline></video>
+              </div>
             `;
           } else if (urlLower.includes('drive.google.com/file/d/') && urlLower.includes('/preview')) {
             // Fallback for existing preview iframes (Legacy)
             imgHtml = `
               <div class="home-news-image-blur" style="position: absolute; top: -10%; left: -10%; width: 120%; height: 120%; background:#000; filter: blur(40px); opacity: 0.5; z-index: 0; pointer-events: none;"></div>
-              <iframe src="${post.imageUrl}" class="home-news-image drive-video-frame" style="position: relative; z-index: 1; border: none; width: 100%; height: 100%;" allow="autoplay" allowfullscreen></iframe>
+              <div style="position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden;">
+                 <iframe src="${post.imageUrl}" class="home-news-image drive-video-frame" style="border: none; width: 100%; height: 100%; ${styleStr}" allow="autoplay" allowfullscreen></iframe>
+              </div>
             `;
           } else {
             imgHtml = `
               <img src="${post.imageUrl}" class="home-news-image-blur" style="position: absolute; top: -10%; left: -10%; width: 120%; height: 120%; object-fit: cover; filter: blur(40px); opacity: 0.5; z-index: 0; pointer-events: none;" aria-hidden="true" loading="lazy">
-              <img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="home-news-image" style="position: relative; z-index: 1; object-position: ${objPos}; object-fit: ${objSize};" loading="lazy">
+              <div style="position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden;">
+                 <img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="home-news-image" style="width: 100%; height: 100%; ${styleStr}" loading="lazy">
+              </div>
             `;
           }
         } else {
@@ -1070,33 +1124,56 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let imgHtml = '';
         if (post.imageUrl && post.imageUrl.trim() !== '') {
-          const objPos = post.imagePosition || 'center';
-          const objSize = post.imageSize || 'cover';
+          // Parse saved values. Check if it's a legacy value (cover/contain) or the new zoom format (scale number)
+          let parsedPos = post.imagePosition || '50% 50%'; // Legacy default
+          let isLegacySize = (post.imageSize === 'cover' || post.imageSize === 'contain' || !post.imageSize);
+          
+          let parsedScale = 1;
+          let parsedTrX = 0;
+          let parsedTrY = 0;
+          
+          let styleStr = '';
+          
+          if (!isLegacySize && !isNaN(parseFloat(post.imageSize))) {
+            parsedScale = parseFloat(post.imageSize);
+            // new pos format is "X Y" in pixels
+            const pParts = parsedPos.split(' ');
+            if (pParts.length >= 2) {
+              parsedTrX = parseFloat(pParts[0]) || 0;
+              parsedTrY = parseFloat(pParts[1]) || 0;
+            }
+            styleStr = `object-fit: contain; object-position: center; transform-origin: center center; transform: scale(${parsedScale}) translate(${parsedTrX}px, ${parsedTrY}px);`;
+          } else {
+             // Legacy
+             const objSizeStr = post.imageSize || 'cover';
+             styleStr = `object-position: ${parsedPos}; object-fit: ${objSizeStr};`;
+          }
+
           const urlLower = post.imageUrl.toLowerCase();
           const ytId = getYouTubeVideoId(post.imageUrl);
 
           if (ytId) {
             // Admin/Uploader view: Show thumbnail instead of iframe
-            imgHtml = `<img src="https://img.youtube.com/vi/${ytId}/hqdefault.jpg" class="post-image" style="object-position: ${objPos}; object-fit: ${objSize};" loading="lazy" onerror="this.src='https://img.youtube.com/vi/${ytId}/default.jpg'">`;
+            imgHtml = `<div style="position: relative; width: 100%; height: 200px; overflow: hidden;"><img src="https://img.youtube.com/vi/${ytId}/hqdefault.jpg" class="post-image" style="width: 100%; height: 100%; ${styleStr}" loading="lazy" onerror="this.src='https://img.youtube.com/vi/${ytId}/default.jpg'"></div>`;
           } else if (
             urlLower && (urlLower.includes('res.cloudinary.com') || urlLower.includes('cloudinary.com'))
           ) {
             // Cloudinary: Only transform to .jpg if it's a video file extension
             const isVideo = /\.(mp4|webm|mov|mkv|avi)$/i.test(urlLower) || urlLower.includes('/video/upload/');
             const thumbUrl = isVideo ? post.imageUrl.replace(/\.[^.]+$/, '.jpg') : post.imageUrl;
-            imgHtml = `<img src="${thumbUrl}" alt="${escapeHtml(post.title)}" class="post-image" style="object-position: ${objPos}; object-fit: ${objSize};" loading="lazy">`;
+            imgHtml = `<div style="position: relative; width: 100%; height: 200px; overflow: hidden;"><img src="${thumbUrl}" alt="${escapeHtml(post.title)}" class="post-image" style="width: 100%; height: 100%; ${styleStr}" loading="lazy"></div>`;
           } else if (
             urlLower.includes('docs.google.com/uc?') ||
             urlLower.includes('drive.google.com/uc?id=') ||
             urlLower.endsWith('.mp4') || urlLower.endsWith('.webm')
           ) {
             // Direct video link (non-Cloudinary): Remove autoplay to prevent multiple videos playing
-            imgHtml = `<video src="${post.imageUrl}" class="post-image" style="object-position: ${objPos}; object-fit: ${objSize};" preload="metadata"></video>`;
+            imgHtml = `<div style="position: relative; width: 100%; height: 200px; overflow: hidden;"><video src="${post.imageUrl}" class="post-image" style="width: 100%; height: 100%; ${styleStr}" preload="metadata"></video></div>`;
           } else if (urlLower.includes('drive.google.com/file/d/') && urlLower.includes('/preview')) {
             // Legacy preview (static iframe)
-            imgHtml = `<iframe src="${post.imageUrl}" class="post-image" style="border: none; object-position: ${objPos}; object-fit: ${objSize};"></iframe>`;
+            imgHtml = `<div style="position: relative; width: 100%; height: 200px; overflow: hidden;"><iframe src="${post.imageUrl}" class="post-image" style="border: none; width: 100%; height: 100%; ${styleStr}"></iframe></div>`;
           } else {
-            imgHtml = `<img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="post-image" style="object-position: ${objPos}; object-fit: ${objSize};" loading="lazy">`;
+            imgHtml = `<div style="position: relative; width: 100%; height: 200px; overflow: hidden;"><img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="post-image" style="width: 100%; height: 100%; ${styleStr}" loading="lazy"></div>`;
           }
         }
 
@@ -1133,17 +1210,34 @@ document.addEventListener('DOMContentLoaded', () => {
             if (posInput) {
               const p = post.imagePosition || '50% 50%';
               posInput.value = p;
-              const previewImg = document.getElementById('post-preview-img');
               const coordsDisplay = document.getElementById('post-preview-coords');
-              if (previewImg) previewImg.style.objectPosition = p;
               if (coordsDisplay) coordsDisplay.textContent = p;
             }
 
-            const sizeSelect = document.getElementById('post-img-size');
-            if (sizeSelect) {
-              sizeSelect.value = post.imageSize || 'cover';
-              sizeSelect.dispatchEvent(new Event('change'));
+            const hiddenSizeVal = document.getElementById('post-img-size-val');
+            const zoomSlider = document.getElementById('post-img-zoom');
+            const zoomValDisplay = document.getElementById('post-preview-zoom-val');
+            const transformWrapper = document.getElementById('post-preview-transform-wrapper');
+
+            // Apply existing scale or fallback
+            let initialZoom = 1;
+            let initialTrX = 0;
+            let initialTrY = 0;
+
+            if (post.imageSize && post.imageSize !== 'cover' && post.imageSize !== 'contain') {
+              initialZoom = parseFloat(post.imageSize);
+              if (isNaN(initialZoom)) initialZoom = 1;
+              const pParts = (post.imagePosition || '0 0').split(' ');
+              if (pParts.length >= 2) {
+                initialTrX = parseFloat(pParts[0]) || 0;
+                initialTrY = parseFloat(pParts[1]) || 0;
+              }
             }
+            
+            if (hiddenSizeVal) hiddenSizeVal.value = initialZoom;
+            if (zoomSlider) zoomSlider.value = initialZoom;
+            if (zoomValDisplay) zoomValDisplay.textContent = initialZoom.toFixed(2) + 'x';
+            if (transformWrapper) transformWrapper.style.transform = `scale(${initialZoom}) translate(${initialTrX}px, ${initialTrY}px)`;
 
             form.setAttribute('data-edit-timestamp', post.timestamp);
             modal.classList.remove('hidden');
