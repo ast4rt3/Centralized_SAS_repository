@@ -38,9 +38,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!clock || !timeEl || !dateEl) return;
 
     const now = new Date();
-    timeEl.textContent = now.toLocaleTimeString('en-US', { 
-      hour12: true, 
-      hour: '2-digit', 
+    timeEl.textContent = now.toLocaleTimeString('en-US', {
+      hour12: true,
+      hour: '2-digit',
       minute: '2-digit'
     });
 
@@ -217,7 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
-    
+
     let icon = 'ℹ️';
     if (type === 'success') icon = '✅';
     if (type === 'error') icon = '❌';
@@ -251,7 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
       titleEl.textContent = title;
       messageEl.textContent = message;
       passwordInput.value = '';
-      
+
       if (showPassword) {
         inputGroup.classList.remove('hidden');
       } else {
@@ -617,18 +617,27 @@ document.addEventListener('DOMContentLoaded', () => {
       const hiddenSizeVal = document.getElementById('post-img-size-val');
 
       let currentZoom = 1;
-      let currentX = 0; // px
-      let currentY = 0; // px
+      let currentX = 0; // %
+      let currentY = 0; // %
 
       function updateTransform() {
         if (!transformWrapper) return;
-        transformWrapper.style.transform = `scale(${currentZoom}) translate(${currentX}px, ${currentY}px)`;
-        const posStr = `${Math.round(currentX)}px, ${Math.round(currentY)}px`;
-        
+        transformWrapper.style.transform = `scale(${currentZoom}) translate(${currentX}%, ${currentY}%)`;
+        const posStr = `${Math.round(currentX)}%, ${Math.round(currentY)}%`;
+
         if (posInput) posInput.value = `${currentX} ${currentY}`;
         if (hiddenSizeVal) hiddenSizeVal.value = currentZoom;
         if (coordsDisplay) coordsDisplay.textContent = posStr;
       }
+
+      window.setPreviewTransformState = function(zoom, x, y) {
+        currentZoom = zoom;
+        currentX = x;
+        currentY = y;
+        if (zoomSlider) zoomSlider.value = zoom;
+        if (zoomValDisplay) zoomValDisplay.textContent = zoom.toFixed(2) + 'x';
+        updateTransform();
+      };
 
       if (zoomSlider) {
         zoomSlider.addEventListener('input', (e) => {
@@ -640,12 +649,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (resetBtn) {
         resetBtn.addEventListener('click', () => {
-          currentZoom = 1;
-          currentX = 0;
-          currentY = 0;
-          if (zoomSlider) zoomSlider.value = 1;
-          if (zoomValDisplay) zoomValDisplay.textContent = '1.00x';
-          updateTransform();
+          if (window.setPreviewTransformState) {
+            window.setPreviewTransformState(1, 0, 0);
+          }
         });
       }
 
@@ -666,12 +672,19 @@ document.addEventListener('DOMContentLoaded', () => {
       window.addEventListener('mousemove', (e) => {
         if (!isDragging) return;
 
-        // Account for current zoom scale so dragging feels 1:1 with mouse movement
-        const deltaX = (e.clientX - startMouseX) / currentZoom;
-        const deltaY = (e.clientY - startMouseY) / currentZoom;
+        const rect = previewContainer.getBoundingClientRect();
+        const containerWidth = rect.width || 1;
+        const containerHeight = rect.height || 1;
 
-        currentX = initialDragX + deltaX;
-        currentY = initialDragY + deltaY;
+        // Account for current zoom scale so dragging feels 1:1 with mouse movement
+        const deltaX_px = (e.clientX - startMouseX) / currentZoom;
+        const deltaY_px = (e.clientY - startMouseY) / currentZoom;
+
+        const deltaX_percent = (deltaX_px / containerWidth) * 100;
+        const deltaY_percent = (deltaY_px / containerHeight) * 100;
+
+        currentX = initialDragX + deltaX_percent;
+        currentY = initialDragY + deltaY_percent;
 
         updateTransform();
       });
@@ -704,9 +717,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (previewGroup) previewGroup.style.display = 'none';
-        if (posInput) posInput.value = '50% 50%';
         if (previewImg) previewImg.style.objectPosition = '50% 50%';
-        if (coordsDisplay) coordsDisplay.textContent = '50% 50%';
+        if (window.setPreviewTransformState) {
+          window.setPreviewTransformState(1, 0, 0);
+        }
 
         modal.classList.remove('hidden');
         if (errorMsg) errorMsg.classList.add('hidden');
@@ -730,8 +744,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const title = document.getElementById('post-title').value;
         const desc = document.getElementById('post-desc').value;
         const imgUrl = document.getElementById('post-img') ? document.getElementById('post-img').value : '';
-        const imgPos = document.getElementById('post-img-pos') ? document.getElementById('post-img-pos').value : '50% 50%';
-        const imgSize = document.getElementById('post-img-size') ? document.getElementById('post-img-size').value : 'cover';
+        const imgPos = document.getElementById('post-img-pos') ? document.getElementById('post-img-pos').value : '0 0';
+        const imgSize = document.getElementById('post-img-size-val') ? document.getElementById('post-img-size-val').value : '1';
         const submitBtn = document.getElementById('submit-post-btn');
         const origText = submitBtn.textContent;
 
@@ -746,11 +760,11 @@ document.addEventListener('DOMContentLoaded', () => {
           const isEdit = !!editTimestamp;
 
           const confirmPass = await showConfirm(
-            isEdit ? "Confirm Edit" : "Confirm Post", 
-            `Please enter your password to ${isEdit ? 'update' : 'publish'} this post:`, 
+            isEdit ? "Confirm Edit" : "Confirm Post",
+            `Please enter your password to ${isEdit ? 'update' : 'publish'} this post:`,
             true
           );
-          
+
           if (!confirmPass) {
             submitBtn.textContent = origText;
             submitBtn.disabled = false;
@@ -1014,26 +1028,26 @@ document.addEventListener('DOMContentLoaded', () => {
           // Parse saved values. Check if it's a legacy value (cover/contain) or the new zoom format (scale number)
           let parsedPos = post.imagePosition || '50% 50%'; // Legacy default
           let isLegacySize = (post.imageSize === 'cover' || post.imageSize === 'contain' || !post.imageSize);
-          
+
           let parsedScale = 1;
           let parsedTrX = 0;
           let parsedTrY = 0;
-          
+
           let styleStr = '';
-          
+
           if (!isLegacySize && !isNaN(parseFloat(post.imageSize))) {
             parsedScale = parseFloat(post.imageSize);
-            // new pos format is "X Y" in pixels
+            // new pos format is "X Y" in percentages
             const pParts = parsedPos.split(' ');
             if (pParts.length >= 2) {
               parsedTrX = parseFloat(pParts[0]) || 0;
               parsedTrY = parseFloat(pParts[1]) || 0;
             }
-            styleStr = `object-fit: contain; object-position: center; transform-origin: center center; transform: scale(${parsedScale}) translate(${parsedTrX}px, ${parsedTrY}px);`;
+            styleStr = `object-fit: contain; object-position: center; transform-origin: center center; transform: scale(${parsedScale}) translate(${parsedTrX}%, ${parsedTrY}%);`;
           } else {
-             // Legacy
-             const objSizeStr = post.imageSize || 'cover';
-             styleStr = `object-position: ${parsedPos}; object-fit: ${objSizeStr};`;
+            // Legacy
+            const objSizeStr = post.imageSize || 'cover';
+            styleStr = `object-position: ${parsedPos}; object-fit: ${objSizeStr};`;
           }
 
           const urlLower = post.imageUrl.toLowerCase();
@@ -1127,26 +1141,26 @@ document.addEventListener('DOMContentLoaded', () => {
           // Parse saved values. Check if it's a legacy value (cover/contain) or the new zoom format (scale number)
           let parsedPos = post.imagePosition || '50% 50%'; // Legacy default
           let isLegacySize = (post.imageSize === 'cover' || post.imageSize === 'contain' || !post.imageSize);
-          
+
           let parsedScale = 1;
           let parsedTrX = 0;
           let parsedTrY = 0;
-          
+
           let styleStr = '';
-          
+
           if (!isLegacySize && !isNaN(parseFloat(post.imageSize))) {
             parsedScale = parseFloat(post.imageSize);
-            // new pos format is "X Y" in pixels
+            // new pos format is "X Y" in percentages
             const pParts = parsedPos.split(' ');
             if (pParts.length >= 2) {
               parsedTrX = parseFloat(pParts[0]) || 0;
               parsedTrY = parseFloat(pParts[1]) || 0;
             }
-            styleStr = `object-fit: contain; object-position: center; transform-origin: center center; transform: scale(${parsedScale}) translate(${parsedTrX}px, ${parsedTrY}px);`;
+            styleStr = `object-fit: contain; object-position: center; transform-origin: center center; transform: scale(${parsedScale}) translate(${parsedTrX}%, ${parsedTrY}%);`;
           } else {
-             // Legacy
-             const objSizeStr = post.imageSize || 'cover';
-             styleStr = `object-position: ${parsedPos}; object-fit: ${objSizeStr};`;
+            // Legacy
+            const objSizeStr = post.imageSize || 'cover';
+            styleStr = `object-position: ${parsedPos}; object-fit: ${objSizeStr};`;
           }
 
           const urlLower = post.imageUrl.toLowerCase();
@@ -1233,11 +1247,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 initialTrY = parseFloat(pParts[1]) || 0;
               }
             }
-            
-            if (hiddenSizeVal) hiddenSizeVal.value = initialZoom;
-            if (zoomSlider) zoomSlider.value = initialZoom;
-            if (zoomValDisplay) zoomValDisplay.textContent = initialZoom.toFixed(2) + 'x';
-            if (transformWrapper) transformWrapper.style.transform = `scale(${initialZoom}) translate(${initialTrX}px, ${initialTrY}px)`;
+
+            if (window.setPreviewTransformState) {
+              window.setPreviewTransformState(initialZoom, initialTrX, initialTrY);
+            }
 
             form.setAttribute('data-edit-timestamp', post.timestamp);
             modal.classList.remove('hidden');
@@ -1248,14 +1261,14 @@ document.addEventListener('DOMContentLoaded', () => {
           deleteBtn.className = 'secondary-btn delete-post-btn';
           deleteBtn.style.cssText = 'position: absolute; top: 12px; right: 80px; padding: 6px 16px; font-size: 0.8rem; background: rgba(220, 38, 38, 0.8); color: white; border-radius: 6px; backdrop-filter: blur(4px); cursor: pointer; border: none;';
           deleteBtn.textContent = 'Delete';
-            deleteBtn.onclick = async () => {
-              const confirmPass = await showConfirm("Delete Post", "Are you sure you want to delete this specific post?", true);
-              if (!confirmPass) return;
+          deleteBtn.onclick = async () => {
+            const confirmPass = await showConfirm("Delete Post", "Are you sure you want to delete this specific post?", true);
+            if (!confirmPass) return;
 
-              const sessionData = sessionStorage.getItem('sas_user_data');
-              if (!sessionData) return;
+            const sessionData = sessionStorage.getItem('sas_user_data');
+            if (!sessionData) return;
 
-              const userObj = JSON.parse(sessionData);
+            const userObj = JSON.parse(sessionData);
 
             deleteBtn.textContent = "Deleting...";
             deleteBtn.disabled = true;
