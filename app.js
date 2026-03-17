@@ -31,6 +31,45 @@ let tvTheaterEnabled = false;
 
 document.addEventListener('DOMContentLoaded', () => {
   // --- TV Clock Logic ---
+  class DigitCounter {
+    constructor(parent, initialValue = '0') {
+      this.parent = parent;
+      this.currentValue = null; // Set to null to force first update
+      this.element = this.createDigitElement();
+      this.parent.appendChild(this.element);
+      this.container = this.element.querySelector('.counter-column-container');
+      this.update(initialValue); // Apply initial position
+    }
+
+    createDigitElement() {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'counter-column-wrapper';
+      const container = document.createElement('div');
+      container.className = 'counter-column-container';
+      
+      // Create digits 0-9
+      for (let i = 0; i <= 9; i++) {
+        const digit = document.createElement('div');
+        digit.className = 'counter-digit';
+        digit.textContent = i;
+        container.appendChild(digit);
+      }
+      
+      wrapper.appendChild(container);
+      return wrapper;
+    }
+
+    update(newValue) {
+      if (this.currentValue === newValue) return;
+      this.currentValue = newValue;
+      const digitHeight = 70; // Matches fixed height in CSS (Reduced)
+      const offset = -parseInt(newValue, 10) * digitHeight;
+      this.container.style.transform = `translateY(${offset}px)`;
+    }
+  }
+
+  let digitCounters = [];
+
   function updateClock() {
     const clock = document.getElementById('tv-clock');
     const timeEl = document.getElementById('tv-time');
@@ -38,10 +77,38 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!clock || !timeEl || !dateEl) return;
 
     const now = new Date();
-    timeEl.textContent = now.toLocaleTimeString('en-US', {
+    
+    // Format: "09:41 AM"
+    const timeStr = now.toLocaleTimeString('en-US', {
       hour12: true,
       hour: '2-digit',
       minute: '2-digit'
+    });
+
+    // Split into characters: ["0", "9", ":", "4", "1", " ", "A", "M"]
+    const chars = timeStr.split('');
+
+    // Initialize counters if they don't exist
+    if (digitCounters.length === 0) {
+      timeEl.innerHTML = '';
+      chars.forEach(char => {
+        if (/\d/.test(char)) {
+          digitCounters.push(new DigitCounter(timeEl, char));
+        } else {
+          const sep = document.createElement('div');
+          sep.className = 'counter-separator';
+          sep.textContent = char;
+          timeEl.appendChild(sep);
+          digitCounters.push({ update: (val) => { sep.textContent = val; } });
+        }
+      });
+    }
+
+    // Update existing counters
+    chars.forEach((char, i) => {
+      if (digitCounters[i]) {
+        digitCounters[i].update(char);
+      }
     });
 
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -1176,26 +1243,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
           if (ytId) {
             // Admin/Uploader view: Show thumbnail instead of iframe
-            imgHtml = `<div style="position: relative; width: 100%; height: 200px; overflow: hidden;"><img src="https://img.youtube.com/vi/${ytId}/hqdefault.jpg" class="post-image" style="width: 100%; height: 100%; ${styleStr}" loading="lazy" onerror="this.src='https://img.youtube.com/vi/${ytId}/default.jpg'"></div>`;
+            imgHtml = `<div style="position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #1a1a1a; border-radius: 4px;"><img src="https://img.youtube.com/vi/${ytId}/hqdefault.jpg" class="post-image" style="width: 100%; height: 100%; ${styleStr}" loading="lazy" onerror="this.src='https://img.youtube.com/vi/${ytId}/default.jpg'"></div>`;
           } else if (
             urlLower && (urlLower.includes('res.cloudinary.com') || urlLower.includes('cloudinary.com'))
           ) {
             // Cloudinary: Only transform to .jpg if it's a video file extension
             const isVideo = /\.(mp4|webm|mov|mkv|avi)$/i.test(urlLower) || urlLower.includes('/video/upload/');
             const thumbUrl = isVideo ? post.imageUrl.replace(/\.[^.]+$/, '.jpg') : post.imageUrl;
-            imgHtml = `<div style="position: relative; width: 100%; height: 200px; overflow: hidden;"><img src="${thumbUrl}" alt="${escapeHtml(post.title)}" class="post-image" style="width: 100%; height: 100%; ${styleStr}" loading="lazy"></div>`;
+            imgHtml = `<div style="position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #1a1a1a; border-radius: 4px;"><img src="${thumbUrl}" alt="${escapeHtml(post.title)}" class="post-image" style="width: 100%; height: 100%; ${styleStr}" loading="lazy"></div>`;
           } else if (
             urlLower.includes('docs.google.com/uc?') ||
             urlLower.includes('drive.google.com/uc?id=') ||
             urlLower.endsWith('.mp4') || urlLower.endsWith('.webm')
           ) {
             // Direct video link (non-Cloudinary): Remove autoplay to prevent multiple videos playing
-            imgHtml = `<div style="position: relative; width: 100%; height: 200px; overflow: hidden;"><video src="${post.imageUrl}" class="post-image" style="width: 100%; height: 100%; ${styleStr}" preload="metadata"></video></div>`;
+            imgHtml = `<div style="position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #1a1a1a; border-radius: 4px;"><video src="${post.imageUrl}" class="post-image" style="width: 100%; height: 100%; ${styleStr}" preload="metadata"></video></div>`;
           } else if (urlLower.includes('drive.google.com/file/d/') && urlLower.includes('/preview')) {
             // Legacy preview (static iframe)
-            imgHtml = `<div style="position: relative; width: 100%; height: 200px; overflow: hidden;"><iframe src="${post.imageUrl}" class="post-image" style="border: none; width: 100%; height: 100%; ${styleStr}"></iframe></div>`;
+            imgHtml = `<div style="position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #1a1a1a; border-radius: 4px;"><iframe src="${post.imageUrl}" class="post-image" style="border: none; width: 100%; height: 100%; ${styleStr}"></iframe></div>`;
           } else {
-            imgHtml = `<div style="position: relative; width: 100%; height: 200px; overflow: hidden;"><img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="post-image" style="width: 100%; height: 100%; ${styleStr}" loading="lazy"></div>`;
+            imgHtml = `<div style="position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #1a1a1a; border-radius: 4px;"><img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="post-image" style="width: 100%; height: 100%; ${styleStr}" loading="lazy"></div>`;
           }
         }
 
