@@ -195,9 +195,12 @@
     <!-- Admin Add Post Modal -->
     <div id="add-post-modal" class="modal-overlay hidden">
       <div class="modal-card">
-        <h3 class="modal-title">Create New Update</h3>
+        <div class="modal-header">
+          <h3 class="modal-title">Create New Update</h3>
+        </div>
         <form id="add-post-form" class="modal-form">
-          <div class="input-group">
+          <div class="modal-body">
+            <div class="input-group">
             <label for="post-title">Title</label>
             <input type="text" id="post-title" required placeholder="Announcement Title">
           </div>
@@ -243,7 +246,10 @@
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
-              <button type="button" id="post-preview-reset-btn" class="secondary-btn" style="padding: 4px 8px; font-size: 0.75rem;">Reset View</button>
+              <div style="display: flex; gap: 8px;">
+                <button type="button" id="post-preview-reset-btn" class="secondary-btn" style="padding: 4px 8px; font-size: 0.75rem;">Reset View</button>
+                <button type="button" id="post-preview-fullfit-btn" class="secondary-btn" style="padding: 4px 8px; font-size: 0.75rem; background: var(--nbsc-gold); color: var(--nbsc-dark); border: none;">Full Fit</button>
+              </div>
               <div style="font-size: 0.8rem; color: var(--text-muted); text-align: right;">
                 Position: <span id="post-preview-coords">0px, 0px</span>
               </div>
@@ -253,10 +259,13 @@
             <input type="hidden" id="post-img-pos" value="0 0">
             <input type="hidden" id="post-img-size-val" value="1">
           </div>
-          <div id="post-error" class="login-error hidden">Error submitting post.</div>
-          <div class="modal-actions">
-            <button type="button" id="cancel-post-btn" class="secondary-btn">Cancel</button>
-            <button type="submit" id="submit-post-btn" class="primary-btn">Post Update</button>
+            <div id="post-error" class="login-error hidden">Error submitting post.</div>
+          </div>
+          <div class="modal-footer">
+            <div class="modal-actions">
+              <button type="button" id="cancel-post-btn" class="secondary-btn">Cancel</button>
+              <button type="submit" id="submit-post-btn" class="primary-btn">Post Update</button>
+            </div>
           </div>
         </form>
       </div>

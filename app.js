@@ -722,6 +722,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       }
 
+      const fullfitBtn = document.getElementById('post-preview-fullfit-btn');
+      if (fullfitBtn) {
+        fullfitBtn.addEventListener('click', () => {
+          if (window.setPreviewTransformState) {
+            window.setPreviewTransformState(0.65, 0, -28);
+          }
+        });
+      }
+
       let isDragging = false;
       let startMouseX = 0, startMouseY = 0;
       let initialDragX = 0, initialDragY = 0;
@@ -786,7 +795,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (previewGroup) previewGroup.style.display = 'none';
         if (previewImg) previewImg.style.objectPosition = '50% 50%';
         if (window.setPreviewTransformState) {
-          window.setPreviewTransformState(1, 0, 0);
+          window.setPreviewTransformState(0.65, 0, -28);
         }
 
         modal.classList.remove('hidden');
@@ -1275,9 +1284,11 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         if (role === 'admin' || role === 'uploader') {
+          const actionArea = document.createElement('div');
+          actionArea.className = 'post-card-actions';
+
           const editBtn = document.createElement('button');
           editBtn.className = 'secondary-btn edit-post-btn';
-          editBtn.style.cssText = 'position: absolute; top: 12px; right: 12px; padding: 6px 16px; font-size: 0.8rem; background: rgba(0,0,0,0.6); color: white; border-radius: 6px; backdrop-filter: blur(4px); cursor: pointer;';
           editBtn.textContent = 'Edit';
           editBtn.onclick = () => {
             const form = document.getElementById('add-post-form');
@@ -1330,11 +1341,13 @@ document.addEventListener('DOMContentLoaded', () => {
             form.setAttribute('data-edit-timestamp', post.timestamp);
             modal.classList.remove('hidden');
           };
-          card.appendChild(editBtn);
+          actionArea.appendChild(editBtn);
 
           const deleteBtn = document.createElement('button');
           deleteBtn.className = 'secondary-btn delete-post-btn';
-          deleteBtn.style.cssText = 'position: absolute; top: 12px; right: 80px; padding: 6px 16px; font-size: 0.8rem; background: rgba(220, 38, 38, 0.8); color: white; border-radius: 6px; backdrop-filter: blur(4px); cursor: pointer; border: none;';
+          deleteBtn.style.background = 'rgba(220, 38, 38, 0.8)';
+          deleteBtn.style.color = 'white';
+          deleteBtn.style.border = 'none';
           deleteBtn.textContent = 'Delete';
           deleteBtn.onclick = async () => {
             const confirmPass = await showConfirm("Delete Post", "Are you sure you want to delete this specific post?", true);
@@ -1375,14 +1388,16 @@ document.addEventListener('DOMContentLoaded', () => {
               deleteBtn.disabled = false;
             }
           };
-          card.appendChild(deleteBtn);
+          actionArea.appendChild(deleteBtn);
 
           const toggleTvBtn = document.createElement('button');
           toggleTvBtn.className = 'secondary-btn toggle-tv-btn';
           const isHidden = String(post.showOnTv).toLowerCase() === 'false';
           toggleTvBtn.textContent = isHidden ? 'Show on TV' : 'Hide from TV';
           const btnColor = isHidden ? 'rgba(34, 197, 94, 0.8)' : 'rgba(249, 115, 22, 0.8)';
-          toggleTvBtn.style.cssText = `position: absolute; top: 12px; right: 155px; padding: 6px 16px; font-size: 0.8rem; background: ${btnColor}; color: white; border-radius: 6px; backdrop-filter: blur(4px); cursor: pointer; border: none;`;
+          toggleTvBtn.style.background = btnColor;
+          toggleTvBtn.style.color = 'white';
+          toggleTvBtn.style.border = 'none';
 
           toggleTvBtn.onclick = async () => {
             const sessionData = sessionStorage.getItem('sas_user_data');
@@ -1420,10 +1435,11 @@ document.addEventListener('DOMContentLoaded', () => {
               showToast("Network error. Could not toggle visibility.", 'error');
             } finally {
               toggleTvBtn.disabled = false;
-              // fetchPosts will re-render anyway, so button text will be corrected
             }
           };
-          card.appendChild(toggleTvBtn);
+          actionArea.appendChild(toggleTvBtn);
+
+          card.appendChild(actionArea);
         }
 
         container.appendChild(card);
