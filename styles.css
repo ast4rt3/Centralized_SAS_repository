@@ -1133,7 +1133,7 @@ body.tv-mode .tv-clock {
   flex-direction: column;
   overflow: hidden;
   line-height: 1;
-  height: 70px; /* Reduced from 90px */
+  height: 56px; /* Reduced from 70px */
 }
 
 .counter-column-container {
@@ -1143,9 +1143,9 @@ body.tv-mode .tv-clock {
 }
 
 .counter-digit {
-  font-size: 60px; /* Reduced from 80px */
+  font-size: 48px; /* Reduced from 60px */
   font-weight: 900;
-  height: 70px; /* Reduced from 90px */
+  height: 56px; /* Reduced from 70px */
   padding: 0 4px;
   display: flex;
   align-items: center;
@@ -1154,9 +1154,9 @@ body.tv-mode .tv-clock {
 }
 
 .counter-separator {
-  font-size: 60px; /* Reduced from 80px */
+  font-size: 48px; /* Reduced from 60px */
   font-weight: 900;
-  height: 70px; /* Reduced from 90px */
+  height: 56px; /* Reduced from 70px */
   display: flex;
   align-items: center;
   padding: 0 4px;

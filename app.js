@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
     update(newValue) {
       if (this.currentValue === newValue) return;
       this.currentValue = newValue;
-      const digitHeight = 70; // Matches fixed height in CSS (Reduced)
+      const digitHeight = 56; // Matches fixed height in CSS (Further Reduced)
       const offset = -parseInt(newValue, 10) * digitHeight;
       this.container.style.transform = `translateY(${offset}px)`;
     }
