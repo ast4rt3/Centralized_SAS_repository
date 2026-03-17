@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="SAS Portal">
   <link rel="apple-touch-icon" href="https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png">
-  
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
@@ -30,7 +30,8 @@
 
 <body>
   <!-- Offline indicator (auto-shown/hidden by JS) -->
-  <div id="offline-banner" style="display:none; position:fixed; top:0; left:0; right:0; z-index:9999; background:#b91c1c; color:#fff; font-size:0.8rem; font-weight:700; text-align:center; padding:6px; letter-spacing:0.5px;">
+  <div id="offline-banner"
+    style="display:none; position:fixed; top:0; left:0; right:0; z-index:9999; background:#b91c1c; color:#fff; font-size:0.8rem; font-weight:700; text-align:center; padding:6px; letter-spacing:0.5px;">
     📡 No internet connection — showing cached content
   </div>
   <!-- Global Login Overlay -->
@@ -102,6 +103,7 @@
       </section>
       <!-- Home content -->
       <section id="home" class="page active">
+        <div id="tv-blurred-bg" class="tv-blurred-bg"></div>
         <header class="home-header">
           <div class="home-header-brand">
             <img src="https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png"
@@ -201,64 +203,73 @@
         <form id="add-post-form" class="modal-form">
           <div class="modal-body">
             <div class="input-group">
-            <label for="post-title">Title</label>
-            <input type="text" id="post-title" required placeholder="Announcement Title">
-          </div>
-          <div class="input-group">
-            <label for="post-desc">Description</label>
-            <textarea id="post-desc" rows="4" required placeholder="Write your update here..."></textarea>
-          </div>
-          <div class="input-group">
-            <label>Image / Video</label>
-            <div class="upload-tabs" id="upload-tabs">
-              <button type="button" class="upload-tab active" data-tab="upload">⬆ Upload File</button>
-              <button type="button" class="upload-tab" data-tab="url">🔗 Use URL</button>
+              <label for="post-title">Title</label>
+              <input type="text" id="post-title" required placeholder="Announcement Title">
             </div>
-            <!-- File Upload Tab -->
-            <div id="upload-tab-upload" class="upload-panel">
-              <label for="post-file" class="file-upload-label" id="file-upload-label">
-                <span id="file-label-text">Click to choose an image or drag &amp; drop</span>
-                <span style="font-size:0.75rem; color:var(--text-muted); display:block; margin-top:4px;">JPG, PNG, GIF, MP4, WEBM — Practical limit ~35MB &nbsp;|&nbsp; Large videos should use YouTube for best TV performance</span>
-              </label>
-              <input type="file" id="post-file" accept="image/*,video/mp4,video/webm" style="display:none;">
+            <div class="input-group">
+              <label for="post-desc">Description</label>
+              <textarea id="post-desc" rows="4" required placeholder="Write your update here..."></textarea>
             </div>
-            <!-- URL Tab -->
-            <div id="upload-tab-url" class="upload-panel hidden">
-              <input type="url" id="post-img" placeholder="https://example.com/image.png or YouTube link">
-            </div>
-          </div>
-          <div class="input-group" id="post-img-preview-group" style="display: none;">
-            <label>TV Image Preview <span
-                style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">(Drag to
-                pan, use slider to zoom)</span></label>
-            <div id="post-preview-container"
-              style="position: relative; width: 100%; aspect-ratio: 16 / 9; border: 2px dashed #ccc; border-radius: 8px; overflow: hidden; background: #e2e8f0; cursor: grab; user-select: none;">
-              <div id="post-preview-transform-wrapper" style="width: 100%; height: 100%; transform-origin: center center; transform: scale(1) translate(0px, 0px);">
-                <img id="post-preview-img" src="" alt="Preview" draggable="false"
-                  style="width: 100%; height: 100%; object-fit: contain; object-position: center; pointer-events: none;">
+            <div class="input-group">
+              <label>Image / Video</label>
+              <div class="upload-tabs" id="upload-tabs">
+                <button type="button" class="upload-tab active" data-tab="upload">⬆ Upload File</button>
+                <button type="button" class="upload-tab" data-tab="url">🔗 Use URL</button>
+              </div>
+              <!-- File Upload Tab -->
+              <div id="upload-tab-upload" class="upload-panel">
+                <label for="post-file" class="file-upload-label" id="file-upload-label">
+                  <span id="file-label-text">Click to choose an image or drag &amp; drop</span>
+                  <span style="font-size:0.75rem; color:var(--text-muted); display:block; margin-top:4px;">JPG, PNG,
+                    GIF, MP4, WEBM — Practical limit ~35MB &nbsp;|&nbsp; Large videos should use YouTube for best TV
+                    performance</span>
+                </label>
+                <input type="file" id="post-file" accept="image/*,video/mp4,video/webm" style="display:none;">
+              </div>
+              <!-- URL Tab -->
+              <div id="upload-tab-url" class="upload-panel hidden">
+                <input type="url" id="post-img" placeholder="https://example.com/image.png or YouTube link">
               </div>
             </div>
-            
-            <div style="display: flex; align-items: center; gap: 10px; margin-top: 12px;">
-              <label for="post-img-zoom" style="font-size: 0.85rem; font-weight: 600; white-space: nowrap; margin-bottom: 0;">Zoom:</label>
-              <input type="range" id="post-img-zoom" min="0.1" max="5" step="0.05" value="1" style="flex-grow: 1; cursor: pointer;">
-              <span id="post-preview-zoom-val" style="font-size: 0.85rem; font-weight: 600; min-width: 40px; text-align: right;">1.0x</span>
-            </div>
+            <div class="input-group" id="post-img-preview-group" style="display: none;">
+              <label>TV Image Preview <span
+                  style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">(Drag to
+                  pan, use slider to zoom)</span></label>
+              <div id="post-preview-container"
+                style="position: relative; width: 100%; aspect-ratio: 16 / 9; border: 2px dashed #ccc; border-radius: 8px; overflow: hidden; background: #e2e8f0; cursor: grab; user-select: none;">
+                <div id="post-preview-transform-wrapper"
+                  style="width: 100%; height: 100%; transform-origin: center center; transform: scale(1) translate(0px, 0px);">
+                  <img id="post-preview-img" src="" alt="Preview" draggable="false"
+                    style="width: 100%; height: 100%; object-fit: contain; object-position: center; pointer-events: none;">
+                </div>
+              </div>
 
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
-              <div style="display: flex; gap: 8px;">
-                <button type="button" id="post-preview-reset-btn" class="secondary-btn" style="padding: 4px 8px; font-size: 0.75rem;">Reset View</button>
-                <button type="button" id="post-preview-fullfit-btn" class="secondary-btn" style="padding: 4px 8px; font-size: 0.75rem; background: var(--nbsc-gold); color: var(--nbsc-dark); border: none;">Full Fit</button>
+              <div style="display: flex; align-items: center; gap: 10px; margin-top: 12px;">
+                <label for="post-img-zoom"
+                  style="font-size: 0.85rem; font-weight: 600; white-space: nowrap; margin-bottom: 0;">Zoom:</label>
+                <input type="range" id="post-img-zoom" min="0.1" max="5" step="0.05" value="1"
+                  style="flex-grow: 1; cursor: pointer;">
+                <span id="post-preview-zoom-val"
+                  style="font-size: 0.85rem; font-weight: 600; min-width: 40px; text-align: right;">1.0x</span>
               </div>
-              <div style="font-size: 0.8rem; color: var(--text-muted); text-align: right;">
-                Position: <span id="post-preview-coords">0px, 0px</span>
-              </div>
-            </div>
 
-            <!-- Hidden inputs to store the exact transform parameters for the backend -->
-            <input type="hidden" id="post-img-pos" value="0 0">
-            <input type="hidden" id="post-img-size-val" value="1">
-          </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                <div style="display: flex; gap: 8px;">
+                  <button type="button" id="post-preview-reset-btn" class="secondary-btn"
+                    style="padding: 4px 8px; font-size: 0.75rem;">Reset View</button>
+                  <button type="button" id="post-preview-fullfit-btn" class="secondary-btn"
+                    style="padding: 4px 8px; font-size: 0.75rem; background: var(--nbsc-gold); color: var(--nbsc-dark); border: none;">Full
+                    Fit</button>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--text-muted); text-align: right;">
+                  Position: <span id="post-preview-coords">0px, 0px</span>
+                </div>
+              </div>
+
+              <!-- Hidden inputs to store the exact transform parameters for the backend -->
+              <input type="hidden" id="post-img-pos" value="0 0">
+              <input type="hidden" id="post-img-size-val" value="1">
+            </div>
             <div id="post-error" class="login-error hidden">Error submitting post.</div>
           </div>
           <div class="modal-footer">
@@ -272,25 +283,25 @@
     </div>
   </main>
 
-    <!-- Custom Confirmation Modal -->
-    <div id="confirm-modal" class="modal-overlay hidden">
-      <div class="modal-card">
-        <h3 id="confirm-modal-title" class="modal-title">Confirm Action</h3>
-        <p id="confirm-modal-message" style="margin-bottom: 20px; color: var(--text-muted); line-height: 1.5;"></p>
-        
-        <div id="confirm-modal-input-group" class="input-group hidden">
-          <label for="confirm-modal-password">Confirm Password</label>
-          <input type="password" id="confirm-modal-password" placeholder="Enter password to confirm">
-        </div>
+  <!-- Custom Confirmation Modal -->
+  <div id="confirm-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h3 id="confirm-modal-title" class="modal-title">Confirm Action</h3>
+      <p id="confirm-modal-message" style="margin-bottom: 20px; color: var(--text-muted); line-height: 1.5;"></p>
 
-        <div class="modal-actions">
-          <button type="button" id="confirm-modal-cancel" class="secondary-btn">Cancel</button>
-          <button type="button" id="confirm-modal-ok" class="primary-btn">Confirm</button>
-        </div>
+      <div id="confirm-modal-input-group" class="input-group hidden">
+        <label for="confirm-modal-password">Confirm Password</label>
+        <input type="password" id="confirm-modal-password" placeholder="Enter password to confirm">
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" id="confirm-modal-cancel" class="secondary-btn">Cancel</button>
+        <button type="button" id="confirm-modal-ok" class="primary-btn">Confirm</button>
       </div>
     </div>
+  </div>
 
-    <div id="toast-container" class="toast-container"></div>
+  <div id="toast-container" class="toast-container"></div>
 
   <script src="app.js?v=8"></script>
 </body>

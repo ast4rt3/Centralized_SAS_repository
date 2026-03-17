@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
       wrapper.className = 'counter-column-wrapper';
       const container = document.createElement('div');
       container.className = 'counter-column-container';
-      
+
       // Create digits 0-9
       for (let i = 0; i <= 9; i++) {
         const digit = document.createElement('div');
@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
         digit.textContent = i;
         container.appendChild(digit);
       }
-      
+
       wrapper.appendChild(container);
       return wrapper;
     }
@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!clock || !timeEl || !dateEl) return;
 
     const now = new Date();
-    
+
     // Format: "09:41 AM"
     const timeStr = now.toLocaleTimeString('en-US', {
       hour12: true,
@@ -393,12 +393,26 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnTvTheater) {
     btnTvTheater.addEventListener('click', () => {
       tvTheaterEnabled = !tvTheaterEnabled;
+      btnTvTheater.classList.toggle('is-active', tvTheaterEnabled);
+      
+      const dotsEl = document.querySelector('.home-news-dots');
+      const tvClock = document.getElementById('tv-clock');
+      const container = document.querySelector('.home-news');
+
       if (tvTheaterEnabled) {
-        btnTvTheater.classList.add('active-setting');
+        document.body.classList.add('fullscreen-active');
       } else {
-        btnTvTheater.classList.remove('active-setting');
-        document.body.classList.remove('video-fullscreen-active'); // Force exit if disabling
+        document.body.classList.remove('fullscreen-active');
       }
+
+      // Consistently move dots to header in any TV mode
+      if (document.body.classList.contains('tv-mode')) {
+        if (dotsEl && tvClock) tvClock.appendChild(dotsEl);
+      } else {
+        if (dotsEl && container) container.appendChild(dotsEl);
+      }
+      
+      showToast(tvTheaterEnabled ? "Image Fullscreen Enabled" : "Image Fullscreen Disabled", 'success');
     });
   }
 
@@ -697,7 +711,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (coordsDisplay) coordsDisplay.textContent = posStr;
       }
 
-      window.setPreviewTransformState = function(zoom, x, y) {
+      window.setPreviewTransformState = function (zoom, x, y) {
         currentZoom = zoom;
         currentX = x;
         currentY = y;
@@ -1518,11 +1532,49 @@ document.addEventListener('DOMContentLoaded', () => {
       const iframeEl = activeSlide.querySelector('iframe.yt-video-frame');
       const driveIframeEl = activeSlide.querySelector('iframe.drive-video-frame');
 
-      // Handle CSS Theater Mode
-      if ((videoEl || iframeEl || driveIframeEl) && tvTheaterEnabled) {
+      // Handle CSS Unified Fullscreen
+      const isVideoSlide = (videoEl || iframeEl || driveIframeEl);
+
+      if (isVideoSlide) {
         document.body.classList.add('video-fullscreen-active');
       } else {
         document.body.classList.remove('video-fullscreen-active');
+      }
+
+      // Handle Blurred Immersive Background
+      const blurredBg = document.getElementById('tv-blurred-bg');
+      if (blurredBg && document.body.classList.contains('tv-mode')) {
+        let bgSource = '';
+
+        if (videoEl && videoEl.poster) {
+          bgSource = videoEl.poster;
+        } else if (videoEl) {
+          // If no poster, try to find the video source or just use a fallback if desired
+          // For now, if it's a local video, we might not have an easy thumbnail unless it's provided.
+        } else if (iframeEl) {
+          const ytId = getYouTubeVideoId(iframeEl.src || '');
+          if (ytId) bgSource = `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`;
+        } else if (driveIframeEl) {
+          // Google Drive videos - hard to get thumb easily without API, 
+          // but we can try to find an img in the slide if we ever added one
+        }
+
+        // Check for static image in the slide
+        const slideImg = activeSlide.querySelector('img.home-news-image');
+        if (slideImg && slideImg.src) {
+          bgSource = slideImg.src;
+        }
+
+        if (bgSource) {
+          blurredBg.style.backgroundImage = `url('${bgSource}')`;
+        }
+      }
+
+      // Consistently move dots to header in any TV mode
+      if (document.body.classList.contains('tv-mode')) {
+        const dotsEl = document.querySelector('.home-news-dots');
+        const tvClock = document.getElementById('tv-clock');
+        if (dotsEl && tvClock) tvClock.appendChild(dotsEl);
       }
 
       if (videoEl) {

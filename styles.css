@@ -211,8 +211,32 @@ body {
   padding: 0;
 }
 
+body.tv-mode #home.page {
+  background: transparent !important;
+}
+
 #home.page.active {
   display: flex;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Blurred Background Layer */
+.tv-blurred-bg {
+  position: absolute;
+  inset: -50px; /* Slight overflow to hide blur edges */
+  background-size: cover;
+  background-position: center;
+  filter: blur(40px) brightness(0.4) saturate(1.2);
+  z-index: 0;
+  transition: background-image 1.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 1s ease;
+  transform: scale(1.1);
+  opacity: 0; /* Hidden by default, shown via JS */
+  pointer-events: none;
+}
+
+body.tv-mode .tv-blurred-bg {
+  opacity: 1;
 }
 
 .home-header {
@@ -220,11 +244,25 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 18px 24px;
-  background: linear-gradient(135deg, var(--nbsc-mid) 0%, var(--nbsc-dark) 100%);
+  background: var(--bg-sidebar); /* Fallback or standard */
   color: #ffffff;
   box-shadow: var(--shadow-soft);
   flex-wrap: nowrap;
   gap: 16px;
+  position: relative;
+  z-index: 100;
+}
+
+body.tv-mode .home-header {
+  background: linear-gradient(135deg, var(--nbsc-mid) 0%, var(--nbsc-dark) 100%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+body.fullscreen-active .home-header {
+  background: rgba(0, 0, 0, 0.25) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: none !important;
 }
 
 .home-header-brand {
@@ -249,7 +287,7 @@ body {
   font-weight: 800;
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  font-size: 1.3rem;
+  font-size: 1.15rem; /* Reduced from 1.3rem */
 }
 
 .home-header-subtitle {
@@ -310,9 +348,11 @@ body {
   .home-header {
     padding: 12px;
   }
+
   .home-header-title {
     font-size: 1.1rem;
   }
+
   .user-menu-name {
     display: none;
   }
@@ -330,9 +370,9 @@ body {
   position: relative;
   overflow: hidden;
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  border: none;
   background: rgba(15, 23, 42, 0.72);
-  box-shadow: var(--shadow-soft);
+  box-shadow: none;
 }
 
 .home-news-slide {
@@ -1121,7 +1161,26 @@ body.tv-mode .sidebar {
 }
 
 body.tv-mode .content {
+  position: relative !important;
   width: 100% !important;
+  height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: transparent !important;
+}
+
+/* Unified Fullscreen Active Class */
+body.fullscreen-active .content {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: transparent !important;
+  z-index: 1005;
 }
 
 body.tv-mode .nav-toggle {
@@ -1156,15 +1215,39 @@ body.tv-mode .posts-header {
 }
 
 body.tv-mode .home-header {
-  padding: 8px 16px;
+  height: auto;
+  min-height: 80px;
+  padding: 16px 48px;
+  background: var(--bg-sidebar);
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 100;
 }
 
-body.tv-mode .home-header-logo {
-  width: 40px;
+body.fullscreen-active .home-header {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  z-index: 2000 !important;
+  pointer-events: none;
+  padding: 32px 48px;
 }
 
-body.tv-mode .home-header-title {
-  font-size: 1.1rem;
+body.fullscreen-active .home-header-brand,
+body.fullscreen-active .home-header-text,
+body.fullscreen-active .home-header-meta {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body.fullscreen-active .home-header * {
+  pointer-events: auto;
 }
 
 /* TV Clock */
@@ -1194,7 +1277,8 @@ body.tv-mode .tv-clock {
   flex-direction: column;
   overflow: hidden;
   line-height: 1;
-  height: 56px; /* Reduced from 70px */
+  height: 56px;
+  /* Reduced from 70px */
 }
 
 .counter-column-container {
@@ -1204,9 +1288,11 @@ body.tv-mode .tv-clock {
 }
 
 .counter-digit {
-  font-size: 48px; /* Reduced from 60px */
+  font-size: 48px;
+  /* Reduced from 60px */
   font-weight: 900;
-  height: 56px; /* Reduced from 70px */
+  height: 56px;
+  /* Reduced from 70px */
   padding: 0 4px;
   display: flex;
   align-items: center;
@@ -1215,9 +1301,11 @@ body.tv-mode .tv-clock {
 }
 
 .counter-separator {
-  font-size: 48px; /* Reduced from 60px */
+  font-size: 48px;
+  /* Reduced from 60px */
   font-weight: 900;
-  height: 56px; /* Reduced from 70px */
+  height: 56px;
+  /* Reduced from 70px */
   display: flex;
   align-items: center;
   padding: 0 4px;
@@ -1244,20 +1332,50 @@ body.tv-mode .home-content-area {
 }
 
 body.tv-mode .home-news-track {
+  width: 100%;
   flex: 1;
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  overflow: hidden;
+  position: relative;
+}
+
+body.fullscreen-active .home-news-track {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 1010;
+}
+
+body.tv-mode .home-news-slide {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
   background: transparent;
 }
 
-body.tv-mode .home-news-image-wrap {
-  position: relative;
-  max-width: 100%;
-  height: 100%;
-  aspect-ratio: 16 / 9;
-  margin: 0 auto;
+body.fullscreen-active .home-news-slide {
+  width: 100vw !important;
+  height: 100vh !important;
   background: transparent;
+}
+
+body.tv-mode .home-news-image-wrap {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
 body.tv-mode .home-news-image,
@@ -1266,17 +1384,32 @@ body.tv-mode iframe.home-news-image {
   object-fit: contain !important;
 }
 
+body.fullscreen-active .home-news-image,
+body.fullscreen-active video.home-news-image {
+  object-fit: cover !important;
+}
+
 body.tv-mode .home-news-ticker {
+  position: fixed;
+  bottom: 0;
+  left: 0;
   width: 100%;
   overflow: hidden;
   white-space: nowrap;
-  background: rgba(15, 23, 42, 0.85);
-  /* Slightly darker, solid bar look now that it is below */
+  background: rgba(0, 26, 51, 0.92); /* Navy Blue */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   padding: 16px 24px;
   display: flex;
-  margin-top: 24px;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  margin-top: 0;
+  border-radius: 0;
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 1020;
+}
+
+body.fullscreen-active .home-news-ticker {
+  background: rgba(0, 26, 51, 0.75) !important; /* Navy Blue Overlay */
 }
 
 body.tv-mode .ticker-wrap {
@@ -1284,11 +1417,39 @@ body.tv-mode .ticker-wrap {
   animation: marquee 25s linear infinite;
 }
 
+/* TV Mode Header Dots Visibility */
+body.tv-mode .home-news-dots {
+  position: absolute;
+  top: 110px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex !important;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  z-index: 2100;
+  padding: 0 !important;
+  margin: 0 !important;
+  pointer-events: auto;
+}
+
+/* Specific adjustment for fullscreen mode overlay dots */
+body.fullscreen-active .home-news-dots {
+  top: 120px !important;
+}
+
 /* ======================================================== */
-/* TV Theater Mode                                          */
+/* TV Fullscreen Behavior (Cleanup legacy names)            */
 /* ======================================================== */
 
-body.video-fullscreen-active .home-header {
+/* ======================================================== */
+/* TV Fullscreen Behavior (Separated)                       */
+/* ======================================================== */
+
+/* 1. Video Fullscreen (Original Behavior: Hide UI) */
+body.video-fullscreen-active .home-header,
+body.video-fullscreen-active .home-news-ticker,
+body.video-fullscreen-active .home-news-dots {
   display: none !important;
 }
 
@@ -1301,17 +1462,30 @@ body.video-fullscreen-active .home-news-image-wrap {
   border-radius: 0 !important;
 }
 
-body.video-fullscreen-active .home-news-ticker {
-  display: none !important;
-}
-
 body.video-fullscreen-active .home-news-track {
   border-radius: 0 !important;
   border: none !important;
 }
 
-body.video-fullscreen-active .home-news-dots {
-  display: none !important;
+/* 2. Manual Image Fullscreen (Persistent UI Overlay) */
+body.fullscreen-active .home-header,
+body.fullscreen-active .home-news-ticker,
+body.fullscreen-active .home-news-dots {
+  display: flex !important;
+}
+
+body.fullscreen-active .home-content-area {
+  padding: 0 !important;
+}
+
+body.fullscreen-active .home-news-image-wrap {
+  height: 100vh !important;
+  border-radius: 0 !important;
+}
+
+body.fullscreen-active .home-news-track {
+  border-radius: 0 !important;
+  border: none !important;
 }
 
 body.tv-mode .ticker-content {
@@ -1321,20 +1495,20 @@ body.tv-mode .ticker-content {
 }
 
 body.tv-mode .ticker-title {
-  font-size: 1.6rem;
+  font-size: 1.35rem; /* Reduced from 1.6rem */
   font-weight: 800;
   color: #fff;
   letter-spacing: 0.5px;
 }
 
 body.tv-mode .ticker-desc {
-  font-size: 1.3rem;
+  font-size: 1.15rem; /* Reduced from 1.3rem */
   color: rgba(255, 255, 255, 0.85);
 }
 
 body.tv-mode .ticker-separator {
   color: var(--nbsc-gold);
-  font-size: 1.6rem;
+  font-size: 1.4rem; /* Reduced from 1.6rem */
   margin: 0 16px;
 }
 
@@ -1349,10 +1523,9 @@ body.tv-mode .ticker-separator {
 }
 
 body.tv-mode .home-news-dots {
-  padding-bottom: 24px;
-  padding-top: 32px;
-  margin-top: auto;
-  /* Push dots to the bottom if there's extra space, but guarantee at least 32px gap */
+  /* Resetting dashboard-style dots since we moved them to the header */
+  padding: 0;
+  margin: 0;
 }
 
 /* === File Upload UI === */
