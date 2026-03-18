@@ -238,7 +238,8 @@ body.tv-mode #home.page {
 }
 
 body.tv-mode .tv-blurred-bg {
-  opacity: 0.6; /* Reduced to let Aurora shine through */
+  opacity: 0.6;
+  /* Reduced to let Aurora shine through */
 }
 
 .aurora-container {
@@ -1273,7 +1274,8 @@ body.fullscreen-active .home-header-brand {
 }
 
 body.fullscreen-active .home-header-logo {
-  width: 38px !important; /* Shrunk for narrow sidebar */
+  width: 38px !important;
+  /* Shrunk for narrow sidebar */
 }
 
 body.fullscreen-active .home-header-title {
@@ -1296,7 +1298,8 @@ body.fullscreen-active .home-header-subtitle {
 body.fullscreen-active .home-header-meta {
   display: flex !important;
   flex-direction: column !important;
-  align-items: center !important; /* Center children in narrow sidebar */
+  align-items: center !important;
+  /* Center children in narrow sidebar */
   gap: 15px !important;
   margin-top: auto !important;
 }
@@ -1304,7 +1307,8 @@ body.fullscreen-active .home-header-meta {
 body.fullscreen-active .admin-tv-settings {
   display: flex !important;
   flex-direction: column !important;
-  align-items: center !important; /* Ensure toggles are centered */
+  align-items: center !important;
+  /* Ensure toggles are centered */
   gap: 8px !important;
   padding-right: 0 !important;
   border-right: none !important;
@@ -1312,23 +1316,26 @@ body.fullscreen-active .admin-tv-settings {
 
 body.fullscreen-active .icon-btn svg,
 body.fullscreen-active .user-menu-btn svg {
-  width: 16px !important; /* Smaller icons */
+  width: 16px !important;
+  /* Smaller icons */
   height: 16px !important;
 }
 
-body.fullscreen-active .tv-clock {
+body.fullscreen-active .tv-clock,
+body.video-fullscreen-active .tv-clock {
   position: fixed !important;
-  left: 105px !important; /* Outside the 90px sidebar */
-  top: 40px !important;
+  right: 20px !important;
+  top: 5px !important;
   margin: 0 !important;
-  text-align: left !important;
+  text-align: right !important;
   display: flex !important;
-  z-index: 3000 !important;
+  z-index: 3005 !important;
 }
 
+/* Dots positioning in fullscreen - moved higher to make room */
 body.fullscreen-active .home-news-dots {
   position: fixed !important;
-  left: 105px !important; /* Outside the 90px sidebar */
+  left: 105px !important;
   top: 50% !important;
   transform: translateY(-50%) !important;
   flex-direction: column !important;
@@ -1361,8 +1368,10 @@ body.tv-mode .tv-clock {
 
 body.fullscreen-active .tv-time {
   flex-direction: row !important;
-  gap: 4px !important; /* Restored gap */
-  letter-spacing: normal !important; /* Restored normal spacing */
+  gap: 4px !important;
+  /* Restored gap */
+  letter-spacing: normal !important;
+  /* Restored normal spacing */
 }
 
 /* Rolling Counter Styles */
@@ -1376,13 +1385,15 @@ body.fullscreen-active .tv-time {
 }
 
 body.fullscreen-active .counter-column-wrapper {
-  height: 60px !important; /* Increased to avoid clipping with thick strokes */
+  height: 60px !important;
+  /* Increased to avoid clipping with thick strokes */
 }
 
 body.fullscreen-active .counter-digit {
   font-size: 38px !important;
   height: 60px !important;
-  line-height: 60px !important; /* Enforce vertical centering */
+  line-height: 60px !important;
+  /* Enforce vertical centering */
   padding: 0 4px !important;
   display: flex !important;
   align-items: center !important;
@@ -1531,12 +1542,30 @@ body.tv-mode .home-news-ticker {
 }
 
 body.fullscreen-active .home-news-ticker {
-  display: none !important;
+  display: flex !important;
+  padding: 2px 12px;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-top: none;
+}
+
+body.fullscreen-active .ticker-title {
+  font-size: 0.65rem;
+}
+
+body.fullscreen-active .ticker-desc {
+  font-size: 0.55rem;
+}
+
+body.fullscreen-active .ticker-separator {
+  font-size: 0.7rem;
+  margin: 0 8px;
 }
 
 body.tv-mode .ticker-wrap {
   display: inline-flex;
-  animation: marquee 25s linear infinite;
+  animation: marquee 80s linear infinite;
 }
 
 /* TV Mode Header Dots Visibility */
@@ -1577,7 +1606,8 @@ body.tv-mode .home-news-dots {
 
 /* Circle Redesign for Fullscreen Sidebar */
 body.fullscreen-active .home-news-dot {
-  width: 8px !important; /* Slightly smaller outside dots */
+  width: 8px !important;
+  /* Slightly smaller outside dots */
   height: 8px !important;
   border-radius: 50% !important;
   border: 1px solid rgba(255, 255, 255, 0.4) !important;
@@ -1600,10 +1630,40 @@ body.fullscreen-active .home-news-dot.is-active {
 /* ======================================================== */
 
 /* 1. Video Fullscreen (Original Behavior: Hide UI) */
-body.video-fullscreen-active .home-header,
-body.video-fullscreen-active .home-news-ticker,
-body.video-fullscreen-active .home-news-dots {
+body.video-fullscreen-active .home-header {
   display: none !important;
+}
+
+body.video-fullscreen-active .home-news-dots {
+  display: flex !important; /* Keep dots visible even on video slides */
+  position: fixed !important;
+  left: 105px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  flex-direction: column !important;
+  z-index: 3000 !important;
+}
+
+body.video-fullscreen-active .home-news-ticker {
+  display: flex !important;
+  padding: 2px 12px;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-top: none;
+}
+
+body.video-fullscreen-active .ticker-title {
+  font-size: 0.65rem;
+}
+
+body.video-fullscreen-active .ticker-desc {
+  font-size: 0.55rem;
+}
+
+body.video-fullscreen-active .ticker-separator {
+  font-size: 0.7rem;
+  margin: 0 8px;
 }
 
 body.video-fullscreen-active .home-content-area {
@@ -1839,14 +1899,16 @@ body.tv-mode .home-news-dots {
   opacity: 0;
   display: none;
   /* Hidden by default */
-  padding-left: 250px; /* Reduced from 400px to a more balanced indentation */
-  margin-left: 40px;   /* Restored moderate margin */
+  padding-left: 250px;
+  /* Reduced from 400px to a more balanced indentation */
+  margin-left: 40px;
+  /* Restored moderate margin */
   transition: opacity 0.5s ease;
 }
 
 body.fullscreen-active .fullscreen-info {
-  display: block;
-  opacity: 1;
+  display: none !important;
+  opacity: 0;
 }
 
 .fullscreen-info.hidden {
@@ -1854,7 +1916,8 @@ body.fullscreen-active .fullscreen-info {
 }
 
 .fs-info-title {
-  font-size: 1.75rem; /* Increased for better visibility as requested */
+  font-size: 1.75rem;
+  /* Increased for better visibility as requested */
   font-weight: 900;
   margin: 0;
   text-transform: uppercase;
@@ -1864,7 +1927,49 @@ body.fullscreen-active .fullscreen-info {
 }
 
 .fs-info-desc {
-  font-size: 1.2rem; /* Increased for better visibility */
+  font-size: 1.2rem;
+  /* Increased for better visibility */
+  font-weight: 600;
+  color: var(--nbsc-gold);
+  margin-top: 15px;
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.fullscreen-info {
+  display: none;
+  /* Hidden by default */
+  padding-left: 250px;
+  /* Reduced from 400px to a more balanced indentation */
+  margin-left: 40px;
+  /* Restored moderate margin */
+  transition: opacity 0.5s ease;
+}
+
+body.fullscreen-active .fullscreen-info {
+  display: none !important;
+  opacity: 0;
+}
+
+.fullscreen-info.hidden {
+  display: none !important;
+}
+
+.fs-info-title {
+  font-size: 1.75rem;
+  /* Increased for better visibility as requested */
+  font-weight: 900;
+  margin: 0;
+  text-transform: uppercase;
+  line-height: 1;
+  letter-spacing: -1px;
+  text-shadow: 0 5px 20px rgba(0, 0, 0, 0.6);
+}
+
+.fs-info-desc {
+  font-size: 1.2rem;
+  /* Increased for better visibility */
   font-weight: 600;
   color: var(--nbsc-gold);
   margin-top: 15px;

@@ -1,6 +1,5 @@
 const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbza2QFzH0B3XkMFX9RITeSj1f3v4Ox8j5lYxBtxnTUTdqyTlWeE0SieK1n4fTdIRPmbvw/exec";
 
-import Aurora from './Aurora.js';
 
 // --- CLOUDINARY CONFIGURATION ---
 // Get these from your Cloudinary Dashboard: https://cloudinary.com/console
@@ -31,14 +30,6 @@ let tvTheaterEnabled = false;
 })();
 
 document.addEventListener('DOMContentLoaded', () => {
-  // --- Aurora Backdrop ---
-  const aurora = new Aurora({
-    colorStops: ["#004a99", "#f0ad4e", "#003366"],
-    blend: 0.5,
-    amplitude: 1.0,
-    speed: 1
-  });
-  aurora.render('#aurora-container');
 
   // --- TV Clock Logic ---
   class DigitCounter {
@@ -405,7 +396,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnTvTheater.addEventListener('click', () => {
       tvTheaterEnabled = !tvTheaterEnabled;
       btnTvTheater.classList.toggle('is-active', tvTheaterEnabled);
-      
+
       const dotsEl = document.querySelector('.home-news-dots');
       const tvClock = document.getElementById('tv-clock');
       const container = document.querySelector('.home-news');
@@ -422,7 +413,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         if (dotsEl && container) container.appendChild(dotsEl);
       }
-      
+
       showToast(tvTheaterEnabled ? "Image Fullscreen Enabled" : "Image Fullscreen Disabled", 'success');
     });
   }
@@ -1487,7 +1478,11 @@ document.addEventListener('DOMContentLoaded', () => {
     ytPlayers = {};
 
     var current = 0;
-    var intervalMs = 7000;
+    var intervalMs = 25000;
+
+    // Force immediate layout update for the first slide (slide 0)
+    // This ensures clock reparenting and other immersive states are applied instantly.
+    setActive(0);
 
     function next() {
       var nextIndex = (current + 1) % slides.length;
@@ -1594,17 +1589,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const isFS = document.body.classList.contains('fullscreen-active');
 
         if (dotsEl && tvClock) {
-          if (isFS) {
-            // In fullscreen, move dots back to the main home page container so they don't get clipped by the sidebar
-            const homePage = document.getElementById('home');
-            if (homePage && dotsEl.parentElement !== homePage) {
-              homePage.appendChild(dotsEl);
-            }
+          const homePage = document.getElementById('home');
+          const homeHeader = document.querySelector('.home-header');
+          // Use the global state variable directly for more robust detection than class checks
+          const isImmersive = (tvTheaterEnabled || isVideoSlide);
+
+          if (isImmersive) {
+            // In immersive mode, move clock and dots to viewport level for fixed positioning
             if (homePage && tvClock.parentElement !== homePage) {
               homePage.appendChild(tvClock);
             }
+            if (homePage && dotsEl.parentElement !== homePage) {
+              homePage.appendChild(dotsEl);
+            }
           } else {
-            // Standard TV mode: keep dots in header
+            // Standard mode: return clock to header, dots to clock
+            if (homeHeader && tvClock.parentElement !== homeHeader) {
+              homeHeader.appendChild(tvClock);
+            }
             if (dotsEl.parentElement !== tvClock) {
               tvClock.appendChild(dotsEl);
             }
