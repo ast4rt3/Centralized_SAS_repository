@@ -1253,8 +1253,9 @@ body.fullscreen-active .home-header {
   width: 90px !important;
   /* Sidebar width */
   height: 100vh !important;
-  background: rgba(0, 0, 0, 0.4) !important;
-  backdrop-filter: blur(8px) !important;
+  background: rgba(0, 26, 51, 0.95) !important;
+  /* Premium Opaque Navy */
+  backdrop-filter: blur(10px) !important;
   -webkit-backdrop-filter: blur(8px) !important;
   border-right: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: none !important;
@@ -1324,12 +1325,24 @@ body.fullscreen-active .user-menu-btn svg {
 body.fullscreen-active .tv-clock,
 body.video-fullscreen-active .tv-clock {
   position: fixed !important;
-  right: 20px !important;
-  top: 5px !important;
+  right: 2px !important;
+  /* Flush to edge */
+  left: auto !important;
+  top: 15px !important;
   margin: 0 !important;
+  padding: 8px 16px !important;
+  background: rgba(0, 26, 51, 0.35) !important;
+  /* Ultra-low opacity */
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3) !important;
   text-align: right !important;
   display: flex !important;
-  z-index: 3005 !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+  z-index: 9999 !important;
+  /* Topmost */
 }
 
 /* Dots positioning in fullscreen - moved higher to make room */
@@ -1355,6 +1368,7 @@ body.fullscreen-active .home-news-dots {
 
 body.tv-mode .tv-clock {
   display: flex;
+  gap: 2px;
 }
 
 .tv-time {
@@ -1368,10 +1382,10 @@ body.tv-mode .tv-clock {
 
 body.fullscreen-active .tv-time {
   flex-direction: row !important;
-  gap: 4px !important;
-  /* Restored gap */
-  letter-spacing: normal !important;
-  /* Restored normal spacing */
+  gap: 2px !important;
+  /* Shrunk gap */
+  letter-spacing: -0.5px !important;
+  /* Tighter spacing */
 }
 
 /* Rolling Counter Styles */
@@ -1385,16 +1399,17 @@ body.fullscreen-active .tv-time {
 }
 
 body.fullscreen-active .counter-column-wrapper {
-  height: 60px !important;
-  /* Increased to avoid clipping with thick strokes */
+  height: 40px !important;
+  /* Shrunk height */
 }
 
 body.fullscreen-active .counter-digit {
-  font-size: 38px !important;
-  height: 60px !important;
-  line-height: 60px !important;
+  font-size: 26px !important;
+  /* Shrunk font */
+  height: 40px !important;
+  line-height: 40px !important;
   /* Enforce vertical centering */
-  padding: 0 4px !important;
+  padding: 0 1px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -1429,9 +1444,9 @@ body.fullscreen-active .counter-digit {
 
 body.fullscreen-active .counter-separator {
   display: flex !important;
-  font-size: 38px !important;
-  height: 60px !important;
-  padding: 0 4px !important;
+  font-size: 26px !important;
+  height: 40px !important;
+  padding: 0 2px !important;
   margin: 0 !important;
   opacity: 1;
 }
@@ -1446,11 +1461,38 @@ body.fullscreen-active .counter-separator {
 }
 
 body.fullscreen-active .tv-date {
-  font-size: 0.9rem !important;
+  font-size: 0.7rem !important;
+  /* Shrunk font */
   text-align: left !important;
-  margin-top: 4px !important;
+  margin-top: 2px !important;
   color: var(--nbsc-gold) !important;
   display: block !important;
+}
+
+/* TV Temperature Styles (Minimalist, below Date) */
+.tv-weather {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+}
+
+.weather-temp {
+  color: var(--nbsc-gold);
+  font-size: 0.8rem;
+  /* Shrunk */
+  font-weight: 800;
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  opacity: 0.85;
+}
+
+body.fullscreen-active .tv-weather,
+body.video-fullscreen-active .tv-weather {
+  display: flex !important;
+  /* Force visibility in all immersive modes */
+  justify-content: flex-start;
+  padding-left: 2px;
+  margin-top: 0;
 }
 
 body.tv-mode .home-news {

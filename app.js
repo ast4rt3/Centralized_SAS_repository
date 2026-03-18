@@ -61,10 +61,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     update(newValue) {
-      if (this.currentValue === newValue) return;
+      // Check for height change as well as value change
+      const isFS = document.body.classList.contains('fullscreen-active') || 
+                   document.body.classList.contains('video-fullscreen-active');
+      const digitHeight = isFS ? 40 : 60;
+      
+      if (this.currentValue === newValue && this.lastHeight === digitHeight) return;
+      
       this.currentValue = newValue;
-      // Fixed 60px height to match modernized CSS perfectly
-      const digitHeight = 60;
+      this.lastHeight = digitHeight;
+      
       const offset = -parseInt(newValue, 10) * digitHeight;
       this.container.style.transform = `translateY(${offset}px)`;
     }
@@ -116,8 +122,33 @@ document.addEventListener('DOMContentLoaded', () => {
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     dateEl.textContent = now.toLocaleDateString('en-US', options);
   }
+
+  async function updateWeather() {
+    const weatherEl = document.getElementById('tv-weather');
+    if (!weatherEl) return;
+
+    try {
+      // Coordinates for Manolo Fortich, Bukidnon
+      const lat = 8.3569;
+      const lon = 124.8622;
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code`;
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data && data.current) {
+        const temp = Math.round(data.current.temperature_2m);
+        weatherEl.innerHTML = `<span class="weather-temp">${temp}°C</span>`;
+      }
+    } catch (err) {
+      console.error("Weather fetch failed:", err);
+    }
+  }
+
   updateClock();
+  updateWeather();
   setInterval(updateClock, 1000);
+  setInterval(updateWeather, 1800000); // 30 minutes
 
   const navDynamic = document.getElementById('nav-dynamic');
   const statSystems = document.getElementById('stat-systems');
@@ -400,17 +431,36 @@ document.addEventListener('DOMContentLoaded', () => {
       const dotsEl = document.querySelector('.home-news-dots');
       const tvClock = document.getElementById('tv-clock');
       const container = document.querySelector('.home-news');
+      const homeHeader = document.querySelector('.home-header');
 
       if (tvTheaterEnabled) {
         document.body.classList.add('fullscreen-active');
+        updateWeather(); // Force immediate refresh to ensure visibility
       } else {
         document.body.classList.remove('fullscreen-active');
       }
 
-      // Consistently move dots to header in any TV mode
+      // Consistently move elements between header and body in TV mode
       if (document.body.classList.contains('tv-mode')) {
-        if (dotsEl && tvClock) tvClock.appendChild(dotsEl);
+        if (tvTheaterEnabled) {
+          // Immersive: move clock and dots to body level for viewport-absolute positioning
+          if (tvClock && tvClock.parentElement !== document.body) {
+            document.body.appendChild(tvClock);
+          }
+          if (dotsEl && dotsEl.parentElement !== document.body) {
+            document.body.appendChild(dotsEl);
+          }
+        } else {
+          // Standard: return clock to header, dots to clock
+          if (homeHeader && tvClock && tvClock.parentElement !== homeHeader) {
+            homeHeader.appendChild(tvClock);
+          }
+          if (tvClock && dotsEl && dotsEl.parentElement !== tvClock) {
+            tvClock.appendChild(dotsEl);
+          }
+        }
       } else {
+        // Fallback for non-TV mode
         if (dotsEl && container) container.appendChild(dotsEl);
       }
 
@@ -1586,21 +1636,19 @@ document.addEventListener('DOMContentLoaded', () => {
       if (document.body.classList.contains('tv-mode')) {
         const dotsEl = document.querySelector('.home-news-dots');
         const tvClock = document.getElementById('tv-clock');
-        const isFS = document.body.classList.contains('fullscreen-active');
+        // Use the global state variable directly for more robust detection than class checks
+        const isImmersive = (tvTheaterEnabled || isVideoSlide);
 
         if (dotsEl && tvClock) {
-          const homePage = document.getElementById('home');
           const homeHeader = document.querySelector('.home-header');
-          // Use the global state variable directly for more robust detection than class checks
-          const isImmersive = (tvTheaterEnabled || isVideoSlide);
 
           if (isImmersive) {
-            // In immersive mode, move clock and dots to viewport level for fixed positioning
-            if (homePage && tvClock.parentElement !== homePage) {
-              homePage.appendChild(tvClock);
+            // In immersive mode, move clock and dots to body level for viewport-absolute positioning
+            if (tvClock.parentElement !== document.body) {
+              document.body.appendChild(tvClock);
             }
-            if (homePage && dotsEl.parentElement !== homePage) {
-              homePage.appendChild(dotsEl);
+            if (dotsEl.parentElement !== document.body) {
+              document.body.appendChild(dotsEl);
             }
           } else {
             // Standard mode: return clock to header, dots to clock
