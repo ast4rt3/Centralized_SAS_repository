@@ -211,8 +211,47 @@ body {
   padding: 0;
 }
 
+body.tv-mode #home.page {
+  background: transparent !important;
+}
+
 #home.page.active {
   display: flex;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Blurred Background Layer */
+.tv-blurred-bg {
+  position: absolute;
+  inset: -50px;
+  /* Slight overflow to hide blur edges */
+  background-size: cover;
+  background-position: center;
+  filter: blur(40px) brightness(0.4) saturate(1.2);
+  z-index: 0;
+  transition: background-image 1.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 1s ease;
+  transform: scale(1.1);
+  opacity: 0;
+  /* Hidden by default, shown via JS */
+  pointer-events: none;
+}
+
+body.tv-mode .tv-blurred-bg {
+  opacity: 0.6;
+  /* Reduced to let Aurora shine through */
+}
+
+.aurora-container {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 2s ease;
+}
+
+body.tv-mode .aurora-container {
+  opacity: 1;
 }
 
 .home-header {
@@ -220,11 +259,26 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 18px 24px;
-  background: linear-gradient(135deg, var(--nbsc-mid) 0%, var(--nbsc-dark) 100%);
+  background: var(--bg-sidebar);
+  /* Fallback or standard */
   color: #ffffff;
   box-shadow: var(--shadow-soft);
   flex-wrap: nowrap;
   gap: 16px;
+  position: relative;
+  z-index: 100;
+}
+
+body.tv-mode .home-header {
+  background: linear-gradient(135deg, var(--nbsc-mid) 0%, var(--nbsc-dark) 100%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+body.fullscreen-active .home-header {
+  background: rgba(0, 0, 0, 0.25) !important;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border-bottom: none !important;
 }
 
 .home-header-brand {
@@ -249,7 +303,8 @@ body {
   font-weight: 800;
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  font-size: 1.3rem;
+  font-size: 1.15rem;
+  /* Reduced from 1.3rem */
 }
 
 .home-header-subtitle {
@@ -310,9 +365,11 @@ body {
   .home-header {
     padding: 12px;
   }
+
   .home-header-title {
     font-size: 1.1rem;
   }
+
   .user-menu-name {
     display: none;
   }
@@ -330,9 +387,9 @@ body {
   position: relative;
   overflow: hidden;
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  border: none;
   background: rgba(15, 23, 42, 0.72);
-  box-shadow: var(--shadow-soft);
+  box-shadow: none;
 }
 
 .home-news-slide {
@@ -1030,6 +1087,8 @@ iframe.post-image {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  flex: 1;
+  overflow: hidden;
 }
 
 .input-group {
@@ -1121,7 +1180,26 @@ body.tv-mode .sidebar {
 }
 
 body.tv-mode .content {
+  position: relative !important;
   width: 100% !important;
+  height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: transparent !important;
+}
+
+/* Unified Fullscreen Active Class */
+body.fullscreen-active .content {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: transparent !important;
+  z-index: 1005;
 }
 
 body.tv-mode .nav-toggle {
@@ -1156,15 +1234,115 @@ body.tv-mode .posts-header {
 }
 
 body.tv-mode .home-header {
-  padding: 8px 16px;
+  height: auto;
+  min-height: 80px;
+  padding: 16px 48px;
+  background: var(--bg-sidebar);
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 100;
 }
 
-body.tv-mode .home-header-logo {
-  width: 40px;
+body.fullscreen-active .home-header {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 90px !important;
+  /* Sidebar width */
+  height: 100vh !important;
+  background: rgba(0, 0, 0, 0.4) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: none !important;
+  z-index: 2000 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  padding: 40px 5px !important;
+  gap: 40px !important;
 }
 
-body.tv-mode .home-header-title {
-  font-size: 1.1rem;
+body.fullscreen-active .home-header-brand {
+  flex-direction: column !important;
+  gap: 8px !important;
+  text-align: center !important;
+}
+
+body.fullscreen-active .home-header-logo {
+  width: 38px !important;
+  /* Shrunk for narrow sidebar */
+}
+
+body.fullscreen-active .home-header-title {
+  font-size: 0.55rem !important;
+  margin: 0 !important;
+  letter-spacing: 0px !important;
+}
+
+body.fullscreen-active .home-header-text {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 2px !important;
+}
+
+body.fullscreen-active .home-header-subtitle {
+  font-size: 0.45rem !important;
+}
+
+body.fullscreen-active .home-header-meta {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  /* Center children in narrow sidebar */
+  gap: 15px !important;
+  margin-top: auto !important;
+}
+
+body.fullscreen-active .admin-tv-settings {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  /* Ensure toggles are centered */
+  gap: 8px !important;
+  padding-right: 0 !important;
+  border-right: none !important;
+}
+
+body.fullscreen-active .icon-btn svg,
+body.fullscreen-active .user-menu-btn svg {
+  width: 16px !important;
+  /* Smaller icons */
+  height: 16px !important;
+}
+
+body.fullscreen-active .tv-clock,
+body.video-fullscreen-active .tv-clock {
+  position: fixed !important;
+  right: 20px !important;
+  top: 5px !important;
+  margin: 0 !important;
+  text-align: right !important;
+  display: flex !important;
+  z-index: 3005 !important;
+}
+
+/* Dots positioning in fullscreen - moved higher to make room */
+body.fullscreen-active .home-news-dots {
+  position: fixed !important;
+  left: 105px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  margin: 0 !important;
+  z-index: 3000 !important;
+  display: flex !important;
 }
 
 /* TV Clock */
@@ -1188,14 +1366,40 @@ body.tv-mode .tv-clock {
   text-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
+body.fullscreen-active .tv-time {
+  flex-direction: row !important;
+  gap: 4px !important;
+  /* Restored gap */
+  letter-spacing: normal !important;
+  /* Restored normal spacing */
+}
+
 /* Rolling Counter Styles */
 .counter-column-wrapper {
   display: flex;
   flex-direction: column;
   overflow: hidden;
   line-height: 1;
-  height: 56px; /* Reduced from 70px */
+  height: 60px;
+  /* Normalized for perfect alignment */
 }
+
+body.fullscreen-active .counter-column-wrapper {
+  height: 60px !important;
+  /* Increased to avoid clipping with thick strokes */
+}
+
+body.fullscreen-active .counter-digit {
+  font-size: 38px !important;
+  height: 60px !important;
+  line-height: 60px !important;
+  /* Enforce vertical centering */
+  padding: 0 4px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
 
 .counter-column-container {
   display: flex;
@@ -1204,9 +1408,9 @@ body.tv-mode .tv-clock {
 }
 
 .counter-digit {
-  font-size: 48px; /* Reduced from 60px */
+  font-size: 48px;
   font-weight: 900;
-  height: 56px; /* Reduced from 70px */
+  height: 60px;
   padding: 0 4px;
   display: flex;
   align-items: center;
@@ -1215,12 +1419,21 @@ body.tv-mode .tv-clock {
 }
 
 .counter-separator {
-  font-size: 48px; /* Reduced from 60px */
+  font-size: 48px;
   font-weight: 900;
-  height: 56px; /* Reduced from 70px */
+  height: 60px;
   display: flex;
   align-items: center;
   padding: 0 4px;
+}
+
+body.fullscreen-active .counter-separator {
+  display: flex !important;
+  font-size: 38px !important;
+  height: 60px !important;
+  padding: 0 4px !important;
+  margin: 0 !important;
+  opacity: 1;
 }
 
 .tv-date {
@@ -1230,6 +1443,14 @@ body.tv-mode .tv-clock {
   text-transform: uppercase;
   letter-spacing: 1px;
   margin-top: 4px;
+}
+
+body.fullscreen-active .tv-date {
+  font-size: 0.9rem !important;
+  text-align: left !important;
+  margin-top: 4px !important;
+  color: var(--nbsc-gold) !important;
+  display: block !important;
 }
 
 body.tv-mode .home-news {
@@ -1244,20 +1465,50 @@ body.tv-mode .home-content-area {
 }
 
 body.tv-mode .home-news-track {
+  width: 100%;
   flex: 1;
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  overflow: hidden;
+  position: relative;
+}
+
+body.fullscreen-active .home-news-track {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 1010;
+}
+
+body.tv-mode .home-news-slide {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
   background: transparent;
 }
 
-body.tv-mode .home-news-image-wrap {
-  position: relative;
-  max-width: 100%;
-  height: 100%;
-  aspect-ratio: 16 / 9;
-  margin: 0 auto;
+body.fullscreen-active .home-news-slide {
+  width: 100vw !important;
+  height: 100vh !important;
   background: transparent;
+}
+
+body.tv-mode .home-news-image-wrap {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
 body.tv-mode .home-news-image,
@@ -1266,30 +1517,153 @@ body.tv-mode iframe.home-news-image {
   object-fit: contain !important;
 }
 
+body.fullscreen-active .home-news-image,
+body.fullscreen-active video.home-news-image {
+  object-fit: contain !important;
+}
+
 body.tv-mode .home-news-ticker {
+  position: fixed;
+  bottom: 0;
+  left: 0;
   width: 100%;
   overflow: hidden;
   white-space: nowrap;
-  background: rgba(15, 23, 42, 0.85);
-  /* Slightly darker, solid bar look now that it is below */
+  background: linear-gradient(135deg, var(--nbsc-mid) 0%, var(--nbsc-dark) 100%);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   padding: 16px 24px;
   display: flex;
-  margin-top: 24px;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  margin-top: 0;
+  border-radius: 0;
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 1020;
+}
+
+body.fullscreen-active .home-news-ticker {
+  display: flex !important;
+  padding: 2px 12px;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-top: none;
+}
+
+body.fullscreen-active .ticker-title {
+  font-size: 0.65rem;
+}
+
+body.fullscreen-active .ticker-desc {
+  font-size: 0.55rem;
+}
+
+body.fullscreen-active .ticker-separator {
+  font-size: 0.7rem;
+  margin: 0 8px;
 }
 
 body.tv-mode .ticker-wrap {
   display: inline-flex;
-  animation: marquee 25s linear infinite;
+  animation: marquee 80s linear infinite;
+}
+
+/* TV Mode Header Dots Visibility */
+body.tv-mode .home-news-dots {
+  position: absolute;
+  top: 110px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex !important;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  z-index: 2100;
+  padding: 0 !important;
+  margin: 15px 0 0 0 !important;
+  pointer-events: auto;
+}
+
+/* Fullscreen mode overlay dots adjustment is handled above at line ~1300 */
+
+/* Individual Dot Styling */
+.home-news-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.3s ease;
+}
+
+.home-news-dot.is-active {
+  background: var(--nbsc-gold);
+  border-color: var(--nbsc-gold);
+  transform: scale(1.2);
+}
+
+/* Circle Redesign for Fullscreen Sidebar */
+body.fullscreen-active .home-news-dot {
+  width: 8px !important;
+  /* Slightly smaller outside dots */
+  height: 8px !important;
+  border-radius: 50% !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+body.fullscreen-active .home-news-dot.is-active {
+  background: var(--nbsc-gold) !important;
+  border-color: var(--nbsc-gold) !important;
+  transform: scale(1.4) !important;
+  box-shadow: 0 0 10px var(--nbsc-gold);
 }
 
 /* ======================================================== */
-/* TV Theater Mode                                          */
+/* TV Fullscreen Behavior (Cleanup legacy names)            */
 /* ======================================================== */
 
+/* ======================================================== */
+/* TV Fullscreen Behavior (Separated)                       */
+/* ======================================================== */
+
+/* 1. Video Fullscreen (Original Behavior: Hide UI) */
 body.video-fullscreen-active .home-header {
   display: none !important;
+}
+
+body.video-fullscreen-active .home-news-dots {
+  display: flex !important; /* Keep dots visible even on video slides */
+  position: fixed !important;
+  left: 105px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  flex-direction: column !important;
+  z-index: 3000 !important;
+}
+
+body.video-fullscreen-active .home-news-ticker {
+  display: flex !important;
+  padding: 2px 12px;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-top: none;
+}
+
+body.video-fullscreen-active .ticker-title {
+  font-size: 0.65rem;
+}
+
+body.video-fullscreen-active .ticker-desc {
+  font-size: 0.55rem;
+}
+
+body.video-fullscreen-active .ticker-separator {
+  font-size: 0.7rem;
+  margin: 0 8px;
 }
 
 body.video-fullscreen-active .home-content-area {
@@ -1301,17 +1675,29 @@ body.video-fullscreen-active .home-news-image-wrap {
   border-radius: 0 !important;
 }
 
-body.video-fullscreen-active .home-news-ticker {
-  display: none !important;
-}
-
 body.video-fullscreen-active .home-news-track {
   border-radius: 0 !important;
   border: none !important;
 }
 
-body.video-fullscreen-active .home-news-dots {
-  display: none !important;
+/* 2. Manual Image Fullscreen (Persistent UI Overlay) */
+body.fullscreen-active .home-header,
+body.fullscreen-active .home-news-dots {
+  display: flex !important;
+}
+
+body.fullscreen-active .home-content-area {
+  padding: 0 !important;
+}
+
+body.fullscreen-active .home-news-image-wrap {
+  height: 100vh !important;
+  border-radius: 0 !important;
+}
+
+body.fullscreen-active .home-news-track {
+  border-radius: 0 !important;
+  border: none !important;
 }
 
 body.tv-mode .ticker-content {
@@ -1321,20 +1707,23 @@ body.tv-mode .ticker-content {
 }
 
 body.tv-mode .ticker-title {
-  font-size: 1.6rem;
+  font-size: 1.35rem;
+  /* Reduced from 1.6rem */
   font-weight: 800;
   color: #fff;
   letter-spacing: 0.5px;
 }
 
 body.tv-mode .ticker-desc {
-  font-size: 1.3rem;
+  font-size: 1.15rem;
+  /* Reduced from 1.3rem */
   color: rgba(255, 255, 255, 0.85);
 }
 
 body.tv-mode .ticker-separator {
   color: var(--nbsc-gold);
-  font-size: 1.6rem;
+  font-size: 1.4rem;
+  /* Reduced from 1.6rem */
   margin: 0 16px;
 }
 
@@ -1349,10 +1738,9 @@ body.tv-mode .ticker-separator {
 }
 
 body.tv-mode .home-news-dots {
-  padding-bottom: 24px;
-  padding-top: 32px;
-  margin-top: auto;
-  /* Push dots to the bottom if there's extra space, but guarantee at least 32px gap */
+  /* Resetting dashboard-style dots since we moved them to the header */
+  padding: 0;
+  margin: 0;
 }
 
 /* === File Upload UI === */
@@ -1495,4 +1883,97 @@ body.tv-mode .home-news-dots {
     opacity: 0;
     transform: translateX(40px) scale(0.9);
   }
+}
+
+/* Fullscreen Right Info Overlay */
+.fullscreen-info {
+  position: fixed;
+  top: 50%;
+  right: 24px;
+  transform: translateY(-50%);
+  z-index: 2005;
+  color: #fff;
+  max-width: 500px;
+  text-align: right;
+  pointer-events: none;
+  opacity: 0;
+  display: none;
+  /* Hidden by default */
+  padding-left: 250px;
+  /* Reduced from 400px to a more balanced indentation */
+  margin-left: 40px;
+  /* Restored moderate margin */
+  transition: opacity 0.5s ease;
+}
+
+body.fullscreen-active .fullscreen-info {
+  display: none !important;
+  opacity: 0;
+}
+
+.fullscreen-info.hidden {
+  display: none !important;
+}
+
+.fs-info-title {
+  font-size: 1.75rem;
+  /* Increased for better visibility as requested */
+  font-weight: 900;
+  margin: 0;
+  text-transform: uppercase;
+  line-height: 1;
+  letter-spacing: -1px;
+  text-shadow: 0 5px 20px rgba(0, 0, 0, 0.6);
+}
+
+.fs-info-desc {
+  font-size: 1.2rem;
+  /* Increased for better visibility */
+  font-weight: 600;
+  color: var(--nbsc-gold);
+  margin-top: 15px;
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.fullscreen-info {
+  display: none;
+  /* Hidden by default */
+  padding-left: 250px;
+  /* Reduced from 400px to a more balanced indentation */
+  margin-left: 40px;
+  /* Restored moderate margin */
+  transition: opacity 0.5s ease;
+}
+
+body.fullscreen-active .fullscreen-info {
+  display: none !important;
+  opacity: 0;
+}
+
+.fullscreen-info.hidden {
+  display: none !important;
+}
+
+.fs-info-title {
+  font-size: 1.75rem;
+  /* Increased for better visibility as requested */
+  font-weight: 900;
+  margin: 0;
+  text-transform: uppercase;
+  line-height: 1;
+  letter-spacing: -1px;
+  text-shadow: 0 5px 20px rgba(0, 0, 0, 0.6);
+}
+
+.fs-info-desc {
+  font-size: 1.2rem;
+  /* Increased for better visibility */
+  font-weight: 600;
+  color: var(--nbsc-gold);
+  margin-top: 15px;
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  line-height: 1.4;
+  white-space: pre-wrap;
 }
