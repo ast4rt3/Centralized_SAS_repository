@@ -1,5 +1,5 @@
-// REPLACE THIS WITH YOUR NEW SPREADSHEET DEPLOYMENT URL
 const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbza2QFzH0B3XkMFX9RITeSj1f3v4Ox8j5lYxBtxnTUTdqyTlWeE0SieK1n4fTdIRPmbvw/exec";
+
 
 // --- CLOUDINARY CONFIGURATION ---
 // Get these from your Cloudinary Dashboard: https://cloudinary.com/console
@@ -30,6 +30,7 @@ let tvTheaterEnabled = false;
 })();
 
 document.addEventListener('DOMContentLoaded', () => {
+
   // --- TV Clock Logic ---
   class DigitCounter {
     constructor(parent, initialValue = '0') {
@@ -46,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
       wrapper.className = 'counter-column-wrapper';
       const container = document.createElement('div');
       container.className = 'counter-column-container';
-      
+
       // Create digits 0-9
       for (let i = 0; i <= 9; i++) {
         const digit = document.createElement('div');
@@ -54,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
         digit.textContent = i;
         container.appendChild(digit);
       }
-      
+
       wrapper.appendChild(container);
       return wrapper;
     }
@@ -62,7 +63,8 @@ document.addEventListener('DOMContentLoaded', () => {
     update(newValue) {
       if (this.currentValue === newValue) return;
       this.currentValue = newValue;
-      const digitHeight = 56; // Matches fixed height in CSS (Further Reduced)
+      // Fixed 60px height to match modernized CSS perfectly
+      const digitHeight = 60;
       const offset = -parseInt(newValue, 10) * digitHeight;
       this.container.style.transform = `translateY(${offset}px)`;
     }
@@ -77,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!clock || !timeEl || !dateEl) return;
 
     const now = new Date();
-    
+
     // Format: "09:41 AM"
     const timeStr = now.toLocaleTimeString('en-US', {
       hour12: true,
@@ -393,12 +395,26 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnTvTheater) {
     btnTvTheater.addEventListener('click', () => {
       tvTheaterEnabled = !tvTheaterEnabled;
+      btnTvTheater.classList.toggle('is-active', tvTheaterEnabled);
+
+      const dotsEl = document.querySelector('.home-news-dots');
+      const tvClock = document.getElementById('tv-clock');
+      const container = document.querySelector('.home-news');
+
       if (tvTheaterEnabled) {
-        btnTvTheater.classList.add('active-setting');
+        document.body.classList.add('fullscreen-active');
       } else {
-        btnTvTheater.classList.remove('active-setting');
-        document.body.classList.remove('video-fullscreen-active'); // Force exit if disabling
+        document.body.classList.remove('fullscreen-active');
       }
+
+      // Consistently move dots to header in any TV mode
+      if (document.body.classList.contains('tv-mode')) {
+        if (dotsEl && tvClock) tvClock.appendChild(dotsEl);
+      } else {
+        if (dotsEl && container) container.appendChild(dotsEl);
+      }
+
+      showToast(tvTheaterEnabled ? "Image Fullscreen Enabled" : "Image Fullscreen Disabled", 'success');
     });
   }
 
@@ -697,7 +713,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (coordsDisplay) coordsDisplay.textContent = posStr;
       }
 
-      window.setPreviewTransformState = function(zoom, x, y) {
+      window.setPreviewTransformState = function (zoom, x, y) {
         currentZoom = zoom;
         currentX = x;
         currentY = y;
@@ -1462,7 +1478,11 @@ document.addEventListener('DOMContentLoaded', () => {
     ytPlayers = {};
 
     var current = 0;
-    var intervalMs = 7000;
+    var intervalMs = 25000;
+
+    // Force immediate layout update for the first slide (slide 0)
+    // This ensures clock reparenting and other immersive states are applied instantly.
+    setActive(0);
 
     function next() {
       var nextIndex = (current + 1) % slides.length;
@@ -1489,6 +1509,12 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             t1.innerHTML = tickerHtml;
             t2.innerHTML = tickerHtml;
+
+            // Update Fullscreen Info Overlay
+            const fsTitle = document.getElementById('fs-post-title');
+            const fsDesc = document.getElementById('fs-post-desc');
+            if (fsTitle) fsTitle.textContent = tempTitle;
+            if (fsDesc) fsDesc.textContent = tempDesc;
           }
         } else {
           s.classList.remove('is-active');
@@ -1518,11 +1544,74 @@ document.addEventListener('DOMContentLoaded', () => {
       const iframeEl = activeSlide.querySelector('iframe.yt-video-frame');
       const driveIframeEl = activeSlide.querySelector('iframe.drive-video-frame');
 
-      // Handle CSS Theater Mode
-      if ((videoEl || iframeEl || driveIframeEl) && tvTheaterEnabled) {
+      // Handle CSS Unified Fullscreen
+      const isVideoSlide = (videoEl || iframeEl || driveIframeEl);
+
+      if (isVideoSlide) {
         document.body.classList.add('video-fullscreen-active');
       } else {
         document.body.classList.remove('video-fullscreen-active');
+      }
+
+      // Handle Blurred Immersive Background
+      const blurredBg = document.getElementById('tv-blurred-bg');
+      if (blurredBg && document.body.classList.contains('tv-mode')) {
+        let bgSource = '';
+
+        if (videoEl && videoEl.poster) {
+          bgSource = videoEl.poster;
+        } else if (videoEl) {
+          // If no poster, try to find the video source or just use a fallback if desired
+          // For now, if it's a local video, we might not have an easy thumbnail unless it's provided.
+        } else if (iframeEl) {
+          const ytId = getYouTubeVideoId(iframeEl.src || '');
+          if (ytId) bgSource = `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`;
+        } else if (driveIframeEl) {
+          // Google Drive videos - hard to get thumb easily without API, 
+          // but we can try to find an img in the slide if we ever added one
+        }
+
+        // Check for static image in the slide
+        const slideImg = activeSlide.querySelector('img.home-news-image');
+        if (slideImg && slideImg.src) {
+          bgSource = slideImg.src;
+        }
+
+        if (bgSource) {
+          blurredBg.style.backgroundImage = `url('${bgSource}')`;
+        }
+      }
+
+      // Consistently move dots to header in any TV mode
+      if (document.body.classList.contains('tv-mode')) {
+        const dotsEl = document.querySelector('.home-news-dots');
+        const tvClock = document.getElementById('tv-clock');
+        const isFS = document.body.classList.contains('fullscreen-active');
+
+        if (dotsEl && tvClock) {
+          const homePage = document.getElementById('home');
+          const homeHeader = document.querySelector('.home-header');
+          // Use the global state variable directly for more robust detection than class checks
+          const isImmersive = (tvTheaterEnabled || isVideoSlide);
+
+          if (isImmersive) {
+            // In immersive mode, move clock and dots to viewport level for fixed positioning
+            if (homePage && tvClock.parentElement !== homePage) {
+              homePage.appendChild(tvClock);
+            }
+            if (homePage && dotsEl.parentElement !== homePage) {
+              homePage.appendChild(dotsEl);
+            }
+          } else {
+            // Standard mode: return clock to header, dots to clock
+            if (homeHeader && tvClock.parentElement !== homeHeader) {
+              homeHeader.appendChild(tvClock);
+            }
+            if (dotsEl.parentElement !== tvClock) {
+              tvClock.appendChild(dotsEl);
+            }
+          }
+        }
       }
 
       if (videoEl) {
