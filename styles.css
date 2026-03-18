@@ -238,6 +238,18 @@ body.tv-mode #home.page {
 }
 
 body.tv-mode .tv-blurred-bg {
+  opacity: 0.6; /* Reduced to let Aurora shine through */
+}
+
+.aurora-container {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 2s ease;
+}
+
+body.tv-mode .aurora-container {
   opacity: 1;
 }
 

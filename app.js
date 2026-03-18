@@ -1,5 +1,6 @@
-// REPLACE THIS WITH YOUR NEW SPREADSHEET DEPLOYMENT URL
 const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbza2QFzH0B3XkMFX9RITeSj1f3v4Ox8j5lYxBtxnTUTdqyTlWeE0SieK1n4fTdIRPmbvw/exec";
+
+import Aurora from './Aurora.js';
 
 // --- CLOUDINARY CONFIGURATION ---
 // Get these from your Cloudinary Dashboard: https://cloudinary.com/console
@@ -30,6 +31,15 @@ let tvTheaterEnabled = false;
 })();
 
 document.addEventListener('DOMContentLoaded', () => {
+  // --- Aurora Backdrop ---
+  const aurora = new Aurora({
+    colorStops: ["#004a99", "#f0ad4e", "#003366"],
+    blend: 0.5,
+    amplitude: 1.0,
+    speed: 1
+  });
+  aurora.render('#aurora-container');
+
   // --- TV Clock Logic ---
   class DigitCounter {
     constructor(parent, initialValue = '0') {
