@@ -784,14 +784,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       }
 
-      const fullfitBtn = document.getElementById('post-preview-fullfit-btn');
-      if (fullfitBtn) {
-        fullfitBtn.addEventListener('click', () => {
-          if (window.setPreviewTransformState) {
-            window.setPreviewTransformState(0.65, 0, -28);
-          }
-        });
-      }
 
       let isDragging = false;
       let startMouseX = 0, startMouseY = 0;
@@ -857,7 +849,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (previewGroup) previewGroup.style.display = 'none';
         if (previewImg) previewImg.style.objectPosition = '50% 50%';
         if (window.setPreviewTransformState) {
-          window.setPreviewTransformState(0.65, 0, -28);
+          window.setPreviewTransformState(1, 0, 0);
         }
 
         modal.classList.remove('hidden');
@@ -1205,10 +1197,22 @@ document.addEventListener('DOMContentLoaded', () => {
             slide.classList.add('has-video');
           }
 
+          let bgThumb = '';
+          if (ytId) {
+            bgThumb = `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`;
+          } else if (urlLower.includes('res.cloudinary.com') || urlLower.includes('cloudinary.com')) {
+            bgThumb = post.imageUrl.replace(/\.(mp4|webm|mov|mkv|avi)$/i, '.jpg');
+          } else if (post.imageUrl && post.imageUrl.trim() !== '') {
+            bgThumb = post.imageUrl;
+          }
+
+          const bgHtml = bgThumb ? `<div class="home-news-image-bg" style="background-image: url('${bgThumb}')"></div>` : '';
+
           if (ytId) {
             imgHtml = `
               <div style="position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden;">
-                 <iframe id="ytplayer-${post.timestamp}" src="https://www.youtube.com/embed/${ytId}?autoplay=1&mute=1&controls=0&enablejsapi=1&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&showinfo=0&autohide=1" class="home-news-image yt-video-frame" style="border: none; width: 100%; height: 100%; ${styleStr}" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                 ${bgHtml}
+                 <iframe id="ytplayer-${post.timestamp}" src="https://www.youtube.com/embed/${ytId}?autoplay=1&mute=1&controls=0&enablejsapi=1&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&showinfo=0&autohide=1" class="home-news-image yt-video-frame" style="border: none; width: 100%; height: 100%; position: relative; z-index: 2; ${styleStr}" allow="autoplay; encrypted-media" allowfullscreen></iframe>
               </div>
             `;
           } else if (
@@ -1221,7 +1225,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Direct/stream URL — use native <video> with autoplay+muted for TV
             imgHtml = `
               <div style="position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden;">
-                <video src="${post.imageUrl}" class="home-news-image" style="width: 100%; height: 100%; ${styleStr}" autoplay muted playsinline></video>
+                ${bgHtml}
+                <video src="${post.imageUrl}" class="home-news-image" style="width: 100%; height: 100%; position: relative; z-index: 2; ${styleStr}" autoplay muted playsinline></video>
               </div>
             `;
           } else if (urlLower.includes('drive.google.com/file/d/') && urlLower.includes('/preview')) {
@@ -1234,7 +1239,8 @@ document.addEventListener('DOMContentLoaded', () => {
           } else {
             imgHtml = `
               <div style="position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden;">
-                 <img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="home-news-image" style="width: 100%; height: 100%; ${styleStr}" loading="lazy">
+                 ${bgHtml}
+                 <img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="home-news-image" style="width: 100%; height: 100%; position: relative; z-index: 2; ${styleStr}" loading="lazy">
               </div>
             `;
           }
@@ -1610,12 +1616,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // VIDEOS: only expand if toggle is user-enabled
         if (tvTheaterEnabled && document.body.classList.contains('tv-mode')) {
           document.body.classList.add('fullscreen-active');
+          document.body.classList.add('theater-mode');
           if (typeof updateWeather === 'function') updateWeather();
         } else {
           document.body.classList.remove('fullscreen-active');
+          document.body.classList.remove('theater-mode');
         }
       } else {
         document.body.classList.remove('video-fullscreen-active');
+        document.body.classList.remove('theater-mode');
         // IMAGES: always expand in TV mode by default
         if (document.body.classList.contains('tv-mode')) {
           document.body.classList.add('fullscreen-active');
@@ -1630,23 +1639,20 @@ document.addEventListener('DOMContentLoaded', () => {
       if (blurredBg && document.body.classList.contains('tv-mode')) {
         let bgSource = '';
 
-        if (videoEl && videoEl.poster) {
+        const slideImg = activeSlide.querySelector('img.home-news-image');
+        const bgLayer = activeSlide.querySelector('.home-news-image-bg');
+
+        if (bgLayer) {
+          // Extract from style.backgroundImage: url("...")
+          const styleBg = bgLayer.style.backgroundImage;
+          bgSource = styleBg.replace(/url\(['"]?(.*?)['"]?\)/i, '$1');
+        } else if (slideImg && slideImg.src) {
+          bgSource = slideImg.src;
+        } else if (videoEl && videoEl.poster) {
           bgSource = videoEl.poster;
-        } else if (videoEl) {
-          // If no poster, try to find the video source or just use a fallback if desired
-          // For now, if it's a local video, we might not have an easy thumbnail unless it's provided.
         } else if (iframeEl) {
           const ytId = getYouTubeVideoId(iframeEl.src || '');
           if (ytId) bgSource = `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`;
-        } else if (driveIframeEl) {
-          // Google Drive videos - hard to get thumb easily without API, 
-          // but we can try to find an img in the slide if we ever added one
-        }
-
-        // Check for static image in the slide
-        const slideImg = activeSlide.querySelector('img.home-news-image');
-        if (slideImg && slideImg.src) {
-          bgSource = slideImg.src;
         }
 
         if (bgSource) {
