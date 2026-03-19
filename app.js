@@ -16,7 +16,7 @@ if (!window.YT) {
 
 // Global TV Settings State
 let tvAudioEnabled = false;
-let tvTheaterEnabled = false;
+let tvTheaterEnabled = false; // Default to non-fullscreen for VIDEOS
 
 // Offline banner — automatically shown/hidden based on connectivity
 (function () {
@@ -62,9 +62,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     update(newValue) {
       // Check for height change as well as value change
-      const isFS = document.body.classList.contains('fullscreen-active') || 
-                   document.body.classList.contains('video-fullscreen-active');
-      const digitHeight = isFS ? 40 : 60;
+      const isImmersive = document.body.classList.contains('tv-mode') || 
+                          document.body.classList.contains('fullscreen-active') || 
+                          document.body.classList.contains('video-fullscreen-active');
+      const digitHeight = isImmersive ? 40 : 60;
       
       if (this.currentValue === newValue && this.lastHeight === digitHeight) return;
       
@@ -174,11 +175,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const tvSettingsBox = document.getElementById('tv-settings');
   const btnTvAudio = document.getElementById('tv-audio-toggle');
   const btnTvTheater = document.getElementById('tv-fullscreen-toggle');
+  const btnTvHeaderToggle = document.getElementById('tv-header-toggle');
+  const btnSidebarToggle = document.getElementById('sidebar-toggle');
 
   let systems = [];
   let ytPlayers = {}; // Persistent store for YT players
   let globalCarouselTimer = null;
   let globalSlideGeneration = 0;
+
+  // Sidebar Collapse Persistence
+  const isSidebarCollapsed = localStorage.getItem('sas_sidebar_collapsed') === 'true';
+  if (isSidebarCollapsed && sidebar) {
+    sidebar.classList.add('collapsed');
+  }
 
   function setActiveNav(item) {
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -426,45 +435,26 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnTvTheater) {
     btnTvTheater.addEventListener('click', () => {
       tvTheaterEnabled = !tvTheaterEnabled;
-      btnTvTheater.classList.toggle('is-active', tvTheaterEnabled);
+      btnTvTheater.classList.toggle('active-setting', tvTheaterEnabled);
+      setActive(current);
+    });
+  }
 
-      const dotsEl = document.querySelector('.home-news-dots');
-      const tvClock = document.getElementById('tv-clock');
-      const container = document.querySelector('.home-news');
-      const homeHeader = document.querySelector('.home-header');
+  if (btnTvHeaderToggle) {
+    btnTvHeaderToggle.addEventListener('click', () => {
+      const isCollapsed = document.body.classList.toggle('tv-header-collapsed');
+      localStorage.setItem('sas_tv_header_collapsed', isCollapsed);
+      // Ensure layout adjusts (if needed for any internal elements)
+      window.dispatchEvent(new Event('resize'));
+    });
+  }
 
-      if (tvTheaterEnabled) {
-        document.body.classList.add('fullscreen-active');
-        updateWeather(); // Force immediate refresh to ensure visibility
-      } else {
-        document.body.classList.remove('fullscreen-active');
-      }
-
-      // Consistently move elements between header and body in TV mode
-      if (document.body.classList.contains('tv-mode')) {
-        if (tvTheaterEnabled) {
-          // Immersive: move clock and dots to body level for viewport-absolute positioning
-          if (tvClock && tvClock.parentElement !== document.body) {
-            document.body.appendChild(tvClock);
-          }
-          if (dotsEl && dotsEl.parentElement !== document.body) {
-            document.body.appendChild(dotsEl);
-          }
-        } else {
-          // Standard: return clock to header, dots to clock
-          if (homeHeader && tvClock && tvClock.parentElement !== homeHeader) {
-            homeHeader.appendChild(tvClock);
-          }
-          if (tvClock && dotsEl && dotsEl.parentElement !== tvClock) {
-            tvClock.appendChild(dotsEl);
-          }
-        }
-      } else {
-        // Fallback for non-TV mode
-        if (dotsEl && container) container.appendChild(dotsEl);
-      }
-
-      showToast(tvTheaterEnabled ? "Image Fullscreen Enabled" : "Image Fullscreen Disabled", 'success');
+  if (btnSidebarToggle) {
+    btnSidebarToggle.addEventListener('click', () => {
+      const isCollapsed = sidebar.classList.toggle('collapsed');
+      localStorage.setItem('sas_sidebar_collapsed', isCollapsed);
+      // Help any open iframe-based system adapt to the new width
+      window.dispatchEvent(new Event('resize'));
     });
   }
 
@@ -582,6 +572,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (userObj.role === 'tv') {
       document.body.classList.add('tv-mode');
       tvSettingsBox.classList.remove('hidden');
+
+      // Persistence for TV Header collapse
+      const tvHeaderCollapsed = localStorage.getItem('sas_tv_header_collapsed') === 'true';
+      if (tvHeaderCollapsed) {
+        document.body.classList.add('tv-header-collapsed');
+      }
 
       // Attempt actual fullscreen via API explicitly for the TV role
       try {
@@ -1197,6 +1193,18 @@ document.addEventListener('DOMContentLoaded', () => {
           const urlLower = post.imageUrl.toLowerCase();
           const ytId = getYouTubeVideoId(post.imageUrl);
 
+          const isVideo = ytId || 
+            urlLower.includes('/video/upload/') ||
+            urlLower.includes('docs.google.com/uc?') ||
+            urlLower.includes('drive.google.com/uc?id=') ||
+            urlLower.endsWith('.mp4') || urlLower.endsWith('.webm') || urlLower.endsWith('.mov') ||
+            (urlLower.includes('drive.google.com') && urlLower.includes('type=video')) ||
+            (urlLower.includes('drive.google.com/file/d/') && urlLower.includes('/preview'));
+
+          if (isVideo) {
+            slide.classList.add('has-video');
+          }
+
           if (ytId) {
             imgHtml = `
               <div style="position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden;">
@@ -1599,8 +1607,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (isVideoSlide) {
         document.body.classList.add('video-fullscreen-active');
+        // VIDEOS: only expand if toggle is user-enabled
+        if (tvTheaterEnabled && document.body.classList.contains('tv-mode')) {
+          document.body.classList.add('fullscreen-active');
+          if (typeof updateWeather === 'function') updateWeather();
+        } else {
+          document.body.classList.remove('fullscreen-active');
+        }
       } else {
         document.body.classList.remove('video-fullscreen-active');
+        // IMAGES: always expand in TV mode by default
+        if (document.body.classList.contains('tv-mode')) {
+          document.body.classList.add('fullscreen-active');
+          if (typeof updateWeather === 'function') updateWeather();
+        } else {
+          document.body.classList.remove('fullscreen-active');
+        }
       }
 
       // Handle Blurred Immersive Background
@@ -1632,33 +1654,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      // Consistently move dots to header in any TV mode
+      // Consistently ensure elements stay at body level in any TV mode
       if (document.body.classList.contains('tv-mode')) {
         const dotsEl = document.querySelector('.home-news-dots');
         const tvClock = document.getElementById('tv-clock');
-        // Use the global state variable directly for more robust detection than class checks
-        const isImmersive = (tvTheaterEnabled || isVideoSlide);
 
-        if (dotsEl && tvClock) {
-          const homeHeader = document.querySelector('.home-header');
-
-          if (isImmersive) {
-            // In immersive mode, move clock and dots to body level for viewport-absolute positioning
-            if (tvClock.parentElement !== document.body) {
-              document.body.appendChild(tvClock);
-            }
-            if (dotsEl.parentElement !== document.body) {
-              document.body.appendChild(dotsEl);
-            }
-          } else {
-            // Standard mode: return clock to header, dots to clock
-            if (homeHeader && tvClock.parentElement !== homeHeader) {
-              homeHeader.appendChild(tvClock);
-            }
-            if (dotsEl.parentElement !== tvClock) {
-              tvClock.appendChild(dotsEl);
-            }
-          }
+        if (tvClock && tvClock.parentElement !== document.body) {
+          document.body.appendChild(tvClock);
+        }
+        if (dotsEl && dotsEl.parentElement !== document.body) {
+          document.body.appendChild(dotsEl);
         }
       }
 

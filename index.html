@@ -71,8 +71,16 @@
 
   <aside class="sidebar">
     <div class="sidebar-header">
-      <span class="logo">SAS</span>
-      <span class="repo-title">SAS Portal</span>
+      <div class="sidebar-header-main">
+        <span class="logo">SAS</span>
+        <span class="repo-title">SAS Portal</span>
+      </div>
+      <button id="sidebar-toggle" class="sidebar-toggle-btn" title="Collapse Sidebar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+          stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
     </div>
     <nav class="nav">
       <a href="#home" class="nav-item active" data-page="home">
@@ -123,6 +131,12 @@
           <div class="home-header-meta">
             <!-- TV Mode Custom Settings -->
             <div class="tv-settings hidden" id="tv-settings">
+              <button id="tv-header-toggle" class="icon-btn" aria-label="Toggle Header" title="Collapse Header">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                  stroke-linecap="round" stroke-linejoin="round" class="toggle-icon">
+                  <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+              </button>
               <button id="tv-audio-toggle" class="icon-btn" aria-label="Toggle Audio" title="Unmute Videos">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                   stroke-linecap="round" stroke-linejoin="round">
@@ -131,8 +145,8 @@
                   <line x1="17" y1="9" x2="23" y2="15"></line>
                 </svg>
               </button>
-              <button id="tv-fullscreen-toggle" class="icon-btn" aria-label="Auto Fullscreen"
-                title="Auto-Theater Mode (Off)">
+              <button id="tv-fullscreen-toggle" class="icon-btn" aria-label="Toggle Video Expansion"
+                title="Expand Videos Only">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                   stroke-linecap="round" stroke-linejoin="round">
                   <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
