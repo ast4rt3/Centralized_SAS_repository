@@ -177,6 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnTvTheater = document.getElementById('tv-fullscreen-toggle');
   const btnTvHeaderToggle = document.getElementById('tv-header-toggle');
   const btnSidebarToggle = document.getElementById('sidebar-toggle');
+  const btnAdminExitTv = document.getElementById('admin-exit-tv');
 
   let systems = [];
   let ytPlayers = {}; // Persistent store for YT players
@@ -187,6 +188,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const isSidebarCollapsed = localStorage.getItem('sas_sidebar_collapsed') === 'true';
   if (isSidebarCollapsed && sidebar) {
     sidebar.classList.add('collapsed');
+  }
+
+  // Admin Exit TV Logic
+  if (btnAdminExitTv) {
+    btnAdminExitTv.addEventListener('click', () => {
+      // Clear TV-specific states
+      localStorage.removeItem('sas_admin_tv_view');
+      document.body.classList.remove('tv-mode');
+      document.body.classList.remove('tv-header-collapsed');
+      
+      // The most robust way to restore the full Admin Dashboard layout
+      // after such heavy DOM/CSS manipulation is a clean reload to #home.
+      window.location.hash = 'home';
+      setTimeout(() => {
+        window.location.reload();
+      }, 50);
+    });
   }
 
   function setActiveNav(item) {
@@ -271,22 +289,30 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderNav() {
-    // Uploader role cannot access other services
+    var groups = groupBySection(systems);
+    var sectionNames = Object.keys(groups).sort(function (a, b) { return a.localeCompare(b); });
+
+    let adminTvNav = '';
     const sessionData = sessionStorage.getItem('sas_user_data');
     if (sessionData) {
       try {
-        const role = JSON.parse(sessionData).role;
-        if (role === 'uploader') {
+        const userData = JSON.parse(sessionData);
+        if (userData.role === 'admin') {
+          adminTvNav = `
+            <div class="nav-section-label">Admin Tools</div>
+            <a href="#home" class="nav-item" id="nav-toggle-tv" data-page="home">
+              <span class="nav-icon">📺</span>
+              <span class="nav-label">TV View</span>
+            </a>
+          `;
+        } else if (userData.role === 'uploader') {
           navDynamic.innerHTML = '<div class="nav-section-label">Restricted</div><div style="padding:10px 16px; font-size:0.85rem; color:var(--text-muted);">Uploader role has limited access to external systems.</div>';
           return;
         }
       } catch (e) { }
     }
 
-    var groups = groupBySection(systems);
-    var sectionNames = Object.keys(groups).sort(function (a, b) { return a.localeCompare(b); });
-
-    navDynamic.innerHTML = sectionNames
+    navDynamic.innerHTML = adminTvNav + sectionNames
       .map(function (sectionName) {
         var itemsHtml = groups[sectionName]
           .map(function (s) {
@@ -301,7 +327,23 @@ document.addEventListener('DOMContentLoaded', () => {
       })
       .join('');
 
+    // Re-bind listeners
     navDynamic.querySelectorAll('.nav-item').forEach(function (a) {
+      if (a.id === 'nav-toggle-tv') {
+        a.addEventListener('click', function (e) {
+          e.preventDefault();
+          document.body.classList.add('tv-mode');
+          localStorage.setItem('sas_admin_tv_view', 'true');
+          if (btnAdminExitTv) btnAdminExitTv.classList.remove('hidden');
+          if (navToggle) navToggle.hidden = true; // Lock down sidebar
+          tvSettingsBox.classList.remove('hidden');
+          window.location.hash = 'home';
+          closeNav();
+          fetchPosts(); // Trigger carousel
+        });
+        return;
+      }
+
       if (a.getAttribute('target') !== '_blank') {
         a.addEventListener('click', function (e) {
           e.preventDefault();
@@ -523,8 +565,11 @@ document.addEventListener('DOMContentLoaded', () => {
   function finishInit() {
     document.querySelector('.nav-item[data-page="home"]').addEventListener('click', function (e) {
       e.preventDefault();
+      document.body.classList.remove('tv-mode');
+      localStorage.removeItem('sas_admin_tv_view');
       window.location.hash = 'home';
       closeNav();
+      fetchPosts(); // Reload for admin card view
     });
 
     if (navToggle) {
@@ -572,6 +617,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (userObj.role === 'tv') {
       document.body.classList.add('tv-mode');
       tvSettingsBox.classList.remove('hidden');
+      if (btnAdminExitTv) btnAdminExitTv.classList.add('hidden');
+      if (navToggle) navToggle.hidden = true; // No sidebar access for TV Role
 
       // Persistence for TV Header collapse
       const tvHeaderCollapsed = localStorage.getItem('sas_tv_header_collapsed') === 'true';
@@ -588,11 +635,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       } catch (err) { }
     } else if (userObj.role === 'admin') {
-      document.body.classList.remove('tv-mode');
+      const adminTvView = localStorage.getItem('sas_admin_tv_view') === 'true';
+      if (adminTvView) {
+        document.body.classList.add('tv-mode');
+        if (btnAdminExitTv) btnAdminExitTv.classList.remove('hidden');
+        if (navToggle) navToggle.hidden = true; // No sidebar in TV preview
+      } else {
+        document.body.classList.remove('tv-mode');
+        if (btnAdminExitTv) btnAdminExitTv.classList.add('hidden');
+        if (navToggle) navToggle.hidden = false;
+      }
       tvSettingsBox.classList.remove('hidden'); // Admin can change TV defaults
     } else {
       document.body.classList.remove('tv-mode');
       tvSettingsBox.classList.add('hidden'); // Uploader / Other restricted
+      if (btnAdminExitTv) btnAdminExitTv.classList.add('hidden');
+      if (navToggle) navToggle.hidden = false;
     }
 
     const displayName = userDisplayName;
@@ -784,14 +842,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       }
 
-      const fullfitBtn = document.getElementById('post-preview-fullfit-btn');
-      if (fullfitBtn) {
-        fullfitBtn.addEventListener('click', () => {
-          if (window.setPreviewTransformState) {
-            window.setPreviewTransformState(0.65, 0, -28);
-          }
-        });
-      }
 
       let isDragging = false;
       let startMouseX = 0, startMouseY = 0;
@@ -857,7 +907,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (previewGroup) previewGroup.style.display = 'none';
         if (previewImg) previewImg.style.objectPosition = '50% 50%';
         if (window.setPreviewTransformState) {
-          window.setPreviewTransformState(0.65, 0, -28);
+          window.setPreviewTransformState(1, 0, 0);
         }
 
         modal.classList.remove('hidden');
@@ -1109,7 +1159,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         renderPosts(data.posts, container, role);
 
-        if (role === 'tv') {
+        const isActualTvMode = role === 'tv' || document.body.classList.contains('tv-mode');
+        if (isActualTvMode) {
           container.className = 'home-news'; // Override container grid settings to fit carousel
         } else {
           container.className = 'posts-container'; // Restore grid for admin/user
@@ -1133,11 +1184,63 @@ document.addEventListener('DOMContentLoaded', () => {
     return (match && match[2].length === 11) ? match[2] : null;
   }
 
+  let windowFbInitDone = false;
+  window.fbPlayers = {};
+  function initFbSdk() {
+    if (windowFbInitDone) return;
+    windowFbInitDone = true;
+    window.fbAsyncInit = function() {
+      FB.init({ xfbml: true, version: 'v19.0' });
+      FB.Event.subscribe('xfbml.ready', function(msg) {
+        if (msg.type === 'video') {
+          window.fbPlayers[msg.id] = msg.instance;
+          // Play immediately if it's currently active
+          const el = document.getElementById(msg.id);
+          if (el && el.closest('.home-news-slide.is-active')) {
+            try {
+               if (window.tvAudioEnabled) msg.instance.unmute();
+               else msg.instance.mute();
+               msg.instance.play();
+            } catch(e) {}
+          }
+        }
+      });
+    };
+    const js = document.createElement('script');
+    js.id = 'facebook-jssdk';
+    js.src = 'https://connect.facebook.net/en_US/sdk.js';
+    document.head.appendChild(js);
+  }
+
+  function getFacebookVideoUrl(url) {
+    if (!url) return null;
+    const urlLower = url.toLowerCase();
+    // Support full URLs, mobile URLs, IDs, and paths
+    if (urlLower.includes('facebook.com') || urlLower.includes('fb.watch') || urlLower.includes('fb.com') || urlLower.includes('/videos/') || urlLower.includes('watch?v=')) {
+      let fbHref = url;
+      
+      // Try to normalize to a very standard format if possible
+      const vMatch = url.match(/[?&]v=([^&#]+)/) || url.match(/\/videos\/([^/?#]+)/) || url.match(/\/reel\/([^/?#]+)/);
+      if (vMatch) {
+         fbHref = `https://www.facebook.com/video.php?v=${vMatch[1]}`;
+      } else if (url.startsWith('/')) {
+         fbHref = 'https://www.facebook.com' + url;
+      } else if (!url.includes('://')) {
+         fbHref = 'https://www.facebook.com/' + url;
+      }
+
+      return fbHref; // Return raw URL for FB SDK
+    }
+    return null;
+  }
+
   function renderPosts(posts, container, role) {
     container.innerHTML = '';
     ytPlayers = {}; // Clear previous instances
 
-    if (role === 'tv') {
+    const isActualTvMode = role === 'tv' || document.body.classList.contains('tv-mode');
+
+    if (isActualTvMode) {
       let tvPosts = posts.filter(p => String(p.showOnTv).toLowerCase() !== 'false');
 
       if (tvPosts.length === 0) {
@@ -1192,8 +1295,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
           const urlLower = post.imageUrl.toLowerCase();
           const ytId = getYouTubeVideoId(post.imageUrl);
+          const fbEmbedUrl = getFacebookVideoUrl(post.imageUrl);
 
-          const isVideo = ytId || 
+          const isVideo = ytId || fbEmbedUrl || 
             urlLower.includes('/video/upload/') ||
             urlLower.includes('docs.google.com/uc?') ||
             urlLower.includes('drive.google.com/uc?id=') ||
@@ -1205,10 +1309,31 @@ document.addEventListener('DOMContentLoaded', () => {
             slide.classList.add('has-video');
           }
 
+          let bgThumb = '';
+          if (ytId) {
+            bgThumb = `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`;
+          } else if (urlLower.includes('res.cloudinary.com') || urlLower.includes('cloudinary.com')) {
+            bgThumb = post.imageUrl.replace(/\.(mp4|webm|mov|mkv|avi)$/i, '.jpg');
+          } else if (post.imageUrl && post.imageUrl.trim() !== '') {
+            bgThumb = post.imageUrl;
+          }
+
+          const bgHtml = bgThumb ? `<div class="home-news-image-bg" style="background-image: url('${bgThumb}')"></div>` : '';
+
           if (ytId) {
             imgHtml = `
               <div style="position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden;">
-                 <iframe id="ytplayer-${post.timestamp}" src="https://www.youtube.com/embed/${ytId}?autoplay=1&mute=1&controls=0&enablejsapi=1&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&showinfo=0&autohide=1" class="home-news-image yt-video-frame" style="border: none; width: 100%; height: 100%; ${styleStr}" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                 ${bgHtml}
+                 <iframe id="ytplayer-${post.timestamp}" src="https://www.youtube.com/embed/${ytId}?autoplay=1&mute=1&controls=0&enablejsapi=1&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&showinfo=0&autohide=1" class="home-news-image yt-video-frame" style="border: none; width: 100%; height: 100%; position: relative; z-index: 2; ${styleStr}" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+              </div>
+            `;
+          } else if (fbEmbedUrl) {
+            initFbSdk();
+            const uniqueId = `fbplayer-${post.timestamp}`;
+            imgHtml = `
+              <div style="position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #000;">
+                 ${bgHtml}
+                 <div id="${uniqueId}" class="fb-video fb-video-wrapper" data-href="${fbEmbedUrl}" data-width="auto" data-show-text="false" data-allowfullscreen="true" data-autoplay="false" style="position: relative; z-index: 2; width: 100%; height: 100%;"></div>
               </div>
             `;
           } else if (
@@ -1221,7 +1346,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Direct/stream URL — use native <video> with autoplay+muted for TV
             imgHtml = `
               <div style="position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden;">
-                <video src="${post.imageUrl}" class="home-news-image" style="width: 100%; height: 100%; ${styleStr}" autoplay muted playsinline></video>
+                ${bgHtml}
+                <video src="${post.imageUrl}" class="home-news-image" style="width: 100%; height: 100%; position: relative; z-index: 2; ${styleStr}" autoplay muted playsinline></video>
               </div>
             `;
           } else if (urlLower.includes('drive.google.com/file/d/') && urlLower.includes('/preview')) {
@@ -1234,7 +1360,8 @@ document.addEventListener('DOMContentLoaded', () => {
           } else {
             imgHtml = `
               <div style="position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden;">
-                 <img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="home-news-image" style="width: 100%; height: 100%; ${styleStr}" loading="lazy">
+                 ${bgHtml}
+                 <img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="home-news-image" style="width: 100%; height: 100%; position: relative; z-index: 2; ${styleStr}" loading="lazy">
               </div>
             `;
           }
@@ -1323,10 +1450,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
           const urlLower = post.imageUrl.toLowerCase();
           const ytId = getYouTubeVideoId(post.imageUrl);
+          const fbEmbedUrl = getFacebookVideoUrl(post.imageUrl);
 
           if (ytId) {
             // Admin/Uploader view: Show thumbnail instead of iframe
             imgHtml = `<div style="position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #1a1a1a; border-radius: 4px;"><img src="https://img.youtube.com/vi/${ytId}/hqdefault.jpg" class="post-image" style="width: 100%; height: 100%; ${styleStr}" loading="lazy" onerror="this.src='https://img.youtube.com/vi/${ytId}/default.jpg'"></div>`;
+          } else if (fbEmbedUrl) {
+            // Facebook: No easy thumbnail API for external developers without SDK, show a neat placeholder
+            imgHtml = `<div style="position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #1a1a1a; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white;">
+              <div style="text-align: center;">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="#1877F2" style="margin-bottom: 8px;"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                <div style="font-size: 12px; opacity: 0.8;">Facebook Video</div>
+              </div>
+            </div>`;
           } else if (
             urlLower && (urlLower.includes('res.cloudinary.com') || urlLower.includes('cloudinary.com'))
           ) {
@@ -1600,22 +1736,26 @@ document.addEventListener('DOMContentLoaded', () => {
       const activeSlide = slides[index];
       const videoEl = activeSlide.querySelector('video.home-news-image');
       const iframeEl = activeSlide.querySelector('iframe.yt-video-frame');
+      const fbIframeEl = activeSlide.querySelector('.fb-video-wrapper');
       const driveIframeEl = activeSlide.querySelector('iframe.drive-video-frame');
 
       // Handle CSS Unified Fullscreen
-      const isVideoSlide = (videoEl || iframeEl || driveIframeEl);
+      const isVideoSlide = (videoEl || iframeEl || fbIframeEl || driveIframeEl);
 
       if (isVideoSlide) {
         document.body.classList.add('video-fullscreen-active');
         // VIDEOS: only expand if toggle is user-enabled
         if (tvTheaterEnabled && document.body.classList.contains('tv-mode')) {
           document.body.classList.add('fullscreen-active');
+          document.body.classList.add('theater-mode');
           if (typeof updateWeather === 'function') updateWeather();
         } else {
           document.body.classList.remove('fullscreen-active');
+          document.body.classList.remove('theater-mode');
         }
       } else {
         document.body.classList.remove('video-fullscreen-active');
+        document.body.classList.remove('theater-mode');
         // IMAGES: always expand in TV mode by default
         if (document.body.classList.contains('tv-mode')) {
           document.body.classList.add('fullscreen-active');
@@ -1630,23 +1770,25 @@ document.addEventListener('DOMContentLoaded', () => {
       if (blurredBg && document.body.classList.contains('tv-mode')) {
         let bgSource = '';
 
-        if (videoEl && videoEl.poster) {
-          bgSource = videoEl.poster;
-        } else if (videoEl) {
-          // If no poster, try to find the video source or just use a fallback if desired
-          // For now, if it's a local video, we might not have an easy thumbnail unless it's provided.
-        } else if (iframeEl) {
-          const ytId = getYouTubeVideoId(iframeEl.src || '');
-          if (ytId) bgSource = `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`;
-        } else if (driveIframeEl) {
-          // Google Drive videos - hard to get thumb easily without API, 
-          // but we can try to find an img in the slide if we ever added one
-        }
-
-        // Check for static image in the slide
         const slideImg = activeSlide.querySelector('img.home-news-image');
-        if (slideImg && slideImg.src) {
+        const bgLayer = activeSlide.querySelector('.home-news-image-bg');
+
+        if (bgLayer) {
+          // Extract from style.backgroundImage: url("...")
+          const styleBg = bgLayer.style.backgroundImage;
+          bgSource = styleBg.replace(/url\(['"]?(.*?)['"]?\)/i, '$1');
+        } else if (slideImg && slideImg.src) {
           bgSource = slideImg.src;
+        } else if (videoEl && videoEl.poster) {
+          bgSource = videoEl.poster;
+        } else if (iframeEl || fbIframeEl) {
+          const ytId = getYouTubeVideoId((iframeEl || fbIframeEl).src || '');
+          if (ytId) {
+            bgSource = `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`;
+          } else if (fbIframeEl) {
+            // For FB, we don't have a simple thumb URL, so we rely on the bgLayer if it exists
+            // (The bgLayer is already set in renderPosts if it's a FB video)
+          }
         }
 
         if (bgSource) {
@@ -1731,6 +1873,44 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         // Safety fallback
         start(300000);
+      } else if (activeSlide.querySelector('.fb-video-wrapper')) {
+        // Facebook video via JS SDK
+        const fbEl = activeSlide.querySelector('.fb-video-wrapper');
+        if (fbEl) {
+          const playerId = fbEl.id;
+          let attempts = 0;
+          // Poll until the player instance is ready from the SDK
+          const tryPlay = setInterval(() => {
+             if (myGeneration !== globalSlideGeneration) {
+                 clearInterval(tryPlay);
+                 return;
+             }
+             const player = window.fbPlayers && window.fbPlayers[playerId];
+             if (player) {
+                 clearInterval(tryPlay);
+                 try {
+                    if (tvAudioEnabled) player.unmute();
+                    else player.mute();
+                    player.play();
+
+                    if (!player._hasFinishedListener) {
+                        player._hasFinishedListener = true;
+                        player.subscribe('finishedPlaying', () => {
+                            if (myGeneration === globalSlideGeneration && slides.length > 1) {
+                                next();
+                            }
+                        });
+                    }
+                 } catch(e) {
+                    console.error('FB Player Error:', e);
+                 }
+             }
+             attempts++;
+             if (attempts > 50) clearInterval(tryPlay); // give up after 10s
+          }, 200);
+        }
+
+        start(180000); 
       } else if (driveIframeEl) {
         // Drive video iframe — can't hook into events, use standard timer
         start();
