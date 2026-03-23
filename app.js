@@ -722,6 +722,320 @@ document.addEventListener('DOMContentLoaded', () => {
     const coordsDisplay = document.getElementById('post-preview-coords');
     const sizeSelect = document.getElementById('post-img-size');
 
+    // Video Playback Settings
+    const videoSettingsGroup = document.getElementById('post-video-settings-group');
+    const videoStartInput = document.getElementById('post-video-start');
+    const videoEndInput = document.getElementById('post-video-end');
+
+    const videoPreviewPlayer = document.getElementById('video-preview-player');
+    const videoPreviewIframe = document.getElementById('video-preview-iframe-wrapper');
+    const videoPreviewLoading = document.getElementById('video-preview-loading');
+    const videoStartDisplay = document.getElementById('video-start-display');
+    const videoDurationDisplay = document.getElementById('video-duration-display');
+    const sliderStart = document.getElementById('post-video-slider-start');
+    const sliderEnd = document.getElementById('post-video-slider-end');
+    
+    let videoDuration = 0;
+    let previewYtPlayer = null;
+    let previewFbPlayer = null;
+
+    function formatTimeObj(seconds) {
+      if (!seconds || isNaN(seconds)) return "00:00";
+      const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+      const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+      return `${m}:${s}`;
+    }
+
+    async function compressImage(file, quality = 0.8, maxWidth = 1920) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (e) => {
+          const img = new Image();
+          img.src = e.target.result;
+          img.onload = () => {
+             const canvas = document.createElement('canvas');
+             let width = img.width;
+             let height = img.height;
+             if (width > maxWidth || height > maxWidth) {
+                 if (width > height) {
+                    height = (maxWidth / width) * height;
+                    width = maxWidth;
+                 } else {
+                    width = (maxWidth / height) * width;
+                    height = maxWidth;
+                 }
+             }
+             canvas.width = width;
+             canvas.height = height;
+             const ctx = canvas.getContext('2d');
+             ctx.drawImage(img, 0, 0, width, height);
+             canvas.toBlob((blob) => {
+                resolve(new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", { type: 'image/jpeg' }));
+             }, 'image/jpeg', quality);
+          };
+        };
+      });
+    }
+
+    async function uploadToGoogleDrive(file, onProgress) {
+      // Note: This requires the GAS backend to have an 'uploadToDrive' action.
+      // Since GAS has a 50MB payload limit, we use a simple Base64 approach for now.
+      // For > 50MB, a chunked approach in GAS would be needed.
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = async () => {
+          const base64 = reader.result.split(',')[1];
+          try {
+            if (onProgress) onProgress(50); // Simple halfway mark
+            const response = await fetch(BACKEND_GAS_URL, {
+              method: 'POST',
+              body: JSON.stringify({
+                action: "uploadToDrive",
+                fileName: file.name,
+                fileData: base64
+              })
+            });
+            const data = await response.json();
+            if (data.success) {
+               if (onProgress) onProgress(100);
+               resolve({ secure_url: data.url, public_id: "gdrive_" + Date.now() });
+            } else {
+               reject(new Error(data.message || "Google Drive upload failed"));
+            }
+          } catch(e) { reject(e); }
+        };
+        reader.onerror = (e) => reject(e);
+      });
+    }
+
+    async function uploadFileChunked(file, uploadPreset, cloudName, onProgress) {
+      const chunkSize = 6 * 1024 * 1024; // 6MB
+      const totalSize = file.size;
+      const totalChunks = Math.ceil(totalSize / chunkSize);
+      const uniqueUploadId = 'sas_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+      let lastResponseData = null;
+
+      for (let i = 0; i < totalChunks; i++) {
+        const start = i * chunkSize;
+        const end = Math.min(start + chunkSize, totalSize);
+        const chunk = file.slice(start, end);
+
+        const formData = new FormData();
+        formData.append('file', chunk);
+        formData.append('upload_preset', uploadPreset);
+        formData.append('folder', 'sas_repository');
+        
+        const contentRange = `bytes ${start}-${end - 1}/${totalSize}`;
+        
+        if (onProgress) onProgress(Math.round((i / totalChunks) * 100));
+
+        const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
+          method: 'POST',
+          headers: {
+            'X-Unique-Upload-Id': uniqueUploadId,
+            'Content-Range': contentRange
+          },
+          body: formData
+        });
+
+        lastResponseData = await response.json();
+        if (!response.ok) {
+           throw new Error(lastResponseData.error ? lastResponseData.error.message : "Chunked upload failed");
+        }
+      }
+      return lastResponseData;
+    }
+
+    function updateDualSliderUI() {
+      if (!videoDuration) return;
+      let sVal = parseInt(sliderStart.value) || 0;
+      let eVal = parseInt(sliderEnd.value) || videoDuration;
+
+      if (sVal >= eVal) {
+         if (this === sliderStart) { sVal = eVal - 1; sliderStart.value = sVal; }
+         else { eVal = sVal + 1; sliderEnd.value = eVal; }
+      }
+
+      videoStartInput.value = sVal;
+      videoEndInput.value = eVal;
+      if (videoStartDisplay) videoStartDisplay.textContent = formatTimeObj(sVal);
+      if (videoDurationDisplay) videoDurationDisplay.textContent = formatTimeObj(eVal) + " (Max: " + formatTimeObj(videoDuration) + ")";
+    }
+
+    function onSliderInput(e) {
+      updateDualSliderUI.call(this);
+      const targetTime = parseInt(this.value);
+      if (videoPreviewPlayer && videoPreviewPlayer.style.display !== 'none' && isFinite(videoPreviewPlayer.duration)) {
+        videoPreviewPlayer.currentTime = targetTime;
+      } else if (previewYtPlayer && typeof previewYtPlayer.seekTo === 'function') {
+        previewYtPlayer.seekTo(targetTime, true);
+      } else if (previewFbPlayer && typeof previewFbPlayer.seek === 'function') {
+        previewFbPlayer.seek(targetTime);
+      }
+    }
+
+    if (sliderStart) sliderStart.addEventListener('input', onSliderInput);
+    if (sliderEnd) sliderEnd.addEventListener('input', onSliderInput);
+
+    async function compressVideo(file, targetWidth = 1280, targetHeight = 720, bitrate = 2500000) {
+      return new Promise((resolve, reject) => {
+        const video = document.createElement('video');
+        video.src = URL.createObjectURL(file);
+        video.muted = true;
+        video.playsInline = true;
+        
+        video.onloadedmetadata = () => {
+          const canvas = document.createElement('canvas');
+          let width = video.videoWidth;
+          let height = video.videoHeight;
+          
+          if (width > targetWidth || height > targetHeight) {
+             const ratio = Math.min(targetWidth / width, targetHeight / height);
+             width *= ratio;
+             height *= ratio;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          
+          const stream = canvas.captureStream(30); 
+          let recorder;
+          try {
+            recorder = new MediaRecorder(stream, {
+              mimeType: 'video/webm;codecs=vp8',
+              videoBitsPerSecond: bitrate
+            });
+          } catch(e) {
+            recorder = new MediaRecorder(stream, { videoBitsPerSecond: bitrate });
+          }
+          
+          const chunks = [];
+          recorder.ondataavailable = (e) => chunks.push(e.data);
+          recorder.onstop = () => {
+             const blob = new Blob(chunks, { type: recorder.mimeType || 'video/webm' });
+             const ext = (recorder.mimeType && recorder.mimeType.includes('mp4')) ? '.mp4' : '.webm';
+             resolve(new File([blob], file.name.replace(/\.[^/.]+$/, "") + "_optimized" + ext, { type: blob.type }));
+             URL.revokeObjectURL(video.src);
+          };
+          
+          video.playbackRate = 4.0; 
+          recorder.start();
+          video.play();
+          
+          const drawFrame = () => {
+            if (video.paused || video.ended) return;
+            ctx.drawImage(video, 0, 0, width, height);
+            requestAnimationFrame(drawFrame);
+          };
+          drawFrame();
+          
+          video.onended = () => {
+            recorder.stop();
+          };
+        };
+        video.onerror = (e) => {
+           URL.revokeObjectURL(video.src);
+           reject(e);
+        };
+      });
+    }
+
+    window.loadPreviewVideo = function(url, isFile = false, resetValues = true) {
+       if (!videoPreviewPlayer) return;
+       videoPreviewPlayer.style.display = 'none';
+       videoPreviewIframe.style.display = 'none';
+       videoPreviewIframe.innerHTML = '';
+       videoPreviewLoading.style.display = 'flex';
+       if (videoPreviewLoading.querySelector('span')) videoPreviewLoading.querySelector('span').textContent = "Loading preview...";
+       
+       if (resetValues) {
+          if (videoStartInput) videoStartInput.value = '';
+          if (videoEndInput) videoEndInput.value = '';
+          if (sliderStart) sliderStart.value = 0;
+          if (sliderEnd) sliderEnd.value = 100;
+       }
+
+       videoDuration = 0;
+       previewYtPlayer = null;
+       previewFbPlayer = null;
+       
+       const ytId = window.getYouTubeVideoId ? getYouTubeVideoId(url) : null;
+       const fbEmbedUrl = window.getFacebookVideoUrl ? getFacebookVideoUrl(url) : null;
+       
+       if (ytId && !isFile) {
+         videoPreviewIframe.style.display = 'block';
+         videoPreviewIframe.innerHTML = `<div id="preview-yt-anchor"></div>`;
+         
+         if (window.YT && window.YT.Player) {
+            previewYtPlayer = new YT.Player('preview-yt-anchor', {
+              videoId: ytId,
+              playerVars: { controls: 0, disablekb: 1 },
+              events: {
+                'onReady': (event) => {
+                   videoPreviewLoading.style.display = 'none';
+                   videoDuration = Math.floor(event.target.getDuration());
+                   sliderStart.max = videoDuration;
+                   sliderEnd.max = videoDuration;
+                   sliderEnd.value = videoEndInput.value || videoDuration;
+                   sliderStart.value = videoStartInput.value || 0;
+                   updateDualSliderUI();
+                }
+              }
+            });
+         } else {
+             if (videoPreviewLoading.querySelector('span')) videoPreviewLoading.querySelector('span').textContent = "YouTube preview unavailable (API not loaded).";
+         }
+       } else if (fbEmbedUrl && !isFile) {
+          videoPreviewIframe.style.display = 'block';
+          const fbId = 'fb-preview-' + Date.now();
+          videoPreviewIframe.innerHTML = `<div id="${fbId}" class="fb-video" data-href="${url}" data-width="auto" data-allowfullscreen="true" data-autoplay="false"></div>`;
+          
+          if (window.FB) {
+             FB.XFBML.parse(videoPreviewIframe, () => {
+                FB.Event.subscribe('xfbml.ready', (msg) => {
+                   if (msg.id === fbId) {
+                      videoPreviewLoading.style.display = 'none';
+                      previewFbPlayer = msg.instance;
+                      // FB SDK doesn't always provide duration immediately. We might have to wait or estimate.
+                      // For now, let's try to get it from the instance if available.
+                      videoDuration = 300; // Fallback to 5 mins if unknown
+                      try {
+                        // Some internal FB players allow getDuration()
+                        if (previewFbPlayer.getDuration) videoDuration = Math.floor(previewFbPlayer.getDuration());
+                      } catch(e){}
+
+                      sliderStart.max = videoDuration;
+                      sliderEnd.max = videoDuration;
+                      sliderEnd.value = videoEndInput.value || videoDuration;
+                      sliderStart.value = videoStartInput.value || 0;
+                      updateDualSliderUI();
+                   }
+                });
+             });
+          } else {
+             if (videoPreviewLoading.querySelector('span')) videoPreviewLoading.querySelector('span').textContent = "Facebook preview unavailable (SDK not loaded).";
+          }
+       } else {
+         videoPreviewPlayer.style.display = 'block';
+         videoPreviewPlayer.src = url;
+         videoPreviewPlayer.onloadedmetadata = () => {
+            videoPreviewLoading.style.display = 'none';
+            videoDuration = Math.floor(videoPreviewPlayer.duration);
+            if (isNaN(videoDuration) || !isFinite(videoDuration)) videoDuration = 100;
+            sliderStart.max = videoDuration;
+            sliderEnd.max = videoDuration;
+            sliderEnd.value = videoEndInput.value || videoDuration;
+            sliderStart.value = videoStartInput.value || 0;
+            updateDualSliderUI();
+         };
+         videoPreviewPlayer.onerror = () => {
+            if (videoPreviewLoading.querySelector('span')) videoPreviewLoading.querySelector('span').textContent = "Preview unavailable for this format.";
+         };
+       }
+    };
+
     // === UPLOAD TAB SWITCHING ===
     const uploadTabBtns = document.querySelectorAll('.upload-tab');
     const uploadPanels = { upload: document.getElementById('upload-tab-upload'), url: document.getElementById('upload-tab-url') };
@@ -752,15 +1066,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
           // --- Show Local Preview ---
           if (file.type.startsWith('image/') && previewImg && previewGroup) {
+            if (videoSettingsGroup) videoSettingsGroup.style.display = 'none';
             const reader = new FileReader();
             reader.onload = (e) => {
               previewImg.src = e.target.result;
               previewGroup.style.display = 'block';
             };
             reader.readAsDataURL(file);
+          } else if (file.type.startsWith('video/')) {
+            if (previewGroup) previewGroup.style.display = 'none';
+            if (videoSettingsGroup) videoSettingsGroup.style.display = 'block';
+            
+            const fileURL = URL.createObjectURL(file);
+            if (window.loadPreviewVideo) window.loadPreviewVideo(fileURL, true, true);
           }
         }
       });
+
 
       fileUploadLabel.addEventListener('dragover', (ev) => {
         ev.preventDefault();
@@ -779,13 +1101,41 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (imgInput && previewGroup && previewImg && previewContainer) {
-      imgInput.addEventListener('input', () => {
-        const url = imgInput.value.trim();
-        if (url) {
-          previewImg.src = url;
-          previewGroup.style.display = 'block';
+      let imgInputTimeout;
+      imgInput.addEventListener('input', (e) => {
+        const runInput = () => {
+          const url = imgInput.value.trim();
+          if (url) {
+            const urlLower = url.toLowerCase();
+            const isVideo = (window.getYouTubeVideoId ? getYouTubeVideoId(url) : false) || 
+                            (window.getFacebookVideoUrl ? getFacebookVideoUrl(url) : false) || 
+                            /\.(mp4|webm|mov|mkv|avi)$/i.test(urlLower) || 
+                            urlLower.includes('drive.google.com') || 
+                            urlLower.includes('/video/upload/');
+            
+            if (isVideo) {
+              previewGroup.style.display = 'none';
+              if (videoSettingsGroup) videoSettingsGroup.style.display = 'block';
+              if (window.loadPreviewVideo) {
+                 const keep = e.detail && e.detail.keepValues;
+                 window.loadPreviewVideo(url, false, !keep);
+              }
+            } else {
+              if (videoSettingsGroup) videoSettingsGroup.style.display = 'none';
+              previewImg.src = url;
+              previewGroup.style.display = 'block';
+            }
+          } else {
+            previewGroup.style.display = 'none';
+            if (videoSettingsGroup) videoSettingsGroup.style.display = 'none';
+          }
+        };
+
+        clearTimeout(imgInputTimeout);
+        if (e.detail && e.detail.keepValues) {
+           runInput();
         } else {
-          previewGroup.style.display = 'none';
+           imgInputTimeout = setTimeout(runInput, 500);
         }
       });
 
@@ -906,6 +1256,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (previewGroup) previewGroup.style.display = 'none';
         if (previewImg) previewImg.style.objectPosition = '50% 50%';
+        if (videoSettingsGroup) videoSettingsGroup.style.display = 'none';
+        if (videoStartInput) videoStartInput.value = '';
+        if (videoEndInput) videoEndInput.value = '';
         if (window.setPreviewTransformState) {
           window.setPreviewTransformState(1, 0, 0);
         }
@@ -932,8 +1285,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const title = document.getElementById('post-title').value;
         const desc = document.getElementById('post-desc').value;
         const imgUrl = document.getElementById('post-img') ? document.getElementById('post-img').value : '';
-        const imgPos = document.getElementById('post-img-pos') ? document.getElementById('post-img-pos').value : '0 0';
+        let imgPos = document.getElementById('post-img-pos') ? document.getElementById('post-img-pos').value : '0 0';
         const imgSize = document.getElementById('post-img-size-val') ? document.getElementById('post-img-size-val').value : '1';
+        
+        const startVal = document.getElementById('post-video-start') ? document.getElementById('post-video-start').value : '';
+        const endVal = document.getElementById('post-video-end') ? document.getElementById('post-video-end').value : '';
+        if (startVal || endVal) {
+          imgPos = `${imgPos}|${startVal}|${endVal}`;
+        }
+
         const submitBtn = document.getElementById('submit-post-btn');
         const origText = submitBtn.textContent;
 
@@ -985,25 +1345,63 @@ document.addEventListener('DOMContentLoaded', () => {
               throw new Error("Cloudinary not configured. Please add CLOUDINARY_CLOUD_NAME and CLOUDINARY_UPLOAD_PRESET in app.js.");
             }
 
-            const file = fileInput.files[0];
+            let file = fileInput.files[0];
+            const isImage = file.type.startsWith('image/');
+            const isVideo = file.type.startsWith('video/');
+            if (isImage) {
+               submitBtn.textContent = 'Compressing Image...';
+               try {
+                  file = await compressImage(file);
+               } catch(e) { console.warn('Image compression failed', e); }
+            } else if (isVideo && file.size > 50 * 1024 * 1024) {
+               // Must compress videos over 50MB client-side to fit Cloudinary's 100MB limit and save storage
+               submitBtn.textContent = 'Optimizing Video for Upload (Please wait)...';
+               try {
+                  file = await compressVideo(file);
+               } catch(e) { 
+                  console.warn('Video compression failed', e);
+                  throw new Error("Video is too large (100MB limit) and optimization failed. Please use a smaller file or YouTube.");
+               }
+            }
+
             submitBtn.textContent = 'Uploading to Cloudinary...';
 
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-            formData.append('folder', 'sas_repository'); // Organizes files into this folder
+            let cloudData;
+            const isLarge = file.size > 90 * 1024 * 1024;
 
-            const cloudRes = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/upload`, {
-              method: 'POST',
-              body: formData
-            });
-
-            const cloudData = await cloudRes.json();
-            if (cloudData.secure_url) {
-              cloudinaryUrl = cloudData.secure_url;
-              cloudinaryPublicId = cloudData.public_id; // Capture the ID for deletion
+            if (isVideo && isLarge) {
+               submitBtn.textContent = 'Sending to Mega Storage (Google Drive)...';
+               try {
+                  cloudData = await uploadToGoogleDrive(file, (pct) => {
+                     submitBtn.textContent = `Mega Upload... ${pct}%`;
+                  });
+               } catch(e) {
+                  console.warn('Google Drive upload failed', e);
+                  throw new Error("Mega Storage (Google Drive) upload failed. " + e.message);
+               }
+            } else if (file.size > 10 * 1024 * 1024) {
+               // Use chunked upload for files over 10MB
+               cloudData = await uploadFileChunked(file, CLOUDINARY_UPLOAD_PRESET, CLOUDINARY_CLOUD_NAME, (pct) => {
+                  submitBtn.textContent = `Uploading... ${pct}%`;
+               });
             } else {
-              throw new Error("Cloudinary Upload Error: " + (cloudData.error ? cloudData.error.message : "Unknown error"));
+               const formData = new FormData();
+               formData.append('file', file);
+               formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+               formData.append('folder', 'sas_repository');
+
+               const cloudRes = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/upload`, {
+                 method: 'POST',
+                 body: formData
+               });
+               cloudData = await cloudRes.json();
+            }
+
+            if (cloudData && cloudData.secure_url) {
+               cloudinaryUrl = cloudData.secure_url;
+               cloudinaryPublicId = cloudData.public_id;
+            } else {
+               throw new Error("Cloudinary Error: " + (cloudData && cloudData.error ? cloudData.error.message : "Upload failed"));
             }
           }
 
@@ -1260,11 +1658,21 @@ document.addEventListener('DOMContentLoaded', () => {
       dotsContainer.setAttribute('role', 'tablist');
 
       tvPosts.forEach((post, index) => {
+        let startVal = '';
+        let endVal = '';
+        if (post.imagePosition && post.imagePosition.includes('|')) {
+           const parts = post.imagePosition.split('|');
+           startVal = parts[1] || '';
+           endVal = parts[2] || '';
+        }
+
         const slide = document.createElement('article');
         slide.className = 'home-news-slide' + (index === 0 ? ' is-active' : '');
         slide.setAttribute('data-index', index);
         slide.setAttribute('data-title', escapeHtml(post.title || ''));
         slide.setAttribute('data-desc', escapeHtml(post.description || ''));
+        slide.setAttribute('data-start', startVal);
+        slide.setAttribute('data-end', endVal);
 
         let imgHtml = '';
         if (post.imageUrl && post.imageUrl.trim() !== '') {
@@ -1321,10 +1729,14 @@ document.addEventListener('DOMContentLoaded', () => {
           const bgHtml = bgThumb ? `<div class="home-news-image-bg" style="background-image: url('${bgThumb}')"></div>` : '';
 
           if (ytId) {
+            let ytParams = `autoplay=1&mute=1&controls=0&enablejsapi=1&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&showinfo=0&autohide=1`;
+            if (startVal) ytParams += `&start=${startVal}`;
+            if (endVal) ytParams += `&end=${endVal}`;
+
             imgHtml = `
               <div style="position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden;">
                  ${bgHtml}
-                 <iframe id="ytplayer-${post.timestamp}" src="https://www.youtube.com/embed/${ytId}?autoplay=1&mute=1&controls=0&enablejsapi=1&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&showinfo=0&autohide=1" class="home-news-image yt-video-frame" style="border: none; width: 100%; height: 100%; position: relative; z-index: 2; ${styleStr}" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                 <iframe id="ytplayer-${post.timestamp}" src="https://www.youtube.com/embed/${ytId}?${ytParams}" class="home-news-image yt-video-frame" style="border: none; width: 100%; height: 100%; position: relative; z-index: 2; ${styleStr}" allow="autoplay; encrypted-media" allowfullscreen></iframe>
               </div>
             `;
           } else if (fbEmbedUrl) {
@@ -1344,10 +1756,15 @@ document.addEventListener('DOMContentLoaded', () => {
             (urlLower.includes('drive.google.com') && urlLower.includes('type=video'))
           ) {
             // Direct/stream URL — use native <video> with autoplay+muted for TV
+            let mediaHash = '';
+            if (startVal && endVal) mediaHash = `#t=${startVal},${endVal}`;
+            else if (startVal) mediaHash = `#t=${startVal}`;
+            else if (endVal) mediaHash = `#t=0,${endVal}`;
+
             imgHtml = `
               <div style="position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden;">
                 ${bgHtml}
-                <video src="${post.imageUrl}" class="home-news-image" style="width: 100%; height: 100%; position: relative; z-index: 2; ${styleStr}" autoplay muted playsinline></video>
+                <video src="${post.imageUrl}${mediaHash}" class="home-news-image" style="width: 100%; height: 100%; position: relative; z-index: 2; ${styleStr}" autoplay muted playsinline></video>
               </div>
             `;
           } else if (urlLower.includes('drive.google.com/file/d/') && urlLower.includes('/preview')) {
@@ -1358,10 +1775,11 @@ document.addEventListener('DOMContentLoaded', () => {
               </div>
             `;
           } else {
+            const fbPlaceholder = 'https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png';
             imgHtml = `
               <div style="position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden;">
                  ${bgHtml}
-                 <img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="home-news-image" style="width: 100%; height: 100%; position: relative; z-index: 2; ${styleStr}" loading="lazy">
+                 <img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="home-news-image" style="width: 100%; height: 100%; position: relative; z-index: 2; ${styleStr}" loading="lazy" onerror="this.onerror=null; this.src='${fbPlaceholder}'; this.style.objectFit='contain'; this.style.opacity='0.2';">
               </div>
             `;
           }
@@ -1421,6 +1839,8 @@ document.addEventListener('DOMContentLoaded', () => {
         card.className = 'post-card';
         card.style.position = 'relative';
 
+        const urlLower = (post.imageUrl || '').toLowerCase();
+
         let imgHtml = '';
         if (post.imageUrl && post.imageUrl.trim() !== '') {
           // Parse saved values. Check if it's a legacy value (cover/contain) or the new zoom format (scale number)
@@ -1448,7 +1868,14 @@ document.addEventListener('DOMContentLoaded', () => {
             styleStr = `object-position: ${parsedPos}; object-fit: ${objSizeStr};`;
           }
 
-          const urlLower = post.imageUrl.toLowerCase();
+          let startVal = '';
+          let endVal = '';
+          if (post.imagePosition && post.imagePosition.includes('|')) {
+             const parts = post.imagePosition.split('|');
+             startVal = parts[1] || '';
+             endVal = parts[2] || '';
+          }
+
           const ytId = getYouTubeVideoId(post.imageUrl);
           const fbEmbedUrl = getFacebookVideoUrl(post.imageUrl);
 
@@ -1476,12 +1903,18 @@ document.addEventListener('DOMContentLoaded', () => {
             urlLower.endsWith('.mp4') || urlLower.endsWith('.webm')
           ) {
             // Direct video link (non-Cloudinary): Remove autoplay to prevent multiple videos playing
-            imgHtml = `<div style="position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #1a1a1a; border-radius: 4px;"><video src="${post.imageUrl}" class="post-image" style="width: 100%; height: 100%; ${styleStr}" preload="metadata"></video></div>`;
+            let mediaHash = '';
+            if (startVal && endVal) mediaHash = `#t=${startVal},${endVal}`;
+            else if (startVal) mediaHash = `#t=${startVal}`;
+            else if (endVal) mediaHash = `#t=0,${endVal}`;
+
+            imgHtml = `<div style="position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #1a1a1a; border-radius: 4px;"><video src="${post.imageUrl}${mediaHash}" class="post-image" style="width: 100%; height: 100%; ${styleStr}" preload="metadata" controls></video></div>`;
           } else if (urlLower.includes('drive.google.com/file/d/') && urlLower.includes('/preview')) {
             // Legacy preview (static iframe)
             imgHtml = `<div style="position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #1a1a1a; border-radius: 4px;"><iframe src="${post.imageUrl}" class="post-image" style="border: none; width: 100%; height: 100%; ${styleStr}"></iframe></div>`;
           } else {
-            imgHtml = `<div style="position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #1a1a1a; border-radius: 4px;"><img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="post-image" style="width: 100%; height: 100%; ${styleStr}" loading="lazy"></div>`;
+            const fallbackSquare = 'https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png';
+            imgHtml = `<div style="position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #1a1a1a; border-radius: 4px; display: flex; align-items: center; justify-content: center;"><img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="post-image" style="width: 100%; height: 100%; ${styleStr}" loading="lazy" onerror="this.onerror=null; this.src='${fallbackSquare}'; this.style.objectFit='contain'; this.style.opacity='0.2'; this.style.width='50%';"></div>`;
           }
         }
 
@@ -1510,21 +1943,36 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('post-title').value = post.title;
             document.getElementById('post-desc').value = post.description;
 
-            const imgInput = document.getElementById('post-img');
-            if (imgInput) {
-              imgInput.value = post.imageUrl;
-              imgInput.dispatchEvent(new Event('input'));
+            const posInput = document.getElementById('post-img-pos');
+            let p = post.imagePosition || '50% 50%';
+            let startVal = '';
+            let endVal = '';
+            if (p.includes('|')) {
+                const parts = p.split('|');
+                p = parts[0];
+                startVal = parts[1] || '';
+                endVal = parts[2] || '';
             }
 
-            const posInput = document.getElementById('post-img-pos');
             if (posInput) {
-              const p = post.imagePosition || '50% 50%';
               posInput.value = p;
               const coordsDisplay = document.getElementById('post-preview-coords');
               if (coordsDisplay) coordsDisplay.textContent = p;
+
+              const vStart = document.getElementById('post-video-start');
+              const vEnd = document.getElementById('post-video-end');
+              if (vStart) vStart.value = startVal;
+              if (vEnd) vEnd.value = endVal;
+            }
+
+            const imgInput = document.getElementById('post-img');
+            if (imgInput) {
+              imgInput.value = post.imageUrl;
+              imgInput.dispatchEvent(new CustomEvent('input', { detail: { keepValues: true } }));
             }
 
             const hiddenSizeVal = document.getElementById('post-img-size-val');
+
             const zoomSlider = document.getElementById('post-img-zoom');
             const zoomValDisplay = document.getElementById('post-preview-zoom-val');
             const transformWrapper = document.getElementById('post-preview-transform-wrapper');
@@ -1537,7 +1985,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (post.imageSize && post.imageSize !== 'cover' && post.imageSize !== 'contain') {
               initialZoom = parseFloat(post.imageSize);
               if (isNaN(initialZoom)) initialZoom = 1;
-              const pParts = (post.imagePosition || '0 0').split(' ');
+              const pParts = (p || '0 0').split(' ');
               if (pParts.length >= 2) {
                 initialTrX = parseFloat(pParts[0]) || 0;
                 initialTrY = parseFloat(pParts[1]) || 0;
@@ -1548,7 +1996,9 @@ document.addEventListener('DOMContentLoaded', () => {
               window.setPreviewTransformState(initialZoom, initialTrX, initialTrY);
             }
 
+
             form.setAttribute('data-edit-timestamp', post.timestamp);
+
             modal.classList.remove('hidden');
           };
           actionArea.appendChild(editBtn);
@@ -1739,6 +2189,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const fbIframeEl = activeSlide.querySelector('.fb-video-wrapper');
       const driveIframeEl = activeSlide.querySelector('iframe.drive-video-frame');
 
+      const curStart = parseFloat(activeSlide.dataset.start) || 0;
+      const curEnd = parseFloat(activeSlide.dataset.end) || 0;
+
       // Handle CSS Unified Fullscreen
       const isVideoSlide = (videoEl || iframeEl || fbIframeEl || driveIframeEl);
 
@@ -1810,9 +2263,19 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       if (videoEl) {
-        videoEl.currentTime = 0;
+        videoEl.currentTime = curStart;
         videoEl.muted = !tvAudioEnabled;
         videoEl.play().catch(e => console.error('Video play prevented:', e));
+        
+        videoEl.ontimeupdate = function() {
+           if (curEnd > 0 && videoEl.currentTime >= curEnd) {
+              if (myGeneration === globalSlideGeneration && slides.length > 1) {
+                 videoEl.ontimeupdate = null; // Prevent double trigger
+                 next();
+              }
+           }
+        };
+        
         videoEl.onended = function () {
           if (myGeneration === globalSlideGeneration && slides.length > 1) next();
         };
@@ -1833,7 +2296,8 @@ document.addEventListener('DOMContentLoaded', () => {
               const duration = player.getDuration();
               const currentTime = player.getCurrentTime();
               // Advance if video is within 1.5s of end
-              if (state === 0 || (duration > 0 && currentTime >= (duration - 1.5))) {
+              const effectiveEnd = (curEnd > 0) ? curEnd : duration;
+              if (state === 0 || (effectiveEnd > 0 && currentTime >= (effectiveEnd - 1.5))) {
                 console.log('YouTube auto-advancing slide:', myPlayerId);
                 clearInterval(checkInterval);
                 next();
@@ -1848,6 +2312,7 @@ document.addEventListener('DOMContentLoaded', () => {
               'onReady': function (event) {
                 if (tvAudioEnabled) event.target.unMute();
                 else event.target.mute();
+                if (curStart > 0) event.target.seekTo(curStart);
                 event.target.playVideo();
                 startYTPolling(event.target);
               },
@@ -1864,7 +2329,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const player = ytPlayers[iframeId];
             if (tvAudioEnabled) player.unMute();
             else player.mute();
-            player.seekTo(0);
+            player.seekTo(curStart);
             player.playVideo();
             startYTPolling(player);
           } catch (e) {
@@ -1891,6 +2356,7 @@ document.addEventListener('DOMContentLoaded', () => {
                  try {
                     if (tvAudioEnabled) player.unmute();
                     else player.mute();
+                    if (curStart > 0) player.seek(curStart);
                     player.play();
 
                     if (!player._hasFinishedListener) {
@@ -1901,6 +2367,21 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         });
                     }
+
+                    // Poll for custom end time
+                    const fbPoll = setInterval(() => {
+                        if (myGeneration !== globalSlideGeneration) {
+                            clearInterval(fbPoll);
+                            return;
+                        }
+                        try {
+                           const pos = player.getCurrentPosition();
+                           if (curEnd > 0 && pos >= curEnd) {
+                               clearInterval(fbPoll);
+                               next();
+                           }
+                        } catch(e){}
+                    }, 500);
                  } catch(e) {
                     console.error('FB Player Error:', e);
                  }

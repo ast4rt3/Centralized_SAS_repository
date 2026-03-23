@@ -2248,3 +2248,48 @@ body.tv-mode.theater-mode .home-news {
   margin-left: 0 !important;
   width: 100% !important;
 }
+
+/* === Dual Range Slider === */
+.dual-range-slider {
+  position: relative;
+  height: 30px;
+  margin-top: -6px;
+}
+
+.dual-range-input {
+  position: absolute;
+  width: 100%;
+  top: 8px;
+  -webkit-appearance: none;
+  appearance: none;
+  pointer-events: none;
+  background: none;
+  margin: 0;
+  outline: none;
+  z-index: 2;
+}
+
+/* Make only the thumb pointer-eventsable so we can drag it */
+.dual-range-input::-webkit-slider-thumb {
+  pointer-events: auto;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: var(--nbsc-gold);
+  border: 2px solid white;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.dual-range-input::-moz-range-thumb {
+  pointer-events: auto;
+  width: 16px;
+  height: 16px;
+  background: var(--nbsc-gold);
+  border: 2px solid white;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}

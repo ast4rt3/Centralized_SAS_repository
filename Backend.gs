@@ -85,6 +85,7 @@ function doPost(e) {
       case "deletePost":       return handleDeletePost(payload);
       case "toggleTvVisible":  return handleToggleTvVisible(payload);
       case "updateTvSettings": return handleUpdateTvSettings(payload);
+      case "uploadToDrive":    return respondJSON(uploadToDrive(payload.fileData, payload.fileName));
       default:
         return respondJSON({ success: false, message: "Unknown action: " + payload.action });
     }
@@ -373,5 +374,32 @@ function testCloudinaryAuth() {
     Logger.log("✅ Cloudinary Auth Success! Result: " + res.getContentText());
   } catch (e) {
     Logger.log("❌ Cloudinary Auth Failed! Error: " + e.message);
+  }
+}
+
+// --------------------------------------------------------------
+// Google Drive Upload (For Large Media > 90MB)
+// --------------------------------------------------------------
+function uploadToDrive(base64Data, fileName) {
+  try {
+    if (!base64Data) return { success: false, message: "No file data received." };
+    
+    // Decode Base64 string to blob
+    const decoded = Utilities.base64Decode(base64Data);
+    const blob = Utilities.newBlob(decoded, null, fileName || ("upload_" + new Date().getTime()));
+    
+    // Create file in root (or specify a folder ID)
+    const file = DriveApp.createFile(blob);
+    
+    // Set sharing so anybody with the link can view (important for TV display)
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    
+    return { 
+      success: true, 
+      url: file.getUrl().replace("/view?usp=drivesdk", "/preview"), // Better for iframes
+      message: "Uploaded to Google Drive successfully!" 
+    };
+  } catch (err) {
+    return { success: false, message: "Drive Upload Error: " + err.toString() };
   }
 }

@@ -236,7 +236,7 @@
                 <label for="post-file" class="file-upload-label" id="file-upload-label">
                   <span id="file-label-text">Click to choose an image or drag &amp; drop</span>
                   <span style="font-size:0.75rem; color:var(--text-muted); display:block; margin-top:4px;">JPG, PNG,
-                    GIF, MP4, WEBM — Practical limit ~35MB &nbsp;|&nbsp; Large videos should use YouTube for best TV
+                    GIF, MP4, WEBM — Practical limit ~100MB &nbsp;|&nbsp; Large videos should use YouTube for best TV
                     performance</span>
                 </label>
                 <input type="file" id="post-file" accept="image/*,video/mp4,video/webm" style="display:none;">
@@ -282,6 +282,46 @@
               <input type="hidden" id="post-img-pos" value="0 0">
               <input type="hidden" id="post-img-size-val" value="1">
             </div>
+
+            <div class="input-group" id="post-video-settings-group" style="display: none; margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+              <label>Video Playback Range</label>
+
+              <!-- Video Preview Container -->
+              <div id="video-preview-wrapper" style="width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 8px; overflow: hidden; position: relative; margin-bottom: 12px; display: flex; align-items: center; justify-content: center;">
+                 <video id="video-preview-player" style="width: 100%; height: 100%; object-fit: contain; display: none;" controls preload="metadata"></video>
+                 <div id="video-preview-iframe-wrapper" style="width: 100%; height: 100%; display: none;"></div>
+                 <div id="video-preview-loading" style="display: none; position: absolute; inset: 0; color: white; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; background: rgba(0,0,0,0.5);">
+                    <div class="spinner" style="margin-bottom: 8px;"></div>
+                    <span>Loading preview...</span>
+                 </div>
+              </div>
+
+              <!-- Range Slider Controls -->
+              <div class="video-range-container" style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
+                 <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600; color: var(--text-color);">
+                       <span>Start Time</span>
+                       <span id="video-start-display" style="color: var(--nbsc-gold);">00:00</span>
+                    </div>
+                    <input type="range" id="post-video-slider-start" min="0" max="100" value="0" step="1" style="width: 100%; cursor: pointer;">
+                 </div>
+                 
+                 <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600; color: var(--text-color);">
+                       <span>End Time</span>
+                       <span id="video-duration-display" style="color: var(--nbsc-gold);">00:00</span>
+                    </div>
+                    <input type="range" id="post-video-slider-end" min="0" max="100" value="100" step="1" style="width: 100%; cursor: pointer;">
+                 </div>
+
+                 <!-- Hidden inputs mapping to previous logic -->
+                 <input type="hidden" id="post-video-start">
+                 <input type="hidden" id="post-video-end">
+              </div>
+
+              <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 6px;">Drag sliders to extract a clip. Available for YouTube and direct video files.</span>
+            </div>
+
             <div id="post-error" class="login-error hidden">Error submitting post.</div>
           </div>
           <div class="modal-footer">
