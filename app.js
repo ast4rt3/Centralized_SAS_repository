@@ -32,6 +32,13 @@ let tvTheaterEnabled = false; // Default to non-fullscreen for VIDEOS
 document.addEventListener('DOMContentLoaded', () => {
 
   // --- TV Clock Logic ---
+  // Utility to extract Drive ID
+  function getDriveId(url) {
+    if (!url) return null;
+    const match = url.match(/[?&]id=([^&#]+)/) || url.match(/\/file\/d\/([^/?#]+)/);
+    return match ? match[1] : null;
+  }
+
   class DigitCounter {
     constructor(parent, initialValue = '0') {
       this.parent = parent;
@@ -879,7 +886,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sliderStart) sliderStart.addEventListener('input', onSliderInput);
     if (sliderEnd) sliderEnd.addEventListener('input', onSliderInput);
 
-    async function uploadToGoogleDriveResumable(file, onProgress) {
+    // Optimized Google Drive Resumable Upload
+  async function uploadToGoogleDriveResumable(file, onProgress) {
       // 1. Get OAuth Token from GAS
       const tokenRes = await fetch(BACKEND_GAS_URL, {
         method: 'POST',
@@ -1365,13 +1373,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const isLarge = file.size > 40 * 1024 * 1024;
 
             if (isVideo && isLarge) {
-               submitBtn.textContent = 'Sending to Mega Storage (Google Drive)...';
+               submitBtn.textContent = 'Uploading to Mega Storage (Optimized Drive)...';
                try {
                   cloudData = await uploadToGoogleDriveResumable(file, (pct) => {
                      submitBtn.textContent = `Mega Upload... ${pct}%`;
                   });
                } catch(e) {
-                  console.warn('Google Drive upload failed', e);
+                  console.warn('Google Drive Fast Mode upload failed', e);
                   throw new Error("Mega Storage (Google Drive) upload failed. " + e.message);
                }
             } else if (file.size > 10 * 1024 * 1024) {
@@ -1716,6 +1724,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
           if (isVideo) {
             slide.classList.add('has-video');
+            const dId = getDriveId(post.imageUrl);
+            if (dId) {
+              // Convert any Drive link to High-Speed Direct Stream
+              post.imageUrl = `https://drive.google.com/uc?id=${dId}&export=download`;
+            }
           }
 
           let bgThumb = '';
@@ -2128,10 +2141,28 @@ document.addEventListener('DOMContentLoaded', () => {
     // Force immediate layout update for the first slide (slide 0)
     // This ensures clock reparenting and other immersive states are applied instantly.
     setActive(0);
+    preloadNext(0);
 
     function next() {
       var nextIndex = (current + 1) % slides.length;
       setActive(nextIndex);
+      preloadNext(nextIndex);
+    }
+
+    function preloadNext(index) {
+      const nextIdx = (index + 1) % slides.length;
+      const nextSlide = slides[nextIdx];
+      const video = nextSlide.querySelector('video.home-news-image');
+      if (video) {
+        video.preload = "auto";
+        // Create a hidden ghost video to force the browser to start buffering the network stream
+        const ghost = document.createElement('video');
+        ghost.style.display = 'none';
+        ghost.preload = 'auto';
+        ghost.src = video.src;
+        document.body.appendChild(ghost);
+        setTimeout(() => ghost.remove(), 10000); // Clean up after a bit
+      }
     }
 
     function setActive(index) {
