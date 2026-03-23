@@ -10,6 +10,7 @@ const masterDatabaseID = "1PJ21kipAuQ_a0GzSkG8r9UFDRdCEDXwytIu7SZWm7cs";
 const CLOUDINARY_CLOUD_NAME = "dj8ugtlrl";
 const CLOUDINARY_API_KEY    = "317748295364596"; // Paste your API Key here
 const CLOUDINARY_API_SECRET = "joU83X6PhU-gltP-USzsYqperzM"; // Paste your API Secret here
+const DRIVE_FOLDER_ID       = "1WJ9pa_ZcDWEz-t2MssgLE1gUB-kMZOyv";
 
 // --------------------------------------------------------------
 // doGet — Fetch all posts + global TV settings
@@ -86,6 +87,8 @@ function doPost(e) {
       case "toggleTvVisible":  return handleToggleTvVisible(payload);
       case "updateTvSettings": return handleUpdateTvSettings(payload);
       case "uploadToDrive":    return respondJSON(uploadToDrive(payload.fileData, payload.fileName));
+      case "getDriveToken":    return respondJSON({ success: true, token: ScriptApp.getOAuthToken() });
+      case "setFilePublic":    return respondJSON(setFilePublic(payload.fileId));
       default:
         return respondJSON({ success: false, message: "Unknown action: " + payload.action });
     }
@@ -388,8 +391,9 @@ function uploadToDrive(base64Data, fileName) {
     const decoded = Utilities.base64Decode(base64Data);
     const blob = Utilities.newBlob(decoded, null, fileName || ("upload_" + new Date().getTime()));
     
-    // Create file in root (or specify a folder ID)
-    const file = DriveApp.createFile(blob);
+    // Create file in specific folder
+    const folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+    const file = folder.createFile(blob);
     
     // Set sharing so anybody with the link can view (important for TV display)
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
@@ -401,5 +405,19 @@ function uploadToDrive(base64Data, fileName) {
     };
   } catch (err) {
     return { success: false, message: "Drive Upload Error: " + err.toString() };
+  }
+}
+
+function setFilePublic(fileId) {
+  try {
+    const file = DriveApp.getFileById(fileId);
+    // Move to organized folder
+    const folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+    file.moveTo(folder);
+    
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    return { success: true, url: file.getUrl().replace("/view?usp=drivesdk", "/preview") };
+  } catch (e) {
+    return { success: false, message: e.toString() };
   }
 }

@@ -879,66 +879,70 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sliderStart) sliderStart.addEventListener('input', onSliderInput);
     if (sliderEnd) sliderEnd.addEventListener('input', onSliderInput);
 
-    async function compressVideo(file, targetWidth = 1280, targetHeight = 720, bitrate = 2500000) {
+    async function uploadToGoogleDriveResumable(file, onProgress) {
+      // 1. Get OAuth Token from GAS
+      const tokenRes = await fetch(BACKEND_GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: "getDriveToken" })
+      });
+      const tokenData = await tokenRes.json();
+      if (!tokenData.success || !tokenData.token) throw new Error("Could not get Drive authorization token.");
+      const token = tokenData.token;
+
+      // 2. Initiate Resumable Session
+      const metadata = {
+        name: file.name,
+        mimeType: file.type
+      };
+
+      const initRes = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable", {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json; charset=UTF-8'
+        },
+        body: JSON.stringify(metadata)
+      });
+
+      if (!initRes.ok) throw new Error("Failed to initiate Google Drive session.");
+      const location = initRes.headers.get('Location');
+
+      // 3. Upload File logic using XHR for progress
       return new Promise((resolve, reject) => {
-        const video = document.createElement('video');
-        video.src = URL.createObjectURL(file);
-        video.muted = true;
-        video.playsInline = true;
+        const xhr = new XMLHttpRequest();
+        xhr.open('PUT', location, true);
+        xhr.setRequestHeader('Content-Range', `bytes 0-${file.size - 1}/${file.size}`);
         
-        video.onloadedmetadata = () => {
-          const canvas = document.createElement('canvas');
-          let width = video.videoWidth;
-          let height = video.videoHeight;
-          
-          if (width > targetWidth || height > targetHeight) {
-             const ratio = Math.min(targetWidth / width, targetHeight / height);
-             width *= ratio;
-             height *= ratio;
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable && onProgress) {
+            const pct = Math.round((e.loaded / e.total) * 100);
+            onProgress(pct);
           }
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          
-          const stream = canvas.captureStream(30); 
-          let recorder;
-          try {
-            recorder = new MediaRecorder(stream, {
-              mimeType: 'video/webm;codecs=vp8',
-              videoBitsPerSecond: bitrate
+        };
+
+        xhr.onload = async () => {
+          if (xhr.status === 200 || xhr.status === 201) {
+            const finalData = JSON.parse(xhr.responseText);
+            const fileId = finalData.id;
+            
+            // 4. Set Public via GAS
+            const setPublicRes = await fetch(BACKEND_GAS_URL, {
+              method: 'POST',
+              body: JSON.stringify({ action: "setFilePublic", fileId: fileId })
             });
-          } catch(e) {
-            recorder = new MediaRecorder(stream, { videoBitsPerSecond: bitrate });
+            const setPublicData = await setPublicRes.json();
+            
+            resolve({ 
+              secure_url: `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`, 
+              public_id: fileId,
+              drivePreviewUrl: setPublicData.url || `https://drive.google.com/file/d/${fileId}/preview`
+            });
+          } else {
+            reject(new Error("Drive upload failed: " + xhr.statusText));
           }
-          
-          const chunks = [];
-          recorder.ondataavailable = (e) => chunks.push(e.data);
-          recorder.onstop = () => {
-             const blob = new Blob(chunks, { type: recorder.mimeType || 'video/webm' });
-             const ext = (recorder.mimeType && recorder.mimeType.includes('mp4')) ? '.mp4' : '.webm';
-             resolve(new File([blob], file.name.replace(/\.[^/.]+$/, "") + "_optimized" + ext, { type: blob.type }));
-             URL.revokeObjectURL(video.src);
-          };
-          
-          video.playbackRate = 4.0; 
-          recorder.start();
-          video.play();
-          
-          const drawFrame = () => {
-            if (video.paused || video.ended) return;
-            ctx.drawImage(video, 0, 0, width, height);
-            requestAnimationFrame(drawFrame);
-          };
-          drawFrame();
-          
-          video.onended = () => {
-            recorder.stop();
-          };
         };
-        video.onerror = (e) => {
-           URL.revokeObjectURL(video.src);
-           reject(e);
-        };
+        xhr.onerror = () => reject(new Error("Network error during Drive upload."));
+        xhr.send(file);
       });
     }
 
@@ -1353,26 +1357,17 @@ document.addEventListener('DOMContentLoaded', () => {
                try {
                   file = await compressImage(file);
                } catch(e) { console.warn('Image compression failed', e); }
-            } else if (isVideo && file.size > 50 * 1024 * 1024) {
-               // Must compress videos over 50MB client-side to fit Cloudinary's 100MB limit and save storage
-               submitBtn.textContent = 'Optimizing Video for Upload (Please wait)...';
-               try {
-                  file = await compressVideo(file);
-               } catch(e) { 
-                  console.warn('Video compression failed', e);
-                  throw new Error("Video is too large (100MB limit) and optimization failed. Please use a smaller file or YouTube.");
-               }
-            }
+            } 
 
-            submitBtn.textContent = 'Uploading to Cloudinary...';
+            submitBtn.textContent = 'Uploading...';
 
             let cloudData;
-            const isLarge = file.size > 90 * 1024 * 1024;
+            const isLarge = file.size > 40 * 1024 * 1024;
 
             if (isVideo && isLarge) {
                submitBtn.textContent = 'Sending to Mega Storage (Google Drive)...';
                try {
-                  cloudData = await uploadToGoogleDrive(file, (pct) => {
+                  cloudData = await uploadToGoogleDriveResumable(file, (pct) => {
                      submitBtn.textContent = `Mega Upload... ${pct}%`;
                   });
                } catch(e) {
@@ -1397,8 +1392,8 @@ document.addEventListener('DOMContentLoaded', () => {
                cloudData = await cloudRes.json();
             }
 
-            if (cloudData && cloudData.secure_url) {
-               cloudinaryUrl = cloudData.secure_url;
+            if (cloudData && (cloudData.secure_url || cloudData.drivePreviewUrl)) {
+               cloudinaryUrl = cloudData.drivePreviewUrl || cloudData.secure_url;
                cloudinaryPublicId = cloudData.public_id;
             } else {
                throw new Error("Cloudinary Error: " + (cloudData && cloudData.error ? cloudData.error.message : "Upload failed"));
@@ -1633,6 +1628,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderPosts(posts, container, role) {
+    // Prevent duplicate dots/tickers on re-render by clearing elements leaked to body
+    const existingDots = document.body.querySelector('.home-news-dots');
+    if (existingDots) existingDots.remove();
+    const existingTicker = document.body.querySelector('.home-news-ticker');
+    if (existingTicker) existingTicker.remove();
+
     container.innerHTML = '';
     ytPlayers = {}; // Clear previous instances
 
