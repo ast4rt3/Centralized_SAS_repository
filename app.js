@@ -396,15 +396,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 4000);
   }
 
-  function showConfirm(title, message, showPassword = false) {
+  function showConfirm(title, message, showPassword = false, type = 'info') {
     return new Promise((resolve) => {
       const modal = document.getElementById('confirm-modal');
+      const card = modal.querySelector('.modal-card');
       const titleEl = document.getElementById('confirm-modal-title');
       const messageEl = document.getElementById('confirm-modal-message');
+      const iconEl = document.getElementById('confirm-modal-icon');
       const inputGroup = document.getElementById('confirm-modal-input-group');
       const passwordInput = document.getElementById('confirm-modal-password');
       const cancelBtn = document.getElementById('confirm-modal-cancel');
       const okBtn = document.getElementById('confirm-modal-ok');
+
+      // Clear previous types
+      card.classList.remove('modal-danger', 'modal-warning', 'modal-success', 'modal-info');
+      card.classList.add(`modal-${type}`);
+
+      // Set Icon
+      const icons = {
+        danger: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`,
+        warning: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`,
+        info: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`,
+        success: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`
+      };
+      iconEl.innerHTML = icons[type] || icons.info;
 
       titleEl.textContent = title;
       messageEl.textContent = message;
@@ -417,13 +432,26 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       modal.classList.remove('hidden');
+      
+      // Accessibility: Autofocus
+      if (showPassword) {
+        passwordInput.focus();
+      } else {
+        okBtn.focus();
+      }
 
       const cleanup = (result) => {
         modal.classList.add('hidden');
         cancelBtn.onclick = null;
         okBtn.onclick = null;
+        document.removeEventListener('keydown', handleEsc);
         resolve(result);
       };
+
+      const handleEsc = (e) => {
+        if (e.key === 'Escape') cleanup(null);
+      };
+      document.addEventListener('keydown', handleEsc);
 
       cancelBtn.onclick = () => cleanup(null);
       okBtn.onclick = () => {
@@ -431,12 +459,18 @@ document.addEventListener('DOMContentLoaded', () => {
           const pass = passwordInput.value.trim();
           if (!pass) {
             showToast("Password is required", "error");
+            passwordInput.focus();
             return;
           }
           cleanup(pass);
         } else {
           cleanup(true);
         }
+      };
+
+      // Close on overlay click
+      modal.onclick = (e) => {
+        if (e.target === modal) cleanup(null);
       };
     });
   }
@@ -1060,6 +1094,14 @@ document.addEventListener('DOMContentLoaded', () => {
         activeUploadTab = btn.dataset.tab;
         Object.values(uploadPanels).forEach(p => p && p.classList.add('hidden'));
         if (uploadPanels[activeUploadTab]) uploadPanels[activeUploadTab].classList.remove('hidden');
+
+        const liveToggle = document.querySelector('.live-stream-toggle');
+        if (activeUploadTab === 'upload') {
+           if (liveToggle) liveToggle.classList.add('hidden');
+        } else if (imgInput && imgInput.value.trim()) {
+           // Trigger URL detection if switching back to URL tab with a value
+           imgInput.dispatchEvent(new CustomEvent('input', { detail: { keepValues: true } }));
+        }
       });
     });
 
@@ -1125,7 +1167,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             urlLower.includes('drive.google.com') || 
                             urlLower.includes('/video/upload/');
             
+            const liveToggle = document.querySelector('.live-stream-toggle');
+            
             if (isVideo) {
+              if (liveToggle) liveToggle.classList.remove('hidden');
               previewGroup.style.display = 'none';
               if (videoSettingsGroup) videoSettingsGroup.style.display = 'block';
               if (window.loadPreviewVideo) {
@@ -1133,11 +1178,14 @@ document.addEventListener('DOMContentLoaded', () => {
                  window.loadPreviewVideo(url, false, !keep);
               }
             } else {
+              if (liveToggle) liveToggle.classList.add('hidden');
               if (videoSettingsGroup) videoSettingsGroup.style.display = 'none';
               previewImg.src = url;
               previewGroup.style.display = 'block';
             }
           } else {
+            const liveToggle = document.querySelector('.live-stream-toggle');
+            if (liveToggle) liveToggle.classList.add('hidden');
             previewGroup.style.display = 'none';
             if (videoSettingsGroup) videoSettingsGroup.style.display = 'none';
           }
@@ -1271,6 +1319,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (videoSettingsGroup) videoSettingsGroup.style.display = 'none';
         if (videoStartInput) videoStartInput.value = '';
         if (videoEndInput) videoEndInput.value = '';
+        
+        // Reset scheduling fields
+        const startDateInput = document.getElementById('post-start-date');
+        const endDateInput = document.getElementById('post-end-date');
+        const isLiveInput = document.getElementById('post-is-live');
+        if (startDateInput) startDateInput.value = '';
+        if (endDateInput) endDateInput.value = '';
+        if (isLiveInput) isLiveInput.checked = false;
+
         if (window.setPreviewTransformState) {
           window.setPreviewTransformState(1, 0, 0);
         }
@@ -1306,11 +1363,52 @@ document.addEventListener('DOMContentLoaded', () => {
           imgPos = `${imgPos}|${startVal}|${endVal}`;
         }
 
+        const startDate = document.getElementById('post-start-date') ? document.getElementById('post-start-date').value : '';
+        const endDate = document.getElementById('post-end-date') ? document.getElementById('post-end-date').value : '';
+        const isLive = document.getElementById('post-is-live') ? document.getElementById('post-is-live').checked : false;
+
         const submitBtn = document.getElementById('submit-post-btn');
         const origText = submitBtn.textContent;
 
-        submitBtn.textContent = "Saving...";
-        submitBtn.disabled = true;
+        const zzProgress = {
+          start: () => {
+            submitBtn.classList.add('active');
+            submitBtn.setAttribute('data-progress', '0');
+            submitBtn.style.setProperty('--zz-progress', '0');
+            submitBtn.disabled = true;
+          },
+          update: (pct) => {
+            submitBtn.setAttribute('data-progress', Math.round(pct));
+            submitBtn.style.setProperty('--zz-progress', pct);
+          },
+          done: () => {
+             return new Promise(resolve => {
+                submitBtn.classList.remove('active');
+                submitBtn.classList.add('progress-done-pre');
+                const onAnimEnd = (e) => {
+                   if (e.animationName === 'progress-done-pre') {
+                      submitBtn.classList.add('zz-button-progress-done');
+                      setTimeout(() => {
+                         submitBtn.classList.add('zz-button-progress-done-active');
+                         setTimeout(() => {
+                            submitBtn.removeEventListener('animationend', onAnimEnd);
+                            resolve();
+                         }, 1500);
+                      }, 100);
+                   }
+                };
+                submitBtn.addEventListener('animationend', onAnimEnd);
+             });
+          },
+          reset: () => {
+            submitBtn.classList.remove('active', 'progress-done-pre', 'zz-button-progress-done', 'zz-button-progress-done-active');
+            submitBtn.textContent = origText;
+            submitBtn.disabled = false;
+            submitBtn.removeAttribute('data-progress');
+            submitBtn.style.removeProperty('--zz-progress');
+          }
+        };
+
         if (errorMsg) errorMsg.classList.add('hidden');
 
         try {
@@ -1322,18 +1420,19 @@ document.addEventListener('DOMContentLoaded', () => {
           const confirmPass = await showConfirm(
             isEdit ? "Confirm Edit" : "Confirm Post",
             `Please enter your password to ${isEdit ? 'update' : 'publish'} this post:`,
-            true
+            true,
+            isEdit ? 'info' : 'success'
           );
 
           if (!confirmPass) {
-            submitBtn.textContent = origText;
-            submitBtn.disabled = false;
+            zzProgress.reset();
             return;
           }
 
+          zzProgress.start();
+
           // --- 1. PRE-VERIFY CREDENTIALS ---
-          // This stops the process immediately if the password is wrong, before uploading files.
-          submitBtn.textContent = 'Verifying credentials...';
+          zzProgress.update(5);
           const loginCheck = await fetch(BACKEND_GAS_URL, {
             method: 'POST',
             body: JSON.stringify({
@@ -1361,22 +1460,23 @@ document.addEventListener('DOMContentLoaded', () => {
             const isImage = file.type.startsWith('image/');
             const isVideo = file.type.startsWith('video/');
             if (isImage) {
-               submitBtn.textContent = 'Compressing Image...';
+               zzProgress.update(7);
                try {
                   file = await compressImage(file);
                } catch(e) { console.warn('Image compression failed', e); }
+               zzProgress.update(10);
             } 
 
-            submitBtn.textContent = 'Uploading...';
+            zzProgress.update(12);
 
             let cloudData;
             const isLarge = file.size > 40 * 1024 * 1024;
 
             if (isVideo && isLarge) {
-               submitBtn.textContent = 'Uploading to Mega Storage (Optimized Drive)...';
+               zzProgress.update(11);
                try {
                   cloudData = await uploadToGoogleDriveResumable(file, (pct) => {
-                     submitBtn.textContent = `Mega Upload... ${pct}%`;
+                     zzProgress.update(12 + (pct * 0.7));
                   });
                } catch(e) {
                   console.warn('Google Drive Fast Mode upload failed', e);
@@ -1385,7 +1485,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (file.size > 10 * 1024 * 1024) {
                // Use chunked upload for files over 10MB
                cloudData = await uploadFileChunked(file, CLOUDINARY_UPLOAD_PRESET, CLOUDINARY_CLOUD_NAME, (pct) => {
-                  submitBtn.textContent = `Uploading... ${pct}%`;
+                  zzProgress.update(12 + (pct * 0.7));
                });
             } else {
                const formData = new FormData();
@@ -1418,41 +1518,46 @@ document.addEventListener('DOMContentLoaded', () => {
             imageUrl: cloudinaryUrl,
             cloudinaryPublicId: cloudinaryPublicId,
             imagePosition: imgPos,
-            imageSize: imgSize
+            imageSize: imgSize,
+            startDate: startDate,
+            endDate: endDate,
+            isLive: isLive
           };
 
           if (isEdit) payload.timestamp = editTimestamp;
           console.log("Submitting Payload to Backend:", payload);
 
-          submitBtn.textContent = 'Updating Spreadsheet...';
-
+          zzProgress.update(85);
           const r = await fetch(BACKEND_GAS_URL, {
             method: 'POST',
             body: JSON.stringify(payload)
           });
 
           const responseData = await r.json();
+          zzProgress.update(100);
           console.log("Backend Response:", responseData);
+
           if (responseData.success) {
+            await zzProgress.done();
             modal.classList.add('hidden');
             form.reset();
             showToast(responseData.message || "Post updated successfully!", 'success');
+            zzProgress.reset();
             fetchPosts(); // Refresh the feed
           } else {
+            zzProgress.reset();
             if (errorMsg) {
               errorMsg.textContent = responseData.message || "Failed to post.";
               errorMsg.classList.remove('hidden');
             }
           }
         } catch (err) {
+          zzProgress.reset();
           if (errorMsg) {
             errorMsg.textContent = err.message || "Network error. Could not post.";
             errorMsg.classList.remove('hidden');
           }
           console.error("Upload Error:", err);
-        } finally {
-          submitBtn.textContent = origText;
-          submitBtn.disabled = false;
         }
       });
     }
@@ -1635,6 +1740,37 @@ document.addEventListener('DOMContentLoaded', () => {
     return null;
   }
 
+  async function expirePostOnBackend(timestamp) {
+    const sessionData = sessionStorage.getItem('sas_user_data');
+    if (!sessionData) return;
+    
+    try {
+      const userObj = JSON.parse(sessionData);
+      const payload = {
+        action: "expirePost",
+        username: userObj.username,
+        password: userObj.password || "",
+        timestamp: timestamp
+      };
+
+      const r = await fetch(BACKEND_GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+
+      const res = await r.json();
+      if (res.success) {
+        console.log("Post auto-expired successfully:", timestamp);
+        // We don't necessarily need to fetchPosts() immediately here 
+        // as the carousel will advance anyway, but we could if we want UI sync.
+      } else {
+        console.warn("Post auto-expiry failed:", res.message);
+      }
+    } catch (e) {
+      console.error("Error during post auto-expiry:", e);
+    }
+  }
+
   function renderPosts(posts, container, role) {
     // Prevent duplicate dots/tickers on re-render by clearing elements leaked to body
     const existingDots = document.body.querySelector('.home-news-dots');
@@ -1648,7 +1784,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const isActualTvMode = role === 'tv' || document.body.classList.contains('tv-mode');
 
     if (isActualTvMode) {
-      let tvPosts = posts.filter(p => String(p.showOnTv).toLowerCase() !== 'false');
+      const now = new Date();
+      let tvPosts = posts.filter(p => {
+        // 1. Check showOnTv flag
+        if (String(p.showOnTv).toLowerCase() === 'false') return false;
+        
+        // 2. Check Start Date
+        if (p.startDate) {
+          const start = new Date(p.startDate);
+          if (now < start) return false;
+        }
+        
+        // 3. Check End Date
+        if (p.endDate) {
+          const end = new Date(p.endDate);
+          if (now > end) return false;
+        }
+        
+        return true;
+      });
 
       if (tvPosts.length === 0) {
         tvPosts = [{
@@ -1930,6 +2084,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const fallbackSquare = 'https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png';
             imgHtml = `<div style="position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #1a1a1a; border-radius: 4px; display: flex; align-items: center; justify-content: center;"><img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="post-image" style="width: 100%; height: 100%; ${styleStr}" loading="lazy" onerror="this.onerror=null; this.src='${fallbackSquare}'; this.style.objectFit='contain'; this.style.opacity='0.2'; this.style.width='50%';"></div>`;
           }
+
+          if (post.isLive) {
+            imgHtml = `<div class="live-badge">LIVE</div>` + imgHtml;
+          }
+        }
+        
+        let schedulingLabel = '';
+        if (post.startDate || post.endDate) {
+          let sText = post.startDate ? `From: ${new Date(post.startDate).toLocaleString()}` : '';
+          let eText = post.endDate ? ` Until: ${new Date(post.endDate).toLocaleString()}` : '';
+          schedulingLabel = `<div class="post-scheduled-label">${sText}${eText}</div>`;
         }
 
         card.innerHTML = `
@@ -1937,6 +2102,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="post-content">
             <h3 class="post-title">${escapeHtml(post.title)}</h3>
             <p class="post-desc">${escapeHtml(post.description)}</p>
+            ${schedulingLabel}
           </div>
         `;
 
@@ -1956,6 +2122,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
             document.getElementById('post-title').value = post.title;
             document.getElementById('post-desc').value = post.description;
+            
+            if (document.getElementById('post-start-date')) document.getElementById('post-start-date').value = post.startDate || '';
+            if (document.getElementById('post-end-date')) document.getElementById('post-end-date').value = post.endDate || '';
+            if (document.getElementById('post-is-live')) document.getElementById('post-is-live').checked = post.isLive;
+
+            const liveToggle = document.querySelector('.live-stream-toggle');
+            const urlForEdit = post.imageUrl || '';
+            const isVideoForEdit = (window.getYouTubeVideoId ? getYouTubeVideoId(urlForEdit) : false) || 
+                                   (window.getFacebookVideoUrl ? getFacebookVideoUrl(urlForEdit) : false) || 
+                                   /\.(mp4|webm|mov|mkv|avi)$/i.test(urlForEdit.toLowerCase()) || 
+                                   urlForEdit.includes('drive.google.com') || 
+                                   urlForEdit.includes('/video/upload/');
+
+            if (isVideoForEdit) {
+              if (liveToggle) liveToggle.classList.remove('hidden');
+            } else if (liveToggle) {
+              liveToggle.classList.add('hidden');
+            }
 
             const posInput = document.getElementById('post-img-pos');
             let p = post.imagePosition || '50% 50%';
@@ -2024,7 +2208,7 @@ document.addEventListener('DOMContentLoaded', () => {
           deleteBtn.style.border = 'none';
           deleteBtn.textContent = 'Delete';
           deleteBtn.onclick = async () => {
-            const confirmPass = await showConfirm("Delete Post", "Are you sure you want to delete this specific post?", true);
+            const confirmPass = await showConfirm("Delete Post", "Are you sure you want to delete this specific post?", true, 'danger');
             if (!confirmPass) return;
 
             const sessionData = sessionStorage.getItem('sas_user_data');
@@ -2079,7 +2263,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const userObj = JSON.parse(sessionData);
 
             const msg = isHidden ? 'Are you sure you want to show this on TV?' : 'Are you sure you want to hide this from TV?';
-            const confirmPass = await showConfirm("TV Visibility", msg, true);
+            const confirmPass = await showConfirm("TV Visibility", msg, true, 'warning');
             if (!confirmPass) return;
 
             toggleTvBtn.textContent = "Updating...";
@@ -2350,6 +2534,11 @@ document.addEventListener('DOMContentLoaded', () => {
               },
               'onStateChange': function (event) {
                 if (event.data === YT.PlayerState.ENDED) {
+                  // --- LIVE AUTO-EXPIRY LOGIC ---
+                  if (post.isLive) {
+                    console.log("Live stream ended! Hiding post from TV automatically...");
+                    expirePostOnBackend(post.timestamp);
+                  }
                   if (myGeneration === globalSlideGeneration && slides.length > 1) next();
                 }
               }
@@ -2394,6 +2583,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!player._hasFinishedListener) {
                         player._hasFinishedListener = true;
                         player.subscribe('finishedPlaying', () => {
+                            // --- LIVE AUTO-EXPIRY LOGIC ---
+                            if (post.isLive) {
+                                console.log("Facebook Live stream finished! Hiding from TV...");
+                                expirePostOnBackend(post.timestamp);
+                            }
                             if (myGeneration === globalSlideGeneration && slides.length > 1) {
                                 next();
                             }

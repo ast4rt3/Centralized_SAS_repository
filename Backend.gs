@@ -25,7 +25,7 @@ function doGet(e) {
     const lastRow = sheet.getLastRow();
     if (lastRow < 2) return respondJSON({ success: true, posts: [] });
 
-    const data = sheet.getRange(2, 1, lastRow - 1, 8).getDisplayValues();
+    const data = sheet.getRange(2, 1, lastRow - 1, 11).getDisplayValues();
 
     const posts = data.map(row => ({
       timestamp:     row[0] || new Date().toISOString(),
@@ -35,7 +35,10 @@ function doGet(e) {
       imagePosition: row[4] || "center",
       imageSize:     row[5] || "cover",
       showOnTv:      row[6] === "" ? "true" : row[6].toLowerCase(),
-      publicId:      row[7] || ""
+      publicId:      row[7] || "",
+      startDate:     row[8] || "",
+      endDate:       row[9] || "",
+      isLive:        String(row[10] || "").toLowerCase() === "true"
     }));
 
     posts.reverse(); // Newest first
@@ -86,6 +89,7 @@ function doPost(e) {
       case "deletePost":       return handleDeletePost(payload);
       case "toggleTvVisible":  return handleToggleTvVisible(payload);
       case "updateTvSettings": return handleUpdateTvSettings(payload);
+      case "expirePost":       return handleExpirePost(payload);
       case "uploadToDrive":    return respondJSON(uploadToDrive(payload.fileData, payload.fileName));
       case "getDriveToken":    return respondJSON({ success: true, token: ScriptApp.getOAuthToken() });
       case "setFilePublic":    return respondJSON(setFilePublic(payload.fileId));
@@ -153,8 +157,6 @@ function verifyAdminOnly(payload) {
 function handleAddPost(payload) {
   try { verifyAuthorized(payload); } catch (e) { return respondJSON({ success: false, message: e.message }); }
 
-  const imageUrl = payload.imageUrl || "";
-
   const sheet = SpreadsheetApp.openById(masterDatabaseID).getSheetByName("Posts");
   if (!sheet) return respondJSON({ success: false, message: "Posts database not initialized." });
 
@@ -166,7 +168,10 @@ function handleAddPost(payload) {
     payload.imagePosition || "center",
     payload.imageSize     || "cover",
     "true",
-    payload.cloudinaryPublicId || "" // Column 8: Public ID for deletion
+    payload.cloudinaryPublicId || "", // Column 8: Public ID for deletion
+    payload.startDate || "",
+    payload.endDate || "",
+    String(payload.isLive || "false")
   ]);
 
   return respondJSON({ success: true, message: "Post added successfully!" });
@@ -191,7 +196,7 @@ function handleEditPost(payload) {
   const currentShowOnTv = sheet.getRange(rowIndex, 7).getDisplayValue() || "true";
   const existingPublicId = sheet.getRange(rowIndex, 8).getValue() || "";
 
-  sheet.getRange(rowIndex, 1, 1, 8).setValues([[
+  sheet.getRange(rowIndex, 1, 1, 11).setValues([[
     payload.timestamp,
     payload.title         || "Untitled Post",
     payload.description   || "",
@@ -199,7 +204,10 @@ function handleEditPost(payload) {
     payload.imagePosition || "center",
     payload.imageSize     || "cover",
     currentShowOnTv,
-    payload.cloudinaryPublicId || existingPublicId
+    payload.cloudinaryPublicId || existingPublicId,
+    payload.startDate || "",
+    payload.endDate || "",
+    String(payload.isLive || "false")
   ]]);
 
   return respondJSON({ success: true, message: "Post updated successfully!" });
@@ -265,6 +273,25 @@ function handleToggleTvVisible(payload) {
   cell.setValue(newVal);
 
   return respondJSON({ success: true, message: "TV visibility toggled to " + newVal, newState: newVal });
+}
+
+// --------------------------------------------------------------
+// Expire Post (Hide from TV when Live ends)
+// --------------------------------------------------------------
+function handleExpirePost(payload) {
+  try { verifyAuthorized(payload); } catch (e) { return respondJSON({ success: false, message: e.message }); }
+
+  if (!payload.timestamp) return respondJSON({ success: false, message: "Missing timestamp." });
+
+  const sheet = SpreadsheetApp.openById(masterDatabaseID).getSheetByName("Posts");
+  if (!sheet) return respondJSON({ success: false, message: "Posts database not initialized." });
+
+  const rowIndex = findRowByTimestamp(sheet, payload.timestamp);
+  if (rowIndex === -1) return respondJSON({ success: false, message: "Post not found." });
+
+  sheet.getRange(rowIndex, 7).setValue("false");
+
+  return respondJSON({ success: true, message: "Post expired/hidden from TV." });
 }
 
 // --------------------------------------------------------------

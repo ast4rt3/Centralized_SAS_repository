@@ -225,6 +225,25 @@
               <label for="post-desc">Description</label>
               <textarea id="post-desc" rows="4" required placeholder="Write your update here..."></textarea>
             </div>
+            
+            <div class="modal-section">
+              <div class="modal-section-title">Visibility Schedule (Optional)</div>
+              <div class="post-schedule-fields">
+                <div class="input-group">
+                  <label for="post-start-date">Visible From</label>
+                  <input type="datetime-local" id="post-start-date">
+                </div>
+                <div class="input-group">
+                  <label for="post-end-date">Visible Until</label>
+                  <input type="datetime-local" id="post-end-date">
+                </div>
+              </div>
+            </div>
+
+            <div class="live-stream-toggle hidden">
+              <input type="checkbox" id="post-is-live">
+              <label for="post-is-live">THIS IS A LIVE STREAM (Auto-hide when it ends)</label>
+            </div>
             <div class="input-group">
               <label>Image / Video</label>
               <div class="upload-tabs" id="upload-tabs">
@@ -327,7 +346,7 @@
           <div class="modal-footer">
             <div class="modal-actions">
               <button type="button" id="cancel-post-btn" class="secondary-btn">Cancel</button>
-              <button type="submit" id="submit-post-btn" class="primary-btn">Post Update</button>
+              <button type="submit" id="submit-post-btn" class="zz-button">Post Update</button>
             </div>
           </div>
         </form>
@@ -337,18 +356,25 @@
 
   <!-- Custom Confirmation Modal -->
   <div id="confirm-modal" class="modal-overlay hidden">
-    <div class="modal-card">
-      <h3 id="confirm-modal-title" class="modal-title">Confirm Action</h3>
-      <p id="confirm-modal-message" style="margin-bottom: 20px; color: var(--text-muted); line-height: 1.5;"></p>
+    <div class="modal-card confirm-card">
+      <div class="modal-body confirm-body">
+        <div id="confirm-modal-icon" class="confirm-icon">
+          <!-- SVG icon injected via JS -->
+        </div>
+        <h3 id="confirm-modal-title" class="modal-title">Confirm Action</h3>
+        <p id="confirm-modal-message" class="confirm-message"></p>
 
-      <div id="confirm-modal-input-group" class="input-group hidden">
-        <label for="confirm-modal-password">Confirm Password</label>
-        <input type="password" id="confirm-modal-password" placeholder="Enter password to confirm">
+        <div id="confirm-modal-input-group" class="input-group hidden">
+          <label for="confirm-modal-password">Confirm Password</label>
+          <input type="password" id="confirm-modal-password" placeholder="Enter password to confirm">
+        </div>
       </div>
 
-      <div class="modal-actions">
-        <button type="button" id="confirm-modal-cancel" class="secondary-btn">Cancel</button>
-        <button type="button" id="confirm-modal-ok" class="primary-btn">Confirm</button>
+      <div class="modal-footer confirm-footer">
+        <div class="modal-actions">
+          <button type="button" id="confirm-modal-cancel" class="secondary-btn">Cancel</button>
+          <button type="button" id="confirm-modal-ok" class="primary-btn">Confirm</button>
+        </div>
       </div>
     </div>
   </div>
