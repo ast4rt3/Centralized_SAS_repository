@@ -1255,6 +1255,12 @@ document.addEventListener('DOMContentLoaded', () => {
         activeUploadTab = btn.dataset.tab;
         Object.values(uploadPanels).forEach(p => p && p.classList.add('hidden'));
         if (uploadPanels[activeUploadTab]) uploadPanels[activeUploadTab].classList.remove('hidden');
+        
+        const scheduleSection = document.getElementById('post-schedule-section');
+        if (scheduleSection) {
+          if (activeUploadTab === 'live') scheduleSection.classList.add('hidden');
+          else scheduleSection.classList.remove('hidden');
+        }
 
         if (activeUploadTab === 'url') {
            // Handle legacy URL detection if needed
@@ -1531,7 +1537,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const title = document.getElementById('post-title').value;
         const desc = document.getElementById('post-desc').value;
-        const imgUrl = document.getElementById('post-img') ? document.getElementById('post-img').value : '';
+        let imgUrl = document.getElementById('post-img') ? document.getElementById('post-img').value : '';
         let imgPos = document.getElementById('post-img-pos') ? document.getElementById('post-img-pos').value : '0 0';
         const imgSize = document.getElementById('post-img-size-val') ? document.getElementById('post-img-size-val').value : '1';
         
@@ -1825,11 +1831,10 @@ document.addEventListener('DOMContentLoaded', () => {
                   if (bgDataString !== window.tvPostsDataHash) {
                     console.log("TV Auto-Refresh: New posts detected! Rebuilding Carousel...");
 
-                    // Clear old Carousel timers and memory leaks
-                    if (window.carouselTimer) {
-                      window.clearInterval(window.carouselTimer);
-                      window.carouselTimer = null;
-                    }
+                  if (globalCarouselTimer) {
+                    window.clearInterval(globalCarouselTimer);
+                    globalCarouselTimer = null;
+                  }
                     window.tvPostsDataHash = bgDataString;
 
                     // Re-sync TV toggles just in case Admin changed them concurrently
@@ -1892,8 +1897,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await r.json();
       if (res.success) {
         console.log("Post auto-expired successfully:", timestamp);
-        // We don't necessarily need to fetchPosts() immediately here 
-        // as the carousel will advance anyway, but we could if we want UI sync.
+        // Refresh the posts list to remove the expired post from all views
+        if (typeof fetchPosts === 'function') fetchPosts();
       } else {
         console.warn("Post auto-expiry failed:", res.message);
       }
@@ -1967,6 +1972,8 @@ document.addEventListener('DOMContentLoaded', () => {
         slide.setAttribute('data-desc', escapeHtml(post.description || ''));
         slide.setAttribute('data-start', startVal);
         slide.setAttribute('data-end', endVal);
+        slide.setAttribute('data-is-live', post.isLive ? 'true' : 'false');
+        slide.setAttribute('data-timestamp', post.timestamp || '');
 
         let imgHtml = '';
         if (post.imageUrl && post.imageUrl.trim() !== '') {
@@ -2099,11 +2106,17 @@ document.addEventListener('DOMContentLoaded', () => {
           imgHtml = `<div class="home-news-image" style="background:var(--nbsc-dark); display:flex; flex-direction:column; align-items:center; justify-content:center; color:white; padding: 20px; text-align: center;"><img src="https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png" style="height:60px; margin-bottom:10px; opacity:0.3"></div>`;
         }
 
+        let liveBadgeHtml = '';
+        if (post.isLive) {
+          liveBadgeHtml = `<div class="live-badge" style="position: absolute; top: 0.8rem; left: 0.8rem; z-index: 10; background: rgba(185, 28, 28, 0.9); color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; animation: pulse-live 4s infinite ease-in-out; border: 1px solid rgba(255,255,255,0.2); pointer-events: none;">Live</div>`;
+        }
+
         slide.innerHTML = `
-        <div class="home-news-image-wrap">
-          ${imgHtml}
-        </div>
-      `;
+          <div class="home-news-image-wrap">
+            ${liveBadgeHtml}
+            ${imgHtml}
+          </div>
+        `;
 
         track.appendChild(slide);
 
@@ -2267,23 +2280,37 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('post-title').value = post.title;
             document.getElementById('post-desc').value = post.description;
             
-            if (document.getElementById('post-start-date')) document.getElementById('post-start-date').value = post.startDate || '';
-            if (document.getElementById('post-end-date')) document.getElementById('post-end-date').value = post.endDate || '';
-            if (document.getElementById('post-is-live')) document.getElementById('post-is-live').checked = post.isLive;
-
-            const liveToggle = document.querySelector('.live-stream-toggle');
+            if (document.getElementById('post-start-date')) document.getElementById('post-start-date').value = (post.startDate || '').replace(' ', 'T');
+            if (document.getElementById('post-end-date')) document.getElementById('post-end-date').value = (post.endDate || '').replace(' ', 'T');
+            
+            // Tab Selection Logic for Edit
             const urlForEdit = post.imageUrl || '';
+            const isLivePost = post.isLive === true || post.isLive === "true";
+            const isCloudinary = urlForEdit.includes('cloudinary.com') || urlForEdit.includes('res.cloudinary.com');
+            const isDriveUpload = urlForEdit.includes('drive.google.com/file/d/') && urlForEdit.includes('/preview');
+
+            if (isLivePost) {
+               const liveTab = document.querySelector('.upload-tab[data-tab="live"]');
+               if (liveTab) liveTab.click();
+               const liveInput = document.getElementById('post-live-url');
+               if (liveInput) liveInput.value = urlForEdit;
+            } else if (isCloudinary || isDriveUpload) {
+               const uploadTab = document.querySelector('.upload-tab[data-tab="upload"]');
+               if (uploadTab) uploadTab.click();
+               // We don't have the original file object, but we show the preview
+               // fileInput value cannot be set for security, so we just rely on the preview logic below
+            } else {
+               const urlTab = document.querySelector('.upload-tab[data-tab="url"]');
+               if (urlTab) urlTab.click();
+               const urlInput = document.getElementById('post-img');
+               if (urlInput) urlInput.value = urlForEdit;
+            }
+
             const isVideoForEdit = (window.getYouTubeVideoId ? getYouTubeVideoId(urlForEdit) : false) || 
                                    (window.getFacebookVideoUrl ? getFacebookVideoUrl(urlForEdit) : false) || 
                                    /\.(mp4|webm|mov|mkv|avi)$/i.test(urlForEdit.toLowerCase()) || 
-                                   urlForEdit.includes('drive.google.com') || 
+                                   isDriveUpload || 
                                    urlForEdit.includes('/video/upload/');
-
-            if (isVideoForEdit) {
-              if (liveToggle) liveToggle.classList.remove('hidden');
-            } else if (liveToggle) {
-              liveToggle.classList.add('hidden');
-            }
 
             const posInput = document.getElementById('post-img-pos');
             let p = post.imagePosition || '50% 50%';
@@ -2307,10 +2334,25 @@ document.addEventListener('DOMContentLoaded', () => {
               if (vEnd) vEnd.value = endVal;
             }
 
-            const imgInput = document.getElementById('post-img');
-            if (imgInput) {
-              imgInput.value = post.imageUrl;
-              imgInput.dispatchEvent(new CustomEvent('input', { detail: { keepValues: true } }));
+            // Trigger preview for non-file-upload edits
+            if (isLivePost || !isCloudinary && !isDriveUpload) {
+               const imgInput = document.getElementById(isLivePost ? 'post-live-url' : 'post-img');
+               if (imgInput) {
+                 imgInput.dispatchEvent(new CustomEvent('input', { detail: { keepValues: true } }));
+               }
+            } else {
+               // For Cloudinary/Drive uploads, we manually trigger the preview logic since fileInput is empty
+               // We'll simulate a URL input on the 'post-img' hidden field or just trigger the preview display
+               const previewImg = document.getElementById('post-preview-img');
+               const previewGroup = document.getElementById('post-img-preview-group');
+               if (previewImg && previewGroup) {
+                  previewImg.src = urlForEdit;
+                  previewGroup.style.display = 'block';
+                  // Also handle video preview if needed
+                  if (isVideoForEdit && window.updateVideoPreview) {
+                     window.updateVideoPreview(urlForEdit, startVal, endVal);
+                  }
+               }
             }
 
             const hiddenSizeVal = document.getElementById('post-img-size-val');
@@ -2551,6 +2593,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const curStart = parseFloat(activeSlide.dataset.start) || 0;
       const curEnd = parseFloat(activeSlide.dataset.end) || 0;
+      const isLive = activeSlide.getAttribute('data-is-live') === 'true';
+      const timestamp = activeSlide.getAttribute('data-timestamp');
 
       // Handle CSS Unified Fullscreen
       const isVideoSlide = (videoEl || iframeEl || fbIframeEl || driveIframeEl);
@@ -2637,15 +2681,53 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         
         videoEl.onended = function () {
+          if (isLive) {
+            console.log("Native video ended! Expiring live post...");
+            expirePostOnBackend(timestamp);
+          }
           if (myGeneration === globalSlideGeneration && slides.length > 1) next();
         };
-        // Safety fallback: advance after 3 minutes max even if video stalls
-        start(180000);
+        videoEl.onerror = function() {
+          if (isLive) {
+            console.log("Native video error! Expiring live post...");
+            expirePostOnBackend(timestamp);
+          }
+          if (myGeneration === globalSlideGeneration && slides.length > 1) next();
+        };
+
+        // --- HEARTBEAT FOR NATIVE VIDEO ---
+        if (isLive) {
+          let lastTime = -1;
+          let stalledCount = 0;
+          const liveHeartbeat = setInterval(() => {
+            if (myGeneration !== globalSlideGeneration) {
+              clearInterval(liveHeartbeat);
+              return;
+            }
+            if (!videoEl.paused && videoEl.currentTime === lastTime) {
+              stalledCount++;
+              if (stalledCount > 15) { // 15 seconds of no progress while playing
+                console.log("Live native video stalled! Expiring...");
+                clearInterval(liveHeartbeat);
+                expirePostOnBackend(timestamp);
+              }
+            } else {
+              stalledCount = 0;
+            }
+            lastTime = videoEl.currentTime;
+          }, 1000);
+        }
+
+        // Safety fallback: advance after 3 minutes max even if video stalls, UNLESS it's live
+        if (!isLive) start(180000);
+        else stop(); // For live, we rely on the heartbeat/ended events
       } else if (iframeEl && window.YT && window.YT.Player) {
         const iframeId = iframeEl.id;
         const myPlayerId = iframeId;
 
         function startYTPolling(player) {
+          let stalledCount = 0;
+          let lastTime = -1;
           const checkInterval = setInterval(() => {
             if (myGeneration !== globalSlideGeneration) {
               clearInterval(checkInterval);
@@ -2655,15 +2737,38 @@ document.addEventListener('DOMContentLoaded', () => {
               const state = player.getPlayerState();
               const duration = player.getDuration();
               const currentTime = player.getCurrentTime();
-              // Advance if video is within 1.5s of end
-              const effectiveEnd = (curEnd > 0) ? curEnd : duration;
-              if (state === 0 || (effectiveEnd > 0 && currentTime >= (effectiveEnd - 1.5))) {
-                console.log('YouTube auto-advancing slide:', myPlayerId);
-                clearInterval(checkInterval);
-                next();
+
+              // --- LIVE HEARTBEAT / STALL CHECK ---
+              if (isLive) {
+                 if (state === 1) { // Playing
+                    if (currentTime === lastTime) {
+                       stalledCount++;
+                       if (stalledCount > 20) { // 20s stall
+                          console.log("YouTube Live stalled! Expiring...");
+                          clearInterval(checkInterval);
+                          expirePostOnBackend(timestamp);
+                       }
+                    } else { stalledCount = 0; }
+                 } else if (state === -1 || state === 5) { // Unstarted or Cued
+                    stalledCount++;
+                    if (stalledCount > 30) { // 30s stuck in loading
+                       console.log("YouTube Live stuck in loading state! Expiring...");
+                       clearInterval(checkInterval);
+                       expirePostOnBackend(timestamp);
+                    }
+                 }
+                 lastTime = currentTime;
               }
+
+                // Advance if video is within 1.5s of end (not for live)
+                const effectiveEnd = (curEnd > 0) ? curEnd : duration;
+                if (!isLive && (state === 0 || (effectiveEnd > 0 && currentTime >= (effectiveEnd - 1.5)))) {
+                  console.log('YouTube auto-advancing slide:', myPlayerId);
+                  clearInterval(checkInterval);
+                  next();
+                }
             } catch (e) { }
-          }, 250);
+          }, 1000);
         }
 
         if (!ytPlayers[iframeId]) {
@@ -2679,12 +2784,22 @@ document.addEventListener('DOMContentLoaded', () => {
               'onStateChange': function (event) {
                 if (event.data === YT.PlayerState.ENDED) {
                   // --- LIVE AUTO-EXPIRY LOGIC ---
-                  if (post.isLive) {
+                  if (isLive) {
                     console.log("Live stream ended! Hiding post from TV automatically...");
-                    expirePostOnBackend(post.timestamp);
+                    expirePostOnBackend(timestamp);
                   }
                   if (myGeneration === globalSlideGeneration && slides.length > 1) next();
                 }
+              },
+              'onError': function(event) {
+                console.warn("YouTube Player Error:", event.data);
+                // Errors: 100 (not found/deleted), 101/150 (embed restricted)
+                const fatalErrors = [100, 101, 150];
+                if (isLive || fatalErrors.includes(event.data)) {
+                  console.log("YouTube Live stream fatal error or unavailable! Expiring post...");
+                  expirePostOnBackend(timestamp);
+                }
+                if (myGeneration === globalSlideGeneration && slides.length > 1) next();
               }
             }
           });
@@ -2701,8 +2816,9 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('YT Player error on restart:', e);
           }
         }
-        // Safety fallback
-        start(300000);
+        // Safety fallback (not for live)
+        if (!isLive) start(300000);
+        else stop();
       } else if (activeSlide.querySelector('.fb-video-wrapper')) {
         // Facebook video via JS SDK
         const fbEl = activeSlide.querySelector('.fb-video-wrapper');
@@ -2728,9 +2844,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         player._hasFinishedListener = true;
                         player.subscribe('finishedPlaying', () => {
                             // --- LIVE AUTO-EXPIRY LOGIC ---
-                            if (post.isLive) {
+                            if (isLive) {
                                 console.log("Facebook Live stream finished! Hiding from TV...");
-                                expirePostOnBackend(post.timestamp);
+                                expirePostOnBackend(timestamp);
+                            }
+                            if (myGeneration === globalSlideGeneration && slides.length > 1) {
+                                next();
+                            }
+                        });
+                        player.subscribe('error', (err) => {
+                            console.warn("Facebook Player Error:", err);
+                            if (isLive) {
+                                console.log("Facebook Live stream error! Expiring post...");
+                                expirePostOnBackend(timestamp);
                             }
                             if (myGeneration === globalSlideGeneration && slides.length > 1) {
                                 next();
@@ -2739,6 +2865,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     // Poll for custom end time
+                    let lastPos = -1;
+                    let stalledCount = 0;
                     const fbPoll = setInterval(() => {
                         if (myGeneration !== globalSlideGeneration) {
                             clearInterval(fbPoll);
@@ -2746,12 +2874,25 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                         try {
                            const pos = player.getCurrentPosition();
+                           
+                           if (isLive) {
+                              if (pos === lastPos) {
+                                 stalledCount++;
+                                 if (stalledCount > 20) {
+                                    console.log("Facebook Live stalled! Expiring...");
+                                    clearInterval(fbPoll);
+                                    expirePostOnBackend(timestamp);
+                                 }
+                              } else { stalledCount = 0; }
+                              lastPos = pos;
+                           }
+
                            if (curEnd > 0 && pos >= curEnd) {
                                clearInterval(fbPoll);
                                next();
                            }
                         } catch(e){}
-                    }, 500);
+                    }, 1000);
                  } catch(e) {
                     console.error('FB Player Error:', e);
                  }
@@ -2761,7 +2902,8 @@ document.addEventListener('DOMContentLoaded', () => {
           }, 200);
         }
 
-        start(180000); 
+        if (!isLive) start(180000); 
+        else stop();
       } else if (driveIframeEl) {
         // Drive video iframe — can't hook into events, use standard timer
         start();
