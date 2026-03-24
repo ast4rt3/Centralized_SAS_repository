@@ -16,11 +16,15 @@ Add the following secrets:
 - `CLOUDINARY_CLOUD_NAME`
 - `CLOUDINARY_UPLOAD_PRESET`
 
-### 2. Configure GitHub Actions
-I have created a workflow file at `.github/workflows/static.yml`. This script will:
-- Check out your code.
-- Create `env.js` using the secrets you provided.
-- Deploy the result to GitHub Pages.
+### 3. Change GitHub Pages Source (CRITICAL)
+For the workflow I provided to work, you must tell GitHub to use Actions instead of just copying the branch:
+1. Go to your GitHub Repository: **Settings > Pages**
+2. Under **Build and deployment > Source**, change the dropdown from **"Deploy from a branch"** to **"GitHub Actions"**.
+
+### 4. Push and Verify
+After making these changes, you must **Push** the new `.github/workflows/static.yml` file to your repo.
+- Go to the **Actions** tab in GitHub to see if the "Deploy static content to Pages" job is running.
+- Once it turns green, your site will be updated with the secrets.
 
 ## Alternative: Manual (Non-Secure)
 If you don't want to use GitHub Actions and are okay with the keys being public in your repo:
