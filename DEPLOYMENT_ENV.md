@@ -15,6 +15,7 @@ Add the following secrets:
 - `BACKEND_GAS_URL`
 - `CLOUDINARY_CLOUD_NAME`
 - `CLOUDINARY_UPLOAD_PRESET`
+- `SYSTEMS_CONFIG_JSON` (Copy and paste the entire JSON from your `systems/config.json` before deleting it)
 
 ### 3. Change GitHub Pages Source (CRITICAL)
 For the workflow I provided to work, you must tell GitHub to use Actions instead of just copying the branch:

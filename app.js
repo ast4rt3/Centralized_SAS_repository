@@ -706,29 +706,19 @@ document.addEventListener('DOMContentLoaded', () => {
       showPage('loading');
     }
 
-    // Load config ONCE
+    // Load config ONCE from window.ENV
     if (!systemsPromise) {
-      systemsPromise = fetch('systems/config.json?v=' + new Date().getTime())
-        .then(function (r) {
-          if (!r.ok) throw new Error('Config not found');
-          return r.json();
-        })
-        .then(function (data) {
-          systems = Array.isArray(data) ? data : (data.systems || []);
-          systemsLoaded = true;
-          if (statSystems) statSystems.textContent = systems.length;
-          renderNav();
-          initPostSetup();
-          fetchPosts(); // Load dynamic posts
-          syncFromHash();
-        })
-        .catch(function (err) {
-          console.error("Config load error:", err);
-          systems = [];
-          systemsLoaded = true;
-          if (statSystems) statSystems.textContent = '0';
-          navDynamic.innerHTML = '<div class="nav-section-label" style="padding: 0.5rem 1rem; color: rgba(255,255,255,0.72);">No systems loaded</div>';
-        });
+      systemsPromise = new Promise((resolve) => {
+        systems = window.ENV?.systems || [];
+        systemsLoaded = true;
+        
+        if (statSystems) statSystems.textContent = systems.length;
+        renderNav();
+        initPostSetup();
+        fetchPosts(); // Load dynamic posts
+        syncFromHash();
+        resolve(systems);
+      });
     }
 
     // Register listener ONCE globally inside DOMContentLoaded
