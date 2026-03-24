@@ -6,5 +6,10 @@ window.ENV = {
 
   // Cloudinary Configuration (Get these from your Cloudinary Dashboard)
   CLOUDINARY_CLOUD_NAME: "YOUR_CLOUD_NAME_HERE",
-  CLOUDINARY_UPLOAD_PRESET: "YOUR_UPLOAD_PRESET_HERE"
+  CLOUDINARY_UPLOAD_PRESET: "YOUR_UPLOAD_PRESET_HERE",
+
+  // Systems Configuration
+  systems: [
+    // Add your system objects here (see current config.json for format)
+  ]
 };
