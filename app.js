@@ -1,10 +1,10 @@
-const BACKEND_GAS_URL = "https://script.google.com/macros/s/AKfycbza2QFzH0B3XkMFX9RITeSj1f3v4Ox8j5lYxBtxnTUTdqyTlWeE0SieK1n4fTdIRPmbvw/exec";
+const BACKEND_GAS_URL = window.ENV?.BACKEND_GAS_URL || "YOUR_NEW_BACKEND_GAS_URL_HERE";
 
 
 // --- CLOUDINARY CONFIGURATION ---
 // Get these from your Cloudinary Dashboard: https://cloudinary.com/console
-const CLOUDINARY_CLOUD_NAME = "dj8ugtlrl"; // e.g. "yourname"
-const CLOUDINARY_UPLOAD_PRESET = "sas_uploads"; // e.g. "sas_uploads" (Must be Unsigned)
+const CLOUDINARY_CLOUD_NAME = window.ENV?.CLOUDINARY_CLOUD_NAME || ""; // e.g. "yourname"
+const CLOUDINARY_UPLOAD_PRESET = window.ENV?.CLOUDINARY_UPLOAD_PRESET || ""; // e.g. "sas_uploads" (Must be Unsigned)
 
 // Load YouTube IFrame APIs
 if (!window.YT) {
