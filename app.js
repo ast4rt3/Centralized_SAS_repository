@@ -832,19 +832,28 @@ document.addEventListener('DOMContentLoaded', () => {
       const adminTvView = localStorage.getItem('sas_admin_tv_view') === 'true';
       if (adminTvView) {
         document.body.classList.add('tv-mode');
-        if (btnAdminExitTv) btnAdminExitTv.classList.remove('hidden');
-        if (navToggle) navToggle.hidden = true; // No sidebar in TV preview
-        if (sidebar) sidebar.style.display = 'none'; // Hide sidebar in Admin TV preview too
+        document.body.classList.remove('dashboard-backdrop');
+        if (btnAdminExitTv) btnAdminExitTv.classList.add('hidden'); // Toggle visibility fixed
+        if (navToggle) navToggle.hidden = true;
+        if (sidebar) sidebar.style.display = 'none';
       } else {
         document.body.classList.remove('tv-mode');
+        document.body.classList.add('dashboard-backdrop');
         if (btnAdminExitTv) btnAdminExitTv.classList.add('hidden');
         if (navToggle) navToggle.hidden = false;
-        if (sidebar) sidebar.style.display = ''; // Restore sidebar
+        if (sidebar) sidebar.style.display = '';
       }
-      tvSettingsBox.classList.remove('hidden'); // Admin can change TV defaults
-    } else {
+      tvSettingsBox.classList.remove('hidden');
+    } else if (userObj.role === 'uploader') {
       document.body.classList.remove('tv-mode');
-      tvSettingsBox.classList.add('hidden'); // Uploader / Other restricted
+      document.body.classList.add('dashboard-backdrop');
+      tvSettingsBox.classList.add('hidden');
+      if (btnAdminExitTv) btnAdminExitTv.classList.add('hidden');
+      if (navToggle) navToggle.hidden = false;
+      if (sidebar) sidebar.style.display = '';
+    } else {
+      document.body.classList.remove('tv-mode', 'dashboard-backdrop');
+      tvSettingsBox.classList.add('hidden');
       if (btnAdminExitTv) btnAdminExitTv.classList.add('hidden');
       if (navToggle) navToggle.hidden = false;
     }
@@ -2212,45 +2221,33 @@ document.addEventListener('DOMContentLoaded', () => {
           const fbEmbedUrl = getFacebookVideoUrl(post.imageUrl);
 
           if (ytId) {
-            // Admin/Uploader view: Show thumbnail instead of iframe
-            imgHtml = `<div style="position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #1a1a1a; border-radius: 4px;"><img src="https://img.youtube.com/vi/${ytId}/hqdefault.jpg" class="post-image" style="width: 100%; height: 100%; ${styleStr}" loading="lazy" onerror="this.src='https://img.youtube.com/vi/${ytId}/default.jpg'"></div>`;
+            imgHtml = `<img src="https://img.youtube.com/vi/${ytId}/maxresdefault.jpg" class="post-image" style="${styleStr}" loading="lazy" onerror="this.src='https://img.youtube.com/vi/${ytId}/hqdefault.jpg'">`;
           } else if (fbEmbedUrl) {
-            // Facebook: No easy thumbnail API for external developers without SDK, show a neat placeholder
-            imgHtml = `<div style="position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #1a1a1a; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white;">
+            imgHtml = `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #000; color: white;">
               <div style="text-align: center;">
                 <svg width="40" height="40" viewBox="0 0 24 24" fill="#1877F2" style="margin-bottom: 8px;"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
                 <div style="font-size: 12px; opacity: 0.8;">Facebook Video</div>
               </div>
             </div>`;
-          } else if (
-            urlLower && (urlLower.includes('res.cloudinary.com') || urlLower.includes('cloudinary.com'))
-          ) {
-            // Cloudinary: Only transform to .jpg if it's a video file extension
+          } else if (urlLower && (urlLower.includes('res.cloudinary.com') || urlLower.includes('cloudinary.com'))) {
             const isVideo = /\.(mp4|webm|mov|mkv|avi)$/i.test(urlLower) || urlLower.includes('/video/upload/');
             const thumbUrl = isVideo ? post.imageUrl.replace(/\.[^.]+$/, '.jpg') : post.imageUrl;
-            imgHtml = `<div style="position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #1a1a1a; border-radius: 4px;"><img src="${thumbUrl}" alt="${escapeHtml(post.title)}" class="post-image" style="width: 100%; height: 100%; ${styleStr}" loading="lazy"></div>`;
-          } else if (
-            urlLower.includes('docs.google.com/uc?') ||
-            urlLower.includes('drive.google.com/uc?id=') ||
-            urlLower.endsWith('.mp4') || urlLower.endsWith('.webm')
-          ) {
-            // Direct video link (non-Cloudinary): Remove autoplay to prevent multiple videos playing
+            imgHtml = `<img src="${thumbUrl}" alt="${escapeHtml(post.title)}" class="post-image" style="${styleStr}" loading="lazy">`;
+          } else if (urlLower.includes('docs.google.com/uc?') || urlLower.includes('drive.google.com/uc?id=') || urlLower.endsWith('.mp4') || urlLower.endsWith('.webm')) {
             let mediaHash = '';
             if (startVal && endVal) mediaHash = `#t=${startVal},${endVal}`;
             else if (startVal) mediaHash = `#t=${startVal}`;
             else if (endVal) mediaHash = `#t=0,${endVal}`;
-
-            imgHtml = `<div style="position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #1a1a1a; border-radius: 4px;"><video src="${post.imageUrl}${mediaHash}" class="post-image" style="width: 100%; height: 100%; ${styleStr}" preload="metadata" controls></video></div>`;
+            imgHtml = `<video src="${post.imageUrl}${mediaHash}" class="post-image" style="${styleStr}" preload="metadata" muted playsinline></video>`;
           } else if (urlLower.includes('drive.google.com/file/d/') && urlLower.includes('/preview')) {
-            // Legacy preview (static iframe)
-            imgHtml = `<div style="position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #1a1a1a; border-radius: 4px;"><iframe src="${post.imageUrl}" class="post-image" style="border: none; width: 100%; height: 100%; ${styleStr}"></iframe></div>`;
+            imgHtml = `<iframe src="${post.imageUrl}" class="post-image" style="border: none; ${styleStr}"></iframe>`;
           } else {
             const fallbackSquare = 'https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png';
-            imgHtml = `<div style="position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #1a1a1a; border-radius: 4px; display: flex; align-items: center; justify-content: center;"><img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="post-image" style="width: 100%; height: 100%; ${styleStr}" loading="lazy" onerror="this.onerror=null; this.src='${fallbackSquare}'; this.style.objectFit='contain'; this.style.opacity='0.2'; this.style.width='50%';"></div>`;
+            imgHtml = `<img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="post-image" style="${styleStr}" loading="lazy" onerror="this.onerror=null; this.src='${fallbackSquare}'; this.style.objectFit='contain'; this.style.opacity='0.2';">`;
           }
-
+          
           if (post.isLive) {
-            imgHtml = `<div class="live-badge">LIVE</div>` + imgHtml;
+            imgHtml = `<div class="live-badge" style="position: absolute; top: 10px; left: 10px; z-index: 15; background: #b91c1c; color: white; padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 0.7rem; animation: pulse-live 2s infinite;">LIVE</div>` + imgHtml;
           }
         }
         
@@ -2262,7 +2259,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         card.innerHTML = `
-          ${imgHtml}
+          <div class="post-image-container">
+            ${imgHtml}
+          </div>
           <div class="post-content">
             <h3 class="post-title">${escapeHtml(post.title)}</h3>
             <p class="post-desc">${escapeHtml(post.description)}</p>
@@ -2275,7 +2274,7 @@ document.addEventListener('DOMContentLoaded', () => {
           actionArea.className = 'post-card-actions';
 
           const editBtn = document.createElement('button');
-          editBtn.className = 'secondary-btn edit-post-btn';
+          editBtn.className = 'secondary-btn edit-btn';
           editBtn.textContent = 'Edit';
           editBtn.onclick = () => {
             const form = document.getElementById('add-post-form');
@@ -2304,8 +2303,6 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (isCloudinary || isDriveUpload) {
                const uploadTab = document.querySelector('.upload-tab[data-tab="upload"]');
                if (uploadTab) uploadTab.click();
-               // We don't have the original file object, but we show the preview
-               // fileInput value cannot be set for security, so we just rely on the preview logic below
             } else {
                const urlTab = document.querySelector('.upload-tab[data-tab="url"]');
                if (urlTab) urlTab.click();
@@ -2341,64 +2338,38 @@ document.addEventListener('DOMContentLoaded', () => {
               if (vEnd) vEnd.value = endVal;
             }
 
-            // Trigger preview for non-file-upload edits
             if (isLivePost || !isCloudinary && !isDriveUpload) {
                const imgInput = document.getElementById(isLivePost ? 'post-live-url' : 'post-img');
                if (imgInput) {
                  imgInput.dispatchEvent(new CustomEvent('input', { detail: { keepValues: true } }));
                }
             } else {
-               // For Cloudinary/Drive uploads, we manually trigger the preview logic since fileInput is empty
-               // We'll simulate a URL input on the 'post-img' hidden field or just trigger the preview display
                const previewImg = document.getElementById('post-preview-img');
                const previewGroup = document.getElementById('post-img-preview-group');
                if (previewImg && previewGroup) {
                   previewImg.src = urlForEdit;
                   previewGroup.style.display = 'block';
-                  // Also handle video preview if needed
                   if (isVideoForEdit && window.updateVideoPreview) {
                      window.updateVideoPreview(urlForEdit, startVal, endVal);
                   }
                }
             }
 
-            const hiddenSizeVal = document.getElementById('post-img-size-val');
-
-            const zoomSlider = document.getElementById('post-img-zoom');
-            const zoomValDisplay = document.getElementById('post-preview-zoom-val');
-            const transformWrapper = document.getElementById('post-preview-transform-wrapper');
-
-            // Apply existing scale or fallback
-            let initialZoom = 1;
-            let initialTrX = 0;
-            let initialTrY = 0;
-
-            if (post.imageSize && post.imageSize !== 'cover' && post.imageSize !== 'contain') {
-              initialZoom = parseFloat(post.imageSize);
-              if (isNaN(initialZoom)) initialZoom = 1;
-              const pParts = (p || '0 0').split(' ');
-              if (pParts.length >= 2) {
-                initialTrX = parseFloat(pParts[0]) || 0;
-                initialTrY = parseFloat(pParts[1]) || 0;
-              }
-            }
-
+            const initialZoom = parseFloat(post.imageSize) || 1;
             if (window.setPreviewTransformState) {
-              window.setPreviewTransformState(initialZoom, initialTrX, initialTrY);
+              const pParts = (p || '0 0').split(' ');
+              const trX = parseFloat(pParts[0]) || 0;
+              const trY = parseFloat(pParts[1]) || 0;
+              window.setPreviewTransformState(initialZoom, trX, trY);
             }
-
 
             form.setAttribute('data-edit-timestamp', post.timestamp);
-
             modal.classList.remove('hidden');
           };
           actionArea.appendChild(editBtn);
 
           const deleteBtn = document.createElement('button');
-          deleteBtn.className = 'secondary-btn delete-post-btn';
-          deleteBtn.style.background = 'rgba(220, 38, 38, 0.8)';
-          deleteBtn.style.color = 'white';
-          deleteBtn.style.border = 'none';
+          deleteBtn.className = 'secondary-btn delete-btn';
           deleteBtn.textContent = 'Delete';
           deleteBtn.onclick = async () => {
             const confirmPass = await showConfirm("Delete Post", "Are you sure you want to delete this specific post?", true, 'danger');
@@ -2442,13 +2413,9 @@ document.addEventListener('DOMContentLoaded', () => {
           actionArea.appendChild(deleteBtn);
 
           const toggleTvBtn = document.createElement('button');
-          toggleTvBtn.className = 'secondary-btn toggle-tv-btn';
+          toggleTvBtn.className = 'secondary-btn hide-btn';
           const isHidden = String(post.showOnTv).toLowerCase() === 'false';
           toggleTvBtn.textContent = isHidden ? 'Show on TV' : 'Hide from TV';
-          const btnColor = isHidden ? 'rgba(34, 197, 94, 0.8)' : 'rgba(249, 115, 22, 0.8)';
-          toggleTvBtn.style.background = btnColor;
-          toggleTvBtn.style.color = 'white';
-          toggleTvBtn.style.border = 'none';
 
           toggleTvBtn.onclick = async () => {
             const sessionData = sessionStorage.getItem('sas_user_data');
@@ -2495,6 +2462,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         container.appendChild(card);
       });
+
+      // --- DASHBOARD BACKDROP SYNC (Static to prevent lag) ---
+      if (document.body.classList.contains('dashboard-backdrop')) {
+        const blurredBg = document.getElementById('tv-blurred-bg');
+        if (blurredBg) {
+          const firstPostWithImg = posts.find(p => p.imageUrl && p.imageUrl.trim() !== '');
+          if (firstPostWithImg) {
+             let bgSource = firstPostWithImg.imageUrl;
+             const ytId = getYouTubeVideoId(bgSource);
+             if (ytId) bgSource = `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`;
+             else if (bgSource.includes('cloudinary.com')) bgSource = bgSource.replace(/\.(mp4|webm|mov|mkv|avi)$/i, '.jpg');
+             
+             blurredBg.style.backgroundImage = `url('${bgSource}')`;
+          }
+        }
+      }
     }
   }
 
