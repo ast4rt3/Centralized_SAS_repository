@@ -253,15 +253,22 @@
               </div>
             </div>
 
-            <div class="live-stream-toggle hidden">
-              <input type="checkbox" id="post-is-live">
-              <label for="post-is-live">THIS IS A LIVE STREAM (Auto-hide when it ends)</label>
-            </div>
+            <!-- Live Stream Toggle Removed (Moved to Tabs) -->
             <div class="input-group">
               <label>Image / Video</label>
               <div class="upload-tabs" id="upload-tabs">
-                <button type="button" class="upload-tab active" data-tab="upload">⬆ Upload File</button>
-                <button type="button" class="upload-tab" data-tab="url">🔗 Use URL</button>
+                <button type="button" class="upload-tab active" data-tab="upload">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                  Upload File
+                </button>
+                <button type="button" class="upload-tab" data-tab="url">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                  Use URL
+                </button>
+                <button type="button" class="upload-tab" data-tab="live">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3" fill="currentColor"></circle></svg>
+                  Live Video
+                </button>
               </div>
               <!-- File Upload Tab -->
               <div id="upload-tab-upload" class="upload-panel">
@@ -285,6 +292,11 @@
               <!-- URL Tab -->
               <div id="upload-tab-url" class="upload-panel hidden">
                 <input type="url" id="post-img" placeholder="https://example.com/image.png or YouTube link">
+              </div>
+              <!-- Live Tab -->
+              <div id="upload-tab-live" class="upload-panel hidden">
+                <input type="url" id="post-live-url" placeholder="https://youtube.com/live/link or FB Live link">
+                <span class="upload-hint" style="display:block; margin-top:8px; font-size:0.75rem;">This post will be marked as <b>LIVE</b> and automatically hidden when the stream ends.</span>
               </div>
             </div>
             <div class="input-group" id="post-img-preview-group" style="display: none;">

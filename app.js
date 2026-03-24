@@ -1165,7 +1165,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // === UPLOAD TAB SWITCHING ===
     const uploadTabBtns = document.querySelectorAll('.upload-tab');
-    const uploadPanels = { upload: document.getElementById('upload-tab-upload'), url: document.getElementById('upload-tab-url') };
+    const uploadPanels = { 
+      upload: document.getElementById('upload-tab-upload'), 
+      url: document.getElementById('upload-tab-url'),
+      live: document.getElementById('upload-tab-live')
+    };
     let activeUploadTab = 'upload'; // Default to file upload
 
     uploadTabBtns.forEach(btn => {
@@ -1176,12 +1180,11 @@ document.addEventListener('DOMContentLoaded', () => {
         Object.values(uploadPanels).forEach(p => p && p.classList.add('hidden'));
         if (uploadPanels[activeUploadTab]) uploadPanels[activeUploadTab].classList.remove('hidden');
 
-        const liveToggle = document.querySelector('.live-stream-toggle');
-        if (activeUploadTab === 'upload') {
-           if (liveToggle) liveToggle.classList.add('hidden');
-        } else if (imgInput && imgInput.value.trim()) {
-           // Trigger URL detection if switching back to URL tab with a value
-           imgInput.dispatchEvent(new CustomEvent('input', { detail: { keepValues: true } }));
+        if (activeUploadTab === 'url') {
+           // Handle legacy URL detection if needed
+           if (imgInput && imgInput.value.trim()) {
+              imgInput.dispatchEvent(new CustomEvent('input', { detail: { keepValues: true } }));
+           }
         }
       });
     });
@@ -1393,8 +1396,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const defaultTabBtn = document.querySelector('.upload-tab[data-tab="upload"]');
         if (defaultTabBtn) defaultTabBtn.classList.add('active');
         activeUploadTab = 'upload';
+        
+        // Hide all panels, show only upload
         Object.values(uploadPanels).forEach(p => p && p.classList.add('hidden'));
         if (uploadPanels['upload']) uploadPanels['upload'].classList.remove('hidden');
+        
+        const liveInput = document.getElementById('post-live-url');
+        if (liveInput) liveInput.value = '';
         if (fileUploadLabel) {
           fileUploadLabel.classList.remove('file-selected');
           if (fileLabelText) fileLabelText.textContent = 'Click or drag image/video here';
@@ -1453,7 +1461,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const startDate = document.getElementById('post-start-date') ? document.getElementById('post-start-date').value : '';
         const endDate = document.getElementById('post-end-date') ? document.getElementById('post-end-date').value : '';
-        const isLive = document.getElementById('post-is-live') ? document.getElementById('post-is-live').checked : false;
+        
+        // isLive is now determined by the active tab
+        const isLive = (activeUploadTab === 'live');
+        
+        // Handle URL selection based on tab
+        if (activeUploadTab === 'url') {
+           imgUrl = document.getElementById('post-img').value || '';
+        } else if (activeUploadTab === 'live') {
+           imgUrl = document.getElementById('post-live-url').value || '';
+        }
 
         const submitBtn = document.getElementById('submit-post-btn');
         const origText = submitBtn.textContent;
@@ -1987,18 +2004,25 @@ document.addEventListener('DOMContentLoaded', () => {
           if (ytId) {
             let ytParams = `autoplay=1&mute=1&controls=0&enablejsapi=1&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&showinfo=0&autohide=1`;
             if (startVal) ytParams += `&start=${startVal}`;
-            if (endVal) ytParams += `&end=${endVal}`;
-
-            // Use Ad-Free Proxy if configured in env.js
+            // Adjust parameters based on whether we use a proxy or official YT
+            let finalParams = ytParams;
             let embedBase = "https://www.youtube.com/embed/";
+            
             if (window.ENV && window.ENV.YOUTUBE_PROXY_URL && window.ENV.YOUTUBE_PROXY_URL.trim() !== '') {
                embedBase = window.ENV.YOUTUBE_PROXY_URL;
+               if (!embedBase.endsWith('/')) embedBase += '/';
+               // Public proxies often don't support YT's enablejsapi or complex flags
+               // We only keep essential ones: autoplay, mute, start, end
+               let proxyParams = `autoplay=1&mute=1`;
+               if (startVal) proxyParams += `&start=${startVal}`;
+               if (endVal) proxyParams += `&end=${endVal}`;
+               finalParams = proxyParams;
             }
 
             imgHtml = `
               <div style="position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden;">
                  ${bgHtml}
-                 <iframe id="ytplayer-${post.timestamp}" src="${embedBase}${ytId}?${ytParams}" class="home-news-image yt-video-frame" style="border: none; width: 100%; height: 100%; position: relative; z-index: 2; ${styleStr}" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                 <iframe id="ytplayer-${post.timestamp}" src="${embedBase}${ytId}?${finalParams}" class="home-news-image yt-video-frame" style="border: none; width: 100%; height: 100%; position: relative; z-index: 2; ${styleStr}" allow="autoplay; encrypted-media" allowfullscreen></iframe>
               </div>
             `;
           } else if (fbEmbedUrl) {

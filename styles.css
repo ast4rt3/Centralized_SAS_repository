@@ -2392,9 +2392,35 @@ body.tv-mode .home-news-dots {
   border-radius: 8px;
   font-family: var(--font-sans);
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.upload-tab svg {
+  opacity: 0.7;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+
+.upload-tab.active svg {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.upload-tab[data-tab="live"].active {
+  color: #ef4444;
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+.upload-tab[data-tab="live"].active svg {
+  color: #ef4444;
+  filter: drop-shadow(0 0 3px rgba(239, 68, 68, 0.4));
 }
 
 .upload-tab.active {
