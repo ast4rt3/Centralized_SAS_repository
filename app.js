@@ -219,6 +219,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnAdminExitTv = document.getElementById('admin-exit-tv');
 
   let systems = [];
+  let systemsLoaded = false;
+  let systemsPromise = null;
   let ytPlayers = {}; // Persistent store for YT players
   let globalCarouselTimer = null;
   let globalSlideGeneration = 0;
@@ -266,6 +268,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function syncFromHash() {
+    if (!systemsLoaded) {
+      // If called before config, defer until ready
+      if (systemsPromise) {
+        systemsPromise.then(() => syncFromHash());
+      }
+      return;
+    }
     var pageId = getHashPageId();
     if (pageId === 'home') {
       setActiveNav(document.querySelector('.nav-item[data-page="home"]'));
@@ -298,9 +307,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const allowedRoles = sys.roles || ['admin']; // Default to admin only if not specified
     const hasAccess = allowedRoles.includes(userRole);
 
+    console.log(`[RBAC] User: ${userRole}, System: ${pageId}, Allowed: ${allowedRoles}, Success: ${hasAccess}`);
+
     if (!hasAccess) {
       console.warn(`[Security] ${userRole} attempted to access restricted system: ${pageId}`);
-      showToast("Access Denied: You don't have permission to view this system.", "error");
+      showToast(`Access Denied: ${userRole} is not authorized for ${sys.name}`, "error");
       window.location.hash = 'home';
       return;
     }
@@ -619,7 +630,8 @@ document.addEventListener('DOMContentLoaded', () => {
         loginError.classList.add('hidden');
 
         if (BACKEND_GAS_URL === "YOUR_NEW_BACKEND_GAS_URL_HERE" || !BACKEND_GAS_URL.startsWith("https://")) {
-          loginError.textContent = "Developer Error: Please paste your deployed Backend.gs URL into app.js Line 2!";
+          console.error("[Config Error] window.ENV:", window.ENV);
+          loginError.textContent = "Developer Error: Please check your env.js file and ensure BACKEND_GAS_URL is set correctly.";
           loginError.classList.remove('hidden');
           btn.textContent = origBtnText;
           btn.disabled = false;
@@ -694,26 +706,39 @@ document.addEventListener('DOMContentLoaded', () => {
       showPage('loading');
     }
 
-    // Fetch config with cache bypassing
-    fetch('systems/config.json?v=' + new Date().getTime())
-      .then(function (r) {
-        if (!r.ok) throw new Error('Config not found');
-        return r.json();
-      })
-      .then(function (data) {
-        systems = Array.isArray(data) ? data : (data.systems || []);
-        if (statSystems) statSystems.textContent = systems.length;
-        renderNav();
-        initPostSetup();
-        fetchPosts(); // Load dynamic posts
-        window.addEventListener('hashchange', syncFromHash);
-        syncFromHash();
-      })
-      .catch(function () {
-        systems = [];
-        if (statSystems) statSystems.textContent = '0';
-        navDynamic.innerHTML = '<div class="nav-section-label" style="padding: 0.5rem 1rem; color: rgba(255,255,255,0.72);">No systems loaded</div>';
-      });
+    // Load config ONCE
+    if (!systemsPromise) {
+      systemsPromise = fetch('systems/config.json?v=' + new Date().getTime())
+        .then(function (r) {
+          if (!r.ok) throw new Error('Config not found');
+          return r.json();
+        })
+        .then(function (data) {
+          systems = Array.isArray(data) ? data : (data.systems || []);
+          systemsLoaded = true;
+          if (statSystems) statSystems.textContent = systems.length;
+          renderNav();
+          initPostSetup();
+          fetchPosts(); // Load dynamic posts
+          syncFromHash();
+        })
+        .catch(function (err) {
+          console.error("Config load error:", err);
+          systems = [];
+          systemsLoaded = true;
+          if (statSystems) statSystems.textContent = '0';
+          navDynamic.innerHTML = '<div class="nav-section-label" style="padding: 0.5rem 1rem; color: rgba(255,255,255,0.72);">No systems loaded</div>';
+        });
+    }
+
+    // Register listener ONCE globally inside DOMContentLoaded
+    if (!window._sas_hash_bound) {
+      window.addEventListener('hashchange', syncFromHash);
+      window._sas_hash_bound = true;
+    }
+    
+    // Trigger initial check if needed (though it might handle internally by promise)
+    syncFromHash();
   }
 
   function setupUserMenu(userObj) {
