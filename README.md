@@ -1,98 +1,26 @@
-# SAS Portal
+# Welcome to the SAS Portal
 
-A single entry point to access all your SAS systems. Open `index.html` in a browser to use the dashboard.
+The **SAS Portal** is a centralized, high-performance gateway designed to streamline access to the entire ecosystem of SAS systems. More than just a directory, it serves as a secure and interactive hub where data management, reporting, and real-time announcements converge.
 
-## Features
+## The SAS Portal Experience
 
-- **Home** – Landing page with a short overview and system count.
-- **Left navbar** – Lists all systems; click to open the system page or an external URL.
-- **Systems** – Defined in `systems/config.json`; each system can have a description and a link (SAS Viya app, report, or local path).
+This platform was built with a focus on simplicity, responsiveness, and professional reliability. Whether on a desktop dashboard or displayed on a 1080p TV in a common area, the Portal ensures that information is always accessible and visually engaging.
 
-## Adding systems
+### Core Architecture
 
-Edit `systems/config.json`. Each system is an object with:
+- **The Dashboard (Frontend)**: A modern, responsive interface built with HTML5 and Vanilla CSS. It provides a seamless transition between home-view summaries and detailed system interfaces using integrated iFrames.
+- **The Engine (Backend)**: Powered by Google Apps Script (GAS), the backend handles secure data storage, post management, and administrative logic directly within the Google Cloud ecosystem.
+- **Dynamic Configuration**: The portal's navigation and modular structure are driven by a central configuration system, allowing it to adapt to growing organizational needs without complex code deployments.
 
-| Field         | Required | Description |
-|---------------|----------|-------------|
-| `id`          | Yes      | Unique slug (used in URL hash, e.g. `#my-system`). |
-| `name`        | Yes      | Label shown in the navbar. |
-| `description` | No       | Shown on the system’s page. |
-| `url`         | No       | Link to open (use `#` for no link). |
-| `external`    | No       | If `true`, opens in a new tab. |
+### Specialized Modules
 
-### Example
+- **Carousel & Announcements**: A media-rich gallery that supports images and video streams (YouTube, Facebook, Cloudinary), providing a dynamic way to share updates.
+- **TV Immersive View**: A dedicated mode for full-screen television display, featuring virtual 1080p canvas scaling, automated weather integration, and a persistent ticker for critical information.
+- **Secure Administration**: A robust login and confirmation system that guards administrative actions while ensuring that only authorized users can publish or modify content.
 
-```json
-[
-  {
-    "id": "viya-reporting",
-    "name": "Viya Reporting",
-    "description": "Main reporting app on SAS Viya.",
-    "url": "https://your-viya-server/SASReportViewer",
-    "external": true
-  },
-  {
-    "id": "local-docs",
-    "name": "Local Documentation",
-    "description": "Docs for SAS programs in this repo.",
-    "url": "docs/README.html",
-    "external": false
-  }
-]
-```
+### Modern Web Standards
 
-You can also use an object with a `systems` array:
+The SAS Portal leverages Progressive Web App (PWA) technologies to provide offline capabilities, fast load times via advanced Service Worker caching, and an automated background update mechanism that ensures all users are consistently running the latest version.
 
-```json
-{
-  "systems": [
-    { "id": "my-system", "name": "My System", "url": "#" }
-  ]
-}
-```
-
-## Running locally
-
-- **Option 1:** Open `index.html` directly in the browser.  
-  Note: `fetch('systems/config.json')` may be blocked by some browsers when using `file://`. If the systems list doesn’t load, use Option 2.
-- **Option 2:** Serve the folder with a local server, e.g.  
-  `python -m http.server 8000` or `npx serve .`  
-  Then open `http://localhost:8000`.
-
-## Deploying to Vercel
-
-This repo is a static site, so Vercel deployment is straightforward.
-
-- **What gets deployed**: the dashboard at `/` (`index.html`), plus any apps under `/apps/` (like your PWA).
-- **PWA shortcut route**: `vercel.json` adds rewrites so your Attendance Scanner is reachable at `/pwa/` and `/attendance-scanner/` (they map to `/apps/attendance-scanner/`).
-
-### Steps
-
-1. Push this repository to GitHub/GitLab/Bitbucket.
-2. In Vercel, click **New Project** and import the repo.
-3. Configure as:
-   - **Framework Preset**: Other
-   - **Build Command**: None
-   - **Output Directory**: `.`
-4. Deploy.
-
-After deploy:
-
-- **Dashboard**: `/`
-- **PWA**:
-  - `/apps/attendance-scanner/` (direct folder)
-  - `/attendance-scanner/` (friendly shortcut)
-  - `/pwa/` (legacy shortcut)
-
-## Structure
-
-```
-Centralized_SAS_repository/
-├── index.html      # Dashboard (home + navbar)
-├── styles.css      # Layout and theme
-├── app.js          # Loads config, renders nav and system pages
-├── README.md
-├── vercel.json     # Vercel rewrites + service-worker cache headers
-└── systems/
-    └── config.json # List of systems (edit this to add/change systems)
-```
+---
+*Empowering data-driven decisions through streamlined access.*
