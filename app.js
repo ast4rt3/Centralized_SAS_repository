@@ -277,12 +277,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     var sys = systems.find(function (s) { return s.id === pageId; });
+    
+    // --- RBAC CHECK ---
+    const sessionData = sessionStorage.getItem('sas_user_data');
+    let userRole = 'guest';
+    if (sessionData) {
+      try { userRole = JSON.parse(sessionData).role; } catch(e) {}
+    }
+
     if (!sys) {
       setActiveNav(document.querySelector('.nav-item[data-page="home"]'));
       document.body.classList.remove('system-mode');
       closeNav();
       if (systemFrame) systemFrame.src = 'about:blank';
       showPage('home');
+      return;
+    }
+
+    // Determine if user has permission
+    const allowedRoles = sys.roles || ['admin']; // Default to admin only if not specified
+    const hasAccess = allowedRoles.includes(userRole);
+
+    if (!hasAccess) {
+      console.warn(`[Security] ${userRole} attempted to access restricted system: ${pageId}`);
+      showToast("Access Denied: You don't have permission to view this system.", "error");
+      window.location.hash = 'home';
       return;
     }
 
@@ -328,27 +347,39 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderNav() {
-    var groups = groupBySection(systems);
-    var sectionNames = Object.keys(groups).sort(function (a, b) { return a.localeCompare(b); });
-
-    let adminTvNav = '';
     const sessionData = sessionStorage.getItem('sas_user_data');
+    let userRole = 'guest';
+
     if (sessionData) {
       try {
         const userData = JSON.parse(sessionData);
-        if (userData.role === 'admin') {
-          adminTvNav = `
-            <div class="nav-section-label">Admin Tools</div>
-            <a href="#home" class="nav-item" id="nav-toggle-tv" data-page="home">
-              <span class="nav-icon">📺</span>
-              <span class="nav-label">TV View</span>
-            </a>
-          `;
-        } else if (userData.role === 'uploader') {
-          navDynamic.innerHTML = '<div class="nav-section-label">Restricted</div><div style="padding:10px 16px; font-size:0.85rem; color:var(--text-muted);">Uploader role has limited access to external systems.</div>';
-          return;
-        }
+        userRole = userData.role;
       } catch (e) { }
+    }
+
+    // Filter systems based on role
+    const allowedSystems = systems.filter(s => {
+      const allowedRoles = s.roles || ['admin'];
+      return allowedRoles.includes(userRole);
+    });
+
+    var groups = groupBySection(allowedSystems);
+    var sectionNames = Object.keys(groups).sort(function (a, b) { return a.localeCompare(b); });
+
+    let adminTvNav = '';
+    if (userRole === 'admin') {
+      adminTvNav = `
+        <div class="nav-section-label">Admin Tools</div>
+        <a href="#home" class="nav-item" id="nav-toggle-tv" data-page="home">
+          <span class="nav-icon">📺</span>
+          <span class="nav-label">TV View</span>
+        </a>
+      `;
+    }
+
+    if (allowedSystems.length === 0 && userRole !== 'admin') {
+      navDynamic.innerHTML = '<div class="nav-section-label">Protected Content</div><div style="padding:10px 16px; font-size:0.85rem; color:var(--text-muted);">Your account has limited access to internal systems. Contact admin for permissions.</div>';
+      return;
     }
 
     navDynamic.innerHTML = adminTvNav + sectionNames
@@ -691,7 +722,8 @@ document.addEventListener('DOMContentLoaded', () => {
       document.body.classList.add('tv-mode');
       tvSettingsBox.classList.remove('hidden');
       if (btnAdminExitTv) btnAdminExitTv.classList.add('hidden');
-      if (navToggle) navToggle.hidden = true; // No sidebar access for TV Role
+      if (navToggle) navToggle.hidden = true; // No sidebar toggle for TV Role
+      if (sidebar) sidebar.style.display = 'none'; // Explicitly hide sidebar element
 
       // Persistence for TV Header collapse
       const tvHeaderCollapsed = localStorage.getItem('sas_tv_header_collapsed') === 'true';
@@ -713,10 +745,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.classList.add('tv-mode');
         if (btnAdminExitTv) btnAdminExitTv.classList.remove('hidden');
         if (navToggle) navToggle.hidden = true; // No sidebar in TV preview
+        if (sidebar) sidebar.style.display = 'none'; // Hide sidebar in Admin TV preview too
       } else {
         document.body.classList.remove('tv-mode');
         if (btnAdminExitTv) btnAdminExitTv.classList.add('hidden');
         if (navToggle) navToggle.hidden = false;
+        if (sidebar) sidebar.style.display = ''; // Restore sidebar
       }
       tvSettingsBox.classList.remove('hidden'); // Admin can change TV defaults
     } else {
