@@ -71,6 +71,73 @@ document.addEventListener('DOMContentLoaded', () => {
     return match ? match[1] : null;
   }
 
+  function getYouTubeVideoId(url) {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  }
+
+  let fbInitPromise = null;
+  window.fbPlayers = {};
+  function initFbSdk() {
+    if (fbInitPromise) return fbInitPromise;
+    
+    fbInitPromise = new Promise((resolve) => {
+      if (window.FB) {
+         resolve();
+         return;
+      }
+      
+      window.fbAsyncInit = function() {
+        FB.init({ xfbml: true, version: 'v19.0' });
+        FB.Event.subscribe('xfbml.ready', function(msg) {
+          if (msg.type === 'video') {
+            window.fbPlayers[msg.id] = msg.instance;
+            const el = document.getElementById(msg.id);
+            if (el && el.closest('.home-news-slide.is-active')) {
+              try {
+                 if (window.tvAudioEnabled) msg.instance.unmute();
+                 else msg.instance.mute();
+                 msg.instance.play();
+              } catch(e) {}
+            }
+          }
+        });
+        resolve();
+      };
+      
+      const js = document.createElement('script');
+      js.id = 'facebook-jssdk';
+      js.src = 'https://connect.facebook.net/en_US/sdk.js';
+      document.head.appendChild(js);
+    });
+    
+    return fbInitPromise;
+  }
+
+  function getFacebookVideoUrl(url) {
+    if (!url) return null;
+    const urlLower = url.toLowerCase();
+    // Support full URLs, mobile URLs, IDs, and paths
+    if (urlLower.includes('facebook.com') || urlLower.includes('fb.watch') || urlLower.includes('fb.com') || urlLower.includes('/videos/') || urlLower.includes('watch?v=')) {
+      let fbHref = url;
+      
+      // Try to normalize to a very standard format if possible
+      const vMatch = url.match(/[?&]v=([^&#]+)/) || url.match(/\/videos\/([^/?#]+)/) || url.match(/\/reel\/([^/?#]+)/);
+      if (vMatch) {
+         fbHref = `https://www.facebook.com/video.php?v=${vMatch[1]}`;
+      } else if (url.startsWith('/')) {
+         fbHref = 'https://www.facebook.com' + url;
+      } else if (!url.includes('://')) {
+         fbHref = 'https://www.facebook.com/' + url;
+      }
+
+      return fbHref; // Return raw URL for FB SDK
+    }
+    return null;
+  }
+
   class DigitCounter {
     constructor(parent, initialValue = '0') {
       this.parent = parent;
@@ -1069,7 +1136,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    window.loadPreviewVideo = function(url, isFile = false, resetValues = true) {
+    window.loadPreviewVideo = async function(url, isFile = false, resetValues = true) {
        if (!videoPreviewPlayer) return;
        videoPreviewPlayer.style.display = 'none';
        videoPreviewIframe.style.display = 'none';
@@ -1088,8 +1155,8 @@ document.addEventListener('DOMContentLoaded', () => {
        previewYtPlayer = null;
        previewFbPlayer = null;
        
-       const ytId = window.getYouTubeVideoId ? getYouTubeVideoId(url) : null;
-       const fbEmbedUrl = window.getFacebookVideoUrl ? getFacebookVideoUrl(url) : null;
+       const ytId = getYouTubeVideoId(url);
+       const fbEmbedUrl = getFacebookVideoUrl(url);
        
        if (ytId && !isFile) {
          videoPreviewIframe.style.display = 'block';
@@ -1115,34 +1182,43 @@ document.addEventListener('DOMContentLoaded', () => {
              if (videoPreviewLoading.querySelector('span')) videoPreviewLoading.querySelector('span').textContent = "YouTube preview unavailable (API not loaded).";
          }
        } else if (fbEmbedUrl && !isFile) {
+          // Initialize FB SDK if not already done
+          await initFbSdk();
+          
           videoPreviewIframe.style.display = 'block';
           const fbId = 'fb-preview-' + Date.now();
           videoPreviewIframe.innerHTML = `<div id="${fbId}" class="fb-video" data-href="${url}" data-width="auto" data-allowfullscreen="true" data-autoplay="false"></div>`;
           
           if (window.FB) {
              FB.XFBML.parse(videoPreviewIframe, () => {
-                FB.Event.subscribe('xfbml.ready', (msg) => {
+                const onFbReady = (msg) => {
                    if (msg.id === fbId) {
                       videoPreviewLoading.style.display = 'none';
                       previewFbPlayer = msg.instance;
-                      // FB SDK doesn't always provide duration immediately. We might have to wait or estimate.
-                      // For now, let's try to get it from the instance if available.
-                      videoDuration = 300; // Fallback to 5 mins if unknown
-                      try {
-                        // Some internal FB players allow getDuration()
-                        if (previewFbPlayer.getDuration) videoDuration = Math.floor(previewFbPlayer.getDuration());
-                      } catch(e){}
-
-                      sliderStart.max = videoDuration;
-                      sliderEnd.max = videoDuration;
-                      sliderEnd.value = videoEndInput.value || videoDuration;
-                      sliderStart.value = videoStartInput.value || 0;
-                      updateDualSliderUI();
+                      
+                      // Poll for duration as it might not be ready immediately
+                      let attempts = 0;
+                      const pollDur = setInterval(() => {
+                         const dur = previewFbPlayer.getDuration ? previewFbPlayer.getDuration() : 0;
+                         attempts++;
+                         if (dur > 0 || attempts > 20) {
+                            clearInterval(pollDur);
+                            videoDuration = Math.floor(dur || 300);
+                            sliderStart.max = videoDuration;
+                            sliderEnd.max = videoDuration;
+                            sliderEnd.value = videoEndInput.value || videoDuration;
+                            sliderStart.value = videoStartInput.value || 0;
+                            updateDualSliderUI();
+                         }
+                      }, 500);
+                      
+                      FB.Event.unsubscribe('xfbml.ready', onFbReady);
                    }
-                });
+                };
+                FB.Event.subscribe('xfbml.ready', onFbReady);
              });
           } else {
-             if (videoPreviewLoading.querySelector('span')) videoPreviewLoading.querySelector('span').textContent = "Facebook preview unavailable (SDK not loaded).";
+              if (videoPreviewLoading.querySelector('span')) videoPreviewLoading.querySelector('span').textContent = "Facebook preview unavailable (SDK not loaded).";
           }
        } else {
          videoPreviewPlayer.style.display = 'block';
@@ -1220,6 +1296,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const fileURL = URL.createObjectURL(file);
             if (window.loadPreviewVideo) window.loadPreviewVideo(fileURL, true, true);
+            if (videoSettingsGroup) videoSettingsGroup.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }
         }
       });
@@ -1250,31 +1327,36 @@ document.addEventListener('DOMContentLoaded', () => {
           const url = imgInput.value.trim();
           if (url) {
             const urlLower = url.toLowerCase();
-            const isVideo = (window.getYouTubeVideoId ? getYouTubeVideoId(url) : false) || 
-                            (window.getFacebookVideoUrl ? getFacebookVideoUrl(url) : false) || 
-                            /\.(mp4|webm|mov|mkv|avi)$/i.test(urlLower) || 
-                            urlLower.includes('drive.google.com') || 
-                            urlLower.includes('/video/upload/');
+            const ytId = getYouTubeVideoId(url);
+            const fbUrl = getFacebookVideoUrl(url);
+            const isDirectVideo = /\.(mp4|webm|mov|mkv|avi)$/i.test(urlLower) || urlLower.includes('/video/upload/');
             
-            const liveToggle = document.querySelector('.live-stream-toggle');
+            const isVideo = ytId || fbUrl || isDirectVideo;
             
             if (isVideo) {
-              if (liveToggle) liveToggle.classList.remove('hidden');
+              // Show Video Range Controls, Hide Image Zoom
               previewGroup.style.display = 'none';
               if (videoSettingsGroup) videoSettingsGroup.style.display = 'block';
+              
               if (window.loadPreviewVideo) {
                  const keep = e.detail && e.detail.keepValues;
                  window.loadPreviewVideo(url, false, !keep);
+                 if (videoSettingsGroup) videoSettingsGroup.scrollIntoView({ behavior: 'smooth', block: 'center' });
               }
             } else {
-              if (liveToggle) liveToggle.classList.add('hidden');
+              // Show Image Zoom/Pan (includes Google Drive), Hide Video Range
               if (videoSettingsGroup) videoSettingsGroup.style.display = 'none';
               previewImg.src = url;
               previewGroup.style.display = 'block';
+              if (previewGroup) previewGroup.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              
+              // If it's a Drive link, we might need a direct image URL for the preview to work
+              const dId = window.getDriveId ? getDriveId(url) : null;
+              if (dId && !url.includes('uc?id=')) {
+                 previewImg.src = `https://drive.google.com/uc?id=${dId}`;
+              }
             }
           } else {
-            const liveToggle = document.querySelector('.live-stream-toggle');
-            if (liveToggle) liveToggle.classList.add('hidden');
             previewGroup.style.display = 'none';
             if (videoSettingsGroup) videoSettingsGroup.style.display = 'none';
           }
@@ -1788,62 +1870,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function getYouTubeVideoId(url) {
-    if (!url) return null;
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : null;
-  }
-
-  let windowFbInitDone = false;
-  window.fbPlayers = {};
-  function initFbSdk() {
-    if (windowFbInitDone) return;
-    windowFbInitDone = true;
-    window.fbAsyncInit = function() {
-      FB.init({ xfbml: true, version: 'v19.0' });
-      FB.Event.subscribe('xfbml.ready', function(msg) {
-        if (msg.type === 'video') {
-          window.fbPlayers[msg.id] = msg.instance;
-          // Play immediately if it's currently active
-          const el = document.getElementById(msg.id);
-          if (el && el.closest('.home-news-slide.is-active')) {
-            try {
-               if (window.tvAudioEnabled) msg.instance.unmute();
-               else msg.instance.mute();
-               msg.instance.play();
-            } catch(e) {}
-          }
-        }
-      });
-    };
-    const js = document.createElement('script');
-    js.id = 'facebook-jssdk';
-    js.src = 'https://connect.facebook.net/en_US/sdk.js';
-    document.head.appendChild(js);
-  }
-
-  function getFacebookVideoUrl(url) {
-    if (!url) return null;
-    const urlLower = url.toLowerCase();
-    // Support full URLs, mobile URLs, IDs, and paths
-    if (urlLower.includes('facebook.com') || urlLower.includes('fb.watch') || urlLower.includes('fb.com') || urlLower.includes('/videos/') || urlLower.includes('watch?v=')) {
-      let fbHref = url;
-      
-      // Try to normalize to a very standard format if possible
-      const vMatch = url.match(/[?&]v=([^&#]+)/) || url.match(/\/videos\/([^/?#]+)/) || url.match(/\/reel\/([^/?#]+)/);
-      if (vMatch) {
-         fbHref = `https://www.facebook.com/video.php?v=${vMatch[1]}`;
-      } else if (url.startsWith('/')) {
-         fbHref = 'https://www.facebook.com' + url;
-      } else if (!url.includes('://')) {
-         fbHref = 'https://www.facebook.com/' + url;
-      }
-
-      return fbHref; // Return raw URL for FB SDK
-    }
-    return null;
-  }
 
   async function expirePostOnBackend(timestamp) {
     const sessionData = sessionStorage.getItem('sas_user_data');
