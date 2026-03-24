@@ -24,3 +24,4 @@ env.example.js
 # Documentation
 *.md
 !README.md
+env.example.js
