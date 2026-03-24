@@ -29,6 +29,38 @@ let tvTheaterEnabled = false; // Default to non-fullscreen for VIDEOS
   updateBanner(); // Check immediately on page load
 })();
 
+  // --- AUTO-UPDATE LOGIC ---
+  // Periodically check for new versions on the server to bypass aggressive caching
+  async function checkForUpdates() {
+    try {
+      // Use timestamp query param to bypass middle-man caches
+      const response = await fetch('version.json?t=' + new Date().getTime());
+      if (!response.ok) return;
+      
+      const data = await response.json();
+      const localVersion = localStorage.getItem('sas_app_version');
+
+      if (localVersion && localVersion !== data.version) {
+        console.log(`[Update] New version ${data.version} found! (Local: ${localVersion})`);
+        localStorage.setItem('sas_app_version', data.version);
+        
+        // Brief delay to allow console logs to be seen, then hard refresh
+        setTimeout(() => {
+          window.location.reload(true);
+        }, 1000);
+      } else {
+        localStorage.setItem('sas_app_version', data.version);
+      }
+    } catch (err) {
+      console.warn("Update check failed (likely offline):", err);
+    }
+  }
+
+  // Initial check on startup
+  checkForUpdates();
+  // Check every 60 minutes
+  setInterval(checkForUpdates, 3600000);
+
 document.addEventListener('DOMContentLoaded', () => {
 
   // --- TV Clock Logic ---

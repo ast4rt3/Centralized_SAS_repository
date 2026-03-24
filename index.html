@@ -21,8 +21,21 @@
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./serviceWorker.js')
-          .then(reg => console.log('SW registered:', reg.scope))
+          .then(reg => {
+            console.log('SW registered:', reg.scope);
+            // Check for updates manually on registration
+            reg.update();
+          })
           .catch(err => console.warn('SW registration failed:', err));
+      });
+
+      // Reload page when new service worker takes over (skipWaiting was called)
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+          refreshing = true;
+          window.location.reload();
+        }
       });
     }
   </script>
