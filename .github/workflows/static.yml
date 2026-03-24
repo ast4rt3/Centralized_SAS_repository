@@ -39,9 +39,9 @@ jobs:
           echo "  YOUTUBE_PROXY_URL: \"${{ secrets.YOUTUBE_PROXY_URL }}\"," >> env.js
           echo "  CLOUDINARY_CLOUD_NAME: \"${{ secrets.CLOUDINARY_CLOUD_NAME }}\"," >> env.js
           echo "  CLOUDINARY_UPLOAD_PRESET: \"${{ secrets.CLOUDINARY_UPLOAD_PRESET }}\"," >> env.js
-          echo "  systems: ${{ secrets.SYSTEMS_CONFIG_JSON || '[]' }}" >> env.js
+          echo "  systems: $(cat systems.json)" >> env.js
           echo "};" >> env.js
-          echo "Generated env.js with secrets"
+          echo "Generated env.js with secrets and systems.json"
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

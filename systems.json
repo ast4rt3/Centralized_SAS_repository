@@ -1,0 +1,47 @@
+[
+  {
+    "id": "attendance-scanner",
+    "name": "Attendance Scanner",
+    "description": "Progressive web app with HTML, CSS, and Google Apps Script backend.",
+    "url": "apps/attendance-scanner/index.html",
+    "external": false,
+    "section": "Attendance",
+    "roles": ["admin"]
+  },
+  {
+    "id": "schedule-manager",
+    "name": "Schedule Manager",
+    "description": "Google Apps Script schedule manager connected to Attendance Scanner.",
+    "url": "https://script.google.com/a/macros/nbsc.edu.ph/s/AKfycbyKLYEUfTct6AG91A7hTrD3qf62ti9qBbvLiLGdNYRStaVK6mRIwyqqfkCgQZnbeUIECQ/exec",
+    "external": false,
+    "section": "Attendance",
+    "roles": ["admin"]
+  },
+  {
+    "id": "foundation-day-attendance",
+    "name": "Foundation Day Attendance",
+    "description": "Live masterlist viewer connected to Google Sheets.",
+    "url": "apps/attendance-viewer/index.html",
+    "external": false,
+    "section": "Attendance",
+    "roles": ["admin"]
+  },
+  {
+    "id": "nbsc-mailer",
+    "name": "NBSC Mailer",
+    "description": "Official communications portal for single and batch emails.",
+    "url": "apps/mailer/index.html",
+    "external": false,
+    "section": "Communications",
+    "roles": ["admin"]
+  },
+  {
+    "id": "lost-and-found",
+    "name": "Lost and Found",
+    "description": "NBSC Lost and Found reporting system.",
+    "url": "https://lost-and-found-liart-seven.vercel.app/",
+    "external": false,
+    "section": "General Services",
+    "roles": ["admin"]
+  }
+]

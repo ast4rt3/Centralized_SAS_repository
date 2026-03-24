@@ -14,8 +14,8 @@ Thumbs.db
 
 # Environment and Dependencies
 .env
-# env.js
-# env.example.js
+env.js
+env.example.js
 node_modules/
 dist/
 build/
