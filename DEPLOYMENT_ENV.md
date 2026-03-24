@@ -13,6 +13,7 @@ Go to your GitHub Repository:
 **Settings > Secrets and variables > Actions > New repository secret**
 Add the following secrets:
 - `BACKEND_GAS_URL`
+- `YOUTUBE_PROXY_URL` (Optional, e.g., https://yewtu.be/embed/)
 - `CLOUDINARY_CLOUD_NAME`
 - `CLOUDINARY_UPLOAD_PRESET`
 - `SYSTEMS_CONFIG_JSON` (Copy and paste the entire JSON from your `systems/config.json` before deleting it)

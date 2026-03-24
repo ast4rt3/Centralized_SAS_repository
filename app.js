@@ -1989,10 +1989,16 @@ document.addEventListener('DOMContentLoaded', () => {
             if (startVal) ytParams += `&start=${startVal}`;
             if (endVal) ytParams += `&end=${endVal}`;
 
+            // Use Ad-Free Proxy if configured in env.js
+            let embedBase = "https://www.youtube.com/embed/";
+            if (window.ENV && window.ENV.YOUTUBE_PROXY_URL && window.ENV.YOUTUBE_PROXY_URL.trim() !== '') {
+               embedBase = window.ENV.YOUTUBE_PROXY_URL;
+            }
+
             imgHtml = `
               <div style="position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden;">
                  ${bgHtml}
-                 <iframe id="ytplayer-${post.timestamp}" src="https://www.youtube.com/embed/${ytId}?${ytParams}" class="home-news-image yt-video-frame" style="border: none; width: 100%; height: 100%; position: relative; z-index: 2; ${styleStr}" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                 <iframe id="ytplayer-${post.timestamp}" src="${embedBase}${ytId}?${ytParams}" class="home-news-image yt-video-frame" style="border: none; width: 100%; height: 100%; position: relative; z-index: 2; ${styleStr}" allow="autoplay; encrypted-media" allowfullscreen></iframe>
               </div>
             `;
           } else if (fbEmbedUrl) {
