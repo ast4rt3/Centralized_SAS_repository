@@ -435,11 +435,17 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch (e) { }
     }
 
+    console.log('[Sidebar] User Role:', userRole);
+    console.log('[Sidebar] Total Systems in Config:', systems.length);
+
     // Filter systems based on role
     const allowedSystems = systems.filter(s => {
       const allowedRoles = s.roles || ['admin'];
-      return allowedRoles.includes(userRole);
+      const hasAccess = allowedRoles.includes(userRole);
+      console.log(`[Sidebar] System ${s.id} allowed: ${hasAccess} (Roles: ${allowedRoles})`);
+      return hasAccess;
     });
+    console.log('[Sidebar] Allowed Systems for User:', allowedSystems.length);
 
     var groups = groupBySection(allowedSystems);
     var sectionNames = Object.keys(groups).sort(function (a, b) { return a.localeCompare(b); });
