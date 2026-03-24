@@ -1,0 +1,20 @@
+# Sensitive logic and keys
+Backend.gs
+systems/config.json
+
+# Local logs and status files
+status.txt
+verification.txt
+tmp_log.txt
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Environment and Dependencies
+.env
+node_modules/
+dist/
+build/
+.vercel
