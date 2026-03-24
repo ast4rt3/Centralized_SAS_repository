@@ -1195,9 +1195,12 @@ document.addEventListener('DOMContentLoaded', () => {
       fileInput.addEventListener('change', () => {
         if (fileInput.files && fileInput.files[0]) {
           const file = fileInput.files[0];
-          fileLabelText.textContent = '✅ ' + file.name;
+          if (fileLabelText) fileLabelText.textContent = '✅ ' + file.name;
           fileUploadLabel.classList.add('file-selected');
           fileUploadLabel.classList.remove('drag-over');
+          
+          const iconWrapper = fileUploadLabel.querySelector('.upload-icon-wrapper');
+          if (iconWrapper) iconWrapper.style.color = '#16a34a';
 
           // --- Show Local Preview ---
           if (file.type.startsWith('image/') && previewImg && previewGroup) {
@@ -1229,8 +1232,10 @@ document.addEventListener('DOMContentLoaded', () => {
         fileUploadLabel.classList.remove('drag-over');
         if (ev.dataTransfer.files && ev.dataTransfer.files[0]) {
           fileInput.files = ev.dataTransfer.files;
-          fileLabelText.textContent = '✅ ' + ev.dataTransfer.files[0].name;
+          if (fileLabelText) fileLabelText.textContent = '✅ ' + ev.dataTransfer.files[0].name;
           fileUploadLabel.classList.add('file-selected');
+          const iconWrapper = fileUploadLabel.querySelector('.upload-icon-wrapper');
+          if (iconWrapper) iconWrapper.style.color = '#16a34a';
         }
       });
     }
@@ -1392,7 +1397,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (uploadPanels['upload']) uploadPanels['upload'].classList.remove('hidden');
         if (fileUploadLabel) {
           fileUploadLabel.classList.remove('file-selected');
-          if (fileLabelText) fileLabelText.textContent = 'Click to choose an image/video or drag & drop';
+          if (fileLabelText) fileLabelText.textContent = 'Click or drag image/video here';
+          const iconWrapper = fileUploadLabel.querySelector('.upload-icon-wrapper');
+          if (iconWrapper) iconWrapper.style.color = '';
         }
 
         if (previewGroup) previewGroup.style.display = 'none';

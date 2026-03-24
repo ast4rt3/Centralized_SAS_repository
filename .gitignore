@@ -20,3 +20,7 @@ dist/
 build/
 .vercel
 env.example.js
+
+# Documentation
+*.md
+!README.md
