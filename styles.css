@@ -1349,7 +1349,6 @@ iframe.post-image {
 #add-post-modal #submit-post-btn {
   grid-column: 2;
   justify-self: center;
-  min-width: 160px;
 }
 
 .primary-btn {
@@ -1498,12 +1497,12 @@ iframe.post-image {
   font-size: 0.95rem;
   font-weight: 800;
   background-color: var(--zz-bg-full);
-  width: 180px;
-  height: 44px;
+  width: 160px;
+  height: 40px;
   border: none;
   cursor: pointer;
   outline: none;
-  border-radius: 22px; /* Pill */
+  border-radius: 20px; /* Pill */
   transition: color var(--zz-animation-time) ease-in-out,
     font-size var(--zz-animation-time) var(--zz-animation-style),
     background-color var(--zz-animation-time) ease-in-out,
@@ -1535,10 +1534,10 @@ iframe.post-image {
 }
 
 .zz-button.active {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   background-color: var(--zz-bg-empty);
-  width: 80px;
-  height: 80px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   color: rgba(255, 255, 255, 0.4); /* Fade out original text */
   background-image: linear-gradient(to top, var(--zz-bg-full) calc(var(--zz-progress) * 1%), var(--zz-bg-empty) calc(var(--zz-progress) * 1%));
@@ -1546,7 +1545,7 @@ iframe.post-image {
 
 .zz-button.active:after {
   content: attr(data-progress) '%';
-  font-size: 1.4rem;
+  font-size: 0.8rem;
   color: white;
 }
 
@@ -1567,17 +1566,17 @@ iframe.post-image {
   background-color: var(--zz-bg-done) !important;
   background-image: none !important;
   position: relative;
-  width: 80px;
-  height: 80px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   box-shadow: 0 8px 25px rgba(82, 181, 0, 0.4);
 }
 
 .zz-button-progress-done:before {
   content: '';
-  width: 24px;
-  height: 12px;
-  border: solid 5px var(--zz-base-color);
+  width: 16px;
+  height: 8px;
+  border: solid 3px var(--zz-base-color);
   border-top: none;
   border-right: none;
   position: absolute;
@@ -1595,8 +1594,8 @@ iframe.post-image {
 
 @keyframes progress-done-post {
   0%   { width: 0px; height: 0px; opacity: 1; }
-  50%  { width: 0px; height: 12px; opacity: 1; }
-  100% { width: 24px; height: 12px; opacity: 1; }
+  50%  { width: 0px; height: 8px; opacity: 1; }
+  100% { width: 16px; height: 8px; opacity: 1; }
 }
 
 .zz-button:disabled:not(.active):not(.zz-button-progress-done) {
