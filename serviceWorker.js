@@ -4,7 +4,7 @@
 // No buttons required — runs invisibly in the background
 // ================================================================
 
-const CACHE_VERSION = 'sas-tv-v56';
+const CACHE_VERSION = 'sas-tv-v57';
 const CACHE_POST_DATA = 'sas-posts-v1';
 const CACHE_MEDIA = 'sas-media-v1';
 
@@ -53,6 +53,23 @@ self.addEventListener('fetch', event => {
 
   // Only handle GET requests
   if (req.method !== 'GET') return;
+
+  // ---- Strategy: NETWORK FIRST → cache fallback ----
+  // Used for: Configuration files (always get latest)
+  const configFiles = ['env.js', 'manifest.json', 'version.json'];
+  if (configFiles.some(f => url.pathname.endsWith(f))) {
+    event.respondWith(
+      fetch(req)
+        .then(res => {
+          if (!res || !res.ok) return res;
+          const clone = res.clone();
+          caches.open(CACHE_VERSION).then(cache => cache.put(req, clone));
+          return res;
+        })
+        .catch(() => caches.match(req))
+    );
+    return;
+  }
 
   // ---- Skip non-cacheable YouTube/Google API resources ----
   // YouTube video content itself can't be cached (CORS), but
