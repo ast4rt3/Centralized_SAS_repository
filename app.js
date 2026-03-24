@@ -61,6 +61,7 @@ let tvTheaterEnabled = false; // Default to non-fullscreen for VIDEOS
   // Check every 60 minutes
   setInterval(checkForUpdates, 3600000);
 
+console.log('--- SAS APP LOADING (v11 + Sidebar Fix) ---');
 document.addEventListener('DOMContentLoaded', () => {
 
   // --- TV Clock Logic ---
