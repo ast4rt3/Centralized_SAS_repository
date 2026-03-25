@@ -200,6 +200,33 @@
           <div class="posts-header">
             <h2>Recent Updates</h2>
             <div style="display:flex; align-items:center; gap:12px;">
+              <div class="view-menu" id="view-menu">
+                <button class="view-menu-btn" id="view-menu-btn" aria-haspopup="true" aria-expanded="false">
+                  <span class="view-menu-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                  </span>
+                  <span class="view-menu-label" id="view-menu-label">View</span>
+                  <span style="font-size: 0.6rem; margin-top: 2px;">▼</span>
+                </button>
+                <div class="view-menu-dropdown" id="view-menu-dropdown">
+                  <button class="view-option" data-view="xl">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                    Extra large icons
+                  </button>
+                  <button class="view-option" data-view="lg">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                    Large icons
+                  </button>
+                  <button class="view-option" data-view="md">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                    Medium icons
+                  </button>
+                  <button class="view-option" data-view="sm">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    Small icons
+                  </button>
+                </div>
+              </div>
               <button id="add-post-btn" class="add-post-btn hidden" aria-label="Add New Post">
                 <span class="plus-icon">+</span> Add Post
               </button>
@@ -254,7 +281,7 @@
             </div>
 
             <!-- Live Stream Toggle Removed (Moved to Tabs) -->
-            <div class="input-group">
+            <div class="input-group" id="post-media-input-group">
               <label>Image / Video</label>
               <div class="upload-tabs" id="upload-tabs">
                 <button type="button" class="upload-tab active" data-tab="upload">

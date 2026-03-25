@@ -795,6 +795,72 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
+    // View Mode Toggle Logic
+    const viewMenu = document.getElementById('view-menu');
+    const viewMenuBtn = document.getElementById('view-menu-btn');
+    const viewMenuDropdown = document.getElementById('view-menu-dropdown');
+    const viewOptions = document.querySelectorAll('.view-option');
+    const postsContainer = document.getElementById('posts-container');
+
+    function setViewMode(mode) {
+      if (!postsContainer) return;
+      
+      // Remove all view classes
+      postsContainer.classList.remove('view-xl', 'view-lg', 'view-md', 'view-sm');
+      // Add selected view class
+      postsContainer.classList.add(`view-${mode}`);
+      
+      // Update active state in dropdown
+      viewOptions.forEach(opt => {
+        opt.classList.toggle('active', opt.getAttribute('data-view') === mode);
+      });
+      
+      // Update button label text
+      const viewLabel = document.getElementById('view-menu-label');
+      if (viewLabel) {
+        const modeNames = { 'xl': 'Extra Large', 'lg': 'Large', 'md': 'Medium', 'sm': 'Small' };
+        viewLabel.textContent = `View: ${modeNames[mode] || mode}`;
+      }
+
+      // Persist choice
+      localStorage.setItem('sas_post_view_mode', mode);
+      
+      // Close menu
+      if (viewMenu) viewMenu.classList.remove('is-open');
+      if (viewMenuBtn) viewMenuBtn.setAttribute('aria-expanded', 'false');
+      
+      console.log(`[View] Mode set to: ${mode}`);
+      
+      // Force layout recalculation for any potential issues
+      window.dispatchEvent(new Event('resize'));
+    }
+
+    if (viewMenuBtn) {
+      viewMenuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = viewMenu.classList.toggle('is-open');
+        viewMenuBtn.setAttribute('aria-expanded', isOpen);
+      });
+    }
+
+    viewOptions.forEach(opt => {
+      opt.addEventListener('click', () => {
+        setViewMode(opt.getAttribute('data-view'));
+      });
+    });
+
+    // Close view menu when clicking outside
+    document.addEventListener('click', (e) => {
+      if (viewMenu && !viewMenu.contains(e.target)) {
+        viewMenu.classList.remove('is-open');
+        if (viewMenuBtn) viewMenuBtn.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    // Initialize View Mode
+    const savedViewMode = localStorage.getItem('sas_post_view_mode') || 'md';
+    setViewMode(savedViewMode);
+
     // Register listener ONCE globally inside DOMContentLoaded
     if (!window._sas_hash_bound) {
       window.addEventListener('hashchange', syncFromHash);
@@ -1272,16 +1338,35 @@ document.addEventListener('DOMContentLoaded', () => {
         Object.values(uploadPanels).forEach(p => p && p.classList.add('hidden'));
         if (uploadPanels[activeUploadTab]) uploadPanels[activeUploadTab].classList.remove('hidden');
         
-        const scheduleSection = document.getElementById('post-schedule-section');
-        if (scheduleSection) {
-          if (activeUploadTab === 'live') scheduleSection.classList.add('hidden');
-          else scheduleSection.classList.remove('hidden');
+        const videoRangeContainer = document.querySelector('.video-range-container');
+        const videoSettingsLabel = videoSettingsGroup ? videoSettingsGroup.querySelector('label') : null;
+
+        if (activeUploadTab === 'live') {
+           if (videoRangeContainer) videoRangeContainer.style.display = 'none';
+           if (videoSettingsLabel) videoSettingsLabel.textContent = 'Live Video Preview';
+           if (scheduleSection) scheduleSection.classList.add('hidden');
+        } else {
+           if (videoRangeContainer) videoRangeContainer.style.display = 'block';
+           if (videoSettingsLabel) videoSettingsLabel.textContent = 'Video Playback Range';
+           if (scheduleSection) scheduleSection.classList.remove('hidden');
         }
 
+        // --- RESET AND RE-TRIGGER PREVIEWS ON TAB SWITCH ---
+        if (previewGroup) previewGroup.style.display = 'none';
+        if (videoSettingsGroup) videoSettingsGroup.style.display = 'none';
+
         if (activeUploadTab === 'url') {
-           // Handle legacy URL detection if needed
            if (imgInput && imgInput.value.trim()) {
               imgInput.dispatchEvent(new CustomEvent('input', { detail: { keepValues: true } }));
+           }
+        } else if (activeUploadTab === 'upload') {
+           if (fileInput && fileInput.files && fileInput.files[0]) {
+              fileInput.dispatchEvent(new Event('change'));
+           }
+        } else if (activeUploadTab === 'live') {
+           const liveInput = document.getElementById('post-live-url');
+           if (liveInput && liveInput.value.trim()) {
+              liveInput.dispatchEvent(new CustomEvent('input', { detail: { keepValues: true } }));
            }
         }
       });
@@ -1353,7 +1438,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const fbUrl = getFacebookVideoUrl(url);
             const isDirectVideo = /\.(mp4|webm|mov|mkv|avi)$/i.test(urlLower) || urlLower.includes('/video/upload/');
             
-            const isVideo = ytId || fbUrl || isDirectVideo;
+            const isVideo = ytId || fbUrl || isDirectVideo || urlLower.includes('drive.google.com') && (urlLower.includes('video') || !urlLower.includes('image'));
             
             if (isVideo) {
               // Show Video Range Controls, Hide Image Zoom
@@ -1399,6 +1484,40 @@ document.addEventListener('DOMContentLoaded', () => {
       previewImg.addEventListener('load', () => {
         previewGroup.style.display = 'block';
       });
+
+      // --- LIVE URL PREVIEW LISTENER ---
+      const liveInput = document.getElementById('post-live-url');
+      if (liveInput) {
+        let liveInputTimeout;
+        liveInput.addEventListener('input', (e) => {
+          const runLiveInput = () => {
+            const url = liveInput.value.trim();
+            if (url) {
+              const ytId = getYouTubeVideoId(url);
+              const fbUrl = getFacebookVideoUrl(url);
+              
+              if (ytId || fbUrl) {
+                // Live is typically video
+                if (previewGroup) previewGroup.style.display = 'none';
+                if (videoSettingsGroup) videoSettingsGroup.style.display = 'block';
+                
+                if (window.loadPreviewVideo) {
+                   const keep = e.detail && e.detail.keepValues;
+                   window.loadPreviewVideo(url, false, !keep);
+                }
+              } else {
+                 // Fallback for non-standard live links as images? unlikely but let's hide video settings
+                 if (videoSettingsGroup) videoSettingsGroup.style.display = 'none';
+              }
+            } else {
+              if (videoSettingsGroup) videoSettingsGroup.style.display = 'none';
+            }
+          };
+          clearTimeout(liveInputTimeout);
+          if (e.detail && e.detail.keepValues) runLiveInput();
+          else liveInputTimeout = setTimeout(runLiveInput, 500);
+        });
+      }
 
       const transformWrapper = document.getElementById('post-preview-transform-wrapper');
       const zoomSlider = document.getElementById('post-img-zoom');
@@ -1507,12 +1626,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const liveInput = document.getElementById('post-live-url');
         if (liveInput) liveInput.value = '';
-        if (fileUploadLabel) {
-          fileUploadLabel.classList.remove('file-selected');
-          if (fileLabelText) fileLabelText.textContent = 'Click or drag image/video here';
-          const iconWrapper = fileUploadLabel.querySelector('.upload-icon-wrapper');
-          if (iconWrapper) iconWrapper.style.color = '';
-        }
+        const mediaGroup = document.getElementById('post-media-input-group');
+        if (mediaGroup) mediaGroup.style.display = 'block';
 
         if (previewGroup) previewGroup.style.display = 'none';
         if (previewImg) previewImg.style.objectPosition = '50% 50%';
@@ -1872,12 +1987,18 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- END PHASE 13 ---
 
         renderPosts(data.posts, container, role);
-
+        
         const isActualTvMode = role === 'tv' || document.body.classList.contains('tv-mode');
         if (isActualTvMode) {
-          container.className = 'home-news'; // Override container grid settings to fit carousel
+          container.className = 'home-news'; 
         } else {
-          container.className = 'posts-container'; // Restore grid for admin/user
+          // Restore grid for admin/user but PRESERVE current view class
+          container.classList.add('posts-container');
+          container.classList.remove('home-news');
+          
+          // Re-apply saved view mode to ensure classes are correct after render
+          const currentMode = localStorage.getItem('sas_view_mode') || 'md';
+          if (typeof setViewMode === 'function') setViewMode(currentMode);
         }
         container.classList.remove('hidden');
       } else {
@@ -2295,15 +2416,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const isCloudinary = urlForEdit.includes('cloudinary.com') || urlForEdit.includes('res.cloudinary.com');
             const isDriveUpload = urlForEdit.includes('drive.google.com/file/d/') && urlForEdit.includes('/preview');
 
+            // Hide Entire Media Group for Edits as requested
+            const mediaGroup = document.getElementById('post-media-input-group');
+            if (mediaGroup) mediaGroup.style.display = 'none';
+            // Also hide previews to be super clean
+            const previewGroup = document.getElementById('post-img-preview-group');
+            if (previewGroup) previewGroup.style.display = 'none';
+            const videoGroup = document.getElementById('post-video-settings-group');
+            if (videoGroup) videoGroup.style.display = 'none';
+
             if (isLivePost) {
                const liveTab = document.querySelector('.upload-tab[data-tab="live"]');
                if (liveTab) liveTab.click();
                const liveInput = document.getElementById('post-live-url');
                if (liveInput) liveInput.value = urlForEdit;
-            } else if (isCloudinary || isDriveUpload) {
-               const uploadTab = document.querySelector('.upload-tab[data-tab="upload"]');
-               if (uploadTab) uploadTab.click();
             } else {
+               // Default to URL tab for edits even if it was originally an upload
                const urlTab = document.querySelector('.upload-tab[data-tab="url"]');
                if (urlTab) urlTab.click();
                const urlInput = document.getElementById('post-img');
@@ -2313,7 +2441,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const isVideoForEdit = (window.getYouTubeVideoId ? getYouTubeVideoId(urlForEdit) : false) || 
                                    (window.getFacebookVideoUrl ? getFacebookVideoUrl(urlForEdit) : false) || 
                                    /\.(mp4|webm|mov|mkv|avi)$/i.test(urlForEdit.toLowerCase()) || 
-                                   isDriveUpload || 
+                                   (urlForEdit.toLowerCase().includes('drive.google.com') && !urlForEdit.toLowerCase().includes('sz=w')) || 
                                    urlForEdit.includes('/video/upload/');
 
             const posInput = document.getElementById('post-img-pos');
@@ -2337,11 +2465,17 @@ document.addEventListener('DOMContentLoaded', () => {
               if (vStart) vStart.value = startVal;
               if (vEnd) vEnd.value = endVal;
             }
-
-            if (isLivePost || !isCloudinary && !isDriveUpload) {
+            if (isVideoForEdit) {
+               // Force trigger video preview
+               const videoGroup = document.getElementById('post-video-settings-group');
+               if (videoGroup) videoGroup.style.display = 'block';
+               if (window.loadPreviewVideo) {
+                  window.loadPreviewVideo(urlForEdit, false, false);
+               }
+            } else if (!isCloudinary && !isDriveUpload) {
                const imgInput = document.getElementById(isLivePost ? 'post-live-url' : 'post-img');
                if (imgInput) {
-                 imgInput.dispatchEvent(new CustomEvent('input', { detail: { keepValues: true } }));
+                  imgInput.dispatchEvent(new CustomEvent('input', { detail: { keepValues: true } }));
                }
             } else {
                const previewImg = document.getElementById('post-preview-img');
@@ -2349,9 +2483,6 @@ document.addEventListener('DOMContentLoaded', () => {
                if (previewImg && previewGroup) {
                   previewImg.src = urlForEdit;
                   previewGroup.style.display = 'block';
-                  if (isVideoForEdit && window.updateVideoPreview) {
-                     window.updateVideoPreview(urlForEdit, startVal, endVal);
-                  }
                }
             }
 

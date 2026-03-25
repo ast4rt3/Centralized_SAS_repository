@@ -43,5 +43,14 @@
     "external": false,
     "section": "General Services",
     "roles": ["admin"]
+  },
+  {
+    "id": "borrowers-log",
+    "name": "Borrowers Log",
+    "description": "NBSC Borrowers Log system for tracking equipment and facilities.",
+    "url": "https://borrowers-log.vercel.app/login",
+    "external": false,
+    "section": "General Services",
+    "roles": ["admin"]
   }
 ]
