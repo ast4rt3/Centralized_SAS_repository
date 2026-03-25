@@ -885,6 +885,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (tvHeaderCollapsed) {
         document.body.classList.add('tv-header-collapsed');
       }
+      if (btnTvHeaderToggle) btnTvHeaderToggle.classList.remove('hidden');
 
       // Attempt actual fullscreen via API explicitly for the TV role
       try {
@@ -902,26 +903,26 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btnAdminExitTv) btnAdminExitTv.classList.add('hidden'); // Toggle visibility fixed
         if (navToggle) navToggle.hidden = true;
         if (sidebar) sidebar.style.display = 'none';
+        if (btnTvHeaderToggle) btnTvHeaderToggle.classList.remove('hidden');
       } else {
         document.body.classList.remove('tv-mode');
         document.body.classList.add('dashboard-backdrop');
         if (btnAdminExitTv) btnAdminExitTv.classList.add('hidden');
         if (navToggle) navToggle.hidden = false;
         if (sidebar) sidebar.style.display = '';
+        if (btnTvHeaderToggle) btnTvHeaderToggle.classList.add('hidden');
       }
       tvSettingsBox.classList.remove('hidden');
-    } else if (userObj.role === 'uploader') {
+      if (btnSidebarToggle) btnSidebarToggle.classList.remove('hidden');
+    } else {
+      // For uploader and others, keep tv-settings hidden
       document.body.classList.remove('tv-mode');
       document.body.classList.add('dashboard-backdrop');
       tvSettingsBox.classList.add('hidden');
       if (btnAdminExitTv) btnAdminExitTv.classList.add('hidden');
       if (navToggle) navToggle.hidden = false;
       if (sidebar) sidebar.style.display = '';
-    } else {
-      document.body.classList.remove('tv-mode', 'dashboard-backdrop');
-      tvSettingsBox.classList.add('hidden');
-      if (btnAdminExitTv) btnAdminExitTv.classList.add('hidden');
-      if (navToggle) navToggle.hidden = false;
+      // Sidebar toggle is hidden by default in index.html, we only show it for Admins above
     }
 
     const displayName = userDisplayName;

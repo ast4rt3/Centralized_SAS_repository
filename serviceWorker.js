@@ -66,7 +66,7 @@ self.addEventListener('fetch', event => {
           caches.open(CACHE_VERSION).then(cache => cache.put(req, clone));
           return res;
         })
-        .catch(() => caches.match(req))
+        .catch(() => caches.match(req).then(cached => cached || new Response('', { status: 404, statusText: 'Not Found' })))
     );
     return;
   }
@@ -94,7 +94,11 @@ self.addEventListener('fetch', event => {
         })
         .catch(() => {
           return caches.match(req, { ignoreSearch: true })
-            .then(cached => cached || Response.error());
+            .then(cached => cached || new Response(JSON.stringify({ success: false, message: "Offline — connection failed." }), { 
+              status: 503, 
+              statusText: 'Service Unavailable',
+              headers: { 'Content-Type': 'application/json' }
+            }));
         })
     );
     return;
@@ -138,9 +142,9 @@ self.addEventListener('fetch', event => {
         return res;
       }).catch(() => {
         if (req.destination === 'document') {
-          return caches.match('./index.html');
+          return caches.match('./index.html').then(cached => cached || new Response('Offline', { status: 503 }));
         }
-        return Response.error();
+        return new Response('', { status: 404 });
       });
     })
   );

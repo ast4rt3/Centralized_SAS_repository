@@ -853,8 +853,8 @@ body.system-mode .content {
 }
 
 .icon-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text);
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
 }
 
 .icon-btn.active-setting {
@@ -879,7 +879,16 @@ body.tv-mode .tv-settings .icon-btn.active-setting {
   align-items: center;
   margin-right: 16px;
   padding-right: 16px;
-  border-right: 1px solid var(--border);
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.tv-settings .icon-btn {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.tv-settings .icon-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
 }
 
 body.tv-mode .tv-settings .icon-btn {
