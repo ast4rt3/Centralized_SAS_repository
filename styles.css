@@ -1082,7 +1082,7 @@ body.tv-mode .tv-settings .icon-btn:hover {
 }
 
 .view-menu.is-open .view-menu-dropdown {
-  display: flex;
+  display: flex !important;
 }
 
 .view-option {
