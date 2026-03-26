@@ -811,7 +811,9 @@ document.addEventListener('DOMContentLoaded', () => {
             loginError.classList.remove('hidden');
           }
         } catch (err) {
-          loginError.textContent = "Check network. Could not connect to Google Servers.";
+          loginError.textContent = (BACKEND_GAS_URL.includes("YOUR_NEW_BACKEND_GAS_URL_HERE")) 
+            ? "Setup Error: Backend URL (BACKEND_GAS_URL) is missing. Set your GitHub Secrets."
+            : "Check network. Could not connect to Google Servers.";
           loginError.classList.remove('hidden');
           console.error(err);
         } finally {

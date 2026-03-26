@@ -3,10 +3,10 @@
   "short_name": "SAS Portal",
   "description": "Centralized Hub for NBSC Systems and Announcements",
   "start_url": "./index.html",
-  "display": "standalone",
+  "display": "fullscreen",
   "background_color": "#001a33",
   "theme_color": "#003366",
-  "orientation": "any",
+  "orientation": "landscape",
   "icons": [
     {
       "src": "https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png",

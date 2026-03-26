@@ -1,0 +1,74 @@
+name: Build & Release Android APK
+
+on:
+  push:
+    branches: ["main", "master"]
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Generate env.js from Secrets
+        run: |
+          echo "window.ENV = {" > env.js
+          echo "  BACKEND_GAS_URL: \"${{ secrets.BACKEND_GAS_URL }}\"," >> env.js
+          echo "  YOUTUBE_PROXY_URL: \"${{ secrets.YOUTUBE_PROXY_URL }}\"," >> env.js
+          echo "  CLOUDINARY_CLOUD_NAME: \"${{ secrets.CLOUDINARY_CLOUD_NAME }}\"," >> env.js
+          echo "  CLOUDINARY_UPLOAD_PRESET: \"${{ secrets.CLOUDINARY_UPLOAD_PRESET }}\"," >> env.js
+          echo "  systems: $(cat systems.json)" >> env.js
+          echo "};" >> env.js
+          echo "Generated env.js with secrets and systems.json"
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build Web Assets
+        run: |
+          # Use shell command equivalent of our custom build script
+          mkdir -p www
+          cp index.html app.js styles.css manifest.json serviceWorker.js env.js Aurora.js version.json www/
+          if [ -d "images" ]; then cp -r images www/; fi
+          if [ -d "systems" ]; then cp -r systems www/; fi
+          echo "Prepared www directory for Capacitor"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build Android APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sas-portal-v1.0.0
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: android/app/build/outputs/apk/debug/app-debug.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

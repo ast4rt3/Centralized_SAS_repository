@@ -1,0 +1,11 @@
+{
+  "scripts": {
+    "build": "powershell -Command \"New-Item -ItemType Directory -Force www; Copy-Item index.html, app.js, styles.css, manifest.json, serviceWorker.js, env.js, Aurora.js, version.json -Destination www; if (Test-Path images) { Copy-Item -Path images -Destination www -Recurse -Force }; if (Test-Path systems) { Copy-Item -Path systems -Destination www -Recurse -Force }\"",
+    "sync": "npm run build && npx cap sync"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.3.0",
+    "@capacitor/cli": "^8.3.0",
+    "@capacitor/core": "^8.3.0"
+  }
+}
