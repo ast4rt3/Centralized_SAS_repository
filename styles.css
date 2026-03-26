@@ -2948,6 +2948,40 @@ body.tv-mode.theater-mode .home-news {
   box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
 
+/* === TV App Download Button === */
+.tv-app-download {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #fff !important;
+  text-decoration: none;
+  font-size: 0.78rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  width: 100%;
+  justify-content: center;
+}
+
+.tv-app-download:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.tv-app-download .icon {
+  font-size: 1rem;
+}
+
+/* Hide in theater mode (TV View) */
+body.tv-mode.theater-mode .tv-app-download {
+  display: none !important;
+}
+
 .dual-range-input::-moz-range-thumb {
   pointer-events: auto;
   width: 16px;
