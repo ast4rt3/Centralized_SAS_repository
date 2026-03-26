@@ -329,92 +329,119 @@
                   </div>
                 </label>
                 <input type="file" id="post-file" accept="image/*,video/mp4,video/webm" style="display:none;">
+
+                <!-- Tab-Specific Preview -->
+                <div class="input-group hidden" id="upload-img-preview-group">
+                  <label>Upload Preview <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">(Drag to pan, use slider to zoom)</span></label>
+                  <div id="upload-preview-container" style="position: relative; width: 100%; aspect-ratio: 16 / 9; border: 2px dashed #ccc; border-radius: 8px; overflow: hidden; background: #e2e8f0; cursor: grab; user-select: none;">
+                    <div id="upload-preview-transform-wrapper" style="width: 100%; height: 100%; transform-origin: center center; transform: scale(1) translate(0px, 0px);">
+                      <img id="upload-preview-img" src="" alt="Preview" draggable="false" style="width: 100%; height: 100%; object-fit: contain; object-position: center; pointer-events: none;">
+                    </div>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 10px; margin-top: 12px;">
+                    <label style="font-size: 0.85rem; font-weight: 600; white-space: nowrap; margin-bottom: 0;">Zoom:</label>
+                    <input type="range" id="upload-img-zoom" min="0.1" max="5" step="0.05" value="1" style="flex-grow: 1; cursor: pointer;">
+                    <span id="upload-preview-zoom-val" style="font-size: 0.85rem; font-weight: 600; min-width: 40px; text-align: right;">1.0x</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                    <button type="button" id="upload-preview-reset-btn" class="secondary-btn" style="padding: 4px 8px; font-size: 0.75rem;">Reset View</button>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); text-align: right;">Position: <span id="upload-preview-coords">0px, 0px</span></div>
+                  </div>
+                  <input type="hidden" id="upload-img-pos" value="0 0">
+                  <input type="hidden" id="upload-img-size-val" value="1">
+                </div>
+
+                <div class="input-group" id="upload-video-settings-group" style="display: none; margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+                  <label>Video Playback Range</label>
+                  <div id="upload-video-preview-wrapper" style="width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 8px; overflow: hidden; position: relative; margin-bottom: 12px; display: flex; align-items: center; justify-content: center;">
+                     <video id="upload-video-preview-player" style="width: 100%; height: 100%; object-fit: contain; display: none;" controls preload="metadata"></video>
+                     <div id="upload-video-preview-iframe-wrapper" style="width: 100%; height: 100%; display: none;"></div>
+                  </div>
+                  <div class="video-range-container" style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
+                     <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600;">
+                           <span>Start Time</span>
+                           <span id="upload-video-start-display" style="color: var(--nbsc-gold);">00:00</span>
+                        </div>
+                        <input type="range" id="upload-video-slider-start" min="0" max="100" value="0" step="1" style="width: 100%; cursor: pointer;">
+                     </div>
+                     <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600;">
+                           <span>End Time</span>
+                           <span id="upload-video-duration-display" style="color: var(--nbsc-gold);">00:00</span>
+                        </div>
+                        <input type="range" id="upload-video-slider-end" min="0" max="100" value="100" step="1" style="width: 100%; cursor: pointer;">
+                     </div>
+                     <input type="hidden" id="upload-video-start">
+                     <input type="hidden" id="upload-video-end">
+                  </div>
+                </div>
               </div>
               <!-- URL Tab -->
               <div id="upload-tab-url" class="upload-panel hidden">
                 <input type="url" id="post-img" placeholder="https://example.com/image.png or YouTube link">
                 <span class="upload-hint" style="display:block; margin-top:8px; font-size:0.75rem; color: var(--text-muted);">Please note: URL embeds may eventually expire or be removed by the source.</span>
+
+                <!-- Tab-Specific Preview -->
+                <div class="input-group hidden" id="url-img-preview-group">
+                  <label>URL Image Preview</label>
+                  <div id="url-preview-container" style="position: relative; width: 100%; aspect-ratio: 16 / 9; border: 2px dashed #ccc; border-radius: 8px; overflow: hidden; background: #e2e8f0; cursor: grab; user-select: none;">
+                    <div id="url-preview-transform-wrapper" style="width: 100%; height: 100%; transform-origin: center center; transform: scale(1) translate(0px, 0px);">
+                      <img id="url-preview-img" src="" alt="Preview" draggable="false" style="width: 100%; height: 100%; object-fit: contain; object-position: center; pointer-events: none;">
+                    </div>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 10px; margin-top: 12px;">
+                    <label style="font-size: 0.85rem; font-weight: 600; white-space: nowrap; margin-bottom: 0;">Zoom:</label>
+                    <input type="range" id="url-img-zoom" min="0.1" max="5" step="0.05" value="1" style="flex-grow: 1; cursor: pointer;">
+                    <span id="url-preview-zoom-val" style="font-size: 0.85rem; font-weight: 600; min-width: 40px; text-align: right;">1.0x</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                    <button type="button" id="url-preview-reset-btn" class="secondary-btn" style="padding: 4px 8px; font-size: 0.75rem;">Reset View</button>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); text-align: right;">Position: <span id="url-preview-coords">0px, 0px</span></div>
+                  </div>
+                  <input type="hidden" id="url-img-pos" value="0 0">
+                  <input type="hidden" id="url-img-size-val" value="1">
+                </div>
+
+                <div class="input-group" id="url-video-settings-group" style="display: none; margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+                  <label>Video Playback Range</label>
+                  <div id="url-video-preview-wrapper" style="width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 8px; overflow: hidden; position: relative; margin-bottom: 12px; display: flex; align-items: center; justify-content: center;">
+                     <video id="url-video-preview-player" style="width: 100%; height: 100%; object-fit: contain; display: none;" controls preload="metadata"></video>
+                     <div id="url-video-preview-iframe-wrapper" style="width: 100%; height: 100%; display: none;"></div>
+                  </div>
+                  <div class="video-range-container" style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
+                     <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600;">
+                           <span>Start Time</span>
+                           <span id="url-video-start-display" style="color: var(--nbsc-gold);">00:00</span>
+                        </div>
+                        <input type="range" id="url-video-slider-start" min="0" max="100" value="0" step="1" style="width: 100%; cursor: pointer;">
+                     </div>
+                     <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600;">
+                           <span>End Time</span>
+                           <span id="url-video-duration-display" style="color: var(--nbsc-gold);">00:00</span>
+                        </div>
+                        <input type="range" id="url-video-slider-end" min="0" max="100" value="100" step="1" style="width: 100%; cursor: pointer;">
+                     </div>
+                     <input type="hidden" id="url-video-start">
+                     <input type="hidden" id="url-video-end">
+                  </div>
+                </div>
               </div>
               <!-- Live Tab -->
               <div id="upload-tab-live" class="upload-panel hidden">
                 <input type="url" id="post-live-url" placeholder="https://youtube.com/live/link or FB Live link">
                 <span class="upload-hint" style="display:block; margin-top:8px; font-size:0.75rem;">This post will be marked as <b>LIVE</b> and automatically hidden when the stream ends.</span>
-              </div>
-            </div>
-            <div class="input-group" id="post-img-preview-group" style="display: none;">
-              <label>TV Image Preview <span
-                  style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">(Drag to
-                  pan, use slider to zoom)</span></label>
-              <div id="post-preview-container"
-                style="position: relative; width: 100%; aspect-ratio: 16 / 9; border: 2px dashed #ccc; border-radius: 8px; overflow: hidden; background: #e2e8f0; cursor: grab; user-select: none;">
-                <div id="post-preview-transform-wrapper"
-                  style="width: 100%; height: 100%; transform-origin: center center; transform: scale(1) translate(0px, 0px);">
-                  <img id="post-preview-img" src="" alt="Preview" draggable="false"
-                    style="width: 100%; height: 100%; object-fit: contain; object-position: center; pointer-events: none;">
+
+                <!-- Tab-Specific Preview (Minimal for Live) -->
+                <div class="input-group" id="live-video-settings-group" style="display: none; margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+                  <label>Live Stream Preview</label>
+                  <div id="live-video-preview-wrapper" style="width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 8px; overflow: hidden; position: relative; margin-bottom: 12px; display: flex; align-items: center; justify-content: center;">
+                     <div id="live-video-preview-iframe-wrapper" style="width: 100%; height: 100%;"></div>
+                  </div>
                 </div>
               </div>
-
-              <div style="display: flex; align-items: center; gap: 10px; margin-top: 12px;">
-                <label for="post-img-zoom"
-                  style="font-size: 0.85rem; font-weight: 600; white-space: nowrap; margin-bottom: 0;">Zoom:</label>
-                <input type="range" id="post-img-zoom" min="0.1" max="5" step="0.05" value="1"
-                  style="flex-grow: 1; cursor: pointer;">
-                <span id="post-preview-zoom-val"
-                  style="font-size: 0.85rem; font-weight: 600; min-width: 40px; text-align: right;">1.0x</span>
-              </div>
-
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
-                <div style="display: flex; gap: 8px;">
-                  <button type="button" id="post-preview-reset-btn" class="secondary-btn"
-                    style="padding: 4px 8px; font-size: 0.75rem;">Reset View</button>
-                </div>
-                <div style="font-size: 0.8rem; color: var(--text-muted); text-align: right;">
-                  Position: <span id="post-preview-coords">0px, 0px</span>
-                </div>
-              </div>
-
-              <!-- Hidden inputs to store the exact transform parameters for the backend -->
-              <input type="hidden" id="post-img-pos" value="0 0">
-              <input type="hidden" id="post-img-size-val" value="1">
-            </div>
-
-            <div class="input-group" id="post-video-settings-group" style="display: none; margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
-              <label>Video Playback Range</label>
-
-              <!-- Video Preview Container -->
-              <div id="video-preview-wrapper" style="width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 8px; overflow: hidden; position: relative; margin-bottom: 12px; display: flex; align-items: center; justify-content: center;">
-                 <video id="video-preview-player" style="width: 100%; height: 100%; object-fit: contain; display: none;" controls preload="metadata"></video>
-                 <div id="video-preview-iframe-wrapper" style="width: 100%; height: 100%; display: none;"></div>
-                 <div id="video-preview-loading" style="display: none; position: absolute; inset: 0; color: white; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; background: rgba(0,0,0,0.5);">
-                    <div class="spinner" style="margin-bottom: 8px;"></div>
-                    <span>Loading preview...</span>
-                 </div>
-              </div>
-
-              <!-- Range Slider Controls -->
-              <div class="video-range-container" style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
-                 <div style="display: flex; flex-direction: column; gap: 4px;">
-                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600; color: var(--text-color);">
-                       <span>Start Time</span>
-                       <span id="video-start-display" style="color: var(--nbsc-gold);">00:00</span>
-                    </div>
-                    <input type="range" id="post-video-slider-start" min="0" max="100" value="0" step="1" style="width: 100%; cursor: pointer;">
-                 </div>
-                 
-                 <div style="display: flex; flex-direction: column; gap: 4px;">
-                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600; color: var(--text-color);">
-                       <span>End Time</span>
-                       <span id="video-duration-display" style="color: var(--nbsc-gold);">00:00</span>
-                    </div>
-                    <input type="range" id="post-video-slider-end" min="0" max="100" value="100" step="1" style="width: 100%; cursor: pointer;">
-                 </div>
-
-                 <!-- Hidden inputs mapping to previous logic -->
-                 <input type="hidden" id="post-video-start">
-                 <input type="hidden" id="post-video-end">
-              </div>
-
-              <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 6px;">Drag sliders to extract a clip.</span>
             </div>
 
             <div id="post-error" class="login-error hidden">Error submitting post.</div>
@@ -474,7 +501,7 @@
   
   <!-- Environment Configuration -->
   <script src="env.js?v=2"></script>
-  <script type="module" src="app.js?v=15"></script>
+  <script type="module" src="app.js?v=21"></script>
 </body>
 
 </html>
