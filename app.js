@@ -1733,6 +1733,15 @@ document.addEventListener('DOMContentLoaded', () => {
       Object.values(uploadPanels).forEach(p => p && p.classList.add('hidden'));
       if (uploadPanels['upload']) uploadPanels['upload'].classList.remove('hidden');
 
+      // Reset Submit Button progress and state
+      const sBtn = document.getElementById('submit-post-btn');
+      if (sBtn) {
+        sBtn.classList.remove('active', 'zz-button-progress-done');
+        sBtn.style.setProperty('--zz-progress', 0);
+        sBtn.setAttribute('data-progress', 0);
+        sBtn.disabled = false;
+      }
+
       // Reset Duration Slider
       const dSlider = document.getElementById('post-display-duration');
       const dValDisp = document.getElementById('post-display-duration-val');
@@ -1777,7 +1786,9 @@ document.addEventListener('DOMContentLoaded', () => {
         let imgUrl = "";
         let imgPos = "0 0";
         let imgSize = "1";
-        const file = (activeUploadTab === 'upload') ? imgInput.files[0] : null;
+        
+        const postFileIn = document.getElementById('post-file');
+        const file = (activeUploadTab === 'upload' && postFileIn) ? postFileIn.files[0] : null;
 
         if (activeUploadTab === 'url') {
            imgUrl = imgInput.value.trim();
