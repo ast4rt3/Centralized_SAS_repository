@@ -2428,7 +2428,7 @@ body.fullscreen-active .ticker-separator {
 
 body.tv-mode .ticker-wrap {
   display: inline-flex;
-  animation: marquee 80s linear infinite;
+  animation: marquee 50s linear infinite;
 }
 
 /* TV Mode Header Dots Visibility */
