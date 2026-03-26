@@ -282,6 +282,18 @@
               </div>
             </div>
 
+            <div class="modal-section" id="post-duration-section">
+              <div class="modal-section-title">TV Display Duration</div>
+              <div class="input-group">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <label for="post-display-duration" style="margin-bottom: 0;">Timer (Seconds)</label>
+                  <span id="post-display-duration-val" style="font-weight: 600; color: var(--nbsc-gold);">25s</span>
+                </div>
+                <input type="range" id="post-display-duration" min="5" max="60" step="1" value="25" style="width: 100%; cursor: pointer;">
+                <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 4px;">Controls how long this post stays on screen before switching.</span>
+              </div>
+            </div>
+
             <!-- Live Stream Toggle Removed (Moved to Tabs) -->
             <div class="input-group" id="post-media-input-group">
               <label>Image / Video</label>
@@ -462,7 +474,7 @@
   
   <!-- Environment Configuration -->
   <script src="env.js?v=2"></script>
-  <script type="module" src="app.js?v=12"></script>
+  <script type="module" src="app.js?v=15"></script>
 </body>
 
 </html>

@@ -1018,6 +1018,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const videoDurationDisplay = document.getElementById('video-duration-display');
     const sliderStart = document.getElementById('post-video-slider-start');
     const sliderEnd = document.getElementById('post-video-slider-end');
+    const durationSlider = document.getElementById('post-display-duration');
+    const durationValDisplay = document.getElementById('post-display-duration-val');
+    
+    if (durationSlider && durationValDisplay) {
+      durationSlider.addEventListener('input', (e) => {
+        durationValDisplay.textContent = e.target.value + 's';
+      });
+    }
     
     let videoDuration = 0;
     let previewYtPlayer = null;
@@ -1403,6 +1411,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
           // --- Show Local Preview ---
           if (file.type.startsWith('image/') && previewImg && previewGroup) {
+            console.log("Showing image preview for file:", file.name);
             if (videoSettingsGroup) videoSettingsGroup.style.display = 'none';
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -1411,6 +1420,7 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             reader.readAsDataURL(file);
           } else if (file.type.startsWith('video/')) {
+            console.log("Showing video preview for file:", file.name);
             if (previewGroup) previewGroup.style.display = 'none';
             if (videoSettingsGroup) videoSettingsGroup.style.display = 'block';
             
@@ -1465,6 +1475,7 @@ document.addEventListener('DOMContentLoaded', () => {
               }
             } else {
               // Show Image Zoom/Pan (includes Google Drive), Hide Video Range
+              console.log("Showing image preview for URL:", url);
               if (videoSettingsGroup) videoSettingsGroup.style.display = 'none';
               previewImg.src = url;
               previewGroup.style.display = 'block';
@@ -1620,55 +1631,68 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
+    // --- Centralized Form Reset ---
+    window.resetAddPostForm = function() {
+      if (form) form.reset();
+      if (form) form.removeAttribute('data-edit-timestamp');
+      
+      // Clear Files
+      const fileInput = document.getElementById('post-file');
+      if (fileInput) fileInput.value = '';
+      const fileUploadLabel = document.getElementById('file-upload-label');
+      const fileLabelText = document.getElementById('file-label-text');
+      if (fileUploadLabel) fileUploadLabel.classList.remove('file-selected', 'drag-over');
+      if (fileLabelText) fileLabelText.textContent = 'Click or drag image/video here';
+      const iconWrapper = fileUploadLabel ? fileUploadLabel.querySelector('.upload-icon-wrapper') : null;
+      if (iconWrapper) iconWrapper.style.color = '';
+
+      // Reset Tabs
+      const uploadTabBtns = document.querySelectorAll('.upload-tab');
+      uploadTabBtns.forEach(b => b.classList.remove('active'));
+      const defaultTabBtn = document.querySelector('.upload-tab[data-tab="upload"]');
+      if (defaultTabBtn) defaultTabBtn.classList.add('active');
+      activeUploadTab = 'upload';
+      const uploadPanels = { 
+        upload: document.getElementById('upload-tab-upload'), 
+        url: document.getElementById('upload-tab-url'),
+        live: document.getElementById('upload-tab-live')
+      };
+      Object.values(uploadPanels).forEach(p => p && p.classList.add('hidden'));
+      if (uploadPanels['upload']) uploadPanels['upload'].classList.remove('hidden');
+
+      // Reset Previews
+      if (previewGroup) previewGroup.style.display = 'none';
+      if (previewImg) {
+        previewImg.src = '';
+        previewImg.style.objectPosition = '50% 50%';
+      }
+      if (videoSettingsGroup) videoSettingsGroup.style.display = 'none';
+      
+      // Reset Duration Slider
+      const durationSlider = document.getElementById('post-display-duration');
+      const durationValDisplay = document.getElementById('post-display-duration-val');
+      if (durationSlider) {
+        durationSlider.value = 25;
+        if (durationValDisplay) durationValDisplay.textContent = '25s';
+      }
+
+      // Reset Transforms
+      if (window.setPreviewTransformState) window.setPreviewTransformState(1, 0, 0);
+      
+      if (errorMsg) errorMsg.classList.add('hidden');
+    };
+
     if (addPostBtn && modal) {
       addPostBtn.addEventListener('click', () => {
-        form.removeAttribute('data-edit-timestamp');
+        window.resetAddPostForm();
         document.querySelector('.modal-title').textContent = "Create New Update";
         document.getElementById('submit-post-btn').textContent = "Post Update";
-        form.reset();
-
-        // Reset upload tab to default
-        uploadTabBtns.forEach(b => b.classList.remove('active'));
-        const defaultTabBtn = document.querySelector('.upload-tab[data-tab="upload"]');
-        if (defaultTabBtn) defaultTabBtn.classList.add('active');
-        activeUploadTab = 'upload';
-        
-        // Hide all panels, show only upload
-        Object.values(uploadPanels).forEach(p => p && p.classList.add('hidden'));
-        if (uploadPanels['upload']) uploadPanels['upload'].classList.remove('hidden');
-        
-        const liveInput = document.getElementById('post-live-url');
-        if (liveInput) liveInput.value = '';
-        const mediaGroup = document.getElementById('post-media-input-group');
-        if (mediaGroup) mediaGroup.style.display = 'block';
-
-        if (previewGroup) previewGroup.style.display = 'none';
-        if (previewImg) previewImg.style.objectPosition = '50% 50%';
-        if (videoSettingsGroup) videoSettingsGroup.style.display = 'none';
-        if (videoStartInput) videoStartInput.value = '';
-        if (videoEndInput) videoEndInput.value = '';
-        
-        // Reset scheduling fields
-        const startDateInput = document.getElementById('post-start-date');
-        const endDateInput = document.getElementById('post-end-date');
-        const isLiveInput = document.getElementById('post-is-live');
-        if (startDateInput) startDateInput.value = '';
-        if (endDateInput) endDateInput.value = '';
-        if (isLiveInput) isLiveInput.checked = false;
-
-        if (window.setPreviewTransformState) {
-          window.setPreviewTransformState(1, 0, 0);
-        }
-
         modal.classList.remove('hidden');
-        if (errorMsg) errorMsg.classList.add('hidden');
       });
 
       cancelBtn.addEventListener('click', () => {
         modal.classList.add('hidden');
-        form.removeAttribute('data-edit-timestamp');
-        form.reset();
-        if (previewGroup) previewGroup.style.display = 'none';
+        window.resetAddPostForm();
       });
     }
 
@@ -1684,6 +1708,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let imgUrl = document.getElementById('post-img') ? document.getElementById('post-img').value : '';
         let imgPos = document.getElementById('post-img-pos') ? document.getElementById('post-img-pos').value : '0 0';
         const imgSize = document.getElementById('post-img-size-val') ? document.getElementById('post-img-size-val').value : '1';
+        const displayDuration = document.getElementById('post-display-duration') ? document.getElementById('post-display-duration').value : '25';
         
         const startVal = document.getElementById('post-video-start') ? document.getElementById('post-video-start').value : '';
         const endVal = document.getElementById('post-video-end') ? document.getElementById('post-video-end').value : '';
@@ -1857,8 +1882,9 @@ document.addEventListener('DOMContentLoaded', () => {
             imagePosition: imgPos,
             imageSize: imgSize,
             startDate: startDate,
-            endDate: endDate,
-            isLive: isLive
+            endDate:       endDate,
+            isLive:        isLive,
+            displayDuration: displayDuration
           };
 
           if (isEdit) payload.timestamp = editTimestamp;
@@ -1877,7 +1903,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (responseData.success) {
             await zzProgress.done();
             modal.classList.add('hidden');
-            form.reset();
+            window.resetAddPostForm();
             showToast(responseData.message || "Post updated successfully!", 'success');
             zzProgress.reset();
             fetchPosts(); // Refresh the feed
@@ -2124,6 +2150,7 @@ document.addEventListener('DOMContentLoaded', () => {
         slide.setAttribute('data-end', endVal);
         slide.setAttribute('data-is-live', post.isLive ? 'true' : 'false');
         slide.setAttribute('data-timestamp', post.timestamp || '');
+        slide.setAttribute('data-duration', post.displayDuration || '');
 
         let imgHtml = '';
         if (post.imageUrl && post.imageUrl.trim() !== '') {
@@ -2422,6 +2449,16 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (document.getElementById('post-start-date')) document.getElementById('post-start-date').value = (post.startDate || '').replace(' ', 'T');
             if (document.getElementById('post-end-date')) document.getElementById('post-end-date').value = (post.endDate || '').replace(' ', 'T');
+            
+            const durationSliderInEdit = document.getElementById('post-display-duration');
+            const durationValDisplayInEdit = document.getElementById('post-display-duration-val');
+            if (durationSliderInEdit) {
+              const dStr = String(post.displayDuration || "");
+              const dVal = (dStr !== "") ? parseInt(dStr) : 25;
+              console.log("Loading duration for edit. Original:", post.displayDuration, "Parsed:", dVal);
+              durationSliderInEdit.value = dVal;
+              if (durationValDisplayInEdit) durationValDisplayInEdit.textContent = dVal + 's';
+            }
             
             // Tab Selection Logic for Edit
             const urlForEdit = post.imageUrl || '';
@@ -2729,6 +2766,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const curEnd = parseFloat(activeSlide.dataset.end) || 0;
       const isLive = activeSlide.getAttribute('data-is-live') === 'true';
       const timestamp = activeSlide.getAttribute('data-timestamp');
+      const customDuration = activeSlide.getAttribute('data-duration');
+      const startMs = (customDuration && !isNaN(customDuration)) ? parseInt(customDuration) * 1000 : undefined;
 
       // Handle CSS Unified Fullscreen
       const isVideoSlide = (videoEl || iframeEl || fbIframeEl || driveIframeEl);
@@ -2852,8 +2891,8 @@ document.addEventListener('DOMContentLoaded', () => {
           }, 1000);
         }
 
-        // Safety fallback: advance after 3 minutes max even if video stalls, UNLESS it's live
-        if (!isLive) start(180000);
+        // Safety fallback: advance after custom duration or 3 minutes max even if video stalls, UNLESS it's live
+        if (!isLive) start(startMs || 180000);
         else stop(); // For live, we rely on the heartbeat/ended events
       } else if (iframeEl && window.YT && window.YT.Player) {
         const iframeId = iframeEl.id;
@@ -2951,7 +2990,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
         // Safety fallback (not for live)
-        if (!isLive) start(300000);
+        if (!isLive) start(startMs || 300000);
         else stop();
       } else if (activeSlide.querySelector('.fb-video-wrapper')) {
         // Facebook video via JS SDK
@@ -3036,14 +3075,14 @@ document.addEventListener('DOMContentLoaded', () => {
           }, 200);
         }
 
-        if (!isLive) start(180000); 
+        if (!isLive) start(startMs || 180000); 
         else stop();
       } else if (driveIframeEl) {
         // Drive video iframe — can't hook into events, use standard timer
-        start();
+        start(startMs);
       } else {
         // Static image slide
-        start();
+        start(startMs);
       }
     }
 
@@ -3066,13 +3105,11 @@ document.addEventListener('DOMContentLoaded', () => {
         var index = parseInt(this.getAttribute('data-index') || '0', 10);
         if (!isNaN(index)) {
           setActive(index);
-          start();
         }
       });
     });
 
     setActive(0);
-    start();
   }
 
 });
