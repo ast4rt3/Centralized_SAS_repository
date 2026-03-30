@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#003366">
+  <title>SAS Portal</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SAS Portal">
+  <link rel="apple-touch-icon" href="https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png">
+  <link rel="icon" type="image/png" href="https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=10">
+  <script>
+    // Automatically register Service Worker for offline caching
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./serviceWorker.js')
+          .then(reg => {
+            console.log('SW registered:', reg.scope);
+            // Check for updates manually on registration
+            reg.update();
+          })
+          .catch(err => console.warn('SW registration failed:', err));
+      });
+
+      // Reload page when new service worker takes over (skipWaiting was called)
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+          refreshing = true;
+          window.location.reload();
+        }
+      });
+    }
+  </script>
+</head>
+
+<body>
+  <!-- Offline indicator (auto-shown/hidden by JS) -->
+  <div id="offline-banner"
+    style="display:none; position:fixed; top:0; left:0; right:0; z-index:9999; background:#b91c1c; color:#fff; font-size:0.8rem; font-weight:700; text-align:center; padding:6px; letter-spacing:0.5px;">
+    📡 No internet connection — showing cached content
+  </div>
+  <!-- Global Login Overlay -->
+  <!-- Recommit for redeployment -->
+  <div id="login-overlay" class="login-overlay">
+    <div class="login-card">
+      <img src="https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png" alt="NBSC Logo"
+        class="login-logo">
+      <h2 class="login-title">NBSC SAS</h2>
+      <p class="login-subtitle">SAS Portal Hub</p>
+
+      <form id="login-form" class="login-form">
+        <div class="login-input-group">
+          <label for="login-username">Username</label>
+          <input type="text" id="login-username" required placeholder="Enter username" autocomplete="username">
+        </div>
+        <div class="login-input-group">
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" required placeholder="Enter password"
+            autocomplete="current-password">
+        </div>
+
+        <div id="login-error" class="login-error hidden">Invalid credentials. Please try again.</div>
+
+        <button type="submit" class="login-btn">
+          Sign In
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <button id="nav-toggle" class="nav-toggle" type="button" aria-label="Open menu" aria-controls="sidebar"
+    aria-expanded="false" hidden>
+    ☰
+  </button>
+  <div id="nav-overlay" class="nav-overlay" hidden></div>
+
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-header-main">
+        <span class="logo">SAS</span>
+        <span class="repo-title">SAS Portal</span>
+      </div>
+      <button id="sidebar-toggle" class="sidebar-toggle-btn hidden" title="Collapse Sidebar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+          stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+    </div>
+    <nav class="nav">
+      <a href="#home" class="nav-item active" data-page="home">
+        <span class="nav-icon">⌂</span>
+        <span class="nav-label">Home</span>
+      </a>
+      <div id="nav-dynamic">
+        <!-- Sections + systems injected from config -->
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <small>Add systems in <code>systems/config.json</code></small>
+    </div>
+  </aside>
+
+  <main class="content">
+    <div id="page-content" class="page-content">
+      <!-- Loading (used when opening a deep-link hash directly) -->
+      <section id="loading" class="page">
+        <div class="welcome-card">
+          <h2>Loading…</h2>
+          <p>Preparing your system.</p>
+        </div>
+      </section>
+      <!-- System view (shows only the embedded system HTML) -->
+      <section id="system-view" class="page system-view">
+        <iframe id="system-frame" class="system-frame" title="System"></iframe>
+      </section>
+      <!-- Home content -->
+        <section id="home" class="page active">
+          <div id="tv-blurred-bg" class="tv-blurred-bg"></div>
+        <header class="home-header">
+          <div class="home-header-brand">
+            <img src="https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png"
+              class="home-header-logo" alt="NBSC Logo">
+            <div class="home-header-text">
+              <h1 class="home-header-title">NBSC SAS</h1>
+              <p class="home-header-subtitle">SAS Portal Hub</p>
+            </div>
+          </div>
+
+          <div id="tv-clock" class="tv-clock">
+            <div id="tv-time" class="tv-time"></div>
+            <div id="tv-date" class="tv-date"></div>
+            <div id="tv-weather" class="tv-weather"></div>
+          </div>
+
+          <div class="home-header-meta">
+            <!-- TV Mode Custom Settings -->
+            <div class="tv-settings hidden" id="tv-settings">
+              <button id="tv-header-toggle" class="icon-btn" aria-label="Toggle Header" title="Collapse Header">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                  stroke-linecap="round" stroke-linejoin="round" class="toggle-icon">
+                  <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+              </button>
+              <button id="tv-audio-toggle" class="icon-btn" aria-label="Toggle Audio" title="Unmute Videos">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                  <line x1="23" y1="9" x2="17" y2="15"></line>
+                  <line x1="17" y1="9" x2="23" y2="15"></line>
+                </svg>
+              </button>
+              <button id="tv-fullscreen-toggle" class="icon-btn" aria-label="Toggle Video Expansion"
+                title="Expand Videos Only">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                  <line x1="8" y1="21" x2="16" y2="21"></line>
+                  <line x1="12" y1="17" x2="12" y2="21"></line>
+                </svg>
+              </button>
+            </div>
+
+            <div class="user-menu" id="user-menu">
+              <button class="user-menu-btn" id="user-menu-btn" aria-haspopup="true" aria-expanded="false">
+                <span class="user-menu-avatar" style="display:flex; align-items:center;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path
+                      d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                    </path>
+                  </svg>
+                </span>
+                <span class="user-menu-name" id="user-display-name">User</span>
+                <span style="font-size: 0.6rem; margin-top: 2px;">▼</span>
+              </button>
+              <div class="user-menu-dropdown" id="user-menu-dropdown">
+                <div class="user-menu-info">
+                  Signed in as <strong id="user-dropdown-name">User</strong>
+                </div>
+                <div class="user-menu-divider"></div>
+                <button class="user-logout-btn" id="logout-btn">
+                  Log Out
+                </button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div class="home-content-area">
+          <div class="posts-header">
+            <h2>Recent Updates</h2>
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div class="view-menu" id="view-menu">
+                <button class="view-menu-btn" id="view-menu-btn" aria-haspopup="true" aria-expanded="false">
+                  <span class="view-menu-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                  </span>
+                  <span class="view-menu-label" id="view-menu-label">View</span>
+                  <span style="font-size: 0.6rem; margin-top: 2px;">▼</span>
+                </button>
+                <div class="view-menu-dropdown" id="view-menu-dropdown" style="display: none;">
+                  <button class="view-option" data-view="xl">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                    Extra large icons
+                  </button>
+                  <button class="view-option" data-view="lg">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                    Large icons
+                  </button>
+                  <button class="view-option" data-view="md">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                    Medium icons
+                  </button>
+                  <button class="view-option" data-view="sm">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    Small icons
+                  </button>
+                </div>
+              </div>
+              <button id="add-post-btn" class="add-post-btn hidden" aria-label="Add New Post">
+                <span class="plus-icon">+</span> Add Post
+              </button>
+            </div>
+          </div>
+
+          <div id="posts-loading" class="posts-state">
+            <div class="spinner"></div>
+            <p>Loading updates...</p>
+          </div>
+
+          <div id="posts-container" class="posts-container hidden">
+            <!-- Dynamic Posts injected here via app.js -->
+          </div>
+
+          <div id="posts-empty" class="posts-state hidden">
+            <p>No recent updates.</p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Admin Add Post Modal -->
+    <div id="add-post-modal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 class="modal-title">Create New Update</h3>
+        </div>
+        <form id="add-post-form" class="modal-form">
+          <div class="modal-body">
+            <div class="input-group">
+              <label for="post-title">Title</label>
+              <input type="text" id="post-title" required placeholder="Announcement Title">
+            </div>
+            <div class="input-group">
+              <label for="post-desc">Description</label>
+              <textarea id="post-desc" rows="4" required placeholder="Write your update here..."></textarea>
+            </div>
+            
+            <div class="modal-section" id="post-schedule-section">
+              <div class="modal-section-title">Visibility Schedule (Optional)</div>
+              <div class="post-schedule-fields">
+                <div class="input-group">
+                  <label for="post-start-date">Visible From</label>
+                  <input type="datetime-local" id="post-start-date">
+                </div>
+                <div class="input-group">
+                  <label for="post-end-date">Visible Until</label>
+                  <input type="datetime-local" id="post-end-date">
+                </div>
+              </div>
+            </div>
+
+            <div class="modal-section" id="post-duration-section">
+              <div class="modal-section-title">TV Display Duration</div>
+              <div class="input-group">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <label for="post-display-duration" style="margin-bottom: 0;">Timer (Seconds)</label>
+                  <span id="post-display-duration-val" style="font-weight: 600; color: var(--nbsc-gold);">25s</span>
+                </div>
+                <input type="range" id="post-display-duration" min="5" max="60" step="1" value="25" style="width: 100%; cursor: pointer;">
+                <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 4px;">Controls how long this post stays on screen before switching.</span>
+              </div>
+            </div>
+
+            <!-- Live Stream Toggle Removed (Moved to Tabs) -->
+            <div class="input-group" id="post-media-input-group">
+              <label>Image / Video</label>
+              <div class="upload-tabs" id="upload-tabs">
+                <button type="button" class="upload-tab active" data-tab="upload">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                  Upload File
+                </button>
+                <button type="button" class="upload-tab" data-tab="url">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                  Use URL
+                </button>
+                <button type="button" class="upload-tab" data-tab="live">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3" fill="currentColor"></circle></svg>
+                  Live Video
+                </button>
+              </div>
+              <!-- File Upload Tab -->
+              <div id="upload-tab-upload" class="upload-panel">
+                <label for="post-file" class="file-upload-label" id="file-upload-label">
+                  <div class="upload-icon-wrapper">
+                    <svg class="camera-icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                      <circle cx="12" cy="13" r="4"></circle>
+                    </svg>
+                  </div>
+                  <div class="upload-text-content">
+                    <span id="file-label-text">Click or drag image/video here</span>
+                    <span class="upload-hint">JPG, PNG, GIF, MP4 (Max 100MB)</span>
+                  </div>
+                  <div class="upload-button-wrapper">
+                    <span class="upload-btn-styled">Select File</span>
+                  </div>
+                </label>
+                <input type="file" id="post-file" accept="image/*,video/mp4,video/webm" style="display:none;">
+
+                <!-- Tab-Specific Preview -->
+                <div class="input-group hidden" id="upload-img-preview-group">
+                  <label>Upload Preview <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">(Drag to pan, use slider to zoom)</span></label>
+                  <div id="upload-preview-container" style="position: relative; width: 100%; aspect-ratio: 16 / 9; border: 2px dashed #ccc; border-radius: 8px; overflow: hidden; background: #e2e8f0; cursor: grab; user-select: none;">
+                    <div id="upload-preview-transform-wrapper" style="width: 100%; height: 100%; transform-origin: center center; transform: scale(1) translate(0px, 0px);">
+                      <img id="upload-preview-img" src="" alt="Preview" draggable="false" style="width: 100%; height: 100%; object-fit: contain; object-position: center; pointer-events: none;">
+                    </div>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 10px; margin-top: 12px;">
+                    <label style="font-size: 0.85rem; font-weight: 600; white-space: nowrap; margin-bottom: 0;">Zoom:</label>
+                    <input type="range" id="upload-img-zoom" min="0.1" max="5" step="0.05" value="1" style="flex-grow: 1; cursor: pointer;">
+                    <span id="upload-preview-zoom-val" style="font-size: 0.85rem; font-weight: 600; min-width: 40px; text-align: right;">1.0x</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                    <button type="button" id="upload-preview-reset-btn" class="secondary-btn" style="padding: 4px 8px; font-size: 0.75rem;">Reset View</button>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); text-align: right;">Position: <span id="upload-preview-coords">0px, 0px</span></div>
+                  </div>
+                  <input type="hidden" id="upload-img-pos" value="0 0">
+                  <input type="hidden" id="upload-img-size-val" value="1">
+                </div>
+
+                <div class="input-group" id="upload-video-settings-group" style="display: none; margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+                  <label>Video Playback Range</label>
+                  <div id="upload-video-preview-wrapper" style="width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 8px; overflow: hidden; position: relative; margin-bottom: 12px; display: flex; align-items: center; justify-content: center;">
+                     <video id="upload-video-preview-player" style="width: 100%; height: 100%; object-fit: contain; display: none;" controls preload="metadata"></video>
+                     <div id="upload-video-preview-iframe-wrapper" style="width: 100%; height: 100%; display: none;"></div>
+                  </div>
+                  <div class="video-range-container" style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
+                     <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600;">
+                           <span>Start Time</span>
+                           <span id="upload-video-start-display" style="color: var(--nbsc-gold);">00:00</span>
+                        </div>
+                        <input type="range" id="upload-video-slider-start" min="0" max="100" value="0" step="1" style="width: 100%; cursor: pointer;">
+                     </div>
+                     <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600;">
+                           <span>End Time</span>
+                           <span id="upload-video-duration-display" style="color: var(--nbsc-gold);">00:00</span>
+                        </div>
+                        <input type="range" id="upload-video-slider-end" min="0" max="100" value="100" step="1" style="width: 100%; cursor: pointer;">
+                     </div>
+                     <input type="hidden" id="upload-video-start">
+                     <input type="hidden" id="upload-video-end">
+                  </div>
+                </div>
+              </div>
+              <!-- URL Tab -->
+              <div id="upload-tab-url" class="upload-panel hidden">
+                <input type="url" id="post-img" placeholder="https://example.com/image.png or YouTube link">
+                <span class="upload-hint" style="display:block; margin-top:8px; font-size:0.75rem; color: var(--text-muted);">Please note: URL embeds may eventually expire or be removed by the source.</span>
+
+                <!-- Tab-Specific Preview -->
+                <div class="input-group hidden" id="url-img-preview-group">
+                  <label>URL Image Preview</label>
+                  <div id="url-preview-container" style="position: relative; width: 100%; aspect-ratio: 16 / 9; border: 2px dashed #ccc; border-radius: 8px; overflow: hidden; background: #e2e8f0; cursor: grab; user-select: none;">
+                    <div id="url-preview-transform-wrapper" style="width: 100%; height: 100%; transform-origin: center center; transform: scale(1) translate(0px, 0px);">
+                      <img id="url-preview-img" src="" alt="Preview" draggable="false" style="width: 100%; height: 100%; object-fit: contain; object-position: center; pointer-events: none;">
+                    </div>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 10px; margin-top: 12px;">
+                    <label style="font-size: 0.85rem; font-weight: 600; white-space: nowrap; margin-bottom: 0;">Zoom:</label>
+                    <input type="range" id="url-img-zoom" min="0.1" max="5" step="0.05" value="1" style="flex-grow: 1; cursor: pointer;">
+                    <span id="url-preview-zoom-val" style="font-size: 0.85rem; font-weight: 600; min-width: 40px; text-align: right;">1.0x</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                    <button type="button" id="url-preview-reset-btn" class="secondary-btn" style="padding: 4px 8px; font-size: 0.75rem;">Reset View</button>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); text-align: right;">Position: <span id="url-preview-coords">0px, 0px</span></div>
+                  </div>
+                  <input type="hidden" id="url-img-pos" value="0 0">
+                  <input type="hidden" id="url-img-size-val" value="1">
+                </div>
+
+                <div class="input-group" id="url-video-settings-group" style="display: none; margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+                  <label>Video Playback Range</label>
+                  <div id="url-video-preview-wrapper" style="width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 8px; overflow: hidden; position: relative; margin-bottom: 12px; display: flex; align-items: center; justify-content: center;">
+                     <video id="url-video-preview-player" style="width: 100%; height: 100%; object-fit: contain; display: none;" controls preload="metadata"></video>
+                     <div id="url-video-preview-iframe-wrapper" style="width: 100%; height: 100%; display: none;"></div>
+                  </div>
+                  <div class="video-range-container" style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
+                     <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600;">
+                           <span>Start Time</span>
+                           <span id="url-video-start-display" style="color: var(--nbsc-gold);">00:00</span>
+                        </div>
+                        <input type="range" id="url-video-slider-start" min="0" max="100" value="0" step="1" style="width: 100%; cursor: pointer;">
+                     </div>
+                     <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600;">
+                           <span>End Time</span>
+                           <span id="url-video-duration-display" style="color: var(--nbsc-gold);">00:00</span>
+                        </div>
+                        <input type="range" id="url-video-slider-end" min="0" max="100" value="100" step="1" style="width: 100%; cursor: pointer;">
+                     </div>
+                     <input type="hidden" id="url-video-start">
+                     <input type="hidden" id="url-video-end">
+                  </div>
+                </div>
+              </div>
+              <!-- Live Tab -->
+              <div id="upload-tab-live" class="upload-panel hidden">
+                <input type="url" id="post-live-url" placeholder="https://youtube.com/live/link or FB Live link">
+                <span class="upload-hint" style="display:block; margin-top:8px; font-size:0.75rem;">This post will be marked as <b>LIVE</b> and automatically hidden when the stream ends.</span>
+
+                <!-- Tab-Specific Preview (Minimal for Live) -->
+                <div class="input-group" id="live-video-settings-group" style="display: none; margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+                  <label>Live Stream Preview</label>
+                  <div id="live-video-preview-wrapper" style="width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 8px; overflow: hidden; position: relative; margin-bottom: 12px; display: flex; align-items: center; justify-content: center;">
+                     <div id="live-video-preview-iframe-wrapper" style="width: 100%; height: 100%;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div id="post-error" class="login-error hidden">Error submitting post.</div>
+          </div>
+          <div class="modal-footer">
+            <div class="modal-actions">
+              <button type="button" id="cancel-post-btn" class="secondary-btn">Cancel</button>
+              <button type="submit" id="submit-post-btn" class="zz-button">Post Update</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <!-- Custom Confirmation Modal -->
+  <div id="confirm-modal" class="modal-overlay hidden">
+    <div class="modal-card confirm-card">
+      <div class="modal-body confirm-body">
+        <div id="confirm-modal-icon" class="confirm-icon">
+          <!-- SVG icon injected via JS -->
+        </div>
+        <h3 id="confirm-modal-title" class="modal-title">Confirm Action</h3>
+        <p id="confirm-modal-message" class="confirm-message"></p>
+
+        <div id="confirm-modal-input-group" class="input-group hidden">
+          <label for="confirm-modal-password">Confirm Password</label>
+          <input type="password" id="confirm-modal-password" placeholder="Enter password to confirm">
+        </div>
+      </div>
+
+      <div class="modal-footer confirm-footer">
+        <div class="modal-actions">
+          <button type="button" id="confirm-modal-cancel" class="secondary-btn">Cancel</button>
+          <button type="button" id="confirm-modal-ok" class="primary-btn">Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fullscreen Info Overlay -->
+  <div id="fullscreen-info" class="fullscreen-info">
+    <div class="fullscreen-info-content">
+      <h1 id="fs-post-title" class="fs-info-title"></h1>
+      <div id="fs-post-desc" class="fs-info-desc"></div>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
+
+  <button id="admin-exit-tv" class="admin-exit-tv-btn hidden" aria-label="Exit TV View" title="Exit TV View (Return to Dashboard)">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M11 17l-5-5 5-5M18 12H6"></path>
+    </svg>
+    <span>Exit TV View</span>
+  </button>
+  
+  <!-- Environment Configuration -->
+  <script src="env.js?v=2"></script>
+  <script type="module" src="app.js?v=21"></script>
+</body>
+
+</html>

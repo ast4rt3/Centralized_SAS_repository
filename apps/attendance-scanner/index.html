@@ -825,8 +825,8 @@
             try {
                 const response = await callBackend("loginUser", { username: user, password: pass, deviceInfo });
                 if (response.success) {
-                    sessionStorage.setItem('isLoggedIn', 'true');
-                    sessionStorage.setItem('scannerUser', user);
+                    localStorage.setItem('isLoggedIn', 'true');
+                    localStorage.setItem('scannerUser', user);
                     document.getElementById('loginOverlay').style.display = 'none';
                 } else {
                     btn.innerText = "Login";
@@ -839,7 +839,7 @@
         }
 
         window.onload = function () {
-            if (sessionStorage.getItem('isLoggedIn') === 'true') {
+            if (localStorage.getItem('isLoggedIn') === 'true') {
                 document.getElementById('loginOverlay').style.display = 'none';
             }
         };
@@ -915,7 +915,7 @@
             resultDiv.style.display = 'block';
 
             const token = extractID(decodedText);
-            const scannerUser = sessionStorage.getItem('scannerUser') || 'Unknown';
+            const scannerUser = localStorage.getItem('scannerUser') || 'Unknown';
 
             // ── OFFLINE ──
             if (!navigator.onLine) {
@@ -1044,7 +1044,7 @@
 
             const total = queue.length;
             const CHUNK_SIZE = 10;
-            const scannerUser = sessionStorage.getItem('scannerUser') || 'Unknown';
+            const scannerUser = localStorage.getItem('scannerUser') || 'Unknown';
             let uploaded = 0;
 
             document.getElementById('modal-icon').innerText = "🔄";
@@ -1138,7 +1138,7 @@
         async function confirmOnlineFlag(token) {
             const reason = document.getElementById('flagReasonSelect')?.value;
             if (!reason) { alert("Please select a reason."); return; }
-            const scannerUser = sessionStorage.getItem('scannerUser') || 'Unknown';
+            const scannerUser = localStorage.getItem('scannerUser') || 'Unknown';
             try {
                 await callBackend("flagStudent", { scannedToken: token, reason, scannerUser });
                 resultDiv.className = "error";
