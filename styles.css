@@ -2957,4 +2957,311 @@ body.tv-mode.theater-mode .home-news {
   border-radius: 50%;
   cursor: pointer;
   box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-}
+}
+
+/* =========================================================
+   Admin Chat UI
+   ========================================================= */
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 120px);
+  max-width: 800px;
+  margin: 20px auto;
+  background: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 51, 102, 0.1);
+  border: 1px solid var(--border-color);
+}
+
+.chat-header {
+  padding: 16px 20px;
+  background: #ffffff;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+}
+
+.chat-header h2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--nbsc-blue);
+  margin: 0;
+}
+
+.chat-messages {
+  flex-grow: 1;
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #f8fafc;
+}
+
+.chat-bubble {
+  max-width: 75%;
+  padding: 12px 16px;
+  border-radius: 16px;
+  position: relative;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  word-wrap: break-word;
+  animation: toast-in 0.3s ease;
+}
+
+.chat-bubble-other {
+  align-self: flex-start;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-bottom-left-radius: 4px;
+}
+
+.chat-bubble-me {
+  align-self: flex-end;
+  background: var(--nbsc-blue);
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.chat-sender {
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+  opacity: 0.8;
+}
+
+.chat-time {
+  font-size: 0.65rem;
+  margin-top: 6px;
+  text-align: right;
+  opacity: 0.7;
+}
+
+.chat-form {
+  display: flex;
+  padding: 16px;
+  background: #ffffff;
+  border-top: 1px solid var(--border-color);
+  gap: 12px;
+}
+
+#chat-input {
+  flex-grow: 1;
+  padding: 12px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 24px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  outline: none;
+  background: #f8fafc;
+  transition: border-color 0.2s;
+}
+
+#chat-input:focus {
+  border-color: var(--nbsc-blue);
+  background: #ffffff;
+}
+
+.chat-send-btn {
+  background: var(--nbsc-gold);
+  color: var(--nbsc-blue);
+  border: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.chat-send-btn:hover {
+  transform: scale(1.05);
+  background: #e5a917;
+}
+
+/* =========================================================
+   Floating Facebook-style User Chat Widget
+   ========================================================= */
+.fb-chat-widget {
+  position: fixed;
+  bottom: 0;
+  right: 20px;
+  width: 320px;
+  background: #ffffff;
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 -4px 15px rgba(0,0,0,0.15);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-bottom: none;
+  font-family: var(--font-sans);
+  transition: transform 0.3s ease;
+}
+
+.fb-chat-header {
+  background: var(--nbsc-blue);
+  color: #fff;
+  padding: 12px 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.fb-chat-unread {
+  background: #e11d48;
+  color: #fff;
+  font-size: 0.75rem;
+  padding: 2px 7px;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+.fb-chat-body {
+  height: 380px;
+  display: flex;
+  flex-direction: column;
+  background: #f8fafc;
+}
+
+.fb-chat-contacts {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 0;
+  margin: 0;
+}
+
+.fb-chat-contact {
+  padding: 12px 15px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  background: #ffffff;
+  transition: background 0.2s;
+}
+
+.fb-chat-contact:hover {
+  background: #f1f5f9;
+}
+
+.fb-chat-contact-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.fb-chat-contact-unread {
+  background: #e11d48;
+  color: #fff;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: 700;
+  margin-left: 8px;
+}
+
+.fb-chat-conversation {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.fb-chat-conv-header {
+  background: #ffffff;
+  padding: 10px 15px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fb-chat-messages {
+  flex-grow: 1;
+  padding: 12px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #f8fafc;
+}
+
+.fb-chat-bubble {
+  max-width: 80%;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  word-wrap: break-word;
+  animation: toast-in 0.2s ease;
+}
+
+.fb-chat-bubble-other {
+  align-self: flex-start;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-bottom-left-radius: 4px;
+}
+
+.fb-chat-bubble-me {
+  align-self: flex-end;
+  background: var(--nbsc-blue);
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.fb-chat-time {
+  font-size: 0.65rem;
+  margin-top: 4px;
+  text-align: right;
+  opacity: 0.7;
+}
+
+.fb-chat-form {
+  display: flex;
+  padding: 12px;
+  background: #ffffff;
+  border-top: 1px solid var(--border-color);
+  gap: 10px;
+}
+
+#fb-chat-input {
+  flex-grow: 1;
+  padding: 10px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  outline: none;
+  font-size: 0.9rem;
+}
+
+#fb-chat-input:focus {
+  border-color: var(--nbsc-blue);
+}
+
+.fb-chat-send-btn {
+  background: var(--nbsc-gold);
+  color: #fff;
+  border: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+
+.fb-chat-send-btn:hover {
+  transform: scale(1.05);
+}

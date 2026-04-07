@@ -1,4 +1,363 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
+import { getDatabase, ref, push, onChildAdded, serverTimestamp, onValue, onDisconnect, set, remove } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
+
 const BACKEND_GAS_URL = window.ENV?.BACKEND_GAS_URL || "YOUR_NEW_BACKEND_GAS_URL_HERE";
+
+// Initialize Firebase Realtime Database for Admin Chat
+let db;
+let chatInitialized = false;
+
+if (window.ENV && window.ENV.FIREBASE_CONFIG) {
+  try {
+    const app = initializeApp(window.ENV.FIREBASE_CONFIG);
+    db = getDatabase(app);
+  } catch (err) {
+    console.error("Firebase initialization failed:", err);
+  }
+}
+
+function initAdminChat() {
+  if (!db || chatInitialized) return;
+  
+  const chatMessages = document.getElementById('chat-messages');
+  const chatForm = document.getElementById('chat-form');
+  const chatInput = document.getElementById('chat-input');
+  if (!chatMessages || !chatForm || !chatInput) return;
+
+  chatInitialized = true;
+  const messagesRef = ref(db, 'admin_messages');
+  
+  const sessionData = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
+  let myUsername = 'Admin';
+  if (sessionData) {
+    try { myUsername = JSON.parse(sessionData).username || 'Admin'; } catch(e) {}
+  }
+
+  onChildAdded(messagesRef, (snapshot) => {
+    const data = snapshot.val();
+    displayMessage(data, data.sender === myUsername);
+  });
+  
+  chatForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = chatInput.value.trim();
+    if (text) {
+      push(messagesRef, {
+        sender: myUsername,
+        text: text,
+        timestamp: serverTimestamp()
+      }).catch(err => {
+        console.error("Failed to send message:", err);
+      });
+      chatInput.value = '';
+    }
+  });
+}
+
+function displayMessage(data, isMe) {
+  const chatMessages = document.getElementById('chat-messages');
+  if(!chatMessages) return;
+  
+  const bubble = document.createElement('div');
+  bubble.className = `chat-bubble ${isMe ? 'chat-bubble-me' : 'chat-bubble-other'}`;
+  
+  let timeStr = "";
+  if (data.timestamp) {
+    const d = new Date(data.timestamp);
+    timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+  
+  const escapeHtml = (text) => {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  };
+  
+  bubble.innerHTML = `
+    ${!isMe ? `<div class="chat-sender">${escapeHtml(data.sender || 'Unknown')}</div>` : ''}
+    <div class="chat-text">${escapeHtml(data.text || '')}</div>
+    <div class="chat-time">${timeStr}</div>
+  `;
+  
+  chatMessages.appendChild(bubble);
+  setTimeout(() => {
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }, 10);
+}
+
+// --- USER TO USER MESSAGING (Firebase) ---
+const userFirebaseConfig = {
+  apiKey: "AIzaSyBMDJujN8met71l1JNGctZv7fubF5hh4W4",
+  authDomain: "centralized-messaging-storage.firebaseapp.com",
+  databaseURL: "https://centralized-messaging-storage-default-rtdb.firebaseio.com",
+  projectId: "centralized-messaging-storage",
+  storageBucket: "centralized-messaging-storage.firebasestorage.app",
+  messagingSenderId: "875825091946",
+  appId: "1:875825091946:web:28f9b6d5a7d9c346068113",
+  measurementId: "G-CPVCPF3SDH"
+};
+
+let userDb;
+let userChatInitialized = false;
+try {
+  const userApp = initializeApp(userFirebaseConfig, "userMessagingApp");
+  userDb = getDatabase(userApp);
+} catch(e) {
+  console.error("User messaging firebase init failed:", e);
+}
+
+function initUserMessaging() {
+  if (!userDb || userChatInitialized) return;
+  
+  const widget = document.getElementById('fb-chat-widget');
+  if (!widget) return;
+  userChatInitialized = true;
+  
+  const header = document.getElementById('fb-chat-header');
+  const body = document.getElementById('fb-chat-body');
+  const toggleIcon = document.getElementById('fb-chat-toggle-icon');
+  
+  const contactsList = document.getElementById('fb-chat-contacts');
+  const conversation = document.getElementById('fb-chat-conversation');
+  const activeUserEl = document.getElementById('fb-chat-active-user');
+  const messagesDiv = document.getElementById('fb-chat-messages');
+  const form = document.getElementById('fb-chat-form');
+  const input = document.getElementById('fb-chat-input');
+  const backBtn = document.getElementById('fb-chat-back-btn');
+  const unreadBadge = document.getElementById('fb-chat-unread');
+  
+  let isWidgetOpen = false;
+  let activeChatUser = null;
+  let myUsername = 'Unknown';
+  let unreadCount = 0;
+  
+  const sessionData = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
+  if (sessionData) {
+    try { myUsername = JSON.parse(sessionData).username || 'Unknown'; } catch(e) {}
+  }
+  if (myUsername === 'Unknown') {
+    widget.style.display = 'none'; // hide if not logged in
+    return;
+  }
+  
+  // UI Setup
+  const contactHeader = document.createElement('div');
+  contactHeader.style.cssText = 'padding:10px; border-bottom:1px solid #e2e8f0; background:#f1f5f9; font-weight:700; font-size:0.8rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;';
+  contactHeader.textContent = 'Available Users';
+  contactsList.appendChild(contactHeader);
+  
+  const contactItems = document.createElement('div');
+  contactsList.appendChild(contactItems);
+  
+  let contactsMap = {};
+  
+  // 1. Fetch Users From Spreadsheet GAS
+  async function fetchSpreadsheetUsers() {
+    try {
+      const res = await fetch(BACKEND_GAS_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "getUsers" })
+      });
+      const data = await res.json();
+      
+      const usersList = data.users || data.data || [];
+      usersList.forEach(u => {
+        const username = typeof u === 'object' ? u.username : u;
+        if (username && username !== myUsername) {
+          if (!contactsMap[username]) {
+            contactsMap[username] = { unread: 0, el: null, history: [] };
+          }
+          // Initial render as offline (Firebase presence will override if online)
+          renderContact(username, false);
+        }
+      });
+    } catch(e) {
+      console.error("Failed to fetch spreadsheet users:", e);
+    }
+  }
+  fetchSpreadsheetUsers();
+
+  // 2. Presence System Overlay
+  const connectedRef = ref(userDb, '.info/connected');
+  const myPresenceRef = ref(userDb, `presence/${myUsername}`);
+  
+  onValue(connectedRef, (snap) => {
+    if (snap.val() === true) {
+      onDisconnect(myPresenceRef).remove();
+      set(myPresenceRef, { status: 'online', timestamp: serverTimestamp() });
+    }
+  });
+
+  // Listen for online status updates
+  const presenceRef = ref(userDb, 'presence');
+  onValue(presenceRef, (snapshot) => {
+    const data = snapshot.val() || {};
+    
+    // Read online users
+    for (const [user, info] of Object.entries(data)) {
+      if (user !== myUsername && info.status === 'online') {
+        if (!contactsMap[user]) {
+          contactsMap[user] = { unread: 0, el: null, history: [] };
+        }
+        renderContact(user, true); // Mark online
+      }
+    }
+    
+    // Update users who went offline
+    for (const user in contactsMap) {
+      if (!data[user] || data[user].status !== 'online') {
+         renderContact(user, false); // Mark offline but KEEP in UI list
+      }
+    }
+  });
+  
+  header.addEventListener('click', (e) => {
+    if (e.target.closest('#fb-chat-toggle-btn') || e.target === header || header.contains(e.target)) {
+      isWidgetOpen = !isWidgetOpen;
+      body.classList.toggle('hidden', !isWidgetOpen);
+      if (isWidgetOpen) {
+        toggleIcon.innerHTML = '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>';
+      } else {
+        toggleIcon.innerHTML = '<polyline points="18 15 12 9 6 15"></polyline>';
+      }
+    }
+  });
+  
+  backBtn.addEventListener('click', () => {
+    activeChatUser = null;
+    conversation.classList.add('hidden');
+    contactsList.classList.remove('hidden');
+  });
+  
+  // Listen to messages globally to build contact history
+  const baseRef = ref(userDb, 'user_messages');
+  onChildAdded(baseRef, (snapshot) => {
+    const data = snapshot.val();
+    if (!data.sender || !data.receiver) return;
+    
+    if (data.sender === myUsername || data.receiver === myUsername) {
+      const otherUser = data.sender === myUsername ? data.receiver : data.sender;
+      
+      if (!contactsMap[otherUser]) {
+        contactsMap[otherUser] = { unread: 0, el: null, history: [] };
+        renderContact(otherUser);
+      }
+      
+      contactsMap[otherUser].history.push(data);
+      
+      if (data.sender === otherUser && activeChatUser !== otherUser && !data.read) {
+        contactsMap[otherUser].unread++;
+        unreadCount++;
+        updateUnreadBadges(otherUser);
+      }
+      
+      if (activeChatUser === otherUser) {
+        renderMessage(data, data.sender === myUsername);
+      }
+    }
+  });
+  
+  function renderContact(username, isOnline = true) {
+    let div = contactsMap[username].el;
+    if (!div) {
+      div = document.createElement('div');
+      div.className = 'fb-chat-contact';
+      div.onclick = () => openConversation(username);
+      contactItems.insertBefore(div, contactItems.firstChild);
+      contactsMap[username].el = div;
+    }
+    const unread = contactsMap[username].unread || 0;
+    
+    // Quick escape HTML
+    const escapeHtml = (text) => {
+      const div = document.createElement('div'); div.textContent = text; return div.innerHTML;
+    };
+    
+    const statusIndicator = isOnline 
+       ? '<span style="display:inline-block; width:8px; height:8px; background:#16a34a; border-radius:50%; margin-right:8px; box-shadow:0 0 4px #16a34a;"></span>'
+       : '<span style="display:inline-block; width:8px; height:8px; background:#94a3b8; border-radius:50%; margin-right:8px;"></span>';
+    
+    div.innerHTML = `
+      <div style="display:flex; align-items:center;">
+         ${statusIndicator}
+         <div class="fb-chat-contact-name">${escapeHtml(username)}</div>
+      </div>
+      ${unread > 0 ? `<div class="fb-chat-contact-unread">${unread}</div>` : ''}
+    `;
+  }
+  
+  function updateUnreadBadges(username) {
+    const isOnline = contactsMap[username].el ? contactsMap[username].el.innerHTML.includes('#16a34a') : false;
+    renderContact(username, isOnline);
+    unreadBadge.textContent = unreadCount;
+    unreadBadge.classList.toggle('hidden', unreadCount === 0);
+  }
+  
+  function openConversation(username) {
+    activeChatUser = username;
+    activeUserEl.textContent = username;
+    contactsList.classList.add('hidden');
+    conversation.classList.remove('hidden');
+    messagesDiv.innerHTML = '';
+    
+    const unread = contactsMap[username].unread || 0;
+    unreadCount = Math.max(0, unreadCount - unread);
+    contactsMap[username].unread = 0;
+    updateUnreadBadges(username);
+    
+    // Render past messages
+    contactsMap[username].history.forEach(msg => {
+      renderMessage(msg, msg.sender === myUsername);
+    });
+    
+    // Scroll to bottom
+    setTimeout(() => {
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }, 10);
+  }
+  
+  function renderMessage(data, isMe) {
+    const bubble = document.createElement('div');
+    bubble.className = `fb-chat-bubble ${isMe ? 'fb-chat-bubble-me' : 'fb-chat-bubble-other'}`;
+    
+    let timeStr = "";
+    if (data.timestamp) {
+      timeStr = new Date(data.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    }
+    
+    const escapeHtml = (text) => {
+      const div = document.createElement('div'); div.textContent = text; return div.innerHTML;
+    };
+    
+    bubble.innerHTML = `
+      <div class="fb-chat-text">${escapeHtml(data.text || '')}</div>
+      <div class="fb-chat-time">${timeStr}</div>
+    `;
+    
+    messagesDiv.appendChild(bubble);
+    setTimeout(() => {
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }, 10);
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = input.value.trim();
+    if (text && activeChatUser) {
+      push(baseRef, {
+        sender: myUsername,
+        receiver: activeChatUser,
+        text: text,
+        timestamp: serverTimestamp(),
+        read: false
+      }).catch(err => console.error("Send failed:", err));
+      input.value = '';
+    }
+  });
+}
+
+// Call on startup
+window.addEventListener('DOMContentLoaded', initUserMessaging);
 
 
 // --- CLOUDINARY CONFIGURATION ---
@@ -405,6 +764,15 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     var pageId = getHashPageId();
+    if (pageId === 'messages') {
+      setActiveNav(document.querySelector('.nav-item[data-page="messages"]'));
+      document.body.classList.remove('system-mode');
+      closeNav();
+      if (systemFrame) systemFrame.src = 'about:blank';
+      showPage('messages');
+      return;
+    }
+
     if (pageId === 'home') {
       setActiveNav(document.querySelector('.nav-item[data-page="home"]'));
       document.body.classList.remove('system-mode');
@@ -996,6 +1364,20 @@ document.addEventListener('DOMContentLoaded', () => {
       if (navToggle) navToggle.hidden = false;
       if (sidebar) sidebar.style.display = '';
       // Sidebar toggle is hidden by default in index.html, we only show it for Admins above
+    }
+
+    const navMessages = document.getElementById('nav-messages');
+    if (userObj.role === 'admin') {
+      if (navMessages) {
+        navMessages.style.display = 'flex';
+        navMessages.classList.remove('hidden');
+      }
+      initAdminChat(); // Initialize chat when admin logs in
+    } else {
+      if (navMessages) {
+        navMessages.style.display = 'none';
+        navMessages.classList.add('hidden');
+      }
     }
 
     const displayName = userDisplayName;

@@ -1,4 +1,89 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
+import { getDatabase, ref, push, onChildAdded, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
+
 const BACKEND_GAS_URL = window.ENV?.BACKEND_GAS_URL || "YOUR_NEW_BACKEND_GAS_URL_HERE";
+
+// Initialize Firebase Realtime Database for Admin Chat
+let db;
+let chatInitialized = false;
+
+if (window.ENV && window.ENV.FIREBASE_CONFIG) {
+  try {
+    const app = initializeApp(window.ENV.FIREBASE_CONFIG);
+    db = getDatabase(app);
+    console.error("Firebase initialization failed:", err);
+  }
+}
+
+function initAdminChat() {
+  if (!db || chatInitialized) return;
+  
+  const chatMessages = document.getElementById('chat-messages');
+  const chatForm = document.getElementById('chat-form');
+  const chatInput = document.getElementById('chat-input');
+  if (!chatMessages || !chatForm || !chatInput) return;
+
+  chatInitialized = true;
+  const messagesRef = ref(db, 'admin_messages');
+  
+  const sessionData = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
+  let myUsername = 'Admin';
+  if (sessionData) {
+    try { myUsername = JSON.parse(sessionData).username || 'Admin'; } catch(e) {}
+  }
+
+  onChildAdded(messagesRef, (snapshot) => {
+    const data = snapshot.val();
+    displayMessage(data, data.sender === myUsername);
+  });
+  
+  chatForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = chatInput.value.trim();
+    if (text) {
+      push(messagesRef, {
+        sender: myUsername,
+        text: text,
+        timestamp: serverTimestamp()
+      }).catch(err => {
+        console.error("Failed to send message:", err);
+      });
+      chatInput.value = '';
+    }
+  });
+}
+
+function displayMessage(data, isMe) {
+  const chatMessages = document.getElementById('chat-messages');
+  if(!chatMessages) return;
+  
+  const bubble = document.createElement('div');
+  bubble.className = `chat-bubble ${isMe ? 'chat-bubble-me' : 'chat-bubble-other'}`;
+  
+  let timeStr = "";
+  if (data.timestamp) {
+    const d = new Date(data.timestamp);
+    timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+  
+  const escapeHtml = (text) => {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  };
+  
+  bubble.innerHTML = `
+    ${!isMe ? `<div class="chat-sender">${escapeHtml(data.sender || 'Unknown')}</div>` : ''}
+    <div class="chat-text">${escapeHtml(data.text || '')}</div>
+    <div class="chat-time">${timeStr}</div>
+  `;
+  
+  chatMessages.appendChild(bubble);
+  setTimeout(() => {
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }, 10);
+}
+
 
 
 // --- CLOUDINARY CONFIGURATION ---
@@ -384,9 +469,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function showPage(pageId) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    const page = pageId === 'home'
-      ? homePage
-      : (pageId === 'loading' ? loadingPage : (pageId === 'system-view' ? systemViewPage : null));
+    let page = null;
+    if (pageId === 'home') page = homePage;
+    else if (pageId === 'loading') page = loadingPage;
+    else if (pageId === 'system-view') page = systemViewPage;
+    else if (pageId === 'messages') page = document.getElementById('messages');
+    
     if (page) page.classList.add('active');
   }
 
@@ -411,6 +499,15 @@ document.addEventListener('DOMContentLoaded', () => {
       closeNav();
       if (systemFrame) systemFrame.src = 'about:blank';
       showPage('home');
+      return;
+    }
+    
+    if (pageId === 'messages') {
+      setActiveNav(document.querySelector('.nav-item[data-page="messages"]'));
+      document.body.classList.remove('system-mode');
+      closeNav();
+      if (systemFrame) systemFrame.src = 'about:blank';
+      showPage('messages');
       return;
     }
 
@@ -996,6 +1093,20 @@ document.addEventListener('DOMContentLoaded', () => {
       if (navToggle) navToggle.hidden = false;
       if (sidebar) sidebar.style.display = '';
       // Sidebar toggle is hidden by default in index.html, we only show it for Admins above
+    }
+
+    const navMessages = document.getElementById('nav-messages');
+    if (userObj.role === 'admin') {
+      if (navMessages) {
+        navMessages.style.display = 'flex';
+        navMessages.classList.remove('hidden');
+      }
+      initAdminChat(); // Initialize chat when admin logs in
+    } else {
+      if (navMessages) {
+        navMessages.style.display = 'none';
+        navMessages.classList.add('hidden');
+      }
     }
 
     const displayName = userDisplayName;

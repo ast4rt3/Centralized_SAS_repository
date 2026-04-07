@@ -102,6 +102,12 @@
         <span class="nav-icon">⌂</span>
         <span class="nav-label">Home</span>
       </a>
+      <a href="#messages" id="nav-messages" class="nav-item hidden" data-page="messages" style="display: none;">
+        <span class="nav-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+        </span>
+        <span class="nav-label">Messages</span>
+      </a>
       <div id="nav-dynamic">
         <!-- Sections + systems injected from config -->
       </div>
@@ -247,6 +253,24 @@
           <div id="posts-empty" class="posts-state hidden">
             <p>No recent updates.</p>
           </div>
+        </div>
+      </section>
+
+      <!-- Messages Page -->
+      <section id="messages" class="page">
+        <div class="chat-container">
+          <header class="chat-header">
+            <h2>Admin Chat</h2>
+          </header>
+          <div id="chat-messages" class="chat-messages">
+            <!-- Dynamic chat bubbles go here -->
+          </div>
+          <form id="chat-form" class="chat-form">
+            <input type="text" id="chat-input" placeholder="Type a message..." required autocomplete="off">
+            <button type="submit" class="chat-send-btn" aria-label="Send Message">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            </button>
+          </form>
         </div>
       </section>
     </div>
@@ -498,6 +522,46 @@
     </svg>
     <span>Exit TV View</span>
   </button>
+  
+  <!-- Floating User Chat Widget -->
+  <div id="fb-chat-widget" class="fb-chat-widget">
+    <div id="fb-chat-header" class="fb-chat-header">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+        <span>Messaging</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span id="fb-chat-unread" class="fb-chat-unread hidden">0</span>
+        <button id="fb-chat-toggle-btn" class="icon-btn" style="color:white; padding:0;">
+          <svg id="fb-chat-toggle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+        </button>
+      </div>
+    </div>
+    
+    <div id="fb-chat-body" class="fb-chat-body hidden">
+      <div id="fb-chat-contacts" class="fb-chat-contacts">
+        <!-- Contacts dynamically injected here -->
+      </div>
+      
+      <div id="fb-chat-conversation" class="fb-chat-conversation hidden">
+        <div id="fb-chat-conv-header" class="fb-chat-conv-header">
+          <button id="fb-chat-back-btn" class="icon-btn" style="color:var(--nbsc-blue); padding:0;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+          </button>
+          <span id="fb-chat-active-user" style="font-weight:700; color:var(--nbsc-blue);">User</span>
+        </div>
+        <div id="fb-chat-messages" class="fb-chat-messages">
+          <!-- Messages injected here -->
+        </div>
+        <form id="fb-chat-form" class="fb-chat-form">
+          <input type="text" id="fb-chat-input" placeholder="Type a message..." required autocomplete="off">
+          <button type="submit" class="fb-chat-send-btn" aria-label="Send Message">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
   
   <!-- Environment Configuration -->
   <script src="env.js?v=2"></script>

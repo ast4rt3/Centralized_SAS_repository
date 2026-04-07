@@ -17,7 +17,20 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=10">
+  <!-- Force PWA SW unregister if coming from older version -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for(let registration of registrations) {
+          // If the active worker is the old v68, we unregister it to force update
+          if (registration.active && registration.active.scriptURL.includes('serviceWorker.js')) {
+            registration.update();
+          }
+        }
+      });
+    }
+  </script>
+  <link rel="stylesheet" href="styles.css?v=11">
   <script>
     // Automatically register Service Worker for offline caching
     if ('serviceWorker' in navigator) {
@@ -101,6 +114,12 @@
       <a href="#home" class="nav-item active" data-page="home">
         <span class="nav-icon">⌂</span>
         <span class="nav-label">Home</span>
+      </a>
+      <a href="#messages" id="nav-messages" class="nav-item hidden" data-page="messages" style="display: none;">
+        <span class="nav-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+        </span>
+        <span class="nav-label">Messages</span>
       </a>
       <div id="nav-dynamic">
         <!-- Sections + systems injected from config -->
@@ -247,6 +266,24 @@
           <div id="posts-empty" class="posts-state hidden">
             <p>No recent updates.</p>
           </div>
+        </div>
+      </section>
+
+      <!-- Messages Page -->
+      <section id="messages" class="page">
+        <div class="chat-container">
+          <header class="chat-header">
+            <h2>Admin Chat</h2>
+          </header>
+          <div id="chat-messages" class="chat-messages">
+            <!-- Dynamic chat bubbles go here -->
+          </div>
+          <form id="chat-form" class="chat-form">
+            <input type="text" id="chat-input" placeholder="Type a message..." required autocomplete="off">
+            <button type="submit" class="chat-send-btn" aria-label="Send Message">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            </button>
+          </form>
         </div>
       </section>
     </div>
@@ -500,8 +537,8 @@
   </button>
   
   <!-- Environment Configuration -->
-  <script src="env.js?v=2"></script>
-  <script type="module" src="app.js?v=21"></script>
+  <script src="env.js?v=3"></script>
+  <script type="module" src="app.js?v=22"></script>
 </body>
 
 </html>
