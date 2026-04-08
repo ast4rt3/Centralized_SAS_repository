@@ -197,7 +197,9 @@ function initUserMessaging() {
     for (const [user, info] of Object.entries(data)) {
       if (user !== myUsername && info.status === 'online') {
         if (!contactsMap[user]) {
-          contactsMap[user] = { unread: 0, el: null, history: [] };
+          contactsMap[user] = { unread: 0, el: null, history: [], isOnline: true };
+        } else {
+          contactsMap[user].isOnline = true;
         }
         renderContact(user, true); // Mark online
       }
@@ -206,6 +208,7 @@ function initUserMessaging() {
     // Update users who went offline
     for (const user in contactsMap) {
       if (!data[user] || data[user].status !== 'online') {
+         contactsMap[user].isOnline = false;
          renderContact(user, false); // Mark offline but KEEP in UI list
       }
     }
@@ -239,8 +242,8 @@ function initUserMessaging() {
       const otherUser = data.sender === myUsername ? data.receiver : data.sender;
       
       if (!contactsMap[otherUser]) {
-        contactsMap[otherUser] = { unread: 0, el: null, history: [] };
-        renderContact(otherUser);
+        contactsMap[otherUser] = { unread: 0, el: null, history: [], isOnline: false };
+        renderContact(otherUser, false);
       }
       
       contactsMap[otherUser].history.push(data);
@@ -284,10 +287,15 @@ function initUserMessaging() {
       </div>
       ${unread > 0 ? `<div class="fb-chat-contact-unread">${unread}</div>` : ''}
     `;
+    
+    // Ensure the element is in the correct container
+    if (div.parentNode !== contactItems) {
+      contactItems.insertBefore(div, contactItems.firstChild);
+    }
   }
   
   function updateUnreadBadges(username) {
-    const isOnline = contactsMap[username].el ? contactsMap[username].el.innerHTML.includes('#16a34a') : false;
+    const isOnline = contactsMap[username] ? contactsMap[username].isOnline : false;
     renderContact(username, isOnline);
     unreadBadge.textContent = unreadCount;
     unreadBadge.classList.toggle('hidden', unreadCount === 0);
@@ -801,8 +809,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Determine if user has permission
-    const allowedRoles = sys.roles || ['admin']; // Default to admin only if not specified
-    const hasAccess = allowedRoles.includes(userRole);
+    const allowedRoles = sys.roles || ['admin'];
+    const hasAccess = (userRole === 'superadmin') || allowedRoles.includes(userRole);
 
     console.log(`[RBAC] User: ${userRole}, System: ${pageId}, Allowed: ${allowedRoles}, Success: ${hasAccess}`);
 
@@ -882,9 +890,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Filter systems based on role
     const allowedSystems = systems.filter(s => {
+      // Superadmin bypass: grant access to everything regardless of roles list
+      if (userRole === 'superadmin') return true;
+
       const allowedRoles = s.roles || ['admin'];
       const hasAccess = allowedRoles.includes(userRole);
-      console.log(`[Sidebar] System ${s.id} allowed: ${hasAccess} (Roles: ${allowedRoles})`);
       return hasAccess;
     });
     console.log('[Sidebar] Allowed Systems for User:', allowedSystems.length);
@@ -893,7 +903,7 @@ document.addEventListener('DOMContentLoaded', () => {
     var sectionNames = Object.keys(groups).sort(function (a, b) { return a.localeCompare(b); });
 
     let adminTvNav = '';
-    if (userRole === 'admin') {
+    if (userRole === 'admin' || userRole === 'superadmin') {
       adminTvNav = `
         <div class="nav-section-label">Admin Tools</div>
         <a href="#home" class="nav-item" id="nav-toggle-tv" data-page="home">
@@ -903,7 +913,7 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
     }
 
-    if (allowedSystems.length === 0 && userRole !== 'admin') {
+    if (allowedSystems.length === 0 && userRole !== 'admin' && userRole !== 'superadmin') {
       navDynamic.innerHTML = '<div class="nav-section-label">Protected Content</div><div style="padding:10px 16px; font-size:0.85rem; color:var(--text-muted);">Your account has limited access to internal systems. Contact admin for permissions.</div>';
       return;
     }
@@ -1336,7 +1346,7 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         }
       } catch (err) { }
-    } else if (userObj.role === 'admin') {
+    } else if (userObj.role === 'admin' || userObj.role === 'superadmin') {
       const adminTvView = localStorage.getItem('sas_admin_tv_view') === 'true';
       if (adminTvView) {
         document.body.classList.add('tv-mode');
@@ -1367,7 +1377,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const navMessages = document.getElementById('nav-messages');
-    if (userObj.role === 'admin') {
+    if (userObj.role === 'admin' || userObj.role === 'superadmin') {
       if (navMessages) {
         navMessages.style.display = 'flex';
         navMessages.classList.remove('hidden');
@@ -1387,7 +1397,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const displayStr = userObj.username;
     let roleBadge = '';
 
-    if (userObj.role === 'admin') {
+    if (userObj.role === 'superadmin') {
+      roleBadge = '<span style="background:#7c3aed; color:white; padding:2px 6px; border-radius:4px; font-size:0.7em; margin-left:8px;">SUPERADMIN</span>';
+    } else if (userObj.role === 'admin') {
       roleBadge = '<span style="background:var(--nbsc-gold); color:var(--nbsc-dark); padding:2px 6px; border-radius:4px; font-size:0.7em; margin-left:8px;">ADMIN</span>';
     } else if (userObj.role === 'uploader') {
       roleBadge = '<span style="background:#3b82f6; color:white; padding:2px 6px; border-radius:4px; font-size:0.7em; margin-left:8px;">UPLOADER</span>';
@@ -1426,10 +1438,36 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // Admin/Uploader check for "Add Post" button
+    // Admin/Uploader/Superadmin check for "Add Post" button
     const addPostBtn = document.getElementById('add-post-btn');
-    if (addPostBtn && (userObj.role === 'admin' || userObj.role === 'uploader')) {
+    if (addPostBtn && (userObj.role === 'admin' || userObj.role === 'uploader' || userObj.role === 'superadmin')) {
       addPostBtn.classList.remove('hidden');
+    }
+
+    // Superadmin-only: Clear Cache/Data button
+    const clearCacheBtn = document.getElementById('clear-cache-btn');
+    if (clearCacheBtn && userObj.role === 'superadmin') {
+      clearCacheBtn.classList.remove('hidden');
+      clearCacheBtn.addEventListener('click', async () => {
+        const confirmed = await showConfirm(
+          "System Data Reset",
+          "This will clear all browser storage (cache, local data, and session). Use this if the portal is showing old or incorrect info. You will be logged out. Continue?",
+          false,
+          'danger'
+        );
+        if (confirmed) {
+          localStorage.clear();
+          sessionStorage.clear();
+          if ('caches' in window) {
+            try {
+              const keys = await caches.keys();
+              await Promise.all(keys.map(key => caches.delete(key)));
+            } catch (e) { console.warn("Cache clear failed:", e); }
+          }
+          showToast("All data cleared. Refreshing...", "success");
+          setTimeout(() => window.location.reload(), 1000);
+        }
+      });
     }
   }
 
@@ -2803,7 +2841,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
         `;
 
-        if (role === 'admin' || role === 'uploader') {
+        if (role === 'admin' || role === 'uploader' || role === 'superadmin') {
           const actionArea = document.createElement('div');
           actionArea.className = 'post-card-actions';
 
