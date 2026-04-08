@@ -86,24 +86,15 @@ function displayMessage(data, isMe) {
 }
 
 // --- USER TO USER MESSAGING (Firebase) ---
-const userFirebaseConfig = {
-  apiKey: "AIzaSyBMDJujN8met71l1JNGctZv7fubF5hh4W4",
-  authDomain: "centralized-messaging-storage.firebaseapp.com",
-  databaseURL: "https://centralized-messaging-storage-default-rtdb.firebaseio.com",
-  projectId: "centralized-messaging-storage",
-  storageBucket: "centralized-messaging-storage.firebasestorage.app",
-  messagingSenderId: "875825091946",
-  appId: "1:875825091946:web:28f9b6d5a7d9c346068113",
-  measurementId: "G-CPVCPF3SDH"
-};
-
 let userDb;
 let userChatInitialized = false;
-try {
-  const userApp = initializeApp(userFirebaseConfig, "userMessagingApp");
-  userDb = getDatabase(userApp);
-} catch(e) {
-  console.error("User messaging firebase init failed:", e);
+if (window.ENV && window.ENV.FIREBASE_CONFIG) {
+  try {
+    const userApp = initializeApp(window.ENV.FIREBASE_CONFIG, "userMessagingApp");
+    userDb = getDatabase(userApp);
+  } catch(e) {
+    console.error("User messaging firebase init failed:", e);
+  }
 }
 
 function initUserMessaging() {
@@ -252,6 +243,15 @@ function initUserMessaging() {
         contactsMap[otherUser].unread++;
         unreadCount++;
         updateUnreadBadges(otherUser);
+        
+        // Notification for Superadmin
+        const sessionData = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
+        let userRole = '';
+        if (sessionData) { try { userRole = JSON.parse(sessionData).role; } catch(e) {} }
+        
+        if (userRole === 'Superadmin') {
+           showNotification(otherUser, data.text);
+        }
       }
       
       if (activeChatUser === otherUser) {
@@ -259,6 +259,51 @@ function initUserMessaging() {
       }
     }
   });
+
+  function showNotification(sender, text) {
+    let container = document.getElementById('fb-chat-notifications');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'fb-chat-notifications';
+      container.className = 'fb-chat-notifications';
+      document.body.appendChild(container);
+    }
+    
+    const toast = document.createElement('div');
+    toast.className = 'fb-chat-toast';
+    toast.onclick = () => {
+      if (!isWidgetOpen) {
+          header.click();
+      }
+      openConversation(sender);
+      toast.remove();
+    };
+    
+    const displaySender = document.createElement('span');
+    displaySender.className = 'fb-chat-toast-sender';
+    displaySender.textContent = sender;
+    
+    const displayText = document.createElement('p');
+    displayText.className = 'fb-chat-toast-text';
+    displayText.textContent = text;
+    
+    toast.appendChild(displaySender);
+    toast.appendChild(displayText);
+    container.appendChild(toast);
+    
+    // Audio alert
+    try {
+      const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
+      audio.volume = 0.5;
+      audio.play();
+    } catch(e) {}
+    
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateX(20px)';
+      setTimeout(() => toast.remove(), 200);
+    }, 5000);
+  }
   
   function renderContact(username, isOnline = true) {
     let div = contactsMap[username].el;

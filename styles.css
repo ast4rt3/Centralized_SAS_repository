@@ -3265,3 +3265,57 @@ body.tv-mode.theater-mode .home-news {
 .fb-chat-send-btn:hover {
   transform: scale(1.05);
 }
+
+/* Messaging Notifications */
+.fb-chat-notifications {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  z-index: 10001;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.fb-chat-toast {
+  background: white;
+  border-left: 4px solid var(--nbsc-blue);
+  padding: 12px 16px;
+  border-radius: 8px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  pointer-events: auto;
+  min-width: 200px;
+  max-width: 300px;
+  animation: fb-toast-in 0.3s ease-out;
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+.fb-chat-toast:hover {
+  transform: translateY(-2px);
+}
+
+.fb-chat-toast-sender {
+  font-weight: 700;
+  color: var(--nbsc-blue);
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.fb-chat-toast-text {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@keyframes fb-toast-in {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
