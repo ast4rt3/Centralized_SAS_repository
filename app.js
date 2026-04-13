@@ -903,7 +903,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.classList.add('system-mode');
     closeNav();
     showPage('system-view');
-    if (systemFrame) systemFrame.src = sys.url;
+    if (systemFrame) {
+      const glue = sys.url.includes('?') ? '&' : '?';
+      const currentUser = JSON.parse(localStorage.getItem('sas_user_data') || '{}').username || 'Unknown';
+      systemFrame.src = sys.url + glue + 'portalUser=' + encodeURIComponent(currentUser);
+    }
   }
 
   function openNav() {

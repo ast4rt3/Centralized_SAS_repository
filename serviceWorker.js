@@ -4,7 +4,7 @@
 // No buttons required — runs invisibly in the background
 // ================================================================
 
-const CACHE_VERSION = 'sas-tv-v79';
+const CACHE_VERSION = 'sas-tv-v82';
 const CACHE_POST_DATA = 'sas-posts-v1';
 const CACHE_MEDIA = 'sas-media-v1';
 

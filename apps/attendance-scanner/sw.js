@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nbsc-sas-v4';
+const CACHE_NAME = 'nbsc-sas-v9';
 
 const PRECACHE = [
   './',

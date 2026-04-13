@@ -615,7 +615,10 @@
         <div class="banner-container">
             <button class="logout-btn-scanner" onclick="logoutScanner()"><i class='bx bx-log-out'></i> Logout</button>
             <img src="https://nbsc.edu.ph/wp-content/uploads/2025/01/SAS.png" class="banner-img" alt="SAS Banner">
+                <div id="userBadge" style="text-align:center; padding: 4px; font-size:0.75rem; color:var(--text-muted); background:rgba(0,0,0,0.05); font-weight:700;">
+            <i class='bx bx-user'></i> <span id="activeScannerName">Checking...</span>
         </div>
+</div>
 
         <div id="windowStatus" class="status-loading">
             <div class="status-dot loading" id="statusDot"></div>
@@ -681,6 +684,37 @@
     </div>
 
     <script>
+        console.log("Scanner Logic Initializing...");
+        function getCurrentUser() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const urlUser = urlParams.get('portalUser') || urlParams.get('scannerUser');
+                if (urlUser) return urlUser;
+
+                let data = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
+                
+                if (!data && window.parent && window.parent !== window) {
+                    try {
+                        data = window.parent.localStorage.getItem('sas_user_data') || 
+                               window.parent.sessionStorage.getItem('sas_user_data');
+                    } catch(e) {}
+                }
+
+                if (data) {
+                    if (data.startsWith('{')) {
+                        const session = JSON.parse(data);
+                        if (session && session.username) return session.username;
+                        if (session && session.user) return session.user;
+                    } else {
+                        return data;
+                    }
+                }
+            } catch (e) {}
+            return localStorage.getItem('scannerUser') || 'Unknown';
+        }
+
+        
+
         // ══════════════════════════════════════════════════
         // ⚙️  PASTE YOUR GAS DEPLOYMENT URL HERE
         // ══════════════════════════════════════════════════
@@ -787,7 +821,7 @@
             resultDiv.style.display = 'block';
 
             const token = extractID(decodedText);
-            const scannerUser = localStorage.getItem('scannerUser') || 'Unknown';
+            const scannerUser = getCurrentUser();
 
             // ── OFFLINE ──
             if (!navigator.onLine) {
@@ -916,7 +950,7 @@
 
             const total = queue.length;
             const CHUNK_SIZE = 10;
-            const scannerUser = localStorage.getItem('scannerUser') || 'Unknown';
+            const scannerUser = getCurrentUser();
             let uploaded = 0;
 
             document.getElementById('modal-icon').innerText = "🔄";
@@ -1010,7 +1044,7 @@
         async function confirmOnlineFlag(token) {
             const reason = document.getElementById('flagReasonSelect')?.value;
             if (!reason) { alert("Please select a reason."); return; }
-            const scannerUser = localStorage.getItem('scannerUser') || 'Unknown';
+            const scannerUser = getCurrentUser();
             try {
                 await callBackend("flagStudent", { scannedToken: token, reason, scannerUser });
                 resultDiv.className = "error";
@@ -1168,8 +1202,8 @@
             }
 
             if (isIos) {
-                document.getElementById('installBtn').style.display = 'none';
-                document.getElementById('installBtnHome').style.display = 'none';
+                var b1 = document.getElementById('installBtn'); if(b1) b1.style.display = 'none';
+                var b2 = document.getElementById('installBtnHome'); if(b2) b2.style.display = 'none';
                 var hint1 = document.getElementById('installHintIos');
                 var hint2 = document.getElementById('installHintIosHome');
                 if (hint1) hint1.style.display = 'block';
@@ -1192,8 +1226,8 @@
                     deferredPrompt = null;
                 });
             }
-            document.getElementById('installBtn').addEventListener('click', doInstall);
-            document.getElementById('installBtnHome').addEventListener('click', doInstall);
+            var btn1 = document.getElementById('installBtn'); if(btn1) btn1.addEventListener('click', doInstall);
+            var btn2 = document.getElementById('installBtnHome'); if(btn2) btn2.addEventListener('click', doInstall);
         })();
     </script>
 </body>
