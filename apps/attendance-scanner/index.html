@@ -926,7 +926,7 @@
                 msg: message,
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             });
-            localStorage.setItem('scan_history', JSON.stringify(history.slice(0, 20)));
+            localStorage.setItem('scan_history', JSON.stringify(history.slice(0, 500))); // Persist up to 500 records
         }
 
         function renderHistory() {
