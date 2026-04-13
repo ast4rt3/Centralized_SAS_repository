@@ -424,6 +424,15 @@ window.addEventListener('DOMContentLoaded', () => {
 // --- FULL PAGE MESSENGER LOGIC ---
 
 function initFullMessenger() {
+
+  window.toggleMessengerMobile = function(active) {
+    const container = document.querySelector('.messenger-container');
+    if(container) {
+      if(active) container.classList.add('chat-active');
+      else container.classList.remove('chat-active');
+    }
+  };
+
   const container = document.querySelector('.messenger-container');
   if(!container || !userDb) return;
 
@@ -545,6 +554,7 @@ function initFullMessenger() {
     contactsMap[user].unread = 0;
     renderFullMessages();
     renderFullContacts();
+    if(window.toggleMessengerMobile) window.toggleMessengerMobile(true);
   }
 
   function renderFullMessages() {
