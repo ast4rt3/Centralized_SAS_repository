@@ -33,12 +33,7 @@
 
       // Reload page when new service worker takes over (skipWaiting was called)
       let refreshing = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!refreshing) {
-          refreshing = true;
-          window.location.reload();
-        }
-      });
+      // controllerchange reload disabled to prevent loops
     }
   </script>
 </head>

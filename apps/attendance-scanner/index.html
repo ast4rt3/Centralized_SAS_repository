@@ -570,9 +570,145 @@
     font-size: 0.8rem;
     color: rgba(255,255,255,0.8);
 }
-    </style>
+    
+        .bottom-nav {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(0,0,0,0.05);
+            padding-bottom: calc(14px + env(safe-area-inset-bottom));
+        }
+        .nav-item i { font-size: 1.5rem; transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .nav-item.active i { transform: translateY(-4px) scale(1.1); color: var(--nbsc-blue); }
+        .nav-item span { margin-top: 2px; font-weight: 800; font-size: 0.6rem; }
+        
+        .sticky-header .banner-img { max-height: 12vh; }
+
+        
+        .user-profile-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 20px;
+            background: white;
+            border-bottom: 2px solid #f1f5f9;
+        }
+        .profile-circle {
+            width: 44px;
+            height: 44px;
+            background: #f1f5f9;
+            border: 2px solid var(--nbsc-gold);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: var(--nbsc-blue);
+            flex-shrink: 0;
+        }
+        .profile-info {
+            display: flex;
+            flex-direction: column;
+        }
+        .profile-name {
+            font-size: 0.8rem;
+            font-weight: 800;
+            color: var(--nbsc-dark);
+            text-transform: uppercase;
+        }
+        .profile-label {
+            font-size: 0.6rem;
+            color: #94a3b8;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+</style>
 
     <script src="https://unpkg.com/html5-qrcode"></script>
+
+    <style>
+        /* Mobile Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 10px 24px 10px;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+            z-index: 1000;
+            border-top: 1px solid #f1f5f9;
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: #94a3b8;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex: 1;
+        }
+        .nav-item i { font-size: 1.4rem; }
+        .nav-item span { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .nav-item.active { color: var(--nbsc-blue); }
+        .nav-item.active i { transform: translateY(-2px); }
+
+        /* Screen Management */
+        .screen {
+            display: none;
+            flex-direction: column;
+            min-height: 100dvh;
+            padding-bottom: 90px;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .screen.active { display: flex; }
+
+        /* List Styling */
+        .data-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .data-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: var(--nbsc-blue);
+        }
+        .data-info { flex: 1; }
+        .data-title { font-size: 0.9rem; font-weight: 700; color: var(--nbsc-dark); }
+        .data-sub { font-size: 0.75rem; color: #64748b; margin-top: 2px; }
+        .data-time { font-size: 0.7rem; color: #94a3b8; font-weight: 600; }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #94a3b8;
+        }
+        .empty-state i { font-size: 3rem; margin-bottom: 10px; opacity: 0.5; }
+
+        /* Banner tweaks for mobile */
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 999;
+            background: white;
+        }
+    </style>
 </head>
 
 <body>
@@ -611,25 +747,31 @@
         </div>
     </div>
 
-    <div id="scannerScreen">
-        <div class="banner-container">
-            <button class="logout-btn-scanner" onclick="logoutScanner()"><i class='bx bx-log-out'></i> Logout</button>
-            <img src="https://nbsc.edu.ph/wp-content/uploads/2025/01/SAS.png" class="banner-img" alt="SAS Banner">
-                <div id="userBadge" style="text-align:center; padding: 4px; font-size:0.75rem; color:var(--text-muted); background:rgba(0,0,0,0.05); font-weight:700;">
-            <i class='bx bx-user'></i> <span id="activeScannerName">Checking...</span>
-        </div>
-</div>
-
-        <div id="windowStatus" class="status-loading">
-            <div class="status-dot loading" id="statusDot"></div>
-            <span id="statusText">Checking window...</span>
+    <div id="scannerScreen" class="screen active">
+        <div class="sticky-header">
+            <div class="banner-container">
+                <img src="https://nbsc.edu.ph/wp-content/uploads/2025/01/SAS.png" class="banner-img" alt="SAS Banner">
+            </div>
+            <div class="user-profile-section">
+                <div class="profile-circle">
+                    <i class='bx bxs-user-circle'></i>
+                </div>
+                <div class="profile-info">
+                    <span class="profile-label">Authorized Scanner</span>
+                    <span id="activeScannerName" class="profile-name">Checking...</span>
+                </div>
+                <button onclick="logoutScanner()" style="margin-left:auto; background:#fee2e2; color:#dc2626; border:none; padding:6px 10px; border-radius:6px; font-size:0.6rem; font-weight:800; cursor:pointer;">LOGOUT</button>
+            </div>
+            <div id="windowStatus" class="status-loading">
+                <div class="status-dot loading" id="statusDot"></div>
+                <span id="statusText">Checking window...</span>
+            </div>
         </div>
 
         <div class="scanner-content">
             <div class="qr-wrapper">
                 <div id="reader"></div>
             </div>
-
             <div id="manual-entry">
                 <div class="manual-card">
                     <div class="manual-label">Manual Entry</div>
@@ -639,51 +781,52 @@
             </div>
             <div id="result"></div>
         </div>
+    </div>
 
-        <div class="recent-scans-card">
-            <div class="recent-header">
-                <span><i class='bx bx-history'></i> Recent Scans</span>
-                <button onclick="clearRecentScans()" class="clear-history-btn">Clear</button>
-            </div>
-            <div id="recentScansList">
-                <p style="padding: 20px; text-align: center; color: #cbd5e1; font-size: 0.8rem;">No scans in this
-                    session</p>
+    <div id="historyScreen" class="screen">
+        <div class="banner-container">
+            <div style="padding: 20px; color: white;">
+                <h2 style="font-weight: 800; text-transform: uppercase; font-size: 1.2rem;">Recent Scans</h2>
+                <p style="font-size: 0.7rem; opacity: 0.8;">YOUR LAST 20 ACTIVITY</p>
             </div>
         </div>
-
-        <div id="offline-status"
-            style="display:none; padding: 15px; background: #fff3cd; border-top: 2px solid #ffeeba;">
-            <div class="offline-inner">
-                <div class="offline-label" style="font-weight:bold; color:#856404; margin-bottom:10px;">
-                    ⚠️ <span id="pending-count">0</span> Pending Scans
-                </div>
-                <div class="offline-actions" style="display: flex; gap: 10px;">
-                    <button class="sync-btn-main" onclick="syncOfflineData()"
-                        style="flex:2; background:#28a745; color:white; border:none; padding:12px; border-radius:5px; font-weight:bold;">🔄
-                        SYNC NOW</button>
-                    <button class="delete-btn-main" onclick="clearOfflineQueue()"
-                        style="flex:1; background:#dc3545; color:white; border:none; padding:12px; border-radius:5px; font-size:12px;">CLEAR</button>
-                </div>
-            </div>
-            <button onclick="toggleOfflineLog()" class="info-btn"
-                style="margin-top: 10px; background: #607d8b; color: white; border: none; padding: 12px; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold;">
-                📋 VIEW PENDING NAMES
-            </button>
-        </div>
-
-        <div id="offline-log-container"
-            style="display:none; margin: 15px auto; width: 90%; background: #fff; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); padding: 15px; border: 1px solid #ddd;">
-            <div
-                style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f0f0f0; padding-bottom: 8px;">
-                <h4 style="margin: 0; color: #333;">Pending List</h4>
-                <button onclick="toggleOfflineLog()"
-                    style="background: none; border: none; cursor: pointer; font-size: 20px;">✖️</button>
-            </div>
-            <div id="offline-list-names" style="max-height: 250px; overflow-y: auto; margin-top: 10px;"></div>
+        <div class="scanner-content" id="historyList">
+            <!-- Dynamic History -->
         </div>
     </div>
 
-    <script>
+    <div id="queueScreen" class="screen">
+        <div class="banner-container">
+            <div style="padding: 20px; color: white; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h2 style="font-weight: 800; text-transform: uppercase; font-size: 1.2rem;">Offline Queue</h2>
+                    <p style="font-size: 0.7rem; opacity: 0.8;">PENDING DATABASE SYNC</p>
+                </div>
+                <button onclick="syncOfflineData()" class="sync-btn-main" style="background: var(--nbsc-gold); color: black; border-radius: 30px;">
+                    <i class='bx bx-sync'></i> Sync All
+                </button>
+            </div>
+        </div>
+        <div class="scanner-content" id="queueList">
+            <!-- Dynamic Queue -->
+        </div>
+    </div>
+
+    <nav class="bottom-nav">
+        <div class="nav-item active" onclick="switchScreen('scannerScreen', this)">
+            <i class='bx bx-qr-scan'></i>
+            <span>Scanner</span>
+        </div>
+        <div class="nav-item" onclick="switchScreen('historyScreen', this)">
+            <i class='bx bx-history'></i>
+            <span>History</span>
+        </div>
+        <div class="nav-item" onclick="switchScreen('queueScreen', this)">
+            <i class='bx bx-cloud-upload'></i>
+            <span id="queueCountLabel">Queue</span>
+        </div>
+    </nav>
+<script>
         console.log("Scanner Logic Initializing...");
         function getCurrentUser() {
             try {
@@ -737,7 +880,123 @@
             return res.json();
         }
 
-        // --- NAVIGATION ---
+        
+        // --- SCREEN NAVIGATION ---
+        
+        function switchScreen(screenId, navEl) {
+            console.log("Navigating to:", screenId);
+            try {
+                // Hide ALL screens
+                const screens = document.querySelectorAll('.screen');
+                screens.forEach(s => {
+                    s.classList.remove('active');
+                    s.style.display = 'none';
+                });
+                
+                // Show TARGET screen
+                const target = document.getElementById(screenId);
+                if(target) {
+                    target.classList.add('active');
+                    target.style.display = 'flex';
+                }
+                
+                // Update Nav UI
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                if(navEl) navEl.classList.add('active');
+                
+                // Refresh data
+                updateQueueCountBadge();
+                if(screenId === 'historyScreen') renderHistory();
+                if(screenId === 'queueScreen') renderQueue();
+                
+                // Re-init scanner if needed
+                if(screenId === 'scannerScreen' && !html5QrcodeScanner) {
+                    startScanner();
+                }
+            } catch(e) { console.error("Navigation Error:", e); }
+        }
+
+
+        // --- LOCAL HISTORY TRACKER ---
+        function addToRecentScans(scannedID, status, message) {
+            let history = JSON.parse(localStorage.getItem('scan_history') || '[]');
+            history.unshift({
+                id: scannedID,
+                status: status,
+                msg: message,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            });
+            localStorage.setItem('scan_history', JSON.stringify(history.slice(0, 20)));
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('historyList');
+            const history = JSON.parse(localStorage.getItem('scan_history') || '[]');
+            
+            if (history.length === 0) {
+                list.innerHTML = '<div class="empty-state"><i class="bx bx-history"></i><p>No recent scans yet</p></div>';
+                return;
+            }
+
+            list.innerHTML = history.map(item => `
+                <div class="data-card">
+                    <div class="data-icon" style="background: ${item.status === 'success' ? '#d1fae5' : '#fee2e2'}; color: ${item.status === 'success' ? '#059669' : '#dc2626'}">
+                        <i class='bx ${item.status === 'success' ? 'bx-check-circle' : 'bx-error-circle'}'></i>
+                    </div>
+                    <div class="data-info">
+                        <div class="data-title">${item.id}</div>
+                        <div class="data-sub">${item.msg}</div>
+                    </div>
+                    <div class="data-time">${item.time}</div>
+                </div>
+            `).join('');
+        }
+
+        
+        function renderQueue() {
+            const list = document.getElementById('queueList');
+            const queue = JSON.parse(localStorage.getItem('nbsc_offline_scans') || '[]');
+            updateQueueCountBadge();
+
+            if (queue.length === 0) {
+                list.innerHTML = '<div class="empty-state"><i class="bx bx-cloud-off"></i><p>Offline queue is empty</p></div>';
+                return;
+            }
+
+            list.innerHTML = queue.map((item, index) => `
+                <div class="data-card">
+                    <div class="data-icon" style="background: ${item.isFlagged ? '#fee2e2' : '#f1f5f9'}; color: ${item.isFlagged ? '#dc2626' : 'var(--nbsc-blue)'}">
+                        <i class='bx ${item.isFlagged ? 'bx-flag' : 'bx-barcode-reader'}'></i>
+                    </div>
+                    <div class="data-info">
+                        <div class="data-title">${item.code}</div>
+                        <div class="data-sub">${item.isFlagged ? 'Flag: ' + item.reason : 'Pending Sync'}</div>
+                    </div>
+                    <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+                        <div class="data-time">${new Date(item.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+                        <button onclick="deleteOfflineItem(${index})" style="background:none; border:none; color:#dc2626; font-size:1.1rem; cursor:pointer; padding:5px;">
+                            <i class='bx bx-trash'></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+
+        function deleteOfflineItem(index) {
+            let queue = JSON.parse(localStorage.getItem('nbsc_offline_scans') || '[]');
+            queue.splice(index, 1);
+            localStorage.setItem('nbsc_offline_scans', JSON.stringify(queue));
+            renderQueue();
+            updateQueueCountBadge();
+        }
+
+        function updateQueueCountBadge() {
+            const queue = JSON.parse(localStorage.getItem('nbsc_offline_scans') || '[]');
+            const label = document.getElementById('queueCountLabel');
+            if(label) label.innerText = queue.length > 0 ? `Queue (${queue.length})` : 'Queue';
+        }
+// --- NAVIGATION ---
         function logoutScanner() {
             if (confirm("Are you sure you want to log out from the system?")) {
                 localStorage.removeItem('sas_user_data');
@@ -754,6 +1013,12 @@
         function enterScanner() {
             document.getElementById("homeScreen").style.display = "none";
             document.getElementById("scannerScreen").style.display = "flex";
+            
+            // Sync current user identity to the badge
+            const userName = getCurrentUser();
+            const badge = document.getElementById('activeScannerName');
+            if(badge) badge.innerText = userName;
+
             updateQueueUI();
             startScanner();
             checkWindowStatus();
@@ -1056,19 +1321,7 @@
             } catch (e) { alert("Flag failed: " + e.message); }
         }
 
-        function updateQueueUI() {
-            let queue = JSON.parse(localStorage.getItem('nbsc_offline_scans') || "[]");
-            const bar = document.getElementById('offline-status');
-            if (bar) bar.style.display = queue.length > 0 ? 'block' : 'none';
-            const count = document.getElementById('pending-count');
-            if (count) count.innerText = queue.length;
-            const list = document.getElementById('offline-list-names');
-            if (!list) return;
-            if (queue.length === 0) { list.innerHTML = "<p>Queue is empty</p>"; return; }
-            let html = "<ul>";
-            queue.slice().reverse().forEach(item => { html += "<li><b>" + item.name + "</b></li>"; });
-            list.innerHTML = html + "</ul>";
-        }
+        function updateQueueUI() { updateQueueCountBadge(); }
 
         function toggleOfflineLog() {
             const log = document.getElementById('offline-log-container');
@@ -1138,25 +1391,57 @@
 
         // --- RECENT SCANS ---
         function addToRecentScans(name, token, windowName, isConsented) {
-            const list = document.getElementById('recentScansList');
-            if (!list) return;
-            const emptyMsg = list.querySelector('p');
-            if (emptyMsg) emptyMsg.remove();
-
-            const item = document.createElement('div');
-            const isOut = windowName.toLowerCase().includes('out');
-            const typeClass = isConsented ? 'type-blue' : (isOut ? 'type-out' : 'type-in');
-            item.className = "recent-item " + typeClass;
-            item.innerHTML =
-                "<span class=\"recent-window\">" + windowName + (isConsented ? " 🔵 CONSENTED" : "") + "</span>" +
-                "<div class=\"recent-flex\">" +
-                "<span class=\"recent-name\">" + name + "</span>" +
-                "<span class=\"recent-token\">" + token + "</span>" +
-                "</div>";
-
-            list.insertBefore(item, list.firstChild);
-            if (list.children.length > 5) list.removeChild(list.lastChild);
+            let history = JSON.parse(localStorage.getItem('scan_history') || '[]');
+            const status = windowName.toLowerCase().includes('recorded') || windowName.toLowerCase().includes('saved') ? 'success' : 'warning';
+            
+            history.unshift({
+                name: name,
+                token: token,
+                window: windowName,
+                isConsented: isConsented,
+                status: status,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            });
+            
+            localStorage.setItem('scan_history', JSON.stringify(history.slice(0, 50))); // Store 50
+            if(document.getElementById('historyScreen').classList.contains('active')) renderHistory();
         }
+
+        function renderHistory() {
+            const list = document.getElementById('historyList');
+            const history = JSON.parse(localStorage.getItem('scan_history') || '[]');
+            
+            if (history.length === 0) {
+                list.innerHTML = '<div class="empty-state"><i class="bx bx-history"></i><p>No recent activity</p></div>';
+                return;
+            }
+
+            list.innerHTML = history.map(item => `
+                <div class="data-card">
+                    <div class="data-icon" style="background: ${item.status === 'success' ? '#d1fae5' : '#fff7ed'}; color: ${item.status === 'success' ? '#059669' : '#ea580c'}">
+                        <i class='bx ${item.status === 'success' ? 'bx-check-circle' : 'bx-time-five'}'></i>
+                    </div>
+                    <div class="data-info">
+                        <div class="data-title">${item.name}</div>
+                        <div class="data-sub">${item.token} • ${item.window}</div>
+                    </div>
+                    <div class="data-time">${item.time}</div>
+                </div>
+            `).join('') + `
+                <button onclick="clearHistory()" style="width:100%; padding:14px; background:none; border:2px dashed #cbd5e1; color:#94a3b8; border-radius:12px; font-weight:700; margin-top:10px; cursor:pointer;">
+                    CLEAR HISTORY
+                </button>
+            `;
+        }
+
+        function clearHistory() {
+            if(confirm('Clear all recent activity?')) {
+                localStorage.removeItem('scan_history');
+                renderHistory();
+            }
+        }
+
+        
 
         function clearRecentScans() {
             const list = document.getElementById('recentScansList');
