@@ -1,29 +1,23 @@
-# Simple workflow for deploying static content to GitHub Pages with environment variables
 name: Deploy static content to Pages
+name: NBSC SAS Industrial CI/CD Pipeline
 
 on:
-  # Runs on pushes targeting the default branch
   push:
     branches: ["main", "master"]
-
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
 concurrency:
   group: "pages"
   cancel-in-progress: false
 
 jobs:
-  # CI: Validate code before deploying
-  validate:
+  # 1. BUILD STAGE
+  build-stage:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -31,66 +25,6 @@ jobs:
       
       - name: Install Dependencies
         run: npm install
-      
-      - name: Run Syntax Check
-        run: node scripts/ci-syntax-check.js
-
-  # CI: Audit third-party service connections
-  integration-audit:
-    needs: validate
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      
-      - name: Run Connection Audit
-        env:
-          BACKEND_GAS_URL: ${{ secrets.BACKEND_GAS_URL }}
-          SCANNER_GAS_URL: ${{ secrets.SCANNER_GAS_URL }}
-        run: node scripts/ci-connection-check.js
-
-  # CI: System End-to-End (E2E) Diagnostic
-  system-testing:
-    needs: validate
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      
-      - name: Install Dependencies
-        run: npm install
-      
-      - name: Run System Diagnostic
-        run: node scripts/system-diagnostic.js
-
-  # CI: Comprehensive Security Audit
-  security-audit:
-    needs: validate
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      
-      - name: Run Trivy Security Scan (Secrets, Vuln, Misconfig)
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          security-checks: 'secret,vuln,misconfig'
-          exit-code: '1'
-          severity: 'CRITICAL,HIGH'
-
-  # CD: Deploy to GitHub Pages
-  deploy:
-    needs: [integration-audit, system-testing, security-audit] # Only deploy if all checks pass
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
       
       - name: Generate env.js from Secrets
         run: |
@@ -102,16 +36,105 @@ jobs:
           echo "  CLOUDINARY_UPLOAD_PRESET: \"${{ secrets.CLOUDINARY_UPLOAD_PRESET }}\"," >> env.js
           echo "  systems: $(cat systems.json)" >> env.js
           echo "};" >> env.js
-          echo "Generated env.js with secrets and systems.json"
 
+  # 2. AUTOMATED TESTS
+  automated-tests:
+    needs: build-stage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Dependencies
+        run: npm install
+      - name: Run System Diagnostic
+        run: node scripts/system-diagnostic.js
+
+  # 3. CODE ANALYSIS AND SECURITY SCAN
+  security-analysis:
+    needs: automated-tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Dependencies
+        run: npm install
+      - name: Syntax Check
+        run: node scripts/ci-syntax-check.js
+      - name: Run Trivy Security Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          security-checks: 'secret,vuln,misconfig'
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
+
+  # 4. ARTIFACT REPOSITORY
+  artifact-repository:
+    needs: security-analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Generate Deployment Artifact
+        # We package the site for the next stages
+        run: |
+          mkdir -p build-assets
+          cp -r . build-assets/
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sas-production-build
+          path: build-assets/
+
+  # 5. DEPLOYMENT TO STAGING
+  deployment-to-staging:
+    needs: artifact-repository
+    environment:
+      name: staging
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: sas-production-build
+      - name: Run Staging Connection Audit
+        env:
+          BACKEND_GAS_URL: ${{ secrets.BACKEND_GAS_URL }}
+          SCANNER_GAS_URL: ${{ secrets.SCANNER_GAS_URL }}
+        run: node scripts/ci-connection-check.js
+
+  # 6. DEPLOYMENT TO PRODUCTION
+  deployment-to-production:
+    needs: deployment-to-staging
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: sas-production-build
+      # IMPORTANT: env.js needs to be regenerated in this job context because 
+      # it wasn't part of the shared git repo (ignored)
+      - name: Finalize env.js
+        run: |
+          echo "window.ENV = {" > env.js
+          echo "  BACKEND_GAS_URL: \"${{ secrets.BACKEND_GAS_URL }}\"," >> env.js
+          echo "  SCANNER_GAS_URL: \"${{ secrets.SCANNER_GAS_URL }}\"," >> env.js
+          echo "  YOUTUBE_PROXY_URL: \"${{ secrets.YOUTUBE_PROXY_URL }}\"," >> env.js
+          echo "  CLOUDINARY_CLOUD_NAME: \"${{ secrets.CLOUDINARY_CLOUD_NAME }}\"," >> env.js
+          echo "  CLOUDINARY_UPLOAD_PRESET: \"${{ secrets.CLOUDINARY_UPLOAD_PRESET }}\"," >> env.js
+          echo "  systems: $(cat systems.json)" >> env.js
+          echo "};" >> env.js
       - name: Setup Pages
         uses: actions/configure-pages@v4
-      
-      - name: Upload artifact
+      - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
-      
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
