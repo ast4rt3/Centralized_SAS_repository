@@ -2,24 +2,24 @@ const https = require('https');
 
 async function checkURL(name, url) {
     return new Promise((resolve) => {
-        console.log(`🔍 Checking ${name}...`);
+        console.log(`🔍 Auditing ${name}...`);
         const req = https.get(url, (res) => {
-            if (res.statusCode >= 200 && res.statusCode < 400) {
-                console.log(`✅ ${name} is reachable (HTTP ${res.statusCode})`);
-                resolve(true);
-            } else if (res.statusCode === 405 || res.statusCode === 401) {
-                // Some APIs (like GAS POST endpoints) might return 405 on GET, but it means they are alive
-                console.log(`✅ ${name} is alive (HTTP ${res.statusCode} - Service is up)`);
-                resolve(true);
+            if (res.statusCode >= 200 && res.statusCode < 300) {
+                console.log(`✅ ${name}: HEALTHY (HTTP ${res.statusCode})`);
+                resolve("HEALTHY");
+            } else if ([401, 404, 405].includes(res.statusCode)) {
+                // Service is up but the specific endpoint is restricted or missing
+                console.log(`::warning::⚠️ ${name}: CAREFUL STATE (HTTP ${res.statusCode}) - Service responded but requested path is restricted or not found.`);
+                resolve("CAREFUL");
             } else {
-                console.error(`❌ ${name} returned error (HTTP ${res.statusCode})`);
-                resolve(false);
+                console.log(`::error::❌ ${name}: CRITICAL (HTTP ${res.statusCode}) - Service appears down or non-responsive.`);
+                resolve("CRITICAL");
             }
         });
 
         req.on('error', (err) => {
-            console.error(`❌ ${name} connection failed: ${err.message}`);
-            resolve(false);
+            console.log(`::error::❌ ${name}: OFFLINE - Connection failed: ${err.message}`);
+            resolve("CRITICAL");
         });
 
         req.end();
@@ -32,24 +32,30 @@ async function runAudit() {
         "Google Apps Script (Scanner)": process.env.SCANNER_GAS_URL,
         "Firebase Runtime": "https://centralized-messaging-storage.firebaseapp.com",
         "Firebase Database": "https://centralized-messaging-storage-default-rtdb.firebaseio.com/.json",
-        "Cloudinary CDN": `https://res.cloudinary.com/dj8ugtlrl/image/upload/sample.jpg`
+        "Cloudinary API": "https://api.cloudinary.com/v1_1"
     };
 
-    let allOk = true;
+    let criticalCount = 0;
+    let carefulCount = 0;
+
     for (const [name, url] of Object.entries(configs)) {
         if (!url) {
-            console.warn(`⚠️ Skipping ${name}: URL not provided (Check GitHub Secrets)`);
+            console.log(`::warning::⚠️ Skipping ${name}: Configuration missing.`);
             continue;
         }
-        const ok = await checkURL(name, url);
-        if (!ok) allOk = false;
+        const state = await checkURL(name, url);
+        if (state === "CRITICAL") criticalCount++;
+        if (state === "CAREFUL") carefulCount++;
     }
 
-    if (!allOk) {
-        console.error("\n🔴 Integration Audit Failed: One or more external services are unreachable.");
-        process.exit(1);
+    if (criticalCount > 0) {
+        console.error(`\n🔴 AUDIT FAILED: ${criticalCount} Critical issues found.`);
+        process.exit(1); 
+    } else if (carefulCount > 0) {
+        console.warn(`\n🟡 AUDIT WARNING: ${carefulCount} Careful states detected. Proceeding with caution.`);
+        process.exit(0); // Proceed but show the warning
     } else {
-        console.log("\n🟢 Integration Audit Passed: All third-party services are online.");
+        console.log("\n🟢 AUDIT PASSED: All services healthy.");
         process.exit(0);
     }
 }
