@@ -3319,3 +3319,8 @@ body.tv-mode.theater-mode .home-news {
   from { transform: translateX(100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
 }
+
+/* Role-based overrides */
+body.role-scanner .nav-toggle {
+  display: none !important;
+}

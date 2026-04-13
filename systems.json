@@ -6,7 +6,7 @@
     "url": "apps/attendance-scanner/index.html",
     "external": false,
     "section": "Attendance",
-    "roles": ["admin"]
+    "roles": ["admin", "scanner"]
   },
   {
     "id": "schedule-manager",

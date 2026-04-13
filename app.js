@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
-import { getDatabase, ref, push, onChildAdded, serverTimestamp, onValue, onDisconnect, set, remove } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
+import { getDatabase, ref, push, onChildAdded, onValue, onDisconnect, set, remove, get, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
 
 const BACKEND_GAS_URL = window.ENV?.BACKEND_GAS_URL || "YOUR_NEW_BACKEND_GAS_URL_HERE";
 
@@ -798,7 +798,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     const page = pageId === 'home'
       ? homePage
-      : (pageId === 'loading' ? loadingPage : (pageId === 'system-view' ? systemViewPage : null));
+      : (pageId === 'loading' ? loadingPage : (pageId === 'system-view' ? systemViewPage : (pageId === 'database' || pageId === 'messages' ? document.getElementById(pageId) : null)));
     if (page) page.classList.add('active');
   }
 
@@ -817,12 +817,35 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     var pageId = getHashPageId();
+    
+    // Lock scanner role to #attendance-scanner only
+    const sd = localStorage.getItem('sas_user_data');
+    if (sd) {
+      try {
+        const u = JSON.parse(sd);
+        if (u.role && u.role.toLowerCase() === 'scanner' && pageId !== 'attendance-scanner') {
+          window.location.hash = 'attendance-scanner';
+          return;
+        }
+      } catch(e) {}
+    }
+
     if (pageId === 'messages') {
       setActiveNav(document.querySelector('.nav-item[data-page="messages"]'));
       document.body.classList.remove('system-mode');
       closeNav();
       if (systemFrame) systemFrame.src = 'about:blank';
       showPage('messages');
+      return;
+    }
+
+    if (pageId === 'database') {
+      setActiveNav(document.querySelector('.nav-item[data-page="database"]'));
+      document.body.classList.remove('system-mode');
+      closeNav();
+      if (systemFrame) systemFrame.src = 'about:blank';
+      showPage('database');
+      initDatabaseManagement();
       return;
     }
 
@@ -855,7 +878,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Determine if user has permission
     const allowedRoles = sys.roles || ['admin'];
-    const hasAccess = (userRole === 'superadmin') || allowedRoles.includes(userRole);
+    const hasAccess = (userRole === 'superadmin') || allowedRoles.some(r => r.toLowerCase() === (userRole || '').toLowerCase());
 
     console.log(`[RBAC] User: ${userRole}, System: ${pageId}, Allowed: ${allowedRoles}, Success: ${hasAccess}`);
 
@@ -939,7 +962,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (userRole === 'superadmin') return true;
 
       const allowedRoles = s.roles || ['admin'];
-      const hasAccess = allowedRoles.includes(userRole);
+      const hasAccess = allowedRoles.some(r => r.toLowerCase() === (userRole || '').toLowerCase());
       return hasAccess;
     });
     console.log('[Sidebar] Allowed Systems for User:', allowedSystems.length);
@@ -986,7 +1009,7 @@ document.addEventListener('DOMContentLoaded', () => {
           document.body.classList.add('tv-mode');
           localStorage.setItem('sas_admin_tv_view', 'true');
           if (btnAdminExitTv) btnAdminExitTv.classList.remove('hidden');
-          if (navToggle) navToggle.hidden = true; // Lock down sidebar
+          if (navToggle) navToggle.classList.add('hidden'); // Lock down sidebar
           tvSettingsBox.classList.remove('hidden');
           window.location.hash = 'home';
           closeNav();
@@ -1123,15 +1146,30 @@ document.addEventListener('DOMContentLoaded', () => {
   function showLoginUI() {
     document.body.classList.remove('system-mode');
     if (loginOverlay) loginOverlay.classList.remove('hidden');
-    if (navToggle) navToggle.hidden = true;
+    if (navToggle) navToggle.classList.add('hidden');
     if (userMenuBtn) userMenuBtn.hidden = true;
     if (tvSettingsBox) tvSettingsBox.classList.add('hidden');
   }
 
-  function showAppUI(userObj) {
+    function showAppUI(userObj) {
     if (loginOverlay) loginOverlay.classList.add('hidden');
-    if (navToggle) navToggle.hidden = false;
-    if (userMenuBtn) userMenuBtn.hidden = false;
+    
+    if (userObj && userObj.role) { document.body.className = document.body.className.replace(/role-\S+/g, '') + ' role-' + userObj.role.toLowerCase(); }
+    if (userObj && (userObj.role && userObj.role.toLowerCase() === 'scanner')) {
+      if (navToggle) navToggle.classList.add('hidden');
+      if (userMenuBtn) userMenuBtn.hidden = false;
+      if (window.location.hash !== '#attendance-scanner') {
+        window.location.hash = 'attendance-scanner';
+      }
+    } else {
+      if (navToggle) navToggle.classList.remove('hidden');
+      if (userMenuBtn) userMenuBtn.hidden = false;
+      // If a non-scanner lands on the scanner page (e.g. after a scanner logs out), send them home
+      if (window.location.hash === '#attendance-scanner') {
+        window.location.hash = 'home';
+      }
+    }
+    
     setupUserMenu(userObj);
     finishInit();
   }
@@ -1373,7 +1411,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.body.classList.add('tv-mode');
       tvSettingsBox.classList.remove('hidden');
       if (btnAdminExitTv) btnAdminExitTv.classList.add('hidden');
-      if (navToggle) navToggle.hidden = true; // No sidebar toggle for TV Role
+      if (navToggle) navToggle.classList.add('hidden'); // No sidebar toggle for TV Role
       if (sidebar) sidebar.style.display = 'none'; // Explicitly hide sidebar element
 
       // Persistence for TV Header collapse
@@ -1397,14 +1435,14 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.classList.add('tv-mode');
         document.body.classList.remove('dashboard-backdrop');
         if (btnAdminExitTv) btnAdminExitTv.classList.add('hidden'); // Toggle visibility fixed
-        if (navToggle) navToggle.hidden = true;
+        if (navToggle) navToggle.classList.add('hidden');
         if (sidebar) sidebar.style.display = 'none';
         if (btnTvHeaderToggle) btnTvHeaderToggle.classList.remove('hidden');
       } else {
         document.body.classList.remove('tv-mode');
         document.body.classList.add('dashboard-backdrop');
         if (btnAdminExitTv) btnAdminExitTv.classList.add('hidden');
-        if (navToggle) navToggle.hidden = false;
+        if (navToggle) navToggle.classList.remove('hidden');
         if (sidebar) sidebar.style.display = '';
         if (btnTvHeaderToggle) btnTvHeaderToggle.classList.add('hidden');
       }
@@ -1416,22 +1454,35 @@ document.addEventListener('DOMContentLoaded', () => {
       document.body.classList.add('dashboard-backdrop');
       tvSettingsBox.classList.add('hidden');
       if (btnAdminExitTv) btnAdminExitTv.classList.add('hidden');
-      if (navToggle) navToggle.hidden = false;
+      if (navToggle) navToggle.classList.remove('hidden');
       if (sidebar) sidebar.style.display = '';
       // Sidebar toggle is hidden by default in index.html, we only show it for Admins above
     }
 
     const navMessages = document.getElementById('nav-messages');
+    const navDatabase = document.getElementById('nav-database');
     if (userObj.role === 'admin' || userObj.role === 'superadmin') {
       if (navMessages) {
         navMessages.style.display = 'flex';
         navMessages.classList.remove('hidden');
       }
-      initAdminChat(); // Initialize chat when admin logs in
+      initAdminChat();
     } else {
       if (navMessages) {
         navMessages.style.display = 'none';
         navMessages.classList.add('hidden');
+      }
+    }
+
+    if (userObj.role === 'superadmin') {
+      if (navDatabase) {
+        navDatabase.style.display = 'flex';
+        navDatabase.classList.remove('hidden');
+      }
+    } else {
+      if (navDatabase) {
+        navDatabase.style.display = 'none';
+        navDatabase.classList.add('hidden');
       }
     }
 
@@ -3523,17 +3574,80 @@ document.addEventListener('DOMContentLoaded', () => {
         globalCarouselTimer = null;
       }
     }
-
-    dots.forEach(function (dot) {
-      dot.addEventListener('click', function () {
-        var index = parseInt(this.getAttribute('data-index') || '0', 10);
-        if (!isNaN(index)) {
-          setActive(index);
-        }
-      });
-    });
-
-    setActive(0);
   }
 
+  // --- DATABASE MANAGEMENT (Superadmin Only) ---
+  async function initDatabaseManagement() {
+    if (!userDb) return;
+
+    const refreshBtn = document.getElementById('db-refresh-btn');
+    const clearUserBtn = document.getElementById('db-clear-user-messages-btn');
+    const clearAdminBtn = document.getElementById('db-clear-admin-messages-btn');
+    const clearAllBtn = document.getElementById('db-clear-all-btn');
+    const userMsgDiv = document.getElementById('db-user-messages');
+    const adminMsgDiv = document.getElementById('db-admin-messages');
+
+    if (!refreshBtn || !userDb) return;
+
+    async function loadMessages() {
+      try {
+        const userSnap = await get(ref(userDb, 'user_messages'));
+        const adminSnap = await get(ref(userDb, 'admin_messages'));
+
+        const userData = userSnap.val();
+        const adminData = adminSnap.val();
+
+        if (userData) {
+          userMsgDiv.innerHTML = JSON.stringify(userData, null, 2);
+        } else {
+          userMsgDiv.innerHTML = '<em style="color: #888;">No user messages</em>';
+        }
+
+        if (adminData) {
+          adminMsgDiv.innerHTML = JSON.stringify(adminData, null, 2);
+        } else {
+          adminMsgDiv.innerHTML = '<em style="color: #888;">No admin messages</em>';
+        }
+      } catch (err) {
+        console.error("Failed to load messages:", err);
+        userMsgDiv.innerHTML = 'Error loading: ' + err.message;
+        adminMsgDiv.innerHTML = 'Error loading: ' + err.message;
+      }
+    }
+
+    async function clearMessages(path) {
+      if (!confirm('Are you sure you want to delete all messages? This cannot be undone.')) return;
+      try {
+        await remove(ref(userDb, path));
+        showToast('Messages deleted successfully', 'success');
+        loadMessages();
+      } catch (err) {
+        console.error("Failed to delete messages:", err);
+        showToast('Failed to delete messages: ' + err.message, 'error');
+      }
+    }
+
+    refreshBtn.addEventListener('click', loadMessages);
+    clearUserBtn.addEventListener('click', () => clearMessages('user_messages'));
+    clearAdminBtn.addEventListener('click', () => clearMessages('admin_messages'));
+    clearAllBtn.addEventListener('click', async () => {
+      if (!confirm('Are you sure you want to delete ALL messages (both user and admin)? This cannot be undone.')) return;
+      try {
+        await remove(ref(userDb, 'user_messages'));
+        await remove(ref(userDb, 'admin_messages'));
+        showToast('All messages deleted', 'success');
+        loadMessages();
+      } catch (err) {
+        showToast('Failed to delete: ' + err.message, 'error');
+      }
+    });
+
+    loadMessages();
+  }
+
+  window.addEventListener('hashchange', () => {
+    if (location.hash === '#database') {
+      initDatabaseManagement();
+    }
+  });
 });

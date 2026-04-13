@@ -134,130 +134,49 @@
         }
 
         /* ══════════════════════════════════════
-            LOGIN
-        ══════════════════════════════════════ */
-        #loginOverlay {
-            position: fixed; inset: 0;
-            background: linear-gradient(180deg, var(--nbsc-mid) 0%, var(--nbsc-dark) 100%);
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            padding: 24px;
-            overflow-y: auto;
-        }
-
-        .login-logo {
-            width: 100px;
-            max-width: 35%;
-            margin-bottom: 12px;
-            filter: drop-shadow(0 4px 15px rgba(0,0,0,0.4));
-        }
-
-        .login-title {
-            font-size: 1.6rem;
-            font-weight: 800;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            margin-bottom: 4px;
-        }
-
-        .login-subtitle {
-            font-size: 0.78rem;
-            font-weight: 600;
-            color: var(--nbsc-gold);
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            margin-bottom: 8px;
-            opacity: 0.9;
-        }
-
-        .login-divider {
-            width: 50px;
-            height: 3px;
-            background: var(--nbsc-gold);
-            border-radius: 2px;
-            margin: 0 auto 28px;
-        }
-
-        .login-input {
-            width: 100%;
-            max-width: 380px;
-            padding: 18px 20px;
-            margin: 7px 0;
-            border-radius: 12px;
-            border: 2px solid rgba(255,255,255,0.15);
-            background: rgba(255,255,255,0.1);
-            color: white;
-            font-family: 'Montserrat', sans-serif;
-            font-size: 16px;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-        .login-input::placeholder { color: rgba(255,255,255,0.4); }
-        .login-input:focus { border-color: var(--nbsc-gold); background: rgba(255,255,255,0.15); }
-
-        .password-container {
-            position: relative;
-            width: 100%;
-            max-width: 380px;
-            margin: 7px 0;
-        }
-
-        .password-container .login-input {
-            margin: 0;
-            padding-right: 50px;
-        }
-
-        .toggle-password {
-            position: absolute;
-            right: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: rgba(255,255,255,0.6);
-            cursor: pointer;
-            font-size: 20px;
-            z-index: 10;
-        }
-
-        .login-btn {
-            background: var(--nbsc-gold);
-            color: var(--nbsc-dark);
-            border: none;
-            padding: 20px;
-            font-size: 16px;
-            font-weight: 800;
-            border-radius: 12px;
-            cursor: pointer;
-            text-transform: uppercase;
-            width: 100%;
-            max-width: 380px;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
-            margin-top: 18px;
-            font-family: 'Montserrat', sans-serif;
-            letter-spacing: 1px;
-        }
-        .login-btn:active { opacity: 0.85; transform: scale(0.98); }
-
-        #loginErr {
-            color: var(--nbsc-gold);
-            font-size: 13px;
-            font-weight: 600;
-            min-height: 22px;
-            margin-top: 14px;
-            text-align: center;
-            max-width: 380px;
-        }
-
-        /* ══════════════════════════════════════
             SCANNER SCREEN
         ══════════════════════════════════════ */
         #scannerScreen {
             display: none;
             flex-direction: column;
             min-height: 100dvh;
+        }
+
+        .logout-btn-scanner {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(220, 53, 69, 0.9);
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+        }
+        .logout-btn-scanner:hover { background: #c82333; }
+        .logout-btn-home {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            cursor: pointer;
+            margin-top: 20px;
         }
 
         .banner-container {
@@ -674,25 +593,6 @@
         </div>
     </div>
 
-    <div id="loginOverlay">
-        <img src="https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png" class="login-logo"
-            alt="NBSC Logo">
-        <div class="login-title">NBSC SAS</div>
-        <div class="login-subtitle">Attendance System</div>
-        <div class="login-divider"></div>
-        <input type="text" id="user" class="login-input" placeholder="Username" autocomplete="username">
-        <div class="password-container">
-            <input type="password" id="pass" class="login-input" placeholder="Password" autocomplete="current-password">
-            <i class="bx bx-hide toggle-password" id="icon"></i>
-        </div>
-        <button class="login-btn" onclick="attemptLogin()">Login</button>
-        <p id="loginErr"></p>
-        <div id="installBannerLogin" class="install-banner" style="display:none;">
-            <button id="installBtn" class="install-btn">📲 Install App</button>
-            <p id="installHintIos" class="install-hint-ios" style="display:none;">Tap Share → Add to Home Screen</p>
-        </div>
-    </div>
-
     <div id="homeScreen">
         <img src="https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png" class="home-logo"
             alt="NBSC Logo">
@@ -702,6 +602,8 @@
             <button class="btn-primary get-started-btn" onclick="enterScanner()">Start Scanning</button>
             <br><br><br>
             <button class="home-secondary-btn" onclick="downloadMasterlist()">⬇️ UPDATE OFFLINE DATA</button>
+            <br>
+            <button class="logout-btn-home" onclick="logoutScanner()">Logout from Portal</button>
             <div id="installBannerHome" class="install-banner" style="display:none;">
                 <button id="installBtnHome" class="install-btn">📲 Install App</button>
                 <p id="installHintIosHome" class="install-hint-ios" style="display:none;">Tap Share → Add to Home Screen</p>
@@ -711,6 +613,7 @@
 
     <div id="scannerScreen">
         <div class="banner-container">
+            <button class="logout-btn-scanner" onclick="logoutScanner()"><i class='bx bx-log-out'></i> Logout</button>
             <img src="https://nbsc.edu.ph/wp-content/uploads/2025/01/SAS.png" class="banner-img" alt="SAS Banner">
         </div>
 
@@ -800,49 +703,20 @@
             return res.json();
         }
 
-        // --- Password toggle ---
-        const passwordField = document.querySelector("#pass");
-        const eyeIcon = document.querySelector("#icon");
-        eyeIcon.addEventListener("click", function () {
-            const type = passwordField.getAttribute("type") === "password" ? "text" : "password";
-            passwordField.setAttribute("type", type);
-            this.classList.toggle("bx-hide");
-            this.classList.toggle("bx-show");
-        });
-
-        // --- LOGIN ---
-        async function attemptLogin() {
-            const user = document.getElementById('user').value;
-            const pass = document.getElementById('pass').value;
-            const btn = event.target;
-            if (!user || !pass) return;
-            btn.innerText = "Verifying...";
-            document.getElementById('loginErr').innerText = "";
-            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-            const deviceInfo = (isMobile ? "Mobile: " : "PC: ") + navigator.platform;
-            try {
-                const response = await callBackend("loginUser", { username: user, password: pass, deviceInfo });
-                if (response.success) {
-                    localStorage.setItem('isLoggedIn', 'true');
-                    localStorage.setItem('scannerUser', user);
-                    document.getElementById('loginOverlay').style.display = 'none';
+        // --- NAVIGATION ---
+        function logoutScanner() {
+            if (confirm("Are you sure you want to log out from the system?")) {
+                localStorage.removeItem('sas_user_data');
+                if (window.parent) window.parent.location.hash = 'home';
+                // If we are in an iframe (central portal), reload the parent
+                if (window.parent && window.parent !== window) {
+                    window.parent.location.reload();
                 } else {
-                    btn.innerText = "Login";
-                    document.getElementById('loginErr').innerText = response.message;
+                    window.location.reload();
                 }
-            } catch (e) {
-                btn.innerText = "Login";
-                document.getElementById('loginErr').innerText = "Connection error. Try again.";
             }
         }
 
-        window.onload = function () {
-            if (localStorage.getItem('isLoggedIn') === 'true') {
-                document.getElementById('loginOverlay').style.display = 'none';
-            }
-        };
-
-        // --- NAVIGATION ---
         function enterScanner() {
             document.getElementById("homeScreen").style.display = "none";
             document.getElementById("scannerScreen").style.display = "flex";
@@ -893,10 +767,10 @@
         // --- SCANNER ---
         function startScanner() {
             let screenWidth = window.innerWidth || document.documentElement.clientWidth;
-            let qrBoxSize = screenWidth < 400 ? 200 : 250;
+            let qrBoxWidth = screenWidth < 400 ? 250 : 350;
             html5QrcodeScanner = new Html5QrcodeScanner("reader", {
                 fps: 15,
-                qrbox: { width: qrBoxSize, height: qrBoxSize }
+                qrbox: { width: qrBoxWidth, height: 150 }
             });
             html5QrcodeScanner.render(processToken);
         }
@@ -937,9 +811,9 @@
                     "<div id=\"flagReasonBox\" style=\"display:none;background:rgba(0,0,0,0.15);border-radius:10px;padding:12px;margin-top:10px;\">" +
                     "<select id=\"flagReasonSelect\" style=\"width:100%;padding:12px;border-radius:8px;border:none;font-family:Montserrat,sans-serif;margin-bottom:10px;\">" +
                     "<option value=\"\">— Select Reason —</option>" +
-                    "<option value=\"Using someone else's QR\">Using someone else's QR</option>" +
+                    "<option value=\"Using someone else's QR\">Using someone else's Barcode</option>" +
                     "<option value=\"Suspicious behavior\">Suspicious behavior</option>" +
-                    "<option value=\"Not the student in the QR\">Not the student in the QR</option>" +
+                    "<option value=\"Not the student in the QR\">Not the student in the Barcode</option>" +
                     "<option value=\"Already scanned elsewhere\">Already scanned elsewhere</option>" +
                     "<option value=\"Other\">Other</option>" +
                     "</select>" +
@@ -974,9 +848,9 @@
                         "<div id=\"flagReasonBox\" style=\"display:none;background:rgba(0,0,0,0.15);border-radius:10px;padding:12px;margin-top:10px;\">" +
                         "<select id=\"flagReasonSelect\" style=\"width:100%;padding:12px;border-radius:8px;border:none;font-family:Montserrat,sans-serif;margin-bottom:10px;\">" +
                         "<option value=\"\">— Select Reason —</option>" +
-                        "<option value=\"Using someone else's QR\">Using someone else's QR</option>" +
+                        "<option value=\"Using someone else's QR\">Using someone else's Barcode</option>" +
                         "<option value=\"Suspicious behavior\">Suspicious behavior</option>" +
-                        "<option value=\"Not the student in the QR\">Not the student in the QR</option>" +
+                        "<option value=\"Not the student in the QR\">Not the student in the Barcode</option>" +
                         "<option value=\"Already scanned elsewhere\">Already scanned elsewhere</option>" +
                         "<option value=\"Other\">Other</option>" +
                         "</select>" +
