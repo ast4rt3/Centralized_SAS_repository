@@ -15,6 +15,7 @@
     <link rel="apple-touch-icon" href="https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <script src="../../env.js"></script>
     <style>
         :root {
             --nbsc-blue: #004a99;
@@ -873,10 +874,10 @@
 
         
 
-        // ══════════════════════════════════════════════════
-        // ⚙️  PASTE YOUR GAS DEPLOYMENT URL HERE
-        // ══════════════════════════════════════════════════
-        const GAS_URL = "https://script.google.com/a/macros/nbsc.edu.ph/s/AKfycbwif9UQu1T_beROIwj4ZiJY_f0SlIDoUxt5p6xiAcO6nqEmpVyY2HygOJCxBR4YcGuRjw/exec";
+        // ⚙️ FETCH FROM GLOBAL ENV (env.js)
+        const GAS_URL = (window.ENV && window.ENV.SCANNER_GAS_URL) 
+            ? window.ENV.SCANNER_GAS_URL 
+            : "https://script.google.com/a/macros/nbsc.edu.ph/s/AKfycbwif9UQu1T_beROIwj4ZiJY_f0SlIDoUxt5p6xiAcO6nqEmpVyY2HygOJCxBR4YcGuRjw/exec";
        
         const resultDiv = document.getElementById('result');
         const manualEntryDiv = document.getElementById('manual-entry');

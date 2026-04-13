@@ -22,8 +22,22 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Single deploy job since we're just deploying; no building needed
+  # CI: Validate code before deploying
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Install Dependencies
+        run: npm install
+      
+      - name: Run Syntax Check
+        run: node scripts/ci-syntax-check.js
+
+  # CD: Deploy to GitHub Pages
   deploy:
+    needs: validate # Only deploy if validation passes
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -36,6 +50,7 @@ jobs:
         run: |
           echo "window.ENV = {" > env.js
           echo "  BACKEND_GAS_URL: \"${{ secrets.BACKEND_GAS_URL }}\"," >> env.js
+          echo "  SCANNER_GAS_URL: \"${{ secrets.SCANNER_GAS_URL }}\"," >> env.js
           echo "  YOUTUBE_PROXY_URL: \"${{ secrets.YOUTUBE_PROXY_URL }}\"," >> env.js
           echo "  CLOUDINARY_CLOUD_NAME: \"${{ secrets.CLOUDINARY_CLOUD_NAME }}\"," >> env.js
           echo "  CLOUDINARY_UPLOAD_PRESET: \"${{ secrets.CLOUDINARY_UPLOAD_PRESET }}\"," >> env.js
@@ -49,7 +64,6 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload entire repository
           path: '.'
       
       - name: Deploy to GitHub Pages
