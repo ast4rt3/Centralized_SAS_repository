@@ -77,15 +77,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Generate Deployment Artifact
-        # We package the site for the next stages
         run: |
-          mkdir -p build-assets
-          cp -r . build-assets/
+          mkdir -p ../sas-build
+          cp -r . ../sas-build/
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
           name: sas-production-build
-          path: build-assets/
+          path: ../sas-build/
 
   # 5. DEPLOYMENT TO STAGING
   deployment-to-staging:
