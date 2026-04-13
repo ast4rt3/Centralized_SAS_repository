@@ -35,9 +35,23 @@ jobs:
       - name: Run Syntax Check
         run: node scripts/ci-syntax-check.js
 
+  # CI: Audit third-party service connections
+  integration-audit:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Run Connection Audit
+        env:
+          BACKEND_GAS_URL: ${{ secrets.BACKEND_GAS_URL }}
+          SCANNER_GAS_URL: ${{ secrets.SCANNER_GAS_URL }}
+        run: node scripts/ci-connection-check.js
+
   # CD: Deploy to GitHub Pages
   deploy:
-    needs: validate # Only deploy if validation passes
+    needs: integration-audit # Only deploy if validation AND audit pass
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
