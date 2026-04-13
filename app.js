@@ -1148,6 +1148,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loginOverlay) loginOverlay.classList.remove('hidden');
     if (navToggle) navToggle.classList.add('hidden');
     if (userMenuBtn) userMenuBtn.hidden = true;
+    const widget = document.getElementById('fb-chat-widget');
+    if (widget) widget.classList.add('hidden');
     if (tvSettingsBox) tvSettingsBox.classList.add('hidden');
   }
 
@@ -1172,6 +1174,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     setupUserMenu(userObj);
     finishInit();
+    initUserMessaging();
   }
 
   // Check login state on load
