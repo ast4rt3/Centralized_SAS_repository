@@ -9,6 +9,8 @@ async function runStressTest() {
         headless: false, // Set to true for background run
         defaultViewport: { width: 390, height: 844 }, // iPhone 12 Pro size
         args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
             '--use-fake-ui-for-media-stream',
             '--use-fake-device-for-media-stream'
         ]

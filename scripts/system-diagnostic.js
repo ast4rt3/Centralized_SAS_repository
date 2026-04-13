@@ -7,6 +7,8 @@ async function runSystemDiagnostic() {
     const browser = await puppeteer.launch({
         headless: "new",
         args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
             '--use-fake-ui-for-media-stream',
             '--use-fake-device-for-media-stream'
         ]
