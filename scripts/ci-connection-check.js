@@ -7,9 +7,9 @@ async function checkURL(name, url) {
             if (res.statusCode >= 200 && res.statusCode < 300) {
                 console.log(`✅ ${name}: HEALTHY (HTTP ${res.statusCode})`);
                 resolve("HEALTHY");
-            } else if ([401, 404, 405].includes(res.statusCode)) {
-                // Service is up but the specific endpoint is restricted or missing
-                console.log(`::warning::⚠️ ${name}: CAREFUL STATE (HTTP ${res.statusCode}) - Service responded but requested path is restricted or not found.`);
+            } else if ([302, 401, 404, 405].includes(res.statusCode)) {
+                // Service is up but the specific endpoint is restricted, missing, or redirecting
+                console.log(`::warning::⚠️ ${name}: CAREFUL STATE (HTTP ${res.statusCode}) - Service responded (Redirect/Restricted/Missing) but it is alive.`);
                 resolve("CAREFUL");
             } else {
                 console.log(`::error::❌ ${name}: CRITICAL (HTTP ${res.statusCode}) - Service appears down or non-responsive.`);
