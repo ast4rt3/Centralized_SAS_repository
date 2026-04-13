@@ -98,6 +98,27 @@ if (window.ENV && window.ENV.FIREBASE_CONFIG) {
 }
 
 let contactsMap = {};
+
+async function fetchSpreadsheetUsers() {
+  try {
+    const res = await fetch(BACKEND_GAS_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "getUsers" })
+    });
+    const data = await res.json();
+    const usersList = data.users || data.data || [];
+    usersList.forEach(u => {
+      const username = typeof u === 'object' ? u.username : u;
+      if (username && username !== myUsername) {
+        if (!contactsMap[username]) {
+          contactsMap[username] = { unread: 0, el: null, history: [] };
+        }
+      }
+    });
+  } catch(e) { console.error("Failed to fetch spreadsheet users:", e); }
+}
+window.fetchSpreadsheetUsers = fetchSpreadsheetUsers;
+
 let myUsername = "Unknown";
 
 function initUserMessaging() {
@@ -148,30 +169,6 @@ function initUserMessaging() {
 
   
   // 1. Fetch Users From Spreadsheet GAS
-  window.fetchSpreadsheetUsers = async function() {
-    try {
-      const res = await fetch(BACKEND_GAS_URL, {
-        method: "POST",
-        body: JSON.stringify({ action: "getUsers" })
-      });
-      const data = await res.json();
-      
-      const usersList = data.users || data.data || [];
-      console.log("Fetched users:", usersList);
-      usersList.forEach(u => {
-        const username = typeof u === 'object' ? u.username : u;
-        if (username && username !== myUsername) {
-          if (!contactsMap[username]) {
-            contactsMap[username] = { unread: 0, el: null, history: [] };
-          }
-          // Initial render as offline (Firebase presence will override if online)
-          renderContact(username, false);
-        }
-      });
-    } catch(e) {
-      console.error("Failed to fetch spreadsheet users:", e);
-    }
-  }
   fetchSpreadsheetUsers();
 
   // 2. Presence System Overlay
@@ -1046,10 +1043,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sd) {
       try {
         const u = JSON.parse(sd);
-        if (u.role && u.role.toLowerCase() === 'scanner' && pageId !== 'attendance-scanner') {
-          window.location.hash = 'attendance-scanner';
-          return;
+        
+        if (u.role) {
+          const r = u.role.toLowerCase();
+          if (r === 'scanner' && pageId !== 'attendance-scanner') {
+            window.location.hash = 'attendance-scanner';
+            return;
+          }
+          if (r === 'user' && pageId !== 'messages') {
+            window.location.hash = 'messages';
+            return;
+          }
         }
+
       } catch(e) {}
     }
 
@@ -1380,29 +1386,37 @@ document.addEventListener('DOMContentLoaded', () => {
     if (tvSettingsBox) tvSettingsBox.classList.add('hidden');
   }
 
-    function showAppUI(userObj) {
-    if (loginOverlay) loginOverlay.classList.add('hidden');
     
-    if (userObj && userObj.role) { document.body.className = document.body.className.replace(/role-\S+/g, '') + ' role-' + userObj.role.toLowerCase(); }
-    if (userObj && (userObj.role && userObj.role.toLowerCase() === 'scanner')) {
+    
+function showAppUI(userObj) {
+  if (loginOverlay) loginOverlay.classList.add('hidden');
+  
+  if (userObj && userObj.role) { 
+    const role = userObj.role.toLowerCase();
+    document.body.className = document.body.className.replace(/role-\S+/g, '') + ' role-' + role; 
+    
+    if (role === 'scanner') {
       if (navToggle) navToggle.classList.add('hidden');
       if (userMenuBtn) userMenuBtn.hidden = false;
-      if (window.location.hash !== '#attendance-scanner') {
-        window.location.hash = 'attendance-scanner';
-      }
+      if (window.location.hash !== '#attendance-scanner') window.location.hash = 'attendance-scanner';
+    } else if (role === 'user') {
+      if (navToggle) navToggle.classList.add('hidden');
+      if (userMenuBtn) userMenuBtn.hidden = false;
+      if (window.location.hash !== '#messages') window.location.hash = 'messages';
     } else {
       if (navToggle) navToggle.classList.remove('hidden');
       if (userMenuBtn) userMenuBtn.hidden = false;
-      // If a non-scanner lands on the scanner page (e.g. after a scanner logs out), send them home
       if (window.location.hash === '#attendance-scanner') {
         window.location.hash = 'home';
       }
     }
-    
+  }
     setupUserMenu(userObj);
     finishInit();
     initUserMessaging();
-  }
+}
+
+
 
   // Check login state on load
   const sessionData = localStorage.getItem('sas_user_data');
@@ -1636,6 +1650,18 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function setupUserMenu(userObj) {
+
+    window.appLogout = function() {
+      const btn = document.getElementById('logout-btn');
+      if (btn) btn.click();
+      else {
+        // Fallback if button is missing
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.reload();
+      }
+    };
+
     // Adjust UI based on TV Mode
     if (userObj.role === 'tv') {
       document.body.classList.add('tv-mode');
@@ -1757,45 +1783,46 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
+    
+    
     if (logoutBtn) {
       logoutBtn.addEventListener('click', function () {
-        localStorage.removeItem('sas_user_data');
+        localStorage.clear();
+        sessionStorage.clear();
+        // Clear cookies if any
+        document.cookie.split(";").forEach((cookie) => {
+          document.cookie = cookie.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+        });
+        window.location.href = window.location.pathname + "#home";
         window.location.reload();
       });
     }
 
     // Admin/Uploader/Superadmin check for "Add Post" button
     const addPostBtn = document.getElementById('add-post-btn');
-    if (addPostBtn && (userObj.role === 'admin' || userObj.role === 'uploader' || userObj.role === 'superadmin')) {
+    if (addPostBtn && userObj && (userObj.role === 'admin' || userObj.role === 'uploader' || userObj.role === 'superadmin')) {
       addPostBtn.classList.remove('hidden');
     }
 
     // Superadmin-only: Clear Cache/Data button
     const clearCacheBtn = document.getElementById('clear-cache-btn');
-    if (clearCacheBtn && userObj.role === 'superadmin') {
+    if (clearCacheBtn && userObj && userObj.role === 'superadmin') {
       clearCacheBtn.classList.remove('hidden');
       clearCacheBtn.addEventListener('click', async () => {
         const confirmed = await showConfirm(
           "System Data Reset",
-          "This will clear all browser storage (cache, local data, and session). Use this if the portal is showing old or incorrect info. You will be logged out. Continue?",
-          false,
-          'danger'
+          "This will clear all browser storage (cache, local data, and session). You will be logged out. Continue?"
         );
         if (confirmed) {
           localStorage.clear();
           sessionStorage.clear();
-          if ('caches' in window) {
-            try {
-              const keys = await caches.keys();
-              await Promise.all(keys.map(key => caches.delete(key)));
-            } catch (e) { console.warn("Cache clear failed:", e); }
-          }
           showToast("All data cleared. Refreshing...", "success");
           setTimeout(() => window.location.reload(), 1000);
         }
       });
     }
   }
+
 
   function initPostSetup() {
     const addPostBtn = document.getElementById('add-post-btn');
