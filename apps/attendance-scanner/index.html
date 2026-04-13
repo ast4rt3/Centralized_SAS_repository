@@ -1043,6 +1043,7 @@
     <script>
         console.log("Scanner Logic Initializing...");
         let currentScanMode = "barcode"; // Default to Barcode (Col A)
+        let isProcessing = false; // Flag to prevent double scanning
 
         const GAS_URL = (window.ENV && window.ENV.SCANNER_GAS_URL)
             ? window.ENV.SCANNER_GAS_URL
@@ -1142,7 +1143,7 @@
 
                 // Re-init scanner if needed
                 if (screenId === 'scannerScreen' && !html5QrcodeScanner) {
-                    startScanner();
+                    initScanner();
                 }
             } catch (e) { console.error("Navigation Error:", e); }
         }
@@ -1254,7 +1255,7 @@
             if (badge) badge.innerText = userName;
 
             updateQueueUI();
-            startScanner();
+            initScanner();
             checkWindowStatus();
             windowStatusInterval = setInterval(checkWindowStatus, 60000);
         }
@@ -1332,6 +1333,7 @@
         }
 
         function resetScanner() {
+            isProcessing = false;
             resultDiv.style.display = 'none';
             manualEntryDiv.style.display = 'block';
             if (html5QrcodeScanner) html5QrcodeScanner.render(processToken);
