@@ -97,6 +97,9 @@ if (window.ENV && window.ENV.FIREBASE_CONFIG) {
   }
 }
 
+let contactsMap = {};
+let myUsername = "Unknown";
+
 function initUserMessaging() {
   if (!userDb || userChatInitialized) return;
   
@@ -119,13 +122,15 @@ function initUserMessaging() {
   
   let isWidgetOpen = false;
   let activeChatUser = null;
-  let myUsername = 'Unknown';
+
   let unreadCount = 0;
   
   const sessionData = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
   if (sessionData) {
     try { myUsername = JSON.parse(sessionData).username || 'Unknown'; } catch(e) {}
   }
+  const sessionData2 = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
+  if (sessionData2) { try { myUsername = JSON.parse(sessionData2).username || 'Unknown'; } catch(e) {} }
   if (myUsername === 'Unknown') {
     widget.style.display = 'none'; // hide if not logged in
     return;
@@ -140,10 +145,10 @@ function initUserMessaging() {
   const contactItems = document.createElement('div');
   contactsList.appendChild(contactItems);
   
-  let contactsMap = {};
+
   
   // 1. Fetch Users From Spreadsheet GAS
-  async function fetchSpreadsheetUsers() {
+  window.fetchSpreadsheetUsers = async function() {
     try {
       const res = await fetch(BACKEND_GAS_URL, {
         method: "POST",
@@ -152,6 +157,7 @@ function initUserMessaging() {
       const data = await res.json();
       
       const usersList = data.users || data.data || [];
+      console.log("Fetched users:", usersList);
       usersList.forEach(u => {
         const username = typeof u === 'object' ? u.username : u;
         if (username && username !== myUsername) {
@@ -410,7 +416,224 @@ function initUserMessaging() {
 }
 
 // Call on startup
-window.addEventListener('DOMContentLoaded', initUserMessaging);
+
+window.addEventListener('DOMContentLoaded', () => {
+    initUserMessaging();
+    setTimeout(initFullMessenger, 2000); // Give Firebase a moment to sync
+});
+
+
+
+// --- FULL PAGE MESSENGER LOGIC ---
+
+function initFullMessenger() {
+  const container = document.querySelector('.messenger-container');
+  if(!container || !userDb) return;
+
+  const contactsList = document.getElementById('messenger-contacts');
+  const chatView = document.getElementById('messenger-chat-view');
+  const emptyView = document.getElementById('messenger-empty');
+  const messagesDiv = document.getElementById('messenger-messages');
+  const form = document.getElementById('messenger-form');
+  const input = document.getElementById('messenger-input');
+  const activeCountEl = document.getElementById('active-count');
+  
+  const activeName = document.getElementById('active-chat-name');
+  const activeAvatar = document.getElementById('active-avatar');
+  const activeStatus = document.getElementById('active-chat-status');
+
+  let activeUser = null;
+
+  
+  // Immediate initial render
+  setTimeout(() => {
+    fetchSpreadsheetUsers();
+    renderFullContacts();
+    
+    // AUTO-SELECT: Find the user with the most recent message
+    setTimeout(() => {
+      let latestUser = null;
+      let latestTime = 0;
+      
+      for (const user in contactsMap) {
+        const history = contactsMap[user].history || [];
+        if (history.length > 0) {
+          const lastMsgTime = new Date(history[history.length - 1].timestamp).getTime();
+          if (lastMsgTime > latestTime) {
+            latestTime = lastMsgTime;
+            latestUser = user;
+          }
+        }
+      }
+      
+      if (latestUser) {
+        selectContact(latestUser);
+      }
+    }, 1000); // Give time for history to populate
+  }, 500);
+
+
+  // Sync loop for UI
+  setInterval(() => {
+     if (document.getElementById('messages').classList.contains('active') || document.getElementById('messages').style.display !== 'none') {
+        renderFullContacts();
+        updateActiveStats();
+     }
+  }, 3000);
+
+  function updateActiveStats() {
+    let count = 0;
+    for (const u in contactsMap) { if(contactsMap[u].isOnline) count++; }
+    if(activeCountEl) activeCountEl.textContent = count;
+  }
+
+  function renderFullContacts() {
+    if(!contactsList) return;
+    const scrollPos = contactsList.scrollTop;
+    contactsList.innerHTML = '';
+    
+    // FILTER: Only show users with history OR forced active
+    const sorted = Object.keys(contactsMap).filter(user => {
+       const info = contactsMap[user];
+       const hasHistory = info.history && info.history.length > 0;
+       return hasHistory || user === activeUser;
+    }).sort((a,b) => {
+       const aOnline = contactsMap[a].isOnline ? 1 : 0;
+       const bOnline = contactsMap[b].isOnline ? 1 : 0;
+       return bOnline - aOnline;
+    });
+
+    if (sorted.length === 0) {
+      contactsList.innerHTML = '<div style="padding:20px; text-align:center; color:#94a3b8; font-size:0.8rem;">No conversations yet.<br>Click "+" to start one.</div>';
+      return;
+    }
+
+    sorted.forEach(user => {
+      const info = contactsMap[user];
+      const card = document.createElement('div');
+      card.className = `contact-card ${activeUser === user ? 'active' : ''}`;
+      card.onclick = () => selectContact(user);
+
+      const lastMsg = info.history && info.history.length > 0 ? info.history[info.history.length-1].text : 'No messages yet';
+      const unread = info.unread || 0;
+
+      card.innerHTML = `
+        <div class="contact-avatar">
+          ${user.charAt(0).toUpperCase()}
+          <span class="contact-status-dot ${info.isOnline ? 'online' : ''}"></span>
+        </div>
+        <div class="contact-info">
+          <span class="contact-name">${user}</span>
+          <span class="contact-preview">${lastMsg}</span>
+        </div>
+        ${unread > 0 ? `<span class="unread-count">${unread}</span>` : ''}
+      `;
+      contactsList.appendChild(card);
+    });
+    contactsList.scrollTop = scrollPos;
+  }
+
+  function selectContact(user) {
+    activeUser = user;
+    if(emptyView) emptyView.style.display = 'none';
+    if(chatView) chatView.classList.remove('hidden');
+    
+    activeName.textContent = user;
+    activeAvatar.textContent = user.charAt(0).toUpperCase();
+    
+    const isOnline = contactsMap[user].isOnline;
+    activeStatus.textContent = isOnline ? 'Active Now' : 'Offline';
+    activeStatus.className = isOnline ? 'status-online' : 'status-offline';
+
+    contactsMap[user].unread = 0;
+    renderFullMessages();
+    renderFullContacts();
+  }
+
+  function renderFullMessages() {
+    if(!activeUser || !messagesDiv) return;
+    messagesDiv.innerHTML = '';
+    const history = contactsMap[activeUser].history || [];
+    
+    history.forEach(data => {
+      const isMe = data.sender === myUsername;
+      const bubble = document.createElement('div');
+      bubble.className = `msg-bubble ${isMe ? 'msg-bubble-me' : 'msg-bubble-other'}`;
+      const time = data.timestamp ? new Date(data.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
+      bubble.innerHTML = `
+        <div class="msg-text">${data.text}</div>
+        <span class="msg-time">${time}</span>
+      `;
+      messagesDiv.appendChild(bubble);
+    });
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = input.value.trim();
+    if (text && activeUser) {
+      const baseRef = ref(userDb, 'user_messages');
+      push(baseRef, {
+        sender: myUsername,
+        receiver: activeUser,
+        text: text,
+        timestamp: serverTimestamp(),
+        read: false
+      });
+      input.value = '';
+      setTimeout(renderFullMessages, 100);
+    }
+  });
+
+  const baseRef = ref(userDb, 'user_messages');
+  onChildAdded(baseRef, (snap) => {
+     const data = snap.val();
+     if(activeUser && (data.sender === activeUser || data.receiver === activeUser)) {
+        setTimeout(renderFullMessages, 200);
+     }
+  });
+
+  window.openNewMessageModal = async function() {
+    const modal = document.getElementById('new-message-modal');
+    const list = document.getElementById('all-users-list');
+    const search = document.getElementById('user-search-input');
+    if(!modal || !list) return;
+    modal.style.display = 'flex';
+    list.innerHTML = '<div style="padding:20px; text-align:center; color:#64748b;">Loading users...</div>';
+    await fetchSpreadsheetUsers();
+    
+    const renderModalList = (filter = '') => {
+      list.innerHTML = '';
+      Object.keys(contactsMap).sort().forEach(user => {
+        if(user === myUsername) return;
+        if(filter && !user.toLowerCase().includes(filter.toLowerCase())) return;
+        
+        const item = document.createElement('div');
+        item.style.cssText = "padding:12px 15px; cursor:pointer; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; gap:12px;";
+        item.onmouseover = () => item.style.background = "#f8fafc";
+        item.onmouseout = () => item.style.background = "transparent";
+        item.innerHTML = `
+          <div style="width:36px; height:36px; background:#003366; color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.9rem; font-weight:800;">${user[0].toUpperCase()}</div>
+          <div style="display:flex; flex-direction:column;">
+            <span style="font-weight:700; color:#1e293b;">${user}</span>
+            <span style="font-size:0.7rem; color:#94a3b8;">${contactsMap[user].isOnline ? 'Online' : 'Offline'}</span>
+          </div>
+        `;
+        item.onclick = () => { selectContact(user); closeNewMessageModal(); };
+        list.appendChild(item);
+      });
+    };
+    search.oninput = (e) => renderModalList(e.target.value);
+    renderModalList();
+    search.focus();
+  };
+
+  window.closeNewMessageModal = function() {
+    const modal = document.getElementById('new-message-modal');
+    if(modal) modal.style.display = 'none';
+  };
+}
 
 
 // --- CLOUDINARY CONFIGURATION ---
