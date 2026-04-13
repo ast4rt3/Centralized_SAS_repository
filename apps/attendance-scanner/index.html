@@ -1430,19 +1430,10 @@
                     </div>
                     <div class="data-time">${item.time}</div>
                 </div>
-            `).join('') + `
-                <button onclick="clearHistory()" style="width:100%; padding:14px; background:none; border:2px dashed #cbd5e1; color:#94a3b8; border-radius:12px; font-weight:700; margin-top:10px; cursor:pointer;">
-                    CLEAR HISTORY
-                </button>
-            `;
+            `).join('');
         }
 
-        function clearHistory() {
-            if(confirm('Clear all recent activity?')) {
-                localStorage.removeItem('scan_history');
-                renderHistory();
-            }
-        }
+        
 
         
 
