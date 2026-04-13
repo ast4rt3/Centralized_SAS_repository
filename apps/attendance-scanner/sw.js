@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nbsc-sas-v9';
+const CACHE_NAME = 'nbsc-sas-v10';
 
 const PRECACHE = [
   './',
@@ -23,21 +23,27 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
+  
   // Never cache Google Apps Script API calls
   if (url.href.includes('script.google.com')) {
     event.respondWith(fetch(event.request));
     return;
   }
-  // Same-origin app shell: prefer cache, fallback network
+
+  // Network First, fallback to Cache for local app files
   if (url.origin === self.location.origin && (url.pathname.endsWith('.html') || url.pathname.endsWith('.css') || url.pathname.endsWith('.json') || url.pathname === '/' || url.pathname === '')) {
     event.respondWith(
-      caches.match(event.request).then((cached) => cached || fetch(event.request).then((res) => {
-        const clone = res.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-        return res;
-      }))
+      fetch(event.request).then((networkResponse) => {
+        return caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, networkResponse.clone());
+          return networkResponse;
+        });
+      }).catch(() => {
+        return caches.match(event.request);
+      })
     );
     return;
   }
+
   event.respondWith(fetch(event.request));
 });

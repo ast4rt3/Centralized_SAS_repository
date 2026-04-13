@@ -753,6 +753,7 @@
             <button class="btn-primary get-started-btn" onclick="enterScanner()">Start Scanning</button>
             <br><br><br>
             <button class="home-secondary-btn" onclick="downloadMasterlist()">⬇️ UPDATE OFFLINE DATA</button>
+            <button class="home-secondary-btn" onclick="superRefresh()" style="border-color: rgba(220,53,69,0.5); color: #ff8e98; font-size: 9px; opacity: 0.8;">🚨 CLEAR ALL SITE DATA & CACHE</button>
             <br>
             <button class="logout-btn-home" onclick="logoutScanner()">Logout from Portal</button>
             <div id="installBannerHome" class="install-banner" style="display:none;">
@@ -802,7 +803,6 @@
         <div class="banner-container">
             <div style="padding: 20px; color: white;">
                 <h2 style="font-weight: 800; text-transform: uppercase; font-size: 1.2rem;">Recent Scans</h2>
-                <p style="font-size: 0.7rem; opacity: 0.8;">YOUR LAST 20 ACTIVITY</p>
             </div>
         </div>
         <div class="scanner-content" id="historyList">
@@ -1435,7 +1435,7 @@
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             });
             
-            localStorage.setItem('scan_history', JSON.stringify(history.slice(0, 50))); // Store 50
+            localStorage.setItem('scan_history', JSON.stringify(history.slice(0, 500))); // Store up to 500 records
             if(document.getElementById('historyScreen').classList.contains('active')) renderHistory();
         }
 
@@ -1482,6 +1482,29 @@
             document.getElementById('syncModal').style.display = 'flex';
         }
         function closeModal() { document.getElementById('syncModal').style.display = 'none'; }
+
+        async function superRefresh() {
+            if(!confirm("This will delete ALL local storage, history, and app cache. Your offline queue will be lost. Proceed?")) return;
+            
+            // Clear Storage
+            localStorage.clear();
+            sessionStorage.clear();
+            
+            // Unregister Service Workers
+            if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (let reg of registrations) { await reg.unregister(); }
+            }
+            
+            // Clear Cache API
+            if ('caches' in window) {
+                const keys = await caches.keys();
+                await Promise.all(keys.map(k => caches.delete(k)));
+            }
+            
+            // Force reload
+            window.location.reload(true);
+        }
 
         // PWA: register service worker for install & offline
         if ('serviceWorker' in navigator) {
