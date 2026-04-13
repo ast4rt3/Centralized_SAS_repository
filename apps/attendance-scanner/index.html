@@ -20,14 +20,21 @@
         :root {
             --nbsc-blue: #004a99;
             --nbsc-dark: #001a33;
-            --nbsc-mid:  #003366;
+            --nbsc-mid: #003366;
             --nbsc-gold: #f0ad4e;
-            --success:   #28a745;
-            --error:     #dc3545;
-            --orange:    #fd7e14;
+            --success: #28a745;
+            --error: #dc3545;
+            --orange: #fd7e14;
         }
 
-        *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            margin: 0;
+            padding: 0;
+        }
 
         body {
             font-family: 'Montserrat', sans-serif;
@@ -35,21 +42,22 @@
             min-height: 100dvh;
             overflow-x: hidden;
         }
+
         .flag-btn {
-    background: rgba(255,255,255,0.15);
-    color: white;
-    border: 2px solid rgba(255,255,255,0.4);
-    padding: 14px;
-    border-radius: 12px;
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 800;
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    width: 100%;
-    margin-top: 10px;
-    cursor: pointer;
-    letter-spacing: 0.5px;
-}
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            padding: 14px;
+            border-radius: 12px;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 800;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            width: 100%;
+            margin-top: 10px;
+            cursor: pointer;
+            letter-spacing: 0.5px;
+        }
 
         /* ══════════════════════════════════════
             HOME SCREEN
@@ -65,7 +73,8 @@
             text-align: center;
             color: white;
             position: fixed;
-            top: 0; left: 0;
+            top: 0;
+            left: 0;
             z-index: 1000;
             padding: 20px;
         }
@@ -75,7 +84,7 @@
             max-width: 50%;
             height: auto;
             margin-bottom: 25px;
-            filter: drop-shadow(0 4px 15px rgba(0,0,0,0.4));
+            filter: drop-shadow(0 4px 15px rgba(0, 0, 0, 0.4));
         }
 
         .home-content h1 {
@@ -107,7 +116,7 @@
             text-transform: uppercase;
             width: 100%;
             max-width: 300px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
             margin-top: 15px;
             font-family: 'Montserrat', sans-serif;
         }
@@ -118,8 +127,8 @@
         }
 
         .home-secondary-btn {
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.3);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
             color: white;
             padding: 12px 20px;
             border-radius: 8px;
@@ -163,13 +172,17 @@
             display: flex;
             align-items: center;
             gap: 6px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
         }
-        .logout-btn-scanner:hover { background: #c82333; }
+
+        .logout-btn-scanner:hover {
+            background: #c82333;
+        }
+
         .logout-btn-home {
-            background: rgba(255,255,255,0.1);
+            background: rgba(255, 255, 255, 0.1);
             color: white;
-            border: 1px solid rgba(255,255,255,0.3);
+            border: 1px solid rgba(255, 255, 255, 0.3);
             padding: 10px 20px;
             border-radius: 10px;
             font-family: 'Montserrat', sans-serif;
@@ -188,6 +201,7 @@
             top: 0;
             z-index: 99;
         }
+
         .banner-img {
             width: 100%;
             height: auto;
@@ -235,9 +249,18 @@
             flex-shrink: 0;
         }
 
-        .status-dot.open  { background: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.25); }
-        .status-dot.closed { background: #ef4444; }
-        .status-dot.loading { background: #94a3b8; }
+        .status-dot.open {
+            background: #10b981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+        }
+
+        .status-dot.closed {
+            background: #ef4444;
+        }
+
+        .status-dot.loading {
+            background: #94a3b8;
+        }
 
         /* Offline notice */
         #offline-status {
@@ -265,7 +288,11 @@
             letter-spacing: 0.5px;
         }
 
-        .offline-actions { display: flex; gap: 10px; flex-shrink: 0; }
+        .offline-actions {
+            display: flex;
+            gap: 10px;
+            flex-shrink: 0;
+        }
 
         .sync-btn-main {
             background: var(--nbsc-blue);
@@ -311,12 +338,21 @@
             background: white;
             border-radius: 16px;
             overflow: hidden;
-            box-shadow: 0 4px 18px rgba(0,0,0,0.12);
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
         }
 
-        .qr-wrapper #reader { border: none !important; padding-bottom: 10px !important; }
-        .qr-wrapper #reader__scan_region { background: #000; }
-        .qr-wrapper #reader__dashboard { padding: 14px 16px !important; }
+        .qr-wrapper #reader {
+            border: none !important;
+            padding-bottom: 10px !important;
+        }
+
+        .qr-wrapper #reader__scan_region {
+            background: #000;
+        }
+
+        .qr-wrapper #reader__dashboard {
+            padding: 14px 16px !important;
+        }
 
         .qr-wrapper #reader__dashboard_section button {
             background: var(--nbsc-blue) !important;
@@ -357,13 +393,16 @@
             text-decoration: none !important;
         }
 
-        .qr-wrapper #reader__dashboard_section_csr span { color: red !important; font-weight: bold !important; }
+        .qr-wrapper #reader__dashboard_section_csr span {
+            color: red !important;
+            font-weight: bold !important;
+        }
 
         .manual-card {
             background: white;
             border-radius: 16px;
             padding: 20px;
-            box-shadow: 0 4px 18px rgba(0,0,0,0.08);
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
         }
 
         .manual-label {
@@ -388,8 +427,15 @@
             outline: none;
             transition: border-color 0.2s;
         }
-        .token-input:focus { border-color: var(--nbsc-gold); }
-        .token-input::placeholder { color: #bbb; font-size: 14px; }
+
+        .token-input:focus {
+            border-color: var(--nbsc-gold);
+        }
+
+        .token-input::placeholder {
+            color: #bbb;
+            font-size: 14px;
+        }
 
         .submit-token-btn {
             background: var(--nbsc-dark);
@@ -406,52 +452,94 @@
             font-size: 14px;
             min-height: 56px;
         }
-        .submit-token-btn:active { opacity: 0.85; }
+
+        .submit-token-btn:active {
+            opacity: 0.85;
+        }
 
         #result {
             display: none;
             border-radius: 16px;
             padding: 32px 20px 24px;
             text-align: center;
-            box-shadow: 0 8px 28px rgba(0,0,0,0.15);
+            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.15);
             animation: popIn 0.3s ease-out;
         }
 
         @keyframes popIn {
-            from { opacity: 0; transform: scale(0.95) translateY(8px); }
-            to   { opacity: 1; transform: scale(1) translateY(0); }
+            from {
+                opacity: 0;
+                transform: scale(0.95) translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
         }
+
         .flag-btn {
-    margin-top: 15px;
-    background-color: #ffc107; /* Warning Yellow */
-    color: #000;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 5px;
-    font-weight: bold;
-    cursor: pointer;
-    width: 100%;
-    transition: background 0.3s;
-}
+            margin-top: 15px;
+            background-color: #ffc107;
+            /* Warning Yellow */
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.3s;
+        }
 
-.flag-btn:hover {
-    background-color: #e0a800;
-}
+        .flag-btn:hover {
+            background-color: #e0a800;
+        }
 
-.result-card.warning {
-    border-left: 5px solid #ff9800;
-    background: #fff3e0;
-    padding: 10px;
-}
+        .result-card.warning {
+            border-left: 5px solid #ff9800;
+            background: #fff3e0;
+            padding: 10px;
+        }
 
-        #result .result-icon { font-size: 3rem; margin-bottom: 10px; display: block; }
-        #result h3 { font-size: 1.5rem; font-weight: 800; margin-bottom: 10px; color: inherit; }
-        #result p  { font-size: 1.05rem; line-height: 1.6; word-break: break-word; }
+        #result .result-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            display: block;
+        }
 
-        .success    { background: var(--success); color: white; }
-        .error      { background: var(--error);   color: white; }
-        .warning    { background: var(--orange);  color: white; }
-        .processing { background: #6c757d;        color: white; }
+        #result h3 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+            color: inherit;
+        }
+
+        #result p {
+            font-size: 1.05rem;
+            line-height: 1.6;
+            word-break: break-word;
+        }
+
+        .success {
+            background: var(--success);
+            color: white;
+        }
+
+        .error {
+            background: var(--error);
+            color: white;
+        }
+
+        .warning {
+            background: var(--orange);
+            color: white;
+        }
+
+        .processing {
+            background: #6c757d;
+            color: white;
+        }
 
         /* Loading Spinner */
         .spinner {
@@ -464,8 +552,11 @@
             animation: spin 0.8s linear infinite;
             display: block;
         }
+
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         .scan-btn-next {
@@ -482,7 +573,7 @@
             margin-top: 20px !important;
             cursor: pointer !important;
             letter-spacing: 0.5px !important;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
             min-height: 58px !important;
         }
 
@@ -491,9 +582,10 @@
         ══════════════════════════════════════ */
         #syncModal {
             display: none;
-            position: fixed; inset: 0;
+            position: fixed;
+            inset: 0;
             z-index: 5000;
-            background: rgba(0,0,0,0.65);
+            background: rgba(0, 0, 0, 0.65);
             justify-content: center;
             align-items: center;
             padding: 24px;
@@ -508,14 +600,31 @@
             text-align: center;
             width: 100%;
             max-width: 320px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
             animation: popIn 0.25s ease-out;
             color: white;
         }
 
-        .modal-content #modal-icon  { font-size: 2.5rem; margin-bottom: 10px; display: block; }
-        .modal-content #modal-title { font-size: 1.15rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 10px; color: white; }
-        .modal-content #modal-text  { font-size: 0.9rem; color: rgba(255,255,255,0.7); line-height: 1.6; }
+        .modal-content #modal-icon {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .modal-content #modal-title {
+            font-size: 1.15rem;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            color: white;
+        }
+
+        .modal-content #modal-text {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.6;
+        }
 
         .modal-btn {
             background: var(--nbsc-gold);
@@ -535,71 +644,92 @@
         }
 
         /* Progress Bar Styles */
-.progress-container {
-    width: 100%;
-    background-color: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-    margin: 15px 0;
-    height: 12px;
-    overflow: hidden;
-    display: none; /* Hidden by default */
-}
+        .progress-container {
+            width: 100%;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            margin: 15px 0;
+            height: 12px;
+            overflow: hidden;
+            display: none;
+            /* Hidden by default */
+        }
 
-#syncProgressBar {
-    width: 0%;
-    height: 100%;
-    background-color: var(--nbsc-gold);
-    transition: width 0.3s ease;
-}
+        #syncProgressBar {
+            width: 0%;
+            height: 100%;
+            background-color: var(--nbsc-gold);
+            transition: width 0.3s ease;
+        }
 
-#progressText {
-    font-size: 0.75rem;
-    color: var(--nbsc-gold);
-    font-weight: 800;
-    margin-bottom: 5px;
-    display: block;
-}
+        #progressText {
+            font-size: 0.75rem;
+            color: var(--nbsc-gold);
+            font-weight: 800;
+            margin-bottom: 5px;
+            display: block;
+        }
 
-/* Install banner (PWA) */
-.install-banner {
-    margin-top: 20px;
-    text-align: center;
-}
-.install-btn {
-    background: rgba(255,255,255,0.2);
-    color: white;
-    border: 2px solid rgba(255,255,255,0.5);
-    padding: 12px 24px;
-    border-radius: 10px;
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 600;
-    font-size: 0.9rem;
-    cursor: pointer;
-    width: 100%;
-    max-width: 280px;
-}
-.install-btn:hover, .install-btn:active {
-    background: rgba(255,255,255,0.3);
-}
-.install-hint-ios {
-    margin-top: 10px;
-    font-size: 0.8rem;
-    color: rgba(255,255,255,0.8);
-}
-    
-        .bottom-nav { display: none !important;
+        /* Install banner (PWA) */
+        .install-banner {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .install-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            width: 100%;
+            max-width: 280px;
+        }
+
+        .install-btn:hover,
+        .install-btn:active {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .install-hint-ios {
+            margin-top: 10px;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .bottom-nav {
+            display: none !important;
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
-            border-top: 1px solid rgba(0,0,0,0.05);
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
             padding-bottom: calc(14px + env(safe-area-inset-bottom));
         }
-        .nav-item i { font-size: 1.5rem; transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
-        .nav-item.active i { transform: translateY(-4px) scale(1.1); color: var(--nbsc-blue); }
-        .nav-item span { margin-top: 2px; font-weight: 800; font-size: 0.6rem; }
-        
-        .sticky-header .banner-img { max-height: 12vh; }
 
-        
+        .nav-item i {
+            font-size: 1.5rem;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .nav-item.active i {
+            transform: translateY(-4px) scale(1.1);
+            color: var(--nbsc-blue);
+        }
+
+        .nav-item span {
+            margin-top: 2px;
+            font-weight: 800;
+            font-size: 0.6rem;
+        }
+
+        .sticky-header .banner-img {
+            max-height: 12vh;
+        }
+
+
         .user-profile-section {
             display: none;
             align-items: center;
@@ -608,6 +738,7 @@
             background: white;
             border-bottom: 2px solid #f1f5f9;
         }
+
         .profile-circle {
             width: 44px;
             height: 44px;
@@ -621,30 +752,33 @@
             color: var(--nbsc-blue);
             flex-shrink: 0;
         }
+
         .profile-info {
             display: flex;
             flex-direction: column;
         }
+
         .profile-name {
             font-size: 0.8rem;
             font-weight: 800;
             color: var(--nbsc-dark);
             text-transform: uppercase;
         }
+
         .profile-label {
             font-size: 0.6rem;
             color: #94a3b8;
             font-weight: 700;
             text-transform: uppercase;
         }
-
-</style>
+    </style>
 
     <script src="https://unpkg.com/html5-qrcode"></script>
 
     <style>
         /* Mobile Navigation */
-        .bottom-nav { display: none !important;
+        .bottom-nav {
+            display: none !important;
             position: fixed;
             bottom: 0;
             left: 0;
@@ -653,10 +787,11 @@
             display: flex;
             justify-content: space-around;
             padding: 12px 10px 24px 10px;
-            box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
             z-index: 1000;
             border-top: 1px solid #f1f5f9;
         }
+
         .nav-item {
             display: flex;
             flex-direction: column;
@@ -667,10 +802,25 @@
             transition: all 0.2s;
             flex: 1;
         }
-        .nav-item i { font-size: 1.4rem; }
-        .nav-item span { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
-        .nav-item.active { color: var(--nbsc-blue); }
-        .nav-item.active i { transform: translateY(-2px); }
+
+        .nav-item i {
+            font-size: 1.4rem;
+        }
+
+        .nav-item span {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-item.active {
+            color: var(--nbsc-blue);
+        }
+
+        .nav-item.active i {
+            transform: translateY(-2px);
+        }
 
         /* Screen Management */
         .screen {
@@ -680,8 +830,20 @@
             padding-bottom: 90px;
             animation: fadeIn 0.3s ease;
         }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .screen.active { display: flex; }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .screen.active {
+            display: flex;
+        }
 
         /* List Styling */
         .data-card {
@@ -689,11 +851,12 @@
             border-radius: 12px;
             padding: 16px;
             margin-bottom: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
             display: flex;
             align-items: center;
             gap: 12px;
         }
+
         .data-icon {
             width: 40px;
             height: 40px;
@@ -705,17 +868,40 @@
             font-size: 1.2rem;
             color: var(--nbsc-blue);
         }
-        .data-info { flex: 1; }
-        .data-title { font-size: 0.9rem; font-weight: 700; color: var(--nbsc-dark); }
-        .data-sub { font-size: 0.75rem; color: #64748b; margin-top: 2px; }
-        .data-time { font-size: 0.7rem; color: #94a3b8; font-weight: 600; }
+
+        .data-info {
+            flex: 1;
+        }
+
+        .data-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--nbsc-dark);
+        }
+
+        .data-sub {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-top: 2px;
+        }
+
+        .data-time {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            font-weight: 600;
+        }
 
         .empty-state {
             text-align: center;
             padding: 40px 20px;
             color: #94a3b8;
         }
-        .empty-state i { font-size: 3rem; margin-bottom: 10px; opacity: 0.5; }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            opacity: 0.5;
+        }
 
         /* Banner tweaks for mobile */
         .sticky-header {
@@ -740,6 +926,7 @@
                     <div id="syncProgressBar"></div>
                 </div>
             </div>
+            <div id="syncLogBox" style="display:none; text-align:left; font-size:0.75rem; background:#f8fafc; padding:10px; border-radius:8px; margin-top:15px; max-height:150px; overflow-y:auto; font-family:monospace; border:1px solid #e2e8f0; width:100%;"></div>
 
             <button class="modal-btn" id="modalCloseBtn" onclick="closeModal()">OK</button>
         </div>
@@ -754,12 +941,15 @@
             <button class="btn-primary get-started-btn" onclick="enterScanner()">Start Scanning</button>
             <br><br><br>
             <button class="home-secondary-btn" onclick="downloadMasterlist()">⬇️ UPDATE OFFLINE DATA</button>
-            <button class="home-secondary-btn" onclick="superRefresh()" style="border-color: rgba(220,53,69,0.5); color: #ff8e98; font-size: 9px; opacity: 0.8;">🚨 CLEAR ALL SITE DATA & CACHE</button>
+            <button class="home-secondary-btn" onclick="superRefresh()"
+                style="border-color: rgba(220,53,69,0.5); color: #ff8e98; font-size: 9px; opacity: 0.8;">🚨 CLEAR ALL
+                SITE DATA & CACHE</button>
             <br>
             <button class="logout-btn-home" onclick="logoutScanner()">Logout from Portal</button>
             <div id="installBannerHome" class="install-banner" style="display:none;">
                 <button id="installBtnHome" class="install-btn">📲 Install App</button>
-                <p id="installHintIosHome" class="install-hint-ios" style="display:none;">Tap Share → Add to Home Screen</p>
+                <p id="installHintIosHome" class="install-hint-ios" style="display:none;">Tap Share → Add to Home Screen
+                </p>
             </div>
         </div>
     </div>
@@ -769,7 +959,8 @@
             <div class="banner-container">
                 <img src="https://nbsc.edu.ph/wp-content/uploads/2025/01/SAS.png" class="banner-img" alt="SAS Banner">
             </div>
-            <div class="user-profile-section">
+            <div class="user-profile-section"
+                onclick="this.dataset.clicks = (parseInt(this.dataset.clicks)||0) + 1; if(this.dataset.clicks >= 5) { triggerStressTest(); this.dataset.clicks=0; }">
                 <div class="profile-circle">
                     <i class='bx bxs-user-circle'></i>
                 </div>
@@ -777,7 +968,8 @@
                     <span class="profile-label">Authorized Scanner</span>
                     <span id="activeScannerName" class="profile-name">Checking...</span>
                 </div>
-                <button onclick="logoutScanner()" style="margin-left:auto; background:#fee2e2; color:#dc2626; border:none; padding:6px 10px; border-radius:6px; font-size:0.6rem; font-weight:800; cursor:pointer;">LOGOUT</button>
+                <button onclick="logoutScanner()"
+                    style="margin-left:auto; background:#fee2e2; color:#dc2626; border:none; padding:6px 10px; border-radius:6px; font-size:0.6rem; font-weight:800; cursor:pointer;">LOGOUT</button>
             </div>
             <div id="windowStatus" class="status-loading">
                 <div class="status-dot loading" id="statusDot"></div>
@@ -813,12 +1005,14 @@
 
     <div id="queueScreen" class="screen">
         <div class="banner-container">
-            <div style="padding: 20px; color: white; display: flex; justify-content: space-between; align-items: center;">
+            <div
+                style="padding: 20px; color: white; display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <h2 style="font-weight: 800; text-transform: uppercase; font-size: 1.2rem;">Offline Queue</h2>
                     <p style="font-size: 0.7rem; opacity: 0.8;">PENDING DATABASE SYNC</p>
                 </div>
-                <button onclick="syncOfflineData()" class="sync-btn-main" style="background: var(--nbsc-gold); color: black; border-radius: 30px;">
+                <button onclick="syncOfflineData()" class="sync-btn-main"
+                    style="background: var(--nbsc-gold); color: black; border-radius: 30px;">
                     <i class='bx bx-sync'></i> Sync All
                 </button>
             </div>
@@ -842,7 +1036,7 @@
             <span id="queueCountLabel">Queue</span>
         </div>
     </nav>
-<script>
+    <script>
         console.log("Scanner Logic Initializing...");
         function getCurrentUser() {
             try {
@@ -851,12 +1045,12 @@
                 if (urlUser) return urlUser;
 
                 let data = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
-                
+
                 if (!data && window.parent && window.parent !== window) {
                     try {
-                        data = window.parent.localStorage.getItem('sas_user_data') || 
-                               window.parent.sessionStorage.getItem('sas_user_data');
-                    } catch(e) {}
+                        data = window.parent.localStorage.getItem('sas_user_data') ||
+                            window.parent.sessionStorage.getItem('sas_user_data');
+                    } catch (e) { }
                 }
 
                 if (data) {
@@ -868,17 +1062,17 @@
                         return data;
                     }
                 }
-            } catch (e) {}
+            } catch (e) { }
             return localStorage.getItem('scannerUser') || 'Unknown';
         }
 
-        
+
 
         // ⚙️ FETCH FROM GLOBAL ENV (env.js)
-        const GAS_URL = (window.ENV && window.ENV.SCANNER_GAS_URL) 
-            ? window.ENV.SCANNER_GAS_URL 
+        const GAS_URL = (window.ENV && window.ENV.SCANNER_GAS_URL)
+            ? window.ENV.SCANNER_GAS_URL
             : "https://script.google.com/a/macros/nbsc.edu.ph/s/AKfycbwif9UQu1T_beROIwj4ZiJY_f0SlIDoUxt5p6xiAcO6nqEmpVyY2HygOJCxBR4YcGuRjw/exec";
-       
+
         const resultDiv = document.getElementById('result');
         const manualEntryDiv = document.getElementById('manual-entry');
         let html5QrcodeScanner;
@@ -896,9 +1090,9 @@
             return res.json();
         }
 
-        
+
         // --- SCREEN NAVIGATION ---
-        
+
         function switchScreen(screenId, navEl) {
             console.log("Navigating to:", screenId);
             try {
@@ -908,28 +1102,28 @@
                     s.classList.remove('active');
                     s.style.display = 'none';
                 });
-                
+
                 // Show TARGET screen
                 const target = document.getElementById(screenId);
-                if(target) {
+                if (target) {
                     target.classList.add('active');
                     target.style.display = 'flex';
                 }
-                
+
                 // Update Nav UI
                 document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-                if(navEl) navEl.classList.add('active');
-                
+                if (navEl) navEl.classList.add('active');
+
                 // Refresh data
                 updateQueueCountBadge();
-                if(screenId === 'historyScreen') renderHistory();
-                if(screenId === 'queueScreen') renderQueue();
-                
+                if (screenId === 'historyScreen') renderHistory();
+                if (screenId === 'queueScreen') renderQueue();
+
                 // Re-init scanner if needed
-                if(screenId === 'scannerScreen' && !html5QrcodeScanner) {
+                if (screenId === 'scannerScreen' && !html5QrcodeScanner) {
                     startScanner();
                 }
-            } catch(e) { console.error("Navigation Error:", e); }
+            } catch (e) { console.error("Navigation Error:", e); }
         }
 
 
@@ -948,7 +1142,7 @@
         function renderHistory() {
             const list = document.getElementById('historyList');
             const history = JSON.parse(localStorage.getItem('scan_history') || '[]');
-            
+
             if (history.length === 0) {
                 list.innerHTML = '<div class="empty-state"><i class="bx bx-history"></i><p>No recent scans yet</p></div>';
                 return;
@@ -968,7 +1162,7 @@
             `).join('');
         }
 
-        
+
         function renderQueue() {
             const list = document.getElementById('queueList');
             const queue = JSON.parse(localStorage.getItem('nbsc_offline_scans') || '[]');
@@ -989,7 +1183,7 @@
                         <div class="data-sub">${item.isFlagged ? 'Flag: ' + item.reason : 'Pending Sync'}</div>
                     </div>
                     <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
-                        <div class="data-time">${new Date(item.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+                        <div class="data-time">${new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                         <button onclick="deleteOfflineItem(${index})" style="background:none; border:none; color:#dc2626; font-size:1.1rem; cursor:pointer; padding:5px;">
                             <i class='bx bx-trash'></i>
                         </button>
@@ -1010,7 +1204,7 @@
         function updateQueueCountBadge() {
             const queue = JSON.parse(localStorage.getItem('nbsc_offline_scans') || '[]');
             const label = document.getElementById('queueCountLabel');
-            if(label) label.innerText = queue.length > 0 ? `Queue (${queue.length})` : 'Queue';
+            if (label) label.innerText = queue.length > 0 ? `Queue (${queue.length})` : 'Queue';
         }
 
         // --- NAVIGATION ---
@@ -1032,11 +1226,11 @@
             document.querySelector(".bottom-nav").style.setProperty("display", "flex", "important");
             document.getElementById("homeScreen").style.display = "none";
             document.getElementById("scannerScreen").style.display = "flex";
-            
+
             // Sync current user identity to the badge
             const userName = getCurrentUser();
             const badge = document.getElementById('activeScannerName');
-            if(badge) badge.innerText = userName;
+            if (badge) badge.innerText = userName;
 
             updateQueueUI();
             startScanner();
@@ -1071,7 +1265,7 @@
                 } else {
                     bar.className = 'status-closed';
                     dot.className = 'status-dot closed';
-                    
+
                     if (res.nextType) {
                         text.innerText = 'UPCOMING: ' + res.nextType + ' · ' + res.nextStart + ' – ' + res.nextEnd;
                     } else {
@@ -1222,7 +1416,7 @@
             input.value = "";
         }
 
-                // --- OFFLINE QUEUE ---
+        // --- OFFLINE QUEUE ---
         function saveToOfflineQueue(code, name, isFlagged = false, reason = "") {
             let queue = JSON.parse(localStorage.getItem('nbsc_offline_scans') || "[]");
             if (isFlagged) {
@@ -1417,16 +1611,96 @@
             }
         }
 
+        async function runDiagnostics() {
+            showCustomModal("🔍", "Running Diagnostics", "Verifying system components...");
+            let logBox = document.getElementById('syncLogBox');
+            if(!logBox) {
+                logBox = document.createElement('div');
+                logBox.id = 'syncLogBox';
+                logBox.style.cssText = "max-height:140px;overflow-y:auto;background:rgba(0,0,0,0.3);border-radius:8px;padding:8px 10px;margin-top:10px;font-size:0.7rem;font-family:monospace;color:#a3e635;text-align:left;line-height:1.6;";
+                document.getElementById('modal-progress-section').after(logBox);
+            }
+            logBox.innerHTML = "";
+            logBox.style.display = 'block';
+            document.getElementById('modalCloseBtn').style.display = 'none';
+
+            function log(m, success=true) { 
+                logBox.innerHTML += (success ? "✅ " : "❌ ") + m + "<br>"; 
+                logBox.scrollTop = logBox.scrollHeight;
+            }
+
+            // 1. Storage Test
+            try {
+                localStorage.setItem('diag_test', 'ok');
+                if(localStorage.getItem('diag_test') !== 'ok') throw new Error();
+                log("Local Storage: Functioning");
+            } catch(e) { log("Local Storage: FAILED", false); }
+
+            // 2. Camera Permission Test
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                log("Camera Access: PERMITTED");
+                stream.getTracks().forEach(t => t.stop());
+            } catch(e) { log("Camera Access: DENIED/NOT FOUND ("+e.name+")", false); }
+
+            // 3. Network & Backend Ping
+            if(navigator.onLine) {
+                log("Internet Connection: ONLINE");
+                try {
+                    const res = await callBackend("ping", {});
+                    log("Backend (GAS): RESPONDING");
+                } catch(e) { log("Backend (GAS): UNREACHABLE", false); }
+            } else {
+                log("Internet Connection: OFFLINE (Sync will wait)");
+            }
+
+            // 4. Mock Offline Scan Test
+            try {
+                saveToOfflineQueue("DIAG_TEST", "DIAGNOSTIC BOT");
+                log("Offline Queueing: Functional");
+                let q = JSON.parse(localStorage.getItem('nbsc_offline_scans') || "[]");
+                q = q.filter(i => i.code !== "DIAG_TEST");
+                localStorage.setItem('nbsc_offline_scans', JSON.stringify(q));
+            } catch(e) { log("Offline Queueing: FAILED", false); }
+
+            document.getElementById('modal-title').innerText = "Diagnostics Done";
+            document.getElementById('modalCloseBtn').style.display = 'block';
+        }
+
+        function showDevDashboard() {
+            const dashboardHTML = `
+                <div style="display:flex; flex-direction:column; gap:10px; margin-top:15px; width:100%;">
+                    <button class="flag-btn" style="background:#004a99; border:none;" onclick="runDiagnostics()">🔍 START SYSTEM DIAGNOSTICS</button>
+                    <button class="flag-btn" style="background:#ea580c; border:none;" onclick="triggerStressTest()">🔋 START SYSTEM STRESS TEST</button>
+                    <button class="flag-btn" style="background:#64748b; border:none;" onclick="closeModal()">CANCEL</button>
+                </div>
+            `;
+            showCustomModal("🛠️", "Developer Tools", "Select a diagnostic function below:");
+            document.getElementById('modal-text').innerHTML += dashboardHTML;
+            document.getElementById('modalCloseBtn').style.display = 'none';
+        }
+
+        async function triggerStressTest() {
+            if (!confirm("This will simulate 50 rapid scans to test UI responsiveness and history caching. Proceed?")) return;
+            console.log("🚀 Stress test started...");
+            for (let i = 1; i <= 50; i++) {
+                const mockID = "STRESS_" + Math.random().toString(36).substr(2, 5);
+                processToken(mockID);
+                await new Promise(r => setTimeout(r, 150));
+            }
+            showCustomModal("🔋", "Stress Test Done", "50 scans simulated. Check History to verify data integrity.");
+        }
+
         // --- RECENT SCANS ---
         function addToRecentScans(name, token, windowName, isConsented) {
             let history = [];
             try {
                 history = JSON.parse(localStorage.getItem('scan_history') || '[]');
                 if (!Array.isArray(history)) history = [];
-            } catch(e) { history = []; }
+            } catch (e) { history = []; }
             const windowStr = String(windowName || "");
             const status = windowStr.toLowerCase().includes('recorded') || windowStr.toLowerCase().includes('saved') ? 'success' : 'warning';
-            
+
             history.unshift({
                 name: name,
                 token: token,
@@ -1435,15 +1709,15 @@
                 status: status,
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             });
-            
+
             localStorage.setItem('scan_history', JSON.stringify(history.slice(0, 500))); // Store up to 500 records
-            if(document.getElementById('historyScreen').classList.contains('active')) renderHistory();
+            if (document.getElementById('historyScreen').classList.contains('active')) renderHistory();
         }
 
         function renderHistory() {
             const list = document.getElementById('historyList');
             const history = JSON.parse(localStorage.getItem('scan_history') || '[]');
-            
+
             if (history.length === 0) {
                 list.innerHTML = '<div class="empty-state"><i class="bx bx-history"></i><p>No recent activity</p></div>';
                 return;
@@ -1463,9 +1737,9 @@
             `).join('');
         }
 
-        
 
-        
+
+
 
         function clearRecentScans() {
             const list = document.getElementById('recentScansList');
@@ -1485,24 +1759,24 @@
         function closeModal() { document.getElementById('syncModal').style.display = 'none'; }
 
         async function superRefresh() {
-            if(!confirm("This will delete ALL local storage, history, and app cache. Your offline queue will be lost. Proceed?")) return;
-            
+            if (!confirm("This will delete ALL local storage, history, and app cache. Your offline queue will be lost. Proceed?")) return;
+
             // Clear Storage
             localStorage.clear();
             sessionStorage.clear();
-            
+
             // Unregister Service Workers
             if ('serviceWorker' in navigator) {
                 const registrations = await navigator.serviceWorker.getRegistrations();
                 for (let reg of registrations) { await reg.unregister(); }
             }
-            
+
             // Clear Cache API
             if ('caches' in window) {
                 const keys = await caches.keys();
                 await Promise.all(keys.map(k => caches.delete(k)));
             }
-            
+
             // Force reload
             window.location.reload(true);
         }
@@ -1510,7 +1784,7 @@
         // PWA: register service worker for install & offline
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function () {
-                navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(function () {});
+                navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(function () { });
             });
         }
 
@@ -1538,8 +1812,8 @@
             }
 
             if (isIos) {
-                var b1 = document.getElementById('installBtn'); if(b1) b1.style.display = 'none';
-                var b2 = document.getElementById('installBtnHome'); if(b2) b2.style.display = 'none';
+                var b1 = document.getElementById('installBtn'); if (b1) b1.style.display = 'none';
+                var b2 = document.getElementById('installBtnHome'); if (b2) b2.style.display = 'none';
                 var hint1 = document.getElementById('installHintIos');
                 var hint2 = document.getElementById('installHintIosHome');
                 if (hint1) hint1.style.display = 'block';
@@ -1562,8 +1836,8 @@
                     deferredPrompt = null;
                 });
             }
-            var btn1 = document.getElementById('installBtn'); if(btn1) btn1.addEventListener('click', doInstall);
-            var btn2 = document.getElementById('installBtnHome'); if(btn2) btn2.addEventListener('click', doInstall);
+            var btn1 = document.getElementById('installBtn'); if (btn1) btn1.addEventListener('click', doInstall);
+            var btn2 = document.getElementById('installBtnHome'); if (btn2) btn2.addEventListener('click', doInstall);
         })();
     </script>
 </body>

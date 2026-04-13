@@ -49,9 +49,23 @@ jobs:
           SCANNER_GAS_URL: ${{ secrets.SCANNER_GAS_URL }}
         run: node scripts/ci-connection-check.js
 
+  # CI: System End-to-End (E2E) Diagnostic
+  system-testing:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Install Dependencies
+        run: npm install
+      
+      - name: Run System Diagnostic
+        run: node scripts/system-diagnostic.js
+
   # CD: Deploy to GitHub Pages
   deploy:
-    needs: integration-audit # Only deploy if validation AND audit pass
+    needs: [integration-audit, system-testing] # Only deploy if all checks pass
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
