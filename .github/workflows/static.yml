@@ -63,9 +63,27 @@ jobs:
       - name: Run System Diagnostic
         run: node scripts/system-diagnostic.js
 
+  # CI: Comprehensive Security Audit
+  security-audit:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Run Trivy Security Scan (Secrets, Vuln, Misconfig)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          security-checks: 'secret,vuln,misconfig'
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
+
   # CD: Deploy to GitHub Pages
   deploy:
-    needs: [integration-audit, system-testing] # Only deploy if all checks pass
+    needs: [integration-audit, system-testing, security-audit] # Only deploy if all checks pass
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
