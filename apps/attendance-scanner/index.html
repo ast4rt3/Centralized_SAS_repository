@@ -585,7 +585,7 @@
 
         
         .user-profile-section {
-            display: flex;
+            display: none;
             align-items: center;
             gap: 12px;
             padding: 10px 20px;
@@ -998,6 +998,7 @@
         }
 // --- NAVIGATION ---
         function logoutScanner() {
+            document.querySelector(".bottom-nav").style.display = "none";
             if (confirm("Are you sure you want to log out from the system?")) {
                 localStorage.removeItem('sas_user_data');
                 if (window.parent) window.parent.location.hash = 'home';
@@ -1011,6 +1012,7 @@
         }
 
         function enterScanner() {
+            document.querySelector(".bottom-nav").style.display = "flex";
             document.getElementById("homeScreen").style.display = "none";
             document.getElementById("scannerScreen").style.display = "flex";
             
@@ -1269,6 +1271,7 @@
 
             localStorage.removeItem('nbsc_offline_scans');
             updateQueueUI();
+            renderQueue();
             log("✅ All " + total + " records uploaded successfully.");
             document.getElementById('progressText').innerText = "100% — Complete";
             document.getElementById('modal-title').innerText = "Done";
