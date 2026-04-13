@@ -1099,6 +1099,9 @@
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             element.classList.add('active');
             
+            // Re-initialize scanner with new box dimensions
+            initScanner();
+            
             // Switch to scanner screen if not already there
             switchScreen('scannerScreen', element);
             
@@ -1300,12 +1303,30 @@
             }
         }
         // --- SCANNER ---
-        function startScanner() {
+        function initScanner() {
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.clear().then(() => {
+                    renderScannerImpl();
+                }).catch(e => {
+                    renderScannerImpl();
+                });
+            } else {
+                renderScannerImpl();
+            }
+        }
+
+        function renderScannerImpl() {
             let screenWidth = window.innerWidth || document.documentElement.clientWidth;
-            let qrBoxWidth = screenWidth < 400 ? 250 : 350;
+            
+            // Adjust box size: Barcode (wide/short), QR (square)
+            const boxWidth = currentScanMode === 'barcode' ? Math.min(screenWidth - 40, 320) : 250;
+            const boxHeight = currentScanMode === 'barcode' ? 150 : 250;
+
             html5QrcodeScanner = new Html5QrcodeScanner("reader", {
                 fps: 15,
-                qrbox: { width: qrBoxWidth, height: 150 }
+                qrbox: { width: boxWidth, height: boxHeight },
+                rememberLastUsedCamera: true,
+                supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
             });
             html5QrcodeScanner.render(processToken);
         }
