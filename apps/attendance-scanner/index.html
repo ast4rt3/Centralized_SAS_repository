@@ -1023,9 +1023,13 @@
     </div>
 
     <nav class="bottom-nav">
-        <div class="nav-item active" onclick="switchScreen('scannerScreen', this)">
+        <div class="nav-item active" id="nav-barcode" onclick="setScanMode('barcode', this)">
+            <i class='bx bx-barcode'></i>
+            <span>Barcode</span>
+        </div>
+        <div class="nav-item" id="nav-qr" onclick="setScanMode('qr', this)">
             <i class='bx bx-qr-scan'></i>
-            <span>Scanner</span>
+            <span>QR Scan</span>
         </div>
         <div class="nav-item" onclick="switchScreen('historyScreen', this)">
             <i class='bx bx-history'></i>
@@ -1038,21 +1042,24 @@
     </nav>
     <script>
         console.log("Scanner Logic Initializing...");
+        let currentScanMode = "barcode"; // Default to Barcode (Col A)
+
+        const GAS_URL = (window.ENV && window.ENV.SCANNER_GAS_URL)
+            ? window.ENV.SCANNER_GAS_URL
+            : "https://script.google.com/a/macros/nbsc.edu.ph/s/AKfycbwif9UQu1T_beROIwj4ZiJY_f0SlIDoUxt5p6xiAcO6nqEmpVyY2HygOJCxBR4YcGuRjw/exec";
+
         function getCurrentUser() {
             try {
                 const urlParams = new URLSearchParams(window.location.search);
                 const urlUser = urlParams.get('portalUser') || urlParams.get('scannerUser');
                 if (urlUser) return urlUser;
-
                 let data = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
-
                 if (!data && window.parent && window.parent !== window) {
                     try {
                         data = window.parent.localStorage.getItem('sas_user_data') ||
-                            window.parent.sessionStorage.getItem('sas_user_data');
+                               window.parent.sessionStorage.getItem('sas_user_data');
                     } catch (e) { }
                 }
-
                 if (data) {
                     if (data.startsWith('{')) {
                         const session = JSON.parse(data);
@@ -1065,13 +1072,6 @@
             } catch (e) { }
             return localStorage.getItem('scannerUser') || 'Unknown';
         }
-
-
-
-        // ⚙️ FETCH FROM GLOBAL ENV (env.js)
-        const GAS_URL = (window.ENV && window.ENV.SCANNER_GAS_URL)
-            ? window.ENV.SCANNER_GAS_URL
-            : "https://script.google.com/a/macros/nbsc.edu.ph/s/AKfycbwif9UQu1T_beROIwj4ZiJY_f0SlIDoUxt5p6xiAcO6nqEmpVyY2HygOJCxBR4YcGuRjw/exec";
 
         const resultDiv = document.getElementById('result');
         const manualEntryDiv = document.getElementById('manual-entry');
@@ -1092,6 +1092,24 @@
 
 
         // --- SCREEN NAVIGATION ---
+
+        function setScanMode(mode, element) {
+            currentScanMode = mode;
+            // Update UI
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+            
+            // Switch to scanner screen if not already there
+            switchScreen('scannerScreen', element);
+            
+            // Update placeholder to show active column
+            const input = document.getElementById('tokenInput');
+            if(input) {
+                input.placeholder = mode === 'qr' ? 'Scanning QR (Col F)...' : 'Scanning Barcode (Col A)...';
+            }
+            
+            console.log("Mode switched to:", mode);
+        }
 
         function switchScreen(screenId, navEl) {
             console.log("Navigating to:", screenId);
@@ -1298,13 +1316,17 @@
             if (html5QrcodeScanner) html5QrcodeScanner.render(processToken);
         }
 
-        async function processToken(decodedText) {
+        async function processToken(rawToken) {
+            if (isProcessing) return;
+            const token = extractID(rawToken);
+            if (!token) return;
+
+            isProcessing = true;
+            const scannerUser = getCurrentUser();
+            const scanMode = currentScanMode; // Capture current mode
             if (html5QrcodeScanner) { html5QrcodeScanner.clear().catch(e => { }); }
             manualEntryDiv.style.display = 'none';
             resultDiv.style.display = 'block';
-
-            const token = extractID(decodedText);
-            const scannerUser = getCurrentUser();
 
             // ── OFFLINE ──
             if (!navigator.onLine) {
@@ -1345,7 +1367,11 @@
             resultDiv.innerHTML = "<div class=\"spinner\"></div><h3>Verifying...</h3>";
 
             try {
-                const response = await callBackend("checkTicket", { scannedID: decodedText, scannerUser });
+                const response = await callBackend("checkTicket", {
+                    scannedID: token,
+                    scannerUser: scannerUser,
+                    scanMode: scanMode
+                });
 
                 let colorClass = response.status === "success" ? "success" : response.status === "warning" ? "warning" : "error";
                 let icon = response.status === "success" ? "✅" : response.status === "warning" ? "⚠️" : "❌";
