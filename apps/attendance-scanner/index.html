@@ -571,7 +571,7 @@
     color: rgba(255,255,255,0.8);
 }
     
-        .bottom-nav {
+        .bottom-nav { display: none !important;
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             border-top: 1px solid rgba(0,0,0,0.05);
@@ -628,7 +628,7 @@
 
     <style>
         /* Mobile Navigation */
-        .bottom-nav {
+        .bottom-nav { display: none !important;
             position: fixed;
             bottom: 0;
             left: 0;
@@ -998,7 +998,7 @@
         }
 // --- NAVIGATION ---
         function logoutScanner() {
-            document.querySelector(".bottom-nav").style.display = "none";
+            document.querySelector(".bottom-nav").style.setProperty("display", "none", "important");
             if (confirm("Are you sure you want to log out from the system?")) {
                 localStorage.removeItem('sas_user_data');
                 if (window.parent) window.parent.location.hash = 'home';
@@ -1012,7 +1012,7 @@
         }
 
         function enterScanner() {
-            document.querySelector(".bottom-nav").style.display = "flex";
+            document.querySelector(".bottom-nav").style.setProperty("display", "flex", "important");
             document.getElementById("homeScreen").style.display = "none";
             document.getElementById("scannerScreen").style.display = "flex";
             
