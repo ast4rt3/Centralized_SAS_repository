@@ -1,4 +1,4 @@
-/* SAS Portal - Layout & theme */
+﻿/* SAS Portal - Layout & theme */
 :root {
   /* Scrollbar Colors */
   --sb-track: transparent;
@@ -3340,37 +3340,41 @@ body.role-scanner .nav-toggle {
 .messenger-sidebar {
   width: 320px;
   border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  background: #f8fafc;
+}
 
-.contact-card {
+#messages .contact-card {
     border-bottom: 1px solid #f1f5f9 !important;
     margin: 0 !important;
     border-radius: 0 !important;
 }
 
-.contact-card:hover {
+#messages .contact-card:hover {
     background: #f1f5f9 !important;
 }
 
-.contact-card.active {
+#messages .contact-card.active {
     background: #e0f2fe !important;
 }
 
-.messenger-chat-view {
+#messages .messenger-chat-view {
     height: 100% !important;
     display: flex !important;
     flex-direction: column !important;
 }
 
-.messenger-messages {
+#messages .messenger-messages {
     background: #fcfcfc !important;
 }
 
-.messenger-empty {
+#messages .messenger-empty {
     background: #f8fafc !important;
     color: #64748b !important;
 }
 
-.loading-contacts {
+#messages .loading-contacts {
     padding: 20px !important;
     text-align: center !important;
     color: #94a3b8 !important;
