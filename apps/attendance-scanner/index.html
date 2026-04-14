@@ -361,20 +361,40 @@
             padding: 14px 16px !important;
         }
 
-        .qr-wrapper #reader__dashboard_section button {
-            background: var(--nbsc-blue) !important;
-            color: white !important;
+        /* Hide library's default UI dashboard entirely */
+        #reader__dashboard_section_csr,
+        #reader__dashboard_section_fsr {
+            display: none !important;
+        }
+
+        .camera-toggle-btn {
+            background: var(--nbsc-blue);
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 800;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            cursor: pointer;
+            letter-spacing: 0.5px;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .camera-toggle-btn.btn-stop {
+            background: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #fca5a5;
+            box-shadow: none;
+        }
+
+        .qr-wrapper #reader {
             border: none !important;
-            padding: 16px 18px !important;
-            border-radius: 10px !important;
-            font-family: 'Montserrat', sans-serif !important;
-            font-weight: 800 !important;
-            font-size: 14px !important;
-            cursor: pointer !important;
-            width: 92% !important;
-            margin: 6px auto !important;
-            display: block !important;
-            min-height: 52px !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            background: #000;
         }
 
         .qr-wrapper #reader__dashboard_section select {
@@ -998,7 +1018,10 @@
                 <div class="section-divider"></div>
 
                 <div class="qr-wrapper">
-                    <div class="manual-label" style="padding: 20px 20px 0; margin-bottom: 0;">Scanner</div>
+                    <div style="padding: 20px; display: flex; align-items: center; justify-content: space-between; background: #fff;">
+                        <div class="manual-label" style="margin-bottom: 0;">Scanner</div>
+                        <button id="customToggle" class="camera-toggle-btn" onclick="toggleCameraState()">Start Scanning</button>
+                    </div>
                     <div id="reader"></div>
                 </div>
             </div>
@@ -1318,7 +1341,70 @@
             }
         }
         // --- SCANNER ---
+        let userCameraOff = true; // Default to OFF on refresh as requested
+
+        function toggleCameraState() {
+            // First time initialization if it's null
+            if (!html5QrcodeScanner) {
+                console.log("Initializing scanner on first click...");
+                userCameraOff = false; 
+                initScanner();
+                return;
+            }
+            
+            const state = (typeof html5QrcodeScanner.getState === 'function') ? html5QrcodeScanner.getState() : 0;
+            console.log("Current Scanner State:", state);
+
+            const startBtn = document.getElementById('html5-qrcode-button-camera-start');
+            const stopBtn = document.getElementById('html5-qrcode-button-camera-stop');
+            const permBtn = document.getElementById('html5-qrcode-button-camera-permission');
+
+            if (state === 2) { // SCANNING
+                if (stopBtn) {
+                    userCameraOff = true; 
+                    stopBtn.click();
+                }
+            } else { // IDLE or UNKNOWN
+                if (startBtn) {
+                    userCameraOff = false;
+                    startBtn.click();
+                } else if (permBtn) {
+                    permBtn.click();
+                } else {
+                    // Force start if no button but scanner exists
+                    userCameraOff = false;
+                    initScanner(); 
+                }
+            }
+            // Sync immediately
+            setTimeout(syncToggleBtn, 100);
+        }
+
+        function syncToggleBtn() {
+            const customBtn = document.getElementById('customToggle');
+            if (!customBtn || !html5QrcodeScanner) return;
+
+            const state = (typeof html5QrcodeScanner.getState === 'function') ? html5QrcodeScanner.getState() : 0;
+            
+            if (state === 2) { // Scanning
+                customBtn.innerText = "Stop Scanning";
+                customBtn.className = "camera-toggle-btn btn-stop";
+            } else {
+                customBtn.innerText = "Start Scanning";
+                customBtn.className = "camera-toggle-btn btn-start";
+            }
+        }
+
+        // Keep custom toggle in sync with internal state changes
+        setInterval(syncToggleBtn, 1000);
+
         function initScanner() {
+            // Respect default off preference on first load or re-init
+            if (userCameraOff && !html5QrcodeScanner) {
+                console.log("Scanner init deferred until manual start");
+                return;
+            }
+
             if (html5QrcodeScanner) {
                 html5QrcodeScanner.clear().then(() => {
                     renderScannerImpl();
@@ -1351,7 +1437,12 @@
             setTimeout(() => { isProcessing = false; }, 500);
             resultDiv.style.display = 'none';
             manualEntryDiv.style.display = 'block';
-            console.log("Scanner UI reset - preserving camera state");
+            
+            // Re-render ONLY if user hasn't explicitly stopped it
+            if (html5QrcodeScanner && !userCameraOff) {
+                html5QrcodeScanner.render(processToken);
+            }
+            console.log("Scanner UI reset - Respecting preference:", userCameraOff ? "OFF" : "ON");
         }
 
         async function processToken(rawToken) {
@@ -1363,8 +1454,9 @@
             const scannerUser = getCurrentUser();
             const scanMode = currentScanMode; // Capture current mode
 
-            // Instead of clearing the scanner, we just hide the UI container
-            // This preserves the "Stop Scanning" state if the user manually stopped it
+            // Stop the scanner explicitly to avoid background processing
+            if (html5QrcodeScanner) { html5QrcodeScanner.clear().catch(e => { }); }
+            
             manualEntryDiv.style.display = 'none';
             resultDiv.style.display = 'block';
 
