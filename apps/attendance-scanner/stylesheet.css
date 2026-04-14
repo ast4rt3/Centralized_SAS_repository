@@ -370,6 +370,13 @@
             gap: 16px;
         }
 
+        .section-divider {
+            height: 1px;
+            background: rgba(0, 0, 0, 0.08);
+            margin: 8px 0;
+            width: 100%;
+        }
+
         .qr-wrapper {
             background: white;
             border-radius: 16px;
