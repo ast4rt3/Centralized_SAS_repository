@@ -986,19 +986,21 @@
         </div>
 
         <div class="scanner-content">
-            <div id="manual-entry">
-                <div class="manual-card">
-                    <div class="manual-label">Manual Entry</div>
-                    <input type="text" id="tokenInput" class="token-input" placeholder="Enter Token Manually">
-                    <button class="submit-token-btn" onclick="submitManualToken()">Submit</button>
+            <div id="scanner-inputs">
+                <div id="manual-entry">
+                    <div class="manual-card">
+                        <div class="manual-label">Manual Entry</div>
+                        <input type="text" id="tokenInput" class="token-input" placeholder="Enter Token Manually">
+                        <button class="submit-token-btn" onclick="submitManualToken()">Submit</button>
+                    </div>
                 </div>
-            </div>
 
-            <div class="section-divider"></div>
+                <div class="section-divider"></div>
 
-            <div class="qr-wrapper">
-                <div class="manual-label" style="padding: 20px 20px 0; margin-bottom: 0;">Scanner</div>
-                <div id="reader"></div>
+                <div class="qr-wrapper">
+                    <div class="manual-label" style="padding: 20px 20px 0; margin-bottom: 0;">Scanner</div>
+                    <div id="reader"></div>
+                </div>
             </div>
             <div id="result"></div>
         </div>
@@ -1087,7 +1089,7 @@
         }
 
         const resultDiv = document.getElementById('result');
-        const manualEntryDiv = document.getElementById('manual-entry');
+        const manualEntryDiv = document.getElementById('scanner-inputs');
         let html5QrcodeScanner;
         let windowStatusInterval;
         let currentWindowInfo = null;
@@ -1345,10 +1347,11 @@
         }
 
         function resetScanner() {
-            isProcessing = false;
+            // Delay enabling scans slightly to prevent immediate re-scan of the same code
+            setTimeout(() => { isProcessing = false; }, 500);
             resultDiv.style.display = 'none';
             manualEntryDiv.style.display = 'block';
-            if (html5QrcodeScanner) html5QrcodeScanner.render(processToken);
+            console.log("Scanner UI reset - preserving camera state");
         }
 
         async function processToken(rawToken) {
@@ -1359,7 +1362,9 @@
             isProcessing = true;
             const scannerUser = getCurrentUser();
             const scanMode = currentScanMode; // Capture current mode
-            if (html5QrcodeScanner) { html5QrcodeScanner.clear().catch(e => { }); }
+
+            // Instead of clearing the scanner, we just hide the UI container
+            // This preserves the "Stop Scanning" state if the user manually stopped it
             manualEntryDiv.style.display = 'none';
             resultDiv.style.display = 'block';
 
