@@ -334,6 +334,13 @@
             gap: 16px;
         }
 
+        .section-divider {
+            height: 1px;
+            background: rgba(0, 0, 0, 0.08);
+            margin: 8px 0;
+            width: 100%;
+        }
+
         .qr-wrapper {
             background: white;
             border-radius: 16px;
@@ -979,15 +986,19 @@
         </div>
 
         <div class="scanner-content">
-            <div class="qr-wrapper">
-                <div id="reader"></div>
-            </div>
             <div id="manual-entry">
                 <div class="manual-card">
                     <div class="manual-label">Manual Entry</div>
                     <input type="text" id="tokenInput" class="token-input" placeholder="Enter Token Manually">
-                    <button class="submit-token-btn" onclick="submitManualToken()">Submit Token</button>
+                    <button class="submit-token-btn" onclick="submitManualToken()">Submit</button>
                 </div>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <div class="qr-wrapper">
+                <div class="manual-label" style="padding: 20px 20px 0; margin-bottom: 0;">Scanner</div>
+                <div id="reader"></div>
             </div>
             <div id="result"></div>
         </div>
