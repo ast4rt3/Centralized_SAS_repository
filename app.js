@@ -1,6 +1,17 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
 import { getDatabase, ref, push, onChildAdded, onValue, onDisconnect, set, remove, get, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
 
+// IMMEDIATE AUTH CHECK - Run BEFORE any UI is shown to prevent flash of unauthorized content
+(function() {
+  const sessionData = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
+  if (!sessionData) {
+    // Not logged in - immediately show loading page to prevent home page flash
+    document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+    var loadingPage = document.getElementById('loading');
+    if (loadingPage) loadingPage.classList.add('active');
+  }
+})();
+
 const BACKEND_GAS_URL = window.ENV?.BACKEND_GAS_URL || "YOUR_NEW_BACKEND_GAS_URL_HERE";
 
 // Initialize Firebase Realtime Database for Admin Chat
@@ -1795,7 +1806,7 @@ function showAppUI(userObj) {
 
     
     
-    if (logoutBtn) {
+if (logoutBtn) {
       logoutBtn.addEventListener('click', function () {
         localStorage.clear();
         sessionStorage.clear();
@@ -1803,7 +1814,12 @@ function showAppUI(userObj) {
         document.cookie.split(";").forEach((cookie) => {
           document.cookie = cookie.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
         });
-        window.location.href = window.location.pathname + "#home";
+        // Hide all pages and show loading first to prevent flash of unauthorized content
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        const loadingPage = document.getElementById('loading');
+        if (loadingPage) loadingPage.classList.add('active');
+        // Go to home without hash to prevent loading old content
+        window.location.hash = '';
         window.location.reload();
       });
     }
