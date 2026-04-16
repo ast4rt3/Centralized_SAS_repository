@@ -1904,12 +1904,17 @@ function showAppUI(userObj) {
 
     const navMessages = document.getElementById('nav-messages');
     const navDatabase = document.getElementById('nav-database');
-    if (userObj.role === 'admin' || userObj.role === 'superadmin') {
+    const navNewsFeed = document.getElementById('nav-news-feed');
+
+    // Messages: Admin, Superadmin, User
+    if (userObj.role === 'admin' || userObj.role === 'superadmin' || userObj.role === 'user') {
       if (navMessages) {
         navMessages.style.display = 'flex';
         navMessages.classList.remove('hidden');
       }
-      initAdminChat();
+      if (userObj.role === 'admin' || userObj.role === 'superadmin') {
+        initAdminChat();
+      }
     } else {
       if (navMessages) {
         navMessages.style.display = 'none';
@@ -1917,6 +1922,20 @@ function showAppUI(userObj) {
       }
     }
 
+    // News Feed: Everyone except TV role
+    if (userObj.role !== 'tv' && userObj.role !== 'scanner') {
+      if (navNewsFeed) {
+        navNewsFeed.style.display = 'flex';
+        navNewsFeed.classList.remove('hidden');
+      }
+    } else {
+      if (navNewsFeed) {
+        navNewsFeed.style.display = 'none';
+        navNewsFeed.classList.add('hidden');
+      }
+    }
+
+    // Database: Superadmin only
     if (userObj.role === 'superadmin') {
       if (navDatabase) {
         navDatabase.style.display = 'flex';
