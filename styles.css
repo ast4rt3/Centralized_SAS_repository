@@ -3726,3 +3726,335 @@ body.dark-theme .login-success {
   background: #064e3b;
   color: #6ee7b7;
 }
+
+/* --- DATABASE MANAGEMENT STYLES --- */
+.db-stats {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.db-stat-card {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 20px 28px;
+  min-width: 150px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.db-stat-value {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #f0ad4e;
+}
+
+.db-stat-label {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.db-controls {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 16px;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border-radius: 12px;
+  border: 1px solid #334155;
+}
+
+.db-search {
+  flex: 1;
+  min-width: 200px;
+}
+
+.db-search input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #475569;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: #0f172a;
+  color: #f1f5f9;
+}
+
+.db-search input::placeholder {
+  color: #64748b;
+}
+
+.db-search input:focus {
+  outline: none;
+  border-color: #f0ad4e;
+  box-shadow: 0 0 0 2px rgba(240, 173, 78, 0.2);
+}
+
+.db-filters {
+  display: flex;
+  gap: 8px;
+}
+
+.db-filters select,
+.db-filters input {
+  padding: 10px 14px;
+  border: 1px solid #475569;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  background: #0f172a;
+  color: #f1f5f9;
+}
+
+.db-filters select:focus,
+.db-filters input:focus {
+  outline: none;
+  border-color: #f0ad4e;
+}
+
+.db-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn {
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.btn-primary {
+  background: #003366;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #004488;
+}
+
+.btn-secondary {
+  background: #334155;
+  color: #f1f5f9;
+}
+
+.btn-secondary:hover {
+  background: #475569;
+}
+
+.btn-warning {
+  background: #b45309;
+  color: white;
+}
+
+.btn-warning:hover {
+  background: #d97706;
+}
+
+.btn-danger {
+  background: #7f1d1d;
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #991b1b;
+}
+
+.db-table-wrapper {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border: 1px solid #334155;
+  border-radius: 12px;
+  overflow: hidden;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.db-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.db-table th,
+.db-table td {
+  padding: 14px 16px;
+  text-align: left;
+  border-bottom: 1px solid #334155;
+}
+
+.db-table th {
+  background: #0f172a;
+  font-weight: 700;
+  color: #f0ad4e;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+}
+
+.db-table td {
+  color: #cbd5e1;
+}
+
+.db-table tr:hover {
+  background: rgba(240, 173, 78, 0.1);
+}
+
+.db-table .message-cell {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: monospace;
+}
+
+.db-table .timestamp-cell {
+  font-size: 0.75rem;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.db-table .type-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.db-table .type-badge.user {
+  background: #1e3a5f;
+  color: #60a5fa;
+}
+
+.db-table .type-badge.admin {
+  background: #451a03;
+  color: #fbbf24;
+}
+
+.db-table .action-btn {
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.db-table .action-btn.delete {
+  background: #7f1d1d;
+  color: #fecaca;
+}
+
+.db-table .action-btn.delete:hover {
+  background: #991b1b;
+  color: white;
+}
+
+.db-pagination {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 16px;
+  justify-content: center;
+  padding: 12px;
+  background: #1e293b;
+  border-radius: 8px;
+  border: 1px solid #334155;
+}
+
+.db-pagination select {
+  padding: 8px 12px;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  background: #0f172a;
+  color: #f1f5f9;
+}
+
+#db-page-info {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+/* Page header for database */
+#database .page-header {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  padding: 20px 24px;
+  border-radius: 12px;
+  border: 1px solid #334155;
+  margin-bottom: 20px;
+}
+
+#database .page-header h2 {
+  color: #f0ad4e;
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+#database {
+  background: #0f172a;
+  min-height: 100vh;
+}
+
+#database .page-header h2 {
+  color: #f0ad4e;
+}
+
+/* Dark theme for database */
+body.dark-theme .db-stat-card {
+  background: #1e293b;
+  border-color: var(--border);
+}
+
+body.dark-theme .db-stat-value {
+  color: #f1f5f9;
+}
+
+body.dark-theme .db-search input,
+body.dark-theme .db-filters select,
+body.dark-theme .db-filters input {
+  background: #334155;
+  border-color: var(--border);
+  color: #f1f5f9;
+}
+
+body.dark-theme .db-table-wrapper {
+  background: #1e293b;
+}
+
+body.dark-theme .db-table th {
+  background: #0f172a;
+  color: #f1f5f9;
+}
+
+body.dark-theme .db-table td {
+  color: #cbd5e1;
+}
+
+body.dark-theme .db-table tr:hover {
+  background: #334155;
+}
+
+body.dark-theme .db-table .type-badge.user {
+  background: #1e3a5f;
+  color: #60a5fa;
+}
+
+body.dark-theme .db-table .type-badge.admin {
+  background: #451a03;
+  color: #fbbf24;
+}

@@ -810,23 +810,85 @@
         </div>
       </section>
 
-      <section id="database" class="page">
+      <section id="database" class="page" style="background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); padding: 20px; min-height: 100vh;">
         <div class="page-header">
           <h2>Messaging Database</h2>
         </div>
-        <div class="db-actions" style="margin-bottom: 20px; display: flex; gap: 10px;">
-          <button id="db-refresh-btn" class="btn btn-primary">Refresh</button>
-          <button id="db-clear-user-messages-btn" class="btn btn-danger">Clear User Messages</button>
-          <button id="db-clear-admin-messages-btn" class="btn btn-danger">Clear Admin Messages</button>
-          <button id="db-clear-all-btn" class="btn btn-danger">Clear All Messages</button>
+        
+        <!-- Stats Cards -->
+        <div class="db-stats">
+          <div class="db-stat-card">
+            <div class="db-stat-value" id="db-total-messages">0</div>
+            <div class="db-stat-label">Total Messages</div>
+          </div>
+          <div class="db-stat-card">
+            <div class="db-stat-value" id="db-user-messages-count">0</div>
+            <div class="db-stat-label">User Messages</div>
+          </div>
+          <div class="db-stat-card">
+            <div class="db-stat-value" id="db-admin-messages-count">0</div>
+            <div class="db-stat-label">Admin Messages</div>
+          </div>
+          <div class="db-stat-card">
+            <div class="db-stat-value" id="db-active-users">0</div>
+            <div class="db-stat-label">Active Users</div>
+          </div>
         </div>
-        <div class="db-section">
-          <h3>User Messages</h3>
-          <div id="db-user-messages" class="db-data" style="background: #f5f5f5; padding: 10px; border-radius: 8px; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px;"></div>
+        
+        <!-- Control Panel -->
+        <div class="db-controls">
+          <div class="db-search">
+            <input type="text" id="db-search-input" placeholder="Search messages...">
+          </div>
+          <div class="db-filters">
+            <select id="db-filter-type">
+              <option value="all">All Types</option>
+              <option value="user">User Messages</option>
+              <option value="admin">Admin Messages</option>
+            </select>
+            <select id="db-filter-user">
+              <option value="">All Users</option>
+            </select>
+            <input type="date" id="db-filter-date-from" placeholder="From">
+            <input type="date" id="db-filter-date-to" placeholder="To">
+          </div>
+          <div class="db-actions">
+            <button id="db-refresh-btn" class="btn btn-primary">Refresh</button>
+            <button id="db-export-btn" class="btn btn-secondary">Export</button>
+            <button id="db-delete-filtered-btn" class="btn btn-warning">Delete Filtered</button>
+            <button id="db-clear-all-btn" class="btn btn-danger">Clear All</button>
+          </div>
         </div>
-        <div class="db-section" style="margin-top: 20px;">
-          <h3>Admin Messages</h3>
-          <div id="db-admin-messages" class="db-data" style="background: #f5f5f5; padding: 10px; border-radius: 8px; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px;"></div>
+        
+        <!-- Messages Table -->
+        <div class="db-table-wrapper">
+          <table class="db-table">
+            <thead>
+              <tr>
+                <th><input type="checkbox" id="db-select-all"></th>
+                <th>Type</th>
+                <th>From</th>
+                <th>To</th>
+                <th>Message</th>
+                <th>Timestamp</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="db-messages-tbody">
+            </tbody>
+          </table>
+        </div>
+        
+        <!-- Pagination -->
+        <div class="db-pagination">
+          <button id="db-prev-btn" class="btn btn-secondary">&larr; Previous</button>
+          <span id="db-page-info">Page 1 of 1</span>
+          <button id="db-next-btn" class="btn btn-secondary">Next &rarr;</button>
+          <select id="db-per-page">
+            <option value="25">25 per page</option>
+            <option value="50">50 per page</option>
+            <option value="100">100 per page</option>
+          </select>
         </div>
       </section>
     </div>

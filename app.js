@@ -3955,64 +3955,243 @@ if (logoutBtn) {
     if (!userDb) return;
 
     const refreshBtn = document.getElementById('db-refresh-btn');
-    const clearUserBtn = document.getElementById('db-clear-user-messages-btn');
-    const clearAdminBtn = document.getElementById('db-clear-admin-messages-btn');
-    const clearAllBtn = document.getElementById('db-clear-all-btn');
-    const userMsgDiv = document.getElementById('db-user-messages');
-    const adminMsgDiv = document.getElementById('db-admin-messages');
-
     if (!refreshBtn || !userDb) return;
+
+    let allMessages = [];
+    let filteredMessages = [];
+    let currentPage = 1;
+    let perPage = 25;
+    let uniqueUsers = new Set();
+
+    const elements = {
+      tbody: document.getElementById('db-messages-tbody'),
+      search: document.getElementById('db-search-input'),
+      filterType: document.getElementById('db-filter-type'),
+      filterUser: document.getElementById('db-filter-user'),
+      filterDateFrom: document.getElementById('db-filter-date-from'),
+      filterDateTo: document.getElementById('db-filter-date-to'),
+      prevBtn: document.getElementById('db-prev-btn'),
+      nextBtn: document.getElementById('db-next-btn'),
+      pageInfo: document.getElementById('db-page-info'),
+      perPage: document.getElementById('db-per-page'),
+      selectAll: document.getElementById('db-select-all'),
+      exportBtn: document.getElementById('db-export-btn'),
+      deleteFilteredBtn: document.getElementById('db-delete-filtered-btn'),
+      clearAllBtn: document.getElementById('db-clear-all-btn'),
+      totalStat: document.getElementById('db-total-messages'),
+      userCount: document.getElementById('db-user-messages-count'),
+      adminCount: document.getElementById('db-admin-messages-count'),
+      activeUsers: document.getElementById('db-active-users')
+    };
 
     async function loadMessages() {
       try {
         const userSnap = await get(ref(userDb, 'user_messages'));
         const adminSnap = await get(ref(userDb, 'admin_messages'));
 
-        const userData = userSnap.val();
-        const adminData = adminSnap.val();
+        const userData = userSnap.val() || {};
+        const adminData = adminSnap.val() || {};
 
-        if (userData) {
-          userMsgDiv.innerHTML = JSON.stringify(userData, null, 2);
-        } else {
-          userMsgDiv.innerHTML = '<em style="color: #888;">No user messages</em>';
-        }
+        allMessages = [];
+        uniqueUsers = new Set();
 
-        if (adminData) {
-          adminMsgDiv.innerHTML = JSON.stringify(adminData, null, 2);
-        } else {
-          adminMsgDiv.innerHTML = '<em style="color: #888;">No admin messages</em>';
-        }
+        Object.entries(userData).forEach(([key, msg]) => {
+          allMessages.push({ ...msg, _key: key, _type: 'user' });
+          if (msg.sender) uniqueUsers.add(msg.sender);
+          if (msg.receiver) uniqueUsers.add(msg.receiver);
+        });
+
+        Object.entries(adminData).forEach(([key, msg]) => {
+          allMessages.push({ ...msg, _key: key, _type: 'admin' });
+          if (msg.sender) uniqueUsers.add(msg.sender);
+          if (msg.receiver) uniqueUsers.add(msg.receiver);
+        });
+
+        allMessages.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+        updateUserFilter();
+        applyFilters();
+        updateStats();
+        showToast('Messages loaded', 'success');
       } catch (err) {
         console.error("Failed to load messages:", err);
-        userMsgDiv.innerHTML = 'Error loading: ' + err.message;
-        adminMsgDiv.innerHTML = 'Error loading: ' + err.message;
+        showToast('Error loading: ' + err.message, 'error');
       }
     }
 
-    async function clearMessages(path) {
-      if (!confirm('Are you sure you want to delete all messages? This cannot be undone.')) return;
+    function updateStats() {
+      const userMsgs = allMessages.filter(m => m._type === 'user');
+      const adminMsgs = allMessages.filter(m => m._type === 'admin');
+
+      if (elements.totalStat) elements.totalStat.textContent = allMessages.length;
+      if (elements.userCount) elements.userCount.textContent = userMsgs.length;
+      if (elements.adminCount) elements.adminCount.textContent = adminMsgs.length;
+      if (elements.activeUsers) elements.activeUsers.textContent = uniqueUsers.size;
+    }
+
+    function updateUserFilter() {
+      const filterUser = elements.filterUser;
+      if (!filterUser) return;
+
+      const currentVal = filterUser.value;
+      filterUser.innerHTML = '<option value="">All Users</option>';
+      Array.from(uniqueUsers).sort().forEach(user => {
+        const opt = document.createElement('option');
+        opt.value = user;
+        opt.textContent = user;
+        filterUser.appendChild(opt);
+      });
+      filterUser.value = currentVal;
+    }
+
+    function applyFilters() {
+      const search = elements.search?.value.toLowerCase() || '';
+      const typeFilter = elements.filterType?.value || 'all';
+      const userFilter = elements.filterUser?.value || '';
+      const dateFrom = elements.filterDateFrom?.value || '';
+      const dateTo = elements.filterDateTo?.value || '';
+
+      filteredMessages = allMessages.filter(msg => {
+        if (typeFilter !== 'all' && msg._type !== typeFilter) return false;
+        if (userFilter && msg.sender !== userFilter && msg.receiver !== userFilter) return false;
+        if (search) {
+          const searchStr = (msg.text || msg.sender || msg.receiver || '').toLowerCase();
+          if (!searchStr.includes(search)) return false;
+        }
+        if (dateFrom || dateTo) {
+          const msgDate = msg.timestamp ? new Date(msg.timestamp).toISOString().split('T')[0] : '';
+          if (dateFrom && msgDate < dateFrom) return false;
+          if (dateTo && msgDate > dateTo) return false;
+        }
+        return true;
+      });
+
+      currentPage = 1;
+      renderTable();
+    }
+
+    function renderTable() {
+      if (!elements.tbody) return;
+
+      const start = (currentPage - 1) * perPage;
+      const end = start + perPage;
+      const pageMsgs = filteredMessages.slice(start, end);
+
+      elements.tbody.innerHTML = pageMsgs.map((msg, idx) => {
+        const globalIdx = start + idx;
+        const typeClass = msg._type || 'user';
+        const typeLabel = (msg._type || 'user').toUpperCase();
+        const timestamp = msg.timestamp ? new Date(msg.timestamp).toLocaleString() : 'Unknown';
+        const messageText = msg.text || '(empty)';
+        const fromUser = msg.sender || 'Unknown';
+        const toUser = msg.receiver || 'All';
+
+        return `
+          <tr>
+            <td><input type="checkbox" class="db-msg-check" data-idx="${globalIdx}"></td>
+            <td><span class="type-badge ${typeClass}">${typeLabel}</span></td>
+            <td>${escapeHtml(fromUser)}</td>
+            <td>${escapeHtml(toUser)}</td>
+            <td class="message-cell" title="${escapeHtml(messageText)}">${escapeHtml(messageText)}</td>
+            <td class="timestamp-cell">${timestamp}</td>
+            <td>
+              <button class="action-btn delete" onclick="deleteMessage('${msg._type}', '${msg._key}')">Delete</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      const totalPages = Math.max(1, Math.ceil(filteredMessages.length / perPage));
+      if (elements.pageInfo) {
+        elements.pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+      }
+      if (elements.prevBtn) elements.prevBtn.disabled = currentPage <= 1;
+      if (elements.nextBtn) elements.nextBtn.disabled = currentPage >= totalPages;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    window.deleteMessage = async function(type, key) {
+      if (!confirm(`Delete this ${type} message?`)) return;
       try {
-        await remove(ref(userDb, path));
-        showToast('Messages deleted successfully', 'success');
+        await remove(ref(userDb, `${type}_messages/${key}`));
+        showToast('Message deleted', 'success');
         loadMessages();
       } catch (err) {
-        console.error("Failed to delete messages:", err);
-        showToast('Failed to delete messages: ' + err.message, 'error');
+        showToast('Delete failed: ' + err.message, 'error');
       }
-    }
+    };
 
-    refreshBtn.addEventListener('click', loadMessages);
-    clearUserBtn.addEventListener('click', () => clearMessages('user_messages'));
-    clearAdminBtn.addEventListener('click', () => clearMessages('admin_messages'));
-    clearAllBtn.addEventListener('click', async () => {
-      if (!confirm('Are you sure you want to delete ALL messages (both user and admin)? This cannot be undone.')) return;
+    elements.search?.addEventListener('input', applyFilters);
+    elements.filterType?.addEventListener('change', applyFilters);
+    elements.filterUser?.addEventListener('change', applyFilters);
+    elements.filterDateFrom?.addEventListener('change', applyFilters);
+    elements.filterDateTo?.addEventListener('change', applyFilters);
+
+    elements.perPage?.addEventListener('change', (e) => {
+      perPage = parseInt(e.target.value) || 25;
+      currentPage = 1;
+      renderTable();
+    });
+
+    elements.prevBtn?.addEventListener('click', () => {
+      if (currentPage > 1) { currentPage--; renderTable(); }
+    });
+
+    elements.nextBtn?.addEventListener('click', () => {
+      const totalPages = Math.ceil(filteredMessages.length / perPage);
+      if (currentPage < totalPages) { currentPage++; renderTable(); }
+    });
+
+    elements.selectAll?.addEventListener('change', (e) => {
+      document.querySelectorAll('.db-msg-check').forEach(cb => cb.checked = e.target.checked);
+    });
+
+    elements.refreshBtn?.addEventListener('click', loadMessages);
+
+    elements.exportBtn?.addEventListener('click', () => {
+      const dataStr = JSON.stringify(filteredMessages, null, 2);
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `messages_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Messages exported', 'success');
+    });
+
+    elements.deleteFilteredBtn?.addEventListener('click', async () => {
+      if (filteredMessages.length === 0) {
+        showToast('No messages to delete', 'error');
+        return;
+      }
+      if (!confirm(`Delete ${filteredMessages.length} filtered messages? This cannot be undone.`)) return;
+      
+      let deleted = 0;
+      for (const msg of filteredMessages) {
+        try {
+          await remove(ref(userDb, `${msg._type}_messages/${msg._key}`));
+          deleted++;
+        } catch (e) { console.error('Delete error:', e); }
+      }
+      showToast(`Deleted ${deleted} messages`, 'success');
+      loadMessages();
+    });
+
+    elements.clearAllBtn?.addEventListener('click', async () => {
+      if (!confirm('DELETE ALL MESSAGES? This cannot be undone!')) return;
       try {
         await remove(ref(userDb, 'user_messages'));
         await remove(ref(userDb, 'admin_messages'));
-        showToast('All messages deleted', 'success');
+        showToast('All messages cleared', 'success');
         loadMessages();
       } catch (err) {
-        showToast('Failed to delete: ' + err.message, 'error');
+        showToast('Clear failed: ' + err.message, 'error');
       }
     });
 
