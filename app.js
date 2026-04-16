@@ -687,11 +687,18 @@ sorted.forEach(user => {
         item.style.cssText = "padding:12px 15px; cursor:pointer; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; gap:12px;";
         item.onmouseover = () => item.style.background = "#f8fafc";
         item.onmouseout = () => item.style.background = "transparent";
+        const info = contactsMap[user];
+        const displayName = info.displayName || user;
+        const initial = displayName.charAt(0).toUpperCase();
+        const avatarHtml = info.profilePic && info.profilePic.startsWith('http')
+          ? `<img src="${info.profilePic}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`
+          : `<span>${initial}</span>`;
+
         item.innerHTML = `
-          <div style="width:36px; height:36px; background:#003366; color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.9rem; font-weight:800;">${user[0].toUpperCase()}</div>
+          <div style="width:36px; height:36px; background:#003366; color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.9rem; font-weight:800; flex-shrink:0; overflow:hidden;">${avatarHtml}</div>
           <div style="display:flex; flex-direction:column;">
-            <span style="font-weight:700; color:#1e293b;">${user}</span>
-            <span style="font-size:0.7rem; color:#94a3b8;">${contactsMap[user].isOnline ? 'Online' : 'Offline'}</span>
+            <span style="font-weight:700; color:#1e293b;">${displayName}</span>
+            <span style="font-size:0.7rem; color:#94a3b8;">${info.isOnline ? 'Online' : 'Offline'}</span>
           </div>
         `;
         item.onclick = () => { selectContact(user); closeNewMessageModal(); };
