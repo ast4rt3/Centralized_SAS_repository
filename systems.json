@@ -52,5 +52,14 @@
     "external": false,
     "section": "General Services",
     "roles": ["admin"]
+  },
+  {
+    "id": "news-feed",
+    "name": "News Feed",
+    "description": "News Feed system",
+    "url": "",
+    "external": false,
+    "section": "Communications",
+    "roles": ["admin", "superadmin", "user"]
   }
 ]

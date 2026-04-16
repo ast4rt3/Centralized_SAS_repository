@@ -4,7 +4,7 @@
 // No buttons required — runs invisibly in the background
 // ================================================================
 
-const CACHE_VERSION = 'sas-tv-v82';
+const CACHE_VERSION = 'sas-tv-v83';
 const CACHE_POST_DATA = 'sas-posts-v1';
 const CACHE_MEDIA = 'sas-media-v1';
 
@@ -45,35 +45,16 @@ self.addEventListener('activate', event => {
 });
 
 // ----------------------------------------------------------------
-// FETCH — intercept all requests and serve from cache when needed
+// Strategy: NETWORK FIRST → cache fallback 
+// Used for: app shell (HTML, CSS, JS) to ensure latest version
 // ----------------------------------------------------------------
 self.addEventListener('fetch', event => {
   const req = event.request;
   const url = new URL(req.url);
 
-  // Only handle GET requests
   if (req.method !== 'GET') return;
 
-  // ---- Strategy: NETWORK FIRST → cache fallback ----
-  // Used for: Configuration files (always get latest)
-  const configFiles = ['env.js', 'manifest.json', 'version.json'];
-  if (configFiles.some(f => url.pathname.endsWith(f))) {
-    event.respondWith(
-      fetch(req)
-        .then(res => {
-          if (!res || !res.ok) return res;
-          const clone = res.clone();
-          caches.open(CACHE_VERSION).then(cache => cache.put(req, clone));
-          return res;
-        })
-        .catch(() => caches.match(req).then(cached => cached || new Response('', { status: 404, statusText: 'Not Found' })))
-    );
-    return;
-  }
-
-  // ---- Skip non-cacheable YouTube/Google API resources ----
-  // YouTube video content itself can't be cached (CORS), but
-  // we still let the request go through normally
+  // 1. Skip non-cacheable YouTube/Google API resources
   const skip = [
     'youtube.com', 'youtu.be', 'ytimg.com',
     'googletagmanager.com', 'google-analytics.com',
@@ -81,31 +62,36 @@ self.addEventListener('fetch', event => {
   ];
   if (skip.some(h => url.hostname.includes(h))) return;
 
-  // ---- Strategy: NETWORK FIRST → cache fallback ----
-  // Used for: Google Apps Script backend (post data)
-  if (url.hostname === 'script.google.com') {
+  // 2. Network First for Configuration (env.js, version.json, manifest)
+  const configFiles = ['env.js', 'manifest.json', 'version.json'];
+  if (configFiles.some(f => url.pathname.endsWith(f))) {
     event.respondWith(
       fetch(req)
         .then(res => {
-          if (!res || !res.ok || res.bodyUsed) return res;
-          const clone = res.clone();
-          caches.open(CACHE_POST_DATA).then(cache => cache.put(req, clone));
+          if (!res || !res.ok) return res;
+          caches.open(CACHE_VERSION).then(cache => cache.put(req, res.clone()));
           return res;
         })
-        .catch(() => {
-          return caches.match(req, { ignoreSearch: true })
-            .then(cached => cached || new Response(JSON.stringify({ success: false, message: "Offline — connection failed." }), { 
-              status: 503, 
-              statusText: 'Service Unavailable',
-              headers: { 'Content-Type': 'application/json' }
-            }));
-        })
+        .catch(() => caches.match(req))
     );
     return;
   }
 
-  // ---- Strategy: STALE-WHILE-REVALIDATE ----
-  // Used for: images from Drive CDN, YouTube thumbnails, etc.
+  // 3. Network First for GAS Backend (Post Data)
+  if (url.hostname === 'script.google.com') {
+    event.respondWith(
+      fetch(req)
+        .then(res => {
+          if (!res || !res.ok) return res;
+          caches.open(CACHE_POST_DATA).then(cache => cache.put(req, res.clone()));
+          return res;
+        })
+        .catch(() => caches.match(req, { ignoreSearch: true }))
+    );
+    return;
+  }
+
+  // 4. Stale-While-Revalidate for Images/Media
   if (
     req.destination === 'image' ||
     url.hostname.includes('googleusercontent.com') ||
@@ -116,13 +102,10 @@ self.addEventListener('fetch', event => {
     event.respondWith(
       caches.open(CACHE_MEDIA).then(mediaCache => {
         return mediaCache.match(req).then(cached => {
-          const networkFetch = fetch(req)
-            .then(res => {
-              if (res && res.ok && !res.bodyUsed) mediaCache.put(req, res.clone());
-              return res;
-            })
-            .catch(() => cached);
-
+          const networkFetch = fetch(req).then(res => {
+            if (res && res.ok) mediaCache.put(req, res.clone());
+            return res;
+          }).catch(() => cached);
           return cached || networkFetch;
         });
       })
@@ -130,22 +113,25 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // ---- Strategy: CACHE FIRST → network fallback ----
-  // Used for: app shell (HTML, CSS, JS)
+  // 5. App Shell: NETWORK FIRST (to respect version updates) with Cache Fallback
   event.respondWith(
-    caches.match(req).then(cached => {
-      if (cached) return cached;
-      return fetch(req).then(res => {
-        if (!res || !res.ok || res.bodyUsed) return res;
-        const clone = res.clone();
-        caches.open(CACHE_VERSION).then(cache => cache.put(req, clone));
-        return res;
-      }).catch(() => {
-        if (req.destination === 'document') {
-          return caches.match('./index.html').then(cached => cached || new Response('Offline', { status: 503 }));
+    fetch(req)
+      .then(res => {
+        // If it's a valid response, update cache and return
+        if (res && res.ok) {
+          const clone = res.clone();
+          caches.open(CACHE_VERSION).then(cache => cache.put(req, clone));
+          return res;
         }
-        return new Response('', { status: 404 });
-      });
-    })
+        return res;
+      })
+      .catch(() => {
+        // Fallback to cache if network fails
+        return caches.match(req).then(cached => {
+          if (cached) return cached;
+          if (req.destination === 'document') return caches.match('./index.html');
+          return new Response('Offline', { status: 503 });
+        });
+      })
   );
 });

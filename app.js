@@ -121,18 +121,25 @@ async function fetchSpreadsheetUsers() {
     usersList.forEach(u => {
       const userObj = typeof u === 'object' ? u : { username: u };
       const username = userObj.username;
-      if (username && username !== myUsername) {
+      const role = (userObj.role || "").toLowerCase();
+
+      // Filter: Skip current user and restricted roles
+      const isRestrictedRole = (role === 'tv' || role === 'scanner' || role === 'uploader');
+      
+      if (username && username !== myUsername && !isRestrictedRole) {
         if (!contactsMap[username]) {
           contactsMap[username] = { 
             unread: 0, 
             el: null, 
             history: [],
             profilePic: userObj.profilePic || "",
-            displayName: userObj.displayName || username
+            displayName: userObj.displayName || username,
+            role: userObj.role || ""
           };
         } else {
           contactsMap[username].profilePic = userObj.profilePic || "";
           contactsMap[username].displayName = userObj.displayName || username;
+          contactsMap[username].role = userObj.role || "";
         }
       }
     });
@@ -275,9 +282,14 @@ function initUserMessaging() {
       contactsMap[otherUser].history.push(data);
       
       if (data.sender === otherUser && activeChatUser !== otherUser && !data.read) {
-        contactsMap[otherUser].unread++;
-        unreadCount++;
-        updateUnreadBadges(otherUser);
+        // Validation: Verify if the other user should even be allowed to message
+        // If we found they have a restricted role but somehow sent a message, we might still skip them here
+        // but for now, we just track unread if they are in our allowed contactsMap
+        if (contactsMap[otherUser]) {
+          contactsMap[otherUser].unread++;
+          unreadCount++;
+          updateUnreadBadges(otherUser);
+        }
         
         // Notification for Superadmin
         const sessionData = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
@@ -352,28 +364,27 @@ function initUserMessaging() {
     const unread = contactsMap[username].unread || 0;
     
     // Quick escape HTML
-    const escapeHtml = (text) => {
-      const div = document.createElement('div'); div.textContent = text; return div.innerHTML;
-    };
-    
-    const statusIndicator = isOnline 
-       ? '<span style="display:inline-block; width:8px; height:8px; background:#16a34a; border-radius:50%; margin-right:8px; box-shadow:0 0 4px #16a34a;"></span>'
-       : '<span style="display:inline-block; width:8px; height:8px; background:#94a3b8; border-radius:50%; margin-right:8px;"></span>';
-    
-    const user = contactsMap[username];
-    const displayName = user.displayName || username;
-    const initial = displayName.charAt(0).toUpperCase();
-    const profilePicHtml = user.profilePic && user.profilePic.startsWith('http')
-      ? `<img src="${user.profilePic}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`
-      : `<span>${initial}</span>`;
-    
+    const avatarSize = 32;
+    const dotSize = 10;
+    const dotBorder = 2;
+    const isOnlineColor = '#16a34a';
+    const isOfflineColor = '#94a3b8';
+
+    const statusDotHtml = `
+      <span style="position:absolute; bottom:0; right:0; width:${dotSize}px; height:${dotSize}px; 
+      background:${isOnline ? isOnlineColor : isOfflineColor}; border-radius:50%; 
+      border:${dotBorder}px solid white; box-shadow:0 0 2px rgba(0,0,0,0.1);"></span>
+    `;
+
     div.innerHTML = `
-      <div style="display:flex; align-items:center; gap:8px;">
-         <div style="width:32px; height:32px; border-radius:50%; background:#003366; color:white; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.9rem; flex-shrink:0; overflow:hidden;">
+      <div style="display:flex; align-items:center; gap:10px;">
+         <div style="width:${avatarSize}px; height:${avatarSize}px; border-radius:50%; background:#003366; 
+              color:white; display:flex; align-items:center; justify-content:center; font-weight:700; 
+              font-size:0.85rem; flex-shrink:0; overflow:hidden; position:relative;">
            ${profilePicHtml}
+           ${statusDotHtml}
          </div>
-         ${statusIndicator}
-         <div class="fb-chat-contact-name">${escapeHtml(displayName)}</div>
+         <div class="fb-chat-contact-name" style="font-size:0.9rem; font-weight:600;">${escapeHtml(displayName)}</div>
       </div>
       ${unread > 0 ? `<div class="fb-chat-contact-unread">${unread}</div>` : ''}
     `;
@@ -442,6 +453,19 @@ function initUserMessaging() {
     e.preventDefault();
     const text = input.value.trim();
     if (text && activeChatUser) {
+      // Safety net: re-validate identity before sending
+      if (myUsername === 'Unknown') {
+        try {
+          const raw = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
+          if (raw) { const p = JSON.parse(raw); if (p && p.username) myUsername = p.username; }
+        } catch(e) {}
+      }
+
+      if (myUsername === 'Unknown') {
+        console.warn('[Messenger Widget] identity not resolved. Cannot send.');
+        return;
+      }
+
       push(baseRef, {
         sender: myUsername,
         receiver: activeChatUser,
@@ -690,12 +714,20 @@ sorted.forEach(user => {
         const info = contactsMap[user];
         const displayName = info.displayName || user;
         const initial = displayName.charAt(0).toUpperCase();
-        const avatarHtml = info.profilePic && info.profilePic.startsWith('http')
-          ? `<img src="${info.profilePic}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`
+        
+        // Robust profile pic check (handle empty strings or non-http values)
+        const profilePic = info.profilePic || "";
+        const hasValidPic = profilePic && (profilePic.startsWith('http') || profilePic.startsWith('data:image'));
+        
+        const avatarHtml = hasValidPic
+          ? `<img src="${profilePic}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`
           : `<span>${initial}</span>`;
 
         item.innerHTML = `
-          <div style="width:36px; height:36px; background:#003366; color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.9rem; font-weight:800; flex-shrink:0; overflow:hidden;">${avatarHtml}</div>
+          <div style="width:36px; height:36px; background:#003366; color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.9rem; font-weight:800; flex-shrink:0; overflow:hidden; position:relative;">
+            ${avatarHtml}
+            <span style="position:absolute; bottom:0; right:0; width:10px; height:10px; background:${info.isOnline ? '#10b981' : '#94a3b8'}; border-radius:50%; border:2px solid white;"></span>
+          </div>
           <div style="display:flex; flex-direction:column;">
             <span style="font-weight:700; color:#1e293b;">${displayName}</span>
             <span style="font-size:0.7rem; color:#94a3b8;">${info.isOnline ? 'Online' : 'Offline'}</span>
@@ -1040,6 +1072,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const homePage = document.getElementById('home');
   const loadingPage = document.getElementById('loading');
   const systemViewPage = document.getElementById('system-view');
+  const messagesPage = document.getElementById('messages');
+  const newsFeedPage = document.getElementById('news-feed');
   const systemFrame = document.getElementById('system-frame');
   const sidebar = document.querySelector('.sidebar');
   const navToggle = document.getElementById('nav-toggle');
@@ -1102,7 +1136,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     const page = pageId === 'home'
       ? homePage
-      : (pageId === 'loading' ? loadingPage : (pageId === 'system-view' ? systemViewPage : (pageId === 'database' || pageId === 'messages' ? document.getElementById(pageId) : null)));
+      : (pageId === 'loading' ? loadingPage : (pageId === 'system-view' ? systemViewPage : (pageId === 'database' ? document.getElementById(pageId) : (pageId === 'messages' ? messagesPage : (pageId === 'news-feed' ? newsFeedPage : null)))));
     if (page) page.classList.add('active');
   }
 
@@ -1134,8 +1168,18 @@ document.addEventListener('DOMContentLoaded', () => {
             window.location.hash = 'attendance-scanner';
             return;
           }
-          if (r === 'user' && pageId !== 'messages') {
+          if (r === 'user' && pageId !== 'messages' && pageId !== 'news-feed') {
             window.location.hash = 'messages';
+            return;
+          }
+          // Redirect TV role to home (carousel) if they try to access internal pages
+          if (r === 'tv' && pageId !== 'home') {
+            window.location.hash = 'home';
+            return;
+          }
+          // Uploader restricted to home and news-feed
+          if (r === 'uploader' && pageId !== 'home' && pageId !== 'news-feed') {
+            window.location.hash = 'home';
             return;
           }
         }
@@ -1149,6 +1193,49 @@ document.addEventListener('DOMContentLoaded', () => {
       closeNav();
       if (systemFrame) systemFrame.src = 'about:blank';
       showPage('messages');
+      return;
+    }
+
+    if (pageId === 'news-feed') {
+      setActiveNav(document.querySelector('.nav-item[data-page="news-feed"]'));
+      document.body.classList.remove('system-mode');
+      closeNav();
+      if (systemFrame) systemFrame.src = 'about:blank';
+      showPage('news-feed');
+
+      const nfContainer = document.getElementById('news-feed-posts');
+      if (nfContainer) {
+        let nfRole = 'user';
+        try { const _sd = localStorage.getItem('sas_user_data'); if (_sd) nfRole = JSON.parse(_sd).role; } catch (e) {}
+
+        // Instant render from cache while fetching fresh data
+        if (window.cachedPosts && window.cachedPosts.length > 0) {
+          nfContainer.innerHTML = '';
+          renderPosts(window.cachedPosts, nfContainer, nfRole);
+        } else {
+          nfContainer.innerHTML = '<div class="loading-posts">Loading posts...</div>';
+        }
+
+        // Fresh fetch — direct async IIFE (avoids fetchPosts().then() race condition)
+        (async () => {
+          try {
+            const _r = await fetch(BACKEND_GAS_URL);
+            const _d = await _r.json();
+            if (_d.success && _d.posts && _d.posts.length > 0) {
+              window.cachedPosts = _d.posts;
+              nfContainer.innerHTML = '';
+              renderPosts(_d.posts, nfContainer, nfRole);
+            } else if (!window.cachedPosts || window.cachedPosts.length === 0) {
+              nfContainer.innerHTML = '<div class="loading-posts">No posts available.</div>';
+            }
+          } catch (err) {
+            console.error('[News Feed] Fetch error:', err);
+            if (!window.cachedPosts || window.cachedPosts.length === 0) {
+              nfContainer.innerHTML = '<div class="loading-posts">Error loading posts. Please check your connection.</div>';
+            }
+          }
+        })();
+      }
       return;
     }
 
@@ -3225,8 +3312,9 @@ if (logoutBtn) {
     } else {
       // Build Standard Vertical Card Feed for Admins & Users
       posts.forEach(post => {
+        const isSocialFeed = (container.id === 'news-feed-posts');
         const card = document.createElement('article');
-        card.className = 'post-card';
+        card.className = isSocialFeed ? 'social-post' : 'post-card';
         card.style.position = 'relative';
 
         const urlLower = (post.imageUrl || '').toLowerCase();
@@ -3307,16 +3395,49 @@ if (logoutBtn) {
           schedulingLabel = `<div class="post-scheduled-label">${sText}${eText}</div>`;
         }
 
-        card.innerHTML = `
-          <div class="post-image-container">
-            ${imgHtml}
-          </div>
-          <div class="post-content">
-            <h3 class="post-title">${escapeHtml(post.title)}</h3>
-            <p class="post-desc">${escapeHtml(post.description)}</p>
-            ${schedulingLabel}
-          </div>
-        `;
+        if (isSocialFeed) {
+          const postDate = new Date(post.timestamp || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          const postBgStyle = post.imageUrl ? `--post-bg: url('${post.imageUrl}')` : '';
+          
+          card.innerHTML = `
+            <header class="social-post-header">
+              <div class="social-post-avatar">N</div>
+              <div class="social-post-info">
+                <span class="social-post-author">NBSC Admin</span>
+                <span class="social-post-time">${postDate}</span>
+              </div>
+            </header>
+            <div class="social-post-media" style="${postBgStyle}">
+              ${imgHtml}
+            </div>
+            <div class="social-post-body">
+              <h3 class="social-post-title">${escapeHtml(post.title)}</h3>
+              <p class="social-post-text">${escapeHtml(post.description)}</p>
+              ${schedulingLabel}
+            </div>
+            <footer class="social-post-footer">
+              <button class="social-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+                Like
+              </button>
+              <button class="social-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                Comment
+              </button>
+            </footer>
+          `;
+        } else {
+          card.innerHTML = `
+            <div class="post-image-container">
+              ${imgHtml}
+            </div>
+            <div class="post-content">
+              <h3 class="post-title">${escapeHtml(post.title)}</h3>
+              <p class="post-desc">${escapeHtml(post.description)}</p>
+              ${schedulingLabel}
+            </div>
+          `;
+        }
 
         if (role === 'admin' || role === 'uploader' || role === 'superadmin') {
           const actionArea = document.createElement('div');
