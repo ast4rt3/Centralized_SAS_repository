@@ -119,10 +119,20 @@ async function fetchSpreadsheetUsers() {
     const data = await res.json();
     const usersList = data.users || data.data || [];
     usersList.forEach(u => {
-      const username = typeof u === 'object' ? u.username : u;
+      const userObj = typeof u === 'object' ? u : { username: u };
+      const username = userObj.username;
       if (username && username !== myUsername) {
         if (!contactsMap[username]) {
-          contactsMap[username] = { unread: 0, el: null, history: [] };
+          contactsMap[username] = { 
+            unread: 0, 
+            el: null, 
+            history: [],
+            profilePic: userObj.profilePic || "",
+            displayName: userObj.displayName || username
+          };
+        } else {
+          contactsMap[username].profilePic = userObj.profilePic || "";
+          contactsMap[username].displayName = userObj.displayName || username;
         }
       }
     });
@@ -130,7 +140,18 @@ async function fetchSpreadsheetUsers() {
 }
 window.fetchSpreadsheetUsers = fetchSpreadsheetUsers;
 
-let myUsername = "Unknown";
+// Resolve myUsername IMMEDIATELY from session storage so it is always available
+// before any messaging function runs, regardless of initialization order.
+let myUsername = (() => {
+  try {
+    const raw = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.username) return parsed.username;
+    }
+  } catch(e) {}
+  return 'Unknown';
+})();
 
 function initUserMessaging() {
   if (!userDb || userChatInitialized) return;
@@ -339,10 +360,20 @@ function initUserMessaging() {
        ? '<span style="display:inline-block; width:8px; height:8px; background:#16a34a; border-radius:50%; margin-right:8px; box-shadow:0 0 4px #16a34a;"></span>'
        : '<span style="display:inline-block; width:8px; height:8px; background:#94a3b8; border-radius:50%; margin-right:8px;"></span>';
     
+    const user = contactsMap[username];
+    const displayName = user.displayName || username;
+    const initial = displayName.charAt(0).toUpperCase();
+    const profilePicHtml = user.profilePic && user.profilePic.startsWith('http')
+      ? `<img src="${user.profilePic}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`
+      : `<span>${initial}</span>`;
+    
     div.innerHTML = `
-      <div style="display:flex; align-items:center;">
+      <div style="display:flex; align-items:center; gap:8px;">
+         <div style="width:32px; height:32px; border-radius:50%; background:#003366; color:white; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.9rem; flex-shrink:0; overflow:hidden;">
+           ${profilePicHtml}
+         </div>
          ${statusIndicator}
-         <div class="fb-chat-contact-name">${escapeHtml(username)}</div>
+         <div class="fb-chat-contact-name">${escapeHtml(displayName)}</div>
       </div>
       ${unread > 0 ? `<div class="fb-chat-contact-unread">${unread}</div>` : ''}
     `;
@@ -525,22 +556,28 @@ function initFullMessenger() {
       return;
     }
 
-    sorted.forEach(user => {
+sorted.forEach(user => {
       const info = contactsMap[user];
       const card = document.createElement('div');
       card.className = `contact-card ${activeUser === user ? 'active' : ''}`;
       card.onclick = () => selectContact(user);
+
+      const displayName = info.displayName || user;
+      const initial = displayName.charAt(0).toUpperCase();
+      const profilePicHtml = info.profilePic && info.profilePic.startsWith('http')
+        ? `<img src="${info.profilePic}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`
+        : `<span>${initial}</span>`;
 
       const lastMsg = info.history && info.history.length > 0 ? info.history[info.history.length-1].text : 'No messages yet';
       const unread = info.unread || 0;
 
       card.innerHTML = `
         <div class="contact-avatar">
-          ${user.charAt(0).toUpperCase()}
+          ${profilePicHtml}
           <span class="contact-status-dot ${info.isOnline ? 'online' : ''}"></span>
         </div>
         <div class="contact-info">
-          <span class="contact-name">${user}</span>
+          <span class="contact-name">${displayName}</span>
           <span class="contact-preview">${lastMsg}</span>
         </div>
         ${unread > 0 ? `<span class="unread-count">${unread}</span>` : ''}
@@ -555,8 +592,15 @@ function initFullMessenger() {
     if(emptyView) emptyView.style.display = 'none';
     if(chatView) chatView.classList.remove('hidden');
     
-    activeName.textContent = user;
-    activeAvatar.textContent = user.charAt(0).toUpperCase();
+    const contact = contactsMap[user];
+    const displayName = contact.displayName || user;
+    const initial = displayName.charAt(0).toUpperCase();
+    const profilePicHtml = contact.profilePic && contact.profilePic.startsWith('http')
+      ? `<img src="${contact.profilePic}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`
+      : `<span>${initial}</span>`;
+    
+    activeName.textContent = displayName;
+    activeAvatar.innerHTML = profilePicHtml;
     
     const isOnline = contactsMap[user].isOnline;
     activeStatus.textContent = isOnline ? 'Active Now' : 'Offline';
@@ -591,6 +635,18 @@ function initFullMessenger() {
     e.preventDefault();
     const text = input.value.trim();
     if (text && activeUser) {
+      // Re-read identity at send time as a safety net in case
+      // the module-level IIFE ran before the session cookie was set.
+      if (myUsername === 'Unknown') {
+        try {
+          const raw = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
+          if (raw) { const p = JSON.parse(raw); if (p && p.username) myUsername = p.username; }
+        } catch(e) {}
+      }
+      if (myUsername === 'Unknown') {
+        console.warn('[Messenger] Cannot send: user identity not yet resolved. Please wait.');
+        return;
+      }
       const baseRef = ref(userDb, 'user_messages');
       push(baseRef, {
         sender: myUsername,
@@ -1412,7 +1468,16 @@ document.addEventListener('DOMContentLoaded', () => {
 function showAppUI(userObj) {
   if (loginOverlay) loginOverlay.classList.add('hidden');
   
-  if (userObj && userObj.role) { 
+  // Apply theme immediately from localStorage or user data
+  const theme = userObj?.theme || localStorage.getItem('sas_theme') || 'light';
+  if (theme === 'dark') {
+    document.body.classList.add('dark-theme');
+  } else {
+    document.body.classList.remove('dark-theme');
+  }
+  localStorage.setItem('sas_theme', theme);
+  
+  if (userObj && userObj.role) {
     const role = userObj.role.toLowerCase();
     document.body.className = document.body.className.replace(/role-\S+/g, '') + ' role-' + role; 
     
@@ -1528,7 +1593,14 @@ function showAppUI(userObj) {
           if (responseData.success) {
             // Note: Storing password in localStorage is necessary here to re-authenticate 
             // the 'updateTvSettings' payload against Google Apps Script without a JWT token.
-            const sessionObj = { username: responseData.username, role: responseData.role, password: pass };
+            const sessionObj = { 
+              username: responseData.username, 
+              role: responseData.role, 
+              password: pass,
+              displayName: responseData.displayName || responseData.username,
+              profilePic: responseData.profilePic || "",
+              theme: responseData.theme || "light"
+            };
             localStorage.setItem('sas_user_data', JSON.stringify(sessionObj));
 
             showAppUI(sessionObj);
@@ -1802,6 +1874,30 @@ function showAppUI(userObj) {
           userMenu.classList.remove('is-open');
         }
       });
+
+      // Add Settings button to dropdown
+      const settingsBtn = document.createElement('button');
+      settingsBtn.className = 'user-settings-btn';
+      settingsBtn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        Settings
+      `;
+      settingsBtn.style.cssText = 'width:100%; padding:10px 16px; background:none; border:none; display:flex; align-items:center; gap:10px; cursor:pointer; font-size:0.9rem; color:#1e293b; text-align:left;';
+      settingsBtn.onmouseover = () => settingsBtn.style.background = '#f1f5f9';
+      settingsBtn.onmouseout = () => settingsBtn.style.background = 'transparent';
+      settingsBtn.onclick = () => { userMenu.classList.remove('is-open'); openSettingsModal(); };
+      
+      const divider = document.createElement('div');
+      divider.className = 'user-menu-divider';
+      
+      // Insert before logout button
+      if (logoutBtn && logoutBtn.parentNode) {
+        logoutBtn.parentNode.insertBefore(settingsBtn, logoutBtn);
+        logoutBtn.parentNode.insertBefore(divider, logoutBtn);
+      }
     }
 
     
@@ -3928,4 +4024,306 @@ if (logoutBtn) {
       initDatabaseManagement();
     }
   });
+
+  // --- Settings Modal Functions ---
+  window.openSettingsModal = function() {
+    const modal = document.getElementById('settings-modal');
+    if (!modal) return;
+    
+    const sessionData = localStorage.getItem('sas_user_data');
+    if (!sessionData) return;
+    
+    const user = JSON.parse(sessionData);
+    
+    // Populate profile tab
+    const profilePicPreview = document.getElementById('settings-profile-pic-preview');
+    const profilePicInitial = document.getElementById('settings-profile-pic-initial');
+    const displayNameInput = document.getElementById('settings-display-name');
+    const previewAvatar = document.getElementById('settings-preview-avatar');
+    const previewAvatarInitial = document.getElementById('settings-preview-avatar-initial');
+    const previewName = document.getElementById('settings-preview-name');
+    const usernameInput = document.getElementById('settings-username');
+    
+    const displayName = user.displayName || user.username;
+    const initial = (user.profilePic && user.profilePic.startsWith('http')) ? '' : displayName.charAt(0).toUpperCase();
+    
+    if (user.profilePic && user.profilePic.startsWith('http')) {
+      profilePicPreview.innerHTML = `<img src="${user.profilePic}" alt="Profile">`;
+      previewAvatar.innerHTML = `<img src="${user.profilePic}" alt="Profile">`;
+    } else {
+      profilePicPreview.innerHTML = `<span>${initial}</span>`;
+      previewAvatar.innerHTML = `<span>${initial}</span>`;
+    }
+    
+    displayNameInput.value = displayName;
+    previewName.textContent = displayName;
+    usernameInput.value = user.username;
+    
+    // Set theme selection
+    const theme = user.theme || 'light';
+    document.querySelectorAll('.settings-theme-option').forEach(opt => {
+      opt.classList.toggle('selected', opt.getAttribute('data-theme') === theme);
+    });
+    
+    // Clear password fields
+    document.getElementById('settings-current-password').value = '';
+    document.getElementById('settings-new-password').value = '';
+    document.getElementById('settings-confirm-password').value = '';
+    
+    // Hide messages
+    document.getElementById('settings-error').classList.add('hidden');
+    document.getElementById('settings-success').classList.add('hidden');
+    
+    modal.classList.remove('hidden');
+  };
+
+  // Close settings modal
+  document.addEventListener('click', (e) => {
+    if (e.target.id === 'settings-close-btn' || e.target.closest('#settings-close-btn')) {
+      document.getElementById('settings-modal').classList.add('hidden');
+    }
+  });
+
+  // Tab switching
+  document.querySelectorAll('.settings-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const tabName = tab.getAttribute('data-tab');
+      
+      document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      
+      document.querySelectorAll('.settings-tab-content').forEach(content => content.classList.add('hidden'));
+      document.getElementById(`settings-${tabName}`).classList.remove('hidden');
+    });
+  });
+
+  // Profile picture upload
+  document.getElementById('settings-profile-pic-btn')?.addEventListener('click', () => {
+    document.getElementById('settings-profile-pic-input').click();
+  });
+
+  document.getElementById('settings-profile-pic-input')?.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // Preview locally immediately
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const preview = document.getElementById('settings-profile-pic-preview');
+      const previewAvatar = document.getElementById('settings-preview-avatar');
+      preview.innerHTML = `<img src="${evt.target.result}" alt="Preview">`;
+      previewAvatar.innerHTML = `<img src="${evt.target.result}" alt="Preview">`;
+    };
+    reader.readAsDataURL(file);
+    
+    // Upload to backend
+    const sessionData = JSON.parse(localStorage.getItem('sas_user_data'));
+    const base64 = await fileToBase64(file);
+    
+    try {
+      const formData = new URLSearchParams();
+      formData.append('action', 'uploadProfilePicture');
+      formData.append('username', sessionData.username);
+      formData.append('password', sessionData.password);
+      formData.append('fileData', base64);
+      formData.append('fileName', file.name);
+      
+      const res = await fetch(BACKEND_GAS_URL, { method: 'POST', body: formData });
+      const data = await res.json();
+      
+      if (data.success) {
+        // Update local storage
+        sessionData.profilePic = data.profilePic;
+        localStorage.setItem('sas_user_data', JSON.stringify(sessionData));
+        
+        // Update current user in contactsMap if exists
+        if (contactsMap[sessionData.username]) {
+          contactsMap[sessionData.username].profilePic = data.profilePic;
+        }
+        
+        // Refresh user list and messenger UI
+        fetchSpreadsheetUsers();
+        if (typeof renderFullContacts === 'function') renderFullContacts();
+        if (typeof initFullMessenger === 'function') {
+          // Refresh the active avatar in chat if currently chatting
+          const activeAvatar = document.getElementById('active-avatar');
+          if (activeAvatar) {
+            activeAvatar.innerHTML = `<img src="${data.profilePic}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+          }
+        }
+        
+        // Also refresh the user's own preview in settings modal
+        const settingsPreview = document.getElementById('settings-profile-pic-preview');
+        if (settingsPreview) settingsPreview.innerHTML = `<img src="${data.profilePic}" alt="Profile">`;
+        const settingsAvatar = document.getElementById('settings-preview-avatar');
+        if (settingsAvatar) settingsAvatar.innerHTML = `<img src="${data.profilePic}" alt="Profile">`;
+        
+        showToast('Profile picture updated!', 'success');
+      } else {
+        showToast(data.message || 'Upload failed', 'error');
+      }
+    } catch (err) {
+      showToast('Upload error: ' + err.message, 'error');
+    }
+  });
+
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Save profile (display name)
+  document.getElementById('settings-save-profile')?.addEventListener('click', async () => {
+    const displayName = document.getElementById('settings-display-name').value.trim();
+    if (!displayName) {
+      showSettingsError('Please enter a display name');
+      return;
+    }
+    
+    const sessionData = JSON.parse(localStorage.getItem('sas_user_data'));
+    
+    try {
+      const formData = new URLSearchParams();
+      formData.append('action', 'updateUserSettings');
+      formData.append('username', sessionData.username);
+      formData.append('password', sessionData.password);
+      formData.append('displayName', displayName);
+      
+      const res = await fetch(BACKEND_GAS_URL, { method: 'POST', body: formData });
+      const data = await res.json();
+      
+      if (data.success) {
+        sessionData.displayName = data.user.displayName;
+        localStorage.setItem('sas_user_data', JSON.stringify(sessionData));
+        
+        const displayNameEl = document.getElementById('user-display-name');
+        const dropNameEl = document.getElementById('user-dropdown-name');
+        if (displayNameEl) displayNameEl.textContent = data.user.displayName;
+        if (dropNameEl) dropNameEl.textContent = data.user.displayName;
+        
+        document.getElementById('settings-preview-name').textContent = data.user.displayName;
+        showSettingsSuccess('Profile updated successfully!');
+      } else {
+        showSettingsError(data.message || 'Failed to update profile');
+      }
+    } catch (err) {
+      showSettingsError('Error: ' + err.message);
+    }
+  });
+
+  // Change password
+  document.getElementById('settings-save-password')?.addEventListener('click', async () => {
+    const currentPass = document.getElementById('settings-current-password').value;
+    const newPass = document.getElementById('settings-new-password').value;
+    const confirmPass = document.getElementById('settings-confirm-password').value;
+    
+    if (!currentPass || !newPass || !confirmPass) {
+      showSettingsError('Please fill in all password fields');
+      return;
+    }
+    
+    if (newPass !== confirmPass) {
+      showSettingsError('New passwords do not match');
+      return;
+    }
+    
+    if (newPass.length < 4) {
+      showSettingsError('Password must be at least 4 characters');
+      return;
+    }
+    
+    const sessionData = JSON.parse(localStorage.getItem('sas_user_data'));
+    
+    try {
+      const formData = new URLSearchParams();
+      formData.append('action', 'updateUserSettings');
+      formData.append('username', sessionData.username);
+      formData.append('password', currentPass);
+      formData.append('newPassword', newPass);
+      
+      const res = await fetch(BACKEND_GAS_URL, { method: 'POST', body: formData });
+      const data = await res.json();
+      
+      if (data.success) {
+        sessionData.password = newPass;
+        localStorage.setItem('sas_user_data', JSON.stringify(sessionData));
+        
+        document.getElementById('settings-current-password').value = '';
+        document.getElementById('settings-new-password').value = '';
+        document.getElementById('settings-confirm-password').value = '';
+        
+        showSettingsSuccess('Password changed successfully!');
+      } else {
+        showSettingsError(data.message || 'Failed to change password');
+      }
+    } catch (err) {
+      showSettingsError('Error: ' + err.message);
+    }
+  });
+
+  // Theme toggle
+  document.querySelectorAll('.settings-theme-option').forEach(opt => {
+    opt.addEventListener('click', async () => {
+      const theme = opt.getAttribute('data-theme');
+      
+      document.querySelectorAll('.settings-theme-option').forEach(o => o.classList.remove('selected'));
+      opt.classList.add('selected');
+      
+      // Apply theme immediately
+      if (theme === 'dark') {
+        document.body.classList.add('dark-theme');
+      } else {
+        document.body.classList.remove('dark-theme');
+      }
+      localStorage.setItem('sas_theme', theme);
+      
+      // Save to backend
+      const sessionData = JSON.parse(localStorage.getItem('sas_user_data'));
+      
+      try {
+        const formData = new URLSearchParams();
+        formData.append('action', 'updateUserSettings');
+        formData.append('username', sessionData.username);
+        formData.append('password', sessionData.password);
+        formData.append('theme', theme);
+        
+        const res = await fetch(BACKEND_GAS_URL, { method: 'POST', body: formData });
+        const data = await res.json();
+        
+        if (data.success) {
+          sessionData.theme = theme;
+          localStorage.setItem('sas_user_data', JSON.stringify(sessionData));
+          showToast('Theme updated!', 'success');
+        }
+      } catch (err) {
+        console.error('Theme save error:', err);
+      }
+    });
+  });
+
+  function showSettingsError(msg) {
+    const el = document.getElementById('settings-error');
+    el.textContent = msg;
+    el.classList.remove('hidden');
+    document.getElementById('settings-success').classList.add('hidden');
+  }
+
+  function showSettingsSuccess(msg) {
+    const el = document.getElementById('settings-success');
+    el.textContent = msg;
+    el.classList.remove('hidden');
+    document.getElementById('settings-error').classList.add('hidden');
+  }
+
+  // Initialize theme on page load
+  (function() {
+    const savedTheme = localStorage.getItem('sas_theme') || 'light';
+    if (savedTheme === 'dark') {
+      document.body.classList.add('dark-theme');
+    }
+  })();
 });

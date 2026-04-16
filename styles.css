@@ -3464,3 +3464,265 @@ body.role-user #admin-exit-tv {
     left: 0 !important;
   }
 }
+
+/* --- DARK THEME --- */
+body.dark-theme {
+  --bg-main: #0f172a;
+  --bg-card: #1e293b;
+  --border: rgba(255, 255, 255, 0.1);
+  --text: #f1f5f9;
+  --text-muted: #94a3b8;
+  --bg-sidebar: linear-gradient(180deg, #0f172a 0%, #020617 100%);
+}
+
+body.dark-theme .sidebar {
+  background: var(--bg-sidebar);
+}
+
+body.dark-theme .sidebar-header {
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom-color: var(--border);
+}
+
+body.dark-theme .nav-item {
+  color: #cbd5e1;
+}
+
+body.dark-theme .nav-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme .nav-item.active {
+  background: rgba(240, 173, 78, 0.2);
+  color: var(--nbsc-gold);
+}
+
+body.dark-theme .content {
+  background: var(--bg-main);
+}
+
+body.dark-theme .home-header {
+  background: rgba(30, 41, 59, 0.95);
+  border-bottom-color: var(--border);
+}
+
+body.dark-theme .home-header-title,
+body.dark-theme .home-header-subtitle {
+  color: #f1f5f9;
+}
+
+body.dark-theme .tv-clock {
+  color: #f1f5f9;
+}
+
+body.dark-theme .user-menu-btn {
+  color: #f1f5f9;
+}
+
+body.dark-theme .user-menu-dropdown {
+  background: #1e293b;
+  border-color: var(--border);
+}
+
+body.dark-theme .user-menu-info {
+  color: #94a3b8;
+}
+
+body.dark-theme .posts-container .post-card {
+  background: #1e293b;
+  border-color: var(--border);
+}
+
+body.dark-theme .posts-container .post-title {
+  color: #f1f5f9;
+}
+
+body.dark-theme .posts-container .post-desc {
+  color: #cbd5e1;
+}
+
+body.dark-theme .add-post-btn {
+  background: #003366;
+  color: white;
+}
+
+body.dark-theme .login-overlay {
+  background: #0f172a;
+}
+
+body.dark-theme .login-card {
+  background: #1e293b;
+}
+
+body.dark-theme .login-title {
+  color: #f1f5f9;
+}
+
+body.dark-theme .login-input-group label {
+  color: #cbd5e1;
+}
+
+body.dark-theme .login-input-group input {
+  background: #334155;
+  border-color: var(--border);
+  color: #f1f5f9;
+}
+
+body.dark-theme .modal-card {
+  background: #1e293b;
+}
+
+body.dark-theme .modal-header,
+body.dark-theme .modal-footer {
+  border-color: var(--border);
+}
+
+body.dark-theme .modal-title {
+  color: #f1f5f9;
+}
+
+body.dark-theme .input-group label {
+  color: #cbd5e1;
+}
+
+body.dark-theme .input-group input,
+body.dark-theme .input-group textarea {
+  background: #334155;
+  border-color: var(--border);
+  color: #f1f5f9;
+}
+
+body.dark-theme .page-header h2 {
+  color: #f1f5f9;
+}
+
+body.dark-theme .messenger-container {
+  background: #1e293b !important;
+}
+
+body.dark-theme .messenger-sidebar {
+  background: #0f172a !important;
+  border-right-color: var(--border) !important;
+}
+
+body.dark-theme .messenger-sidebar-header {
+  background: #1e293b !important;
+  border-bottom-color: var(--border) !important;
+}
+
+body.dark-theme .messenger-sidebar-header h3 {
+  color: #f1f5f9 !important;
+}
+
+body.dark-theme .contact-card {
+  border-left-color: transparent !important;
+}
+
+body.dark-theme .contact-card:hover {
+  background: #334155 !important;
+}
+
+body.dark-theme .contact-card.active {
+  background: #334155 !important;
+  border-left-color: #f0ad4e !important;
+}
+
+body.dark-theme .contact-name {
+  color: #f1f5f9 !important;
+}
+
+body.dark-theme .contact-preview {
+  color: #94a3b8 !important;
+}
+
+body.dark-theme .messenger-main {
+  background: #1e293b !important;
+}
+
+body.dark-theme .messenger-chat-header {
+  background: #0f172a !important;
+  border-bottom-color: var(--border) !important;
+}
+
+body.dark-theme .active-user-info h4 {
+  color: #f1f5f9 !important;
+}
+
+body.dark-theme .messenger-messages {
+  background: #0f172a !important;
+}
+
+body.dark-theme .msg-bubble-me {
+  background: #003366 !important;
+}
+
+body.dark-theme .msg-bubble-other {
+  background: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+body.dark-theme .messenger-form {
+  background: #0f172a !important;
+  border-top-color: var(--border) !important;
+}
+
+body.dark-theme .messenger-form input {
+  background: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+body.dark-theme .settings-modal-card {
+  background: #1e293b;
+}
+
+body.dark-theme .settings-modal-header {
+  border-bottom-color: var(--border);
+}
+
+body.dark-theme .settings-modal-header h3 {
+  color: #f1f5f9;
+}
+
+body.dark-theme .settings-tabs {
+  border-bottom-color: var(--border);
+}
+
+body.dark-theme .settings-tab {
+  color: #94a3b8;
+}
+
+body.dark-theme .settings-tab.active {
+  color: #f0ad4e;
+  border-bottom-color: #f0ad4e;
+}
+
+body.dark-theme .settings-theme-option {
+  border-color: var(--border);
+}
+
+body.dark-theme .settings-theme-option.selected {
+  border-color: #f0ad4e;
+  background: rgba(240, 173, 78, 0.1);
+}
+
+body.dark-theme .settings-theme-option span {
+  color: #94a3b8;
+}
+
+body.dark-theme .settings-theme-option.selected span {
+  color: #f0ad4e;
+}
+
+body.dark-theme .settings-preview-chat {
+  background: #334155;
+  border-color: var(--border);
+}
+
+body.dark-theme .settings-preview-name {
+  color: #f1f5f9 !important;
+}
+
+body.dark-theme .login-success {
+  background: #064e3b;
+  color: #6ee7b7;
+}
