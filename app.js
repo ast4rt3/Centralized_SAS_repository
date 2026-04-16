@@ -1492,12 +1492,12 @@ function showAppUI(userObj) {
   if (loginForm) {
     loginForm.addEventListener('submit', async function (e) {
       e.preventDefault();
-      const user = document.getElementById('login-username').value;
-      const pass = document.getElementById('login-password').value;
+      const user = document.getElementById('login-username').value.trim();
+      const pass = document.getElementById('login-password').value.trim();
       const btn = loginForm.querySelector('.login-btn');
       const origBtnText = btn.textContent;
 
-      if (user.trim() !== '' && pass.trim() !== '') {
+      if (user !== '' && pass !== '') {
         btn.textContent = 'Authenticating...';
         btn.disabled = true;
         loginError.classList.add('hidden');
@@ -2635,23 +2635,18 @@ if (logoutBtn) {
           const editTimestamp = form.getAttribute('data-edit-timestamp');
           const isEdit = !!editTimestamp;
 
-          const confirmPass = await showConfirm(
+          const confirmed = await showConfirm(
             isEdit ? "Confirm Edit" : "Confirm Post",
-            `Please enter your password to ${isEdit ? 'update' : 'publish'} this post:`,
-            true,
+            `Are you sure you want to ${isEdit ? 'update' : 'publish'} this post?`,
+            false,
             isEdit ? 'info' : 'success'
           );
 
-          if (!confirmPass) return;
+          if (!confirmed) return;
           zzProgress.start();
 
-          // 1. Verify credentials
-          const loginCheck = await fetch(BACKEND_GAS_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action: "login", username: userObj.username, password: confirmPass })
-          });
-          const loginRes = await loginCheck.json();
-          if (!loginRes.success) throw new Error("Invalid credentials.");
+          // Use stored credentials from session
+          const userPassword = userObj.password;
 
           let cloudinaryUrl = imgUrl;
           let cloudinaryPublicId = "";
@@ -2680,7 +2675,7 @@ if (logoutBtn) {
           const payload = {
             action: isEdit ? "editPost" : "addPost",
             username: userObj.username,
-            password: confirmPass,
+            password: userPassword,
             title, description: desc,
             imageUrl: cloudinaryUrl,
             cloudinaryPublicId,
@@ -3311,8 +3306,8 @@ if (logoutBtn) {
           deleteBtn.className = 'secondary-btn delete-btn';
           deleteBtn.textContent = 'Delete';
           deleteBtn.onclick = async () => {
-            const confirmPass = await showConfirm("Delete Post", "Are you sure you want to delete this specific post?", true, 'danger');
-            if (!confirmPass) return;
+            const confirmDelete = await showConfirm("Delete Post", "Are you sure you want to delete this specific post?", false, 'danger');
+            if (!confirmDelete) return;
 
             const sessionData = localStorage.getItem('sas_user_data');
             if (!sessionData) return;
@@ -3326,7 +3321,7 @@ if (logoutBtn) {
               const payload = {
                 action: "deletePost",
                 username: userObj.username,
-                password: confirmPass,
+                password: userObj.password,
                 timestamp: post.timestamp
               };
 
@@ -3362,8 +3357,8 @@ if (logoutBtn) {
             const userObj = JSON.parse(sessionData);
 
             const msg = isHidden ? 'Are you sure you want to show this on TV?' : 'Are you sure you want to hide this from TV?';
-            const confirmPass = await showConfirm("TV Visibility", msg, true, 'warning');
-            if (!confirmPass) return;
+            const confirmToggle = await showConfirm("TV Visibility", msg, false, 'warning');
+            if (!confirmToggle) return;
 
             toggleTvBtn.textContent = "Updating...";
             toggleTvBtn.disabled = true;
@@ -3372,7 +3367,7 @@ if (logoutBtn) {
               const payload = {
                 action: "toggleTvVisible",
                 username: userObj.username,
-                password: confirmPass,
+                password: userObj.password,
                 timestamp: post.timestamp
               };
 
