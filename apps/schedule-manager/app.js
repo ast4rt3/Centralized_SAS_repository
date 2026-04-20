@@ -88,14 +88,6 @@ async function loadSchedules() {
     console.log('✅ Data received, rows:', data?.length);
     renderSchedules(data);
 }
-        showError(msg);
-        els.grid.innerHTML = `<div style="text-align:center;padding:40px;color:red;">${msg.replace(/\n/g, '<br>')}</div>`;
-        return;
-    }
-
-    console.log('✅ Data received, rows:', data?.length);
-    renderSchedules(data);
-}
 
 function renderSchedules(schedules) {
     els.grid.innerHTML = '';

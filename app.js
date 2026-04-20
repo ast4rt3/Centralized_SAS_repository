@@ -3166,7 +3166,7 @@ if (logoutBtn) {
               </div>
             `;
           } else {
-            const fbPlaceholder = 'https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png';
+            const fbPlaceholder = 'assets/sas_logo_real.png';
             imgHtml = `
               <div style="position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden;">
                  ${bgHtml}
@@ -3175,7 +3175,7 @@ if (logoutBtn) {
             `;
           }
         } else {
-          imgHtml = `<div class="home-news-image" style="background:var(--nbsc-dark); display:flex; flex-direction:column; align-items:center; justify-content:center; color:white; padding: 20px; text-align: center;"><img src="https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png" style="height:60px; margin-bottom:10px; opacity:0.3"></div>`;
+          imgHtml = `<div class="home-news-image" style="background:var(--nbsc-dark); display:flex; flex-direction:column; align-items:center; justify-content:center; color:white; padding: 20px; text-align: center;"><img src="assets/sas_logo_real.png" style="height:60px; margin-bottom:10px; opacity:0.3"></div>`;
         }
 
         let liveBadgeHtml = '';
@@ -3298,7 +3298,7 @@ if (logoutBtn) {
           } else if (urlLower.includes('drive.google.com/file/d/') && urlLower.includes('/preview')) {
             imgHtml = `<iframe src="${post.imageUrl}" class="post-image" style="border: none; ${styleStr}"></iframe>`;
           } else {
-            const fallbackSquare = 'https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png';
+            const fallbackSquare = 'assets/sas_logo_real.png';
             imgHtml = `<img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="post-image" style="${styleStr}" loading="lazy" onerror="this.onerror=null; this.src='${fallbackSquare}'; this.style.objectFit='contain'; this.style.opacity='0.2';">`;
           }
           

@@ -1,4 +1,4 @@
-﻿/* SAS Portal - Layout & theme */
+/* SAS Portal - Layout & theme */
 :root {
   /* Scrollbar Colors */
   --sb-track: transparent;
@@ -429,11 +429,11 @@ body.fullscreen-active .home-header {
 .home-header-brand {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
 }
 
 .home-header-logo {
-  width: 54px;
+  width: 76px;
   height: auto;
   filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));
 }
