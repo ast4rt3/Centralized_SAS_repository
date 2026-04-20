@@ -54,22 +54,27 @@ self.addEventListener('fetch', event => {
   // Only handle GET requests
   if (req.method !== 'GET') return;
 
-  // ---- Strategy: NETWORK FIRST → cache fallback ----
-  // Used for: Configuration files (always get latest)
-  const configFiles = ['env.js', 'manifest.json', 'version.json'];
-  if (configFiles.some(f => url.pathname.endsWith(f))) {
-    event.respondWith(
-      fetch(req)
-        .then(res => {
-          if (!res || !res.ok) return res;
-          const clone = res.clone();
-          caches.open(CACHE_VERSION).then(cache => cache.put(req, clone));
-          return res;
-        })
-        .catch(() => caches.match(req).then(cached => cached || new Response('', { status: 404, statusText: 'Not Found' })))
-    );
-    return;
-  }
+   // ---- Strategy: NETWORK FIRST → cache fallback ----
+   // Used for: Configuration files (always get latest)
+   const configFiles = ['env.js', 'manifest.json', 'version.json'];
+   // EXCLUDE: App files — always fetch fresh
+   if (url.pathname.startsWith('/apps/')) {
+     event.respondWith(fetch(req));
+     return;
+   }
+   if (configFiles.some(f => url.pathname.endsWith(f))) {
+     event.respondWith(
+       fetch(req)
+         .then(res => {
+           if (!res || !res.ok) return res;
+           const clone = res.clone();
+           caches.open(CACHE_VERSION).then(cache => cache.put(req, clone));
+           return res;
+         })
+         .catch(() => caches.match(req).then(cached => cached || new Response('', { status: 404, statusText: 'Not Found' })))
+     );
+     return;
+   }
 
   // ---- Skip non-cacheable YouTube/Google API resources ----
   // YouTube video content itself can't be cached (CORS), but
@@ -132,6 +137,13 @@ self.addEventListener('fetch', event => {
 
   // ---- Strategy: CACHE FIRST → network fallback ----
   // Used for: app shell (HTML, CSS, JS)
+  // EXCLUDE: /apps/schedule-manager — handled separately (no caching)
+  if (url.origin === self.location.origin && url.pathname.startsWith('/apps/schedule-manager/')) {
+    // Bypass cache entirely for Schedule Manager — always fetch fresh
+    event.respondWith(fetch(req));
+    return;
+  }
+
   event.respondWith(
     caches.match(req).then(cached => {
       if (cached) return cached;

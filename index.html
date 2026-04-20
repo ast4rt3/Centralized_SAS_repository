@@ -19,22 +19,18 @@
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css?v=12.2">
   <script>
+    // TEMPORARILY DISABLED: Service Worker causing caching issues for new apps
     // Automatically register Service Worker for offline caching
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./serviceWorker.js')
-          .then(reg => {
-            console.log('SW registered:', reg.scope);
-            // Check for updates manually on registration
-            reg.update();
-          })
-          .catch(err => console.warn('SW registration failed:', err));
-      });
-
-      // Reload page when new service worker takes over (skipWaiting was called)
-      let refreshing = false;
-      // controllerchange reload disabled to prevent loops
-    }
+    // if ('serviceWorker' in navigator) {
+    //   window.addEventListener('load', () => {
+    //     navigator.serviceWorker.register('./serviceWorker.js')
+    //       .then(reg => {
+    //         console.log('SW registered:', reg.scope);
+    //         reg.update();
+    //       })
+    //       .catch(err => console.warn('SW registration failed:', err));
+    //   });
+    // }
   </script>
 
 

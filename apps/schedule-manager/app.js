@@ -10,90 +10,91 @@ const els = {
 async function init() {
     console.log("🚀 Initializing Schedule Manager...");
     
-    // ── Config check ──
-    if (!window.ENV || !window.ENV.SUPABASE_URL || !window.ENV.SUPABASE_ANON_KEY) {
-        alert("Configuration Error: Supabase credentials missing in env.js.\n\nCheck that ENV.SUPABASE_URL and ENV.SUPABASE_ANON_KEY are defined.");
-        console.error("❌ Missing ENV variables", window.ENV);
-        els.loading.classList.add('hidden');
+    // Guard: ENV
+    if (!window.ENV?.SUPABASE_URL || !window.ENV?.SUPABASE_ANON_KEY) {
+        console.error("❌ Missing Supabase credentials");
+        showError("Supabase credentials missing in env.js");
         return;
     }
     
-    // ── Library check ──
-    if (typeof window.supabase === 'undefined') {
-        alert("Error: Supabase JS library not loaded.\n\nCheck your internet connection and that https://unpkg.com/@supabase/supabase-js@2 is accessible.");
-        console.error("❌ window.supabase is undefined");
-        els.loading.classList.add('hidden');
+    // Guard: library
+    if (!window.supabase) {
+        console.error("❌ Supabase library not loaded");
+        showError("Supabase library not loaded — check internet connection");
         return;
     }
     
-    // ── Create client ──
+    // Create client
     try {
         supabaseClient = window.supabase.createClient(window.ENV.SUPABASE_URL, window.ENV.SUPABASE_ANON_KEY);
-        console.log("✅ Supabase client created");
+        console.log("✅ Supabase client ready");
     } catch (e) {
-        alert("Failed to create Supabase client: " + e.message);
-        console.error("❌ Supabase init error:", e);
-        els.loading.classList.add('hidden');
+        console.error("❌ Client creation failed:", e);
+        showError("Failed to create Supabase client:\n" + e.message);
         return;
     }
-
-    // ── UI setup ──
+    
+    // UI setup
     document.getElementById('schedDate').valueAsDate = new Date();
     els.form.addEventListener('submit', handleFormSubmit);
     
-    // ── Load data with timeout safeguard ──
-    const timeoutPromise = new Promise((resolve) => {
-        setTimeout(() => {
-            console.warn("⚠️ loadSchedules timeout — hiding loading overlay");
-            els.loading.classList.add('hidden');
-            resolve('timeout');
-        }, 10000);
-    });
-    
+    // Load schedules
     try {
-        const result = await Promise.race([loadSchedules(), timeoutPromise]);
-        if (result !== 'timeout') {
-            console.log("✅ Schedules loaded successfully");
-        }
+        await loadSchedules();
+        console.log("✅ Schedules loaded");
     } catch (e) {
-        console.error("❌ init error:", e);
-        // Error alert already shown by loadSchedules()
-        els.loading.classList.add('hidden');
+        console.error("❌ loadSchedules failed:", e);
     }
     
-    console.log("✅ Schedule Manager ready");
+    els.loading.classList.add('hidden');
+    console.log("✅ Init complete");
+}
+
+function showError(msg) {
+    alert(msg);
+    els.loading.classList.add('hidden');
 }
 
 async function loadSchedules() {
     console.log("📡 Fetching schedules...");
-    try {
-        const { data, error } = await supabaseClient
-            .from('sas_schedules')
-            .select('*')
-            .order('date', { ascending: false })
-            .order('start_time', { ascending: false });
+    const { data, error, status, statusText } = await supabaseClient
+        .from('sas_schedules')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-        if (error) {
-            console.error("❌ Supabase Error:", error);
-            
-            let errMsg = "Failed to load schedules.\n";
-            if (error.code === '42P01') {
-                errMsg += "Table 'sas_schedules' does not exist.\n\nRun the SQL migration first!";
-            } else if (error.code === '42501') {
-                errMsg += "Permission denied (RLS?).\n\nCheck that RLS is disabled or policies set.";
-            } else {
-                errMsg += "Code: " + (error.code || 'unknown') + "\n" + error.message;
-            }
-            errMsg += "\n\nSee browser console (F12) for details.";
-            alert(errMsg);
-            return; // Exit without throwing; UI already hidden by init timeout
+    console.log('📊 Query raw response:', { 
+        rowCount: data?.length, 
+        error: error?.message, 
+        status, 
+        statusText,
+        firstRow: data?.[0] 
+    });
+
+    if (error) {
+        console.error("❌ Supabase Error:", error);
+        let msg = "Failed to load schedules.\n";
+        if (error.code === '42P01') {
+            msg += "Table 'sas_schedules' not found.\n\nDid you run the SQL migration?";
+        } else if (error.code === '42501') {
+            msg += "Permission denied — RLS may be enabled.\n\nRun: ALTER TABLE sas_schedules DISABLE ROW LEVEL SECURITY;";
+        } else {
+            msg += "(" + (error.code || 'unknown') + ") " + error.message;
         }
-
-        renderSchedules(data);
-    } catch (e) {
-        console.error("❌ loadSchedules exception:", e);
-        alert("Unexpected error loading schedules: " + e.message);
+        showError(msg);
+        els.grid.innerHTML = `<div style="text-align:center;padding:40px;color:red;">${msg.replace(/\n/g, '<br>')}</div>`;
+        return;
     }
+
+    console.log('✅ Data received, rows:', data?.length);
+    renderSchedules(data);
+}
+        showError(msg);
+        els.grid.innerHTML = `<div style="text-align:center;padding:40px;color:red;">${msg.replace(/\n/g, '<br>')}</div>`;
+        return;
+    }
+
+    console.log('✅ Data received, rows:', data?.length);
+    renderSchedules(data);
 }
 
 function renderSchedules(schedules) {
@@ -192,7 +193,6 @@ async function deleteSchedule(id) {
     else loadSchedules();
 }
 
-// Helpers
 function openModal() { els.modal.style.display = 'flex'; }
 function closeModal() { els.modal.style.display = 'none'; els.form.reset(); document.getElementById('schedDate').valueAsDate = new Date(); }
 
@@ -210,4 +210,9 @@ function formatTime(timeStr) {
     return `${h12}:${m} ${ampm}`;
 }
 
-document.addEventListener('DOMContentLoaded', init);
+// Run init when DOM ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}

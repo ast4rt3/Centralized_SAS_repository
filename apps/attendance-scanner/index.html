@@ -16,7 +16,18 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <script src="../../env.js"></script>
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Fallback loader if primary CDN fails
+        if (typeof window.supabase === 'undefined') {
+            console.warn("Supabase CDN 1 failed, trying fallback...");
+            const s = document.createElement('script');
+            s.src = 'https://unpkg.com/@supabase/supabase-js@2';
+            s.onload = () => console.log("Fallback Supabase CDN loaded");
+            s.onerror = () => console.error("All CDNs failed — no Supabase library");
+            document.head.appendChild(s);
+        }
+    </script>
     <style>
         :root {
             --nbsc-blue: #004a99;
