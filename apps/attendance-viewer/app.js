@@ -1,4 +1,21 @@
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbz3cjgDKFw4CrDdB0dETT4SPyU7Xvh6szAFB_Iz8AiwCpbDNRGVPsuwnjr-0HFDbxaZ2g/exec';
+// Initialize Supabase Client
+let supabaseClient;
+
+function checkDependencies() {
+  if (typeof supabaseClient === 'undefined' && window.supabase) {
+      if (!window.ENV || !window.ENV.SUPABASE_URL || !window.ENV.SUPABASE_ANON_KEY) {
+          setState('error', 'Configuration Error: Supabase URL or Key missing in env.js');
+          return false;
+      }
+      supabaseClient = window.supabase.createClient(window.ENV.SUPABASE_URL, window.ENV.SUPABASE_ANON_KEY);
+  }
+  
+  if (!supabaseClient) {
+      setState('error', 'Dependency Error: Supabase library failed to load.');
+      return false;
+  }
+  return true;
+}
 
 const els = {
   loading: document.getElementById('loading'),
@@ -22,6 +39,9 @@ const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes cache
 let searchTimeout;
 
 function init() {
+  console.log("🚀 Initializing App...");
+  if (!checkDependencies()) return;
+  
   els.refreshBtn.addEventListener('click', () => fetchData(true));
   els.retryBtn.addEventListener('click', () => fetchData(true));
   
@@ -96,7 +116,7 @@ function setState(state, msg = '') {
 }
 
 function processTimeValue(v) {
-  if (!v) return '<span class="status-badge">Empty</span>';
+  if (!v || v === 'Not Checked In' || v === 'Empty') return '<span class="status-badge">Not Checked In</span>';
   const str = v.toString();
   if (str.toLowerCase() === 'not checked in') return '<span class="status-badge">Not Checked In</span>';
   if (str.includes('Flagged')) {
@@ -135,97 +155,129 @@ function processYearValue(v) {
 }
 
 function renderTable(filter = '', selectedColumnIndex = 'all') {
-  els.tbody.innerHTML = '';
   const term = filter.toLowerCase().trim();
   let count = 0;
+  let html = '';
 
   masterData.forEach(row => {
-    // Search across all data rows (except maybe timestamps)
+    // Search across ID, Name, and Course
     const searchable = row.slice(0, 3).map(c => (c || '').toString().toLowerCase()).join(' ');
     if (term && !searchable.includes(term)) return;
 
     count++;
-    const tr = document.createElement('tr');
+    html += '<tr>';
 
     row.forEach((cell, i) => {
-      // If a specific column is selected (and it's not the Name/ID columns which we might always want to show, or maybe we hide them too)
-      // Usually, we always show the first column (Name) and hide the others if a filter is active
+      // Column filter logic
       if (selectedColumnIndex !== 'all') {
         const targetIdx = parseInt(selectedColumnIndex);
-        if (i !== 0 && i !== targetIdx) {
-           // Hide the columns that don't match the selected filter, except Name (idx 0)
-           return;
-        }
+        if (i > 3 && i !== targetIdx) return; // Keep ID, Name, Course, Year
       }
 
-      const td = document.createElement('td');
-      // Assume earliest columns are strings, and the latter ones are timelines
-      // The user wants C,D,E,H,I,J,K,L,M,N,O,P,Q,R,S
-      // Let's assume indices > 2 are timestamps (adjust if needed based on data)
-      if (i > 2) {
-        td.innerHTML = processTimeValue(cell);
-      } else if (i === 2) {
-        // Column E (Index 2) is Year/Level
-        td.innerHTML = processYearValue(cell);
+      let content = '';
+      let style = '';
+      
+      if (i === 3) {
+        content = processYearValue(cell);
+      } else if (i > 3) {
+        content = processTimeValue(cell);
       } else {
-        td.textContent = cell || '';
-        if (i === 0) td.style.fontWeight = '600'; // Make Name bold
+        content = cell || '';
+        if (i === 1) style = ' style="font-weight: 600;"'; // Name
       }
-      tr.appendChild(td);
+      
+      html += `<td${style}>${content}</td>`;
     });
-    els.tbody.appendChild(tr);
+    html += '</tr>';
   });
 
+  els.tbody.innerHTML = html;
   els.recordCount.textContent = count;
 }
 
-function fetchData(forceRefresh = false) {
+async function fetchData(forceRefresh = false) {
+  console.log("📡 Fetching data from Supabase...");
+  if (!checkDependencies()) return;
   setState('loading');
   masterData = [];
   els.thead.innerHTML = '';
   els.tbody.innerHTML = '';
 
-  // Require URL to be set
-  if (!GAS_URL.startsWith("https://") || GAS_URL.includes("YOUR_NEW_GAS_WEB_APP_URL_HERE")) {
-    setState('error', 'Please set the Google Apps Script URL in app.js first.');
-    return;
-  }
+  try {
+    let allData = [];
+    let from = 0;
+    let step = 1000;
+    let keepFetching = true;
 
-  // Use fetch to trigger a simple GET request.
-  // Google Apps Script doGet() will redirect and return JSON.
-  fetch(GAS_URL)
-    .then(res => res.text()) // Use text() first to catch unexpected HTML redirects
-    .then(text => {
-      let data;
+    while (keepFetching) {
+      console.log(` 🔍 Fetching range ${from} to ${from + step - 1}...`);
+      const { data, error } = await supabaseClient
+        .from('NBSC_masterlist')
+        .select(`
+          ID, Name, Course, yearLevel,
+          attendance: NBSC_attendance (*)
+        `)
+        .order('Name', { ascending: true })
+        .range(from, from + step - 1);
+
+      if (error) {
+          console.error(" ❌ Supabase Query Error:", error);
+          throw error;
+      }
+
+      if (data && data.length > 0) {
+          allData = allData.concat(data);
+          from += step;
+          // If we got less than the step size, we reached the end
+          if (data.length < step) keepFetching = false;
+      } else {
+          keepFetching = false;
+      }
+    }
+    
+    console.log(" ✅ All data received:", allData.length, "rows");
+
+    const attendanceCols = [
+      'Day1_Parade_Mass', 'Day1Opening_Morning', 'Day1Afternoon_IN', 'Day1Afternoon_OUT',
+      'Day2Morning_IN', 'Day2Morning_OUT', 'Day2Afternoon_IN', 'Day2Afernoon_OUT',
+      'Day3Morning_IN', 'Day3Morning_OUT', 'Day3Afternoon_IN', 'Day3Afternoon_OUT',
+      'Day3_Scan_3', 'Day4_Scan_1', 'Day4_Scan_2', 'Day4_Scan_3'
+    ];
+
+    const headers = ['ID', 'Name', 'Course', 'Year Level', ...attendanceCols.map(c => c.replace(/_/g, ' '))];
+    
+    const rows = allData.map((m, idx) => {
       try {
-        data = JSON.parse(text);
+        const att = m.attendance && m.attendance.length > 0 ? m.attendance[0] : {};
+        return [
+          m.ID, 
+          m.Name, 
+          m.Course, 
+          m.yearLevel,
+          ...attendanceCols.map(c => att[c] || 'Not Checked In')
+        ];
       } catch (err) {
-        console.error("Non-JSON response received:", text);
-        throw new Error("Invalid response from Google Servers: " + text.slice(0, 100)); // slice to avoid massive error block
+        console.error(" ❌ Mapping failed at row " + idx, err);
+        return null;
       }
+    }).filter(r => r !== null);
 
-      if (!data.success) {
-        throw new Error(data.message || "Unknown server error");
-      }
+    // Save to Cache
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+       timestamp: Date.now(),
+       headers: headers,
+       data: rows
+    }));
 
-      // Save to Cache
-      localStorage.setItem(CACHE_KEY, JSON.stringify({
-         timestamp: Date.now(),
-         headers: data.headers,
-         data: data.rows
-      }));
+    masterData = rows;
+    buildHeaders(headers);
+    setState('loaded');
+    renderTable();
 
-      // Build interface
-      buildHeaders(data.headers);
-      masterData = data.rows;
-
-      setState('loaded');
-      renderTable();
-    })
-    .catch(err => {
-      console.error(err);
-      setState('error', err.message || 'Failed to fetch Masterlist');
-    });
+  } catch (err) {
+    console.error(err);
+    setState('error', err.message || 'Failed to fetch Masterlist from Supabase');
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init);
