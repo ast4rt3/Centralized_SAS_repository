@@ -731,8 +731,8 @@ if (!window.YT) {
 }
 
 // Global TV Settings State
-let tvAudioEnabled = false;
-let tvTheaterEnabled = false; // Default to non-fullscreen for VIDEOS
+let tvAudioEnabled = localStorage.getItem('sas_tv_audio_enabled') === 'true';
+let tvTheaterEnabled = localStorage.getItem('sas_tv_theater_enabled') === 'true'; // Default to non-fullscreen for VIDEOS
 
 // Offline banner — automatically shown/hidden based on connectivity
 (function () {
@@ -1070,10 +1070,20 @@ document.addEventListener('DOMContentLoaded', () => {
   let globalCarouselTimer = null;
   let globalSlideGeneration = 0;
 
+  // TV Carousel State Exporters (for toggle responsiveness)
+  window.currentTvSlide = 0;
+  window.setTvActiveSlide = null;
+
   // Sidebar Collapse Persistence
   const isSidebarCollapsed = localStorage.getItem('sas_sidebar_collapsed') === 'true';
   if (isSidebarCollapsed && sidebar) {
     sidebar.classList.add('collapsed');
+  }
+
+  // TV Header Collapse Persistence
+  const isTvHeaderCollapsed = localStorage.getItem('sas_tv_header_collapsed') === 'true';
+  if (isTvHeaderCollapsed) {
+    document.body.classList.add('tv-header-collapsed');
   }
 
   // Admin Exit TV Logic
@@ -1520,25 +1530,44 @@ function showAppUI(userObj) {
     showLoginUI();
   }
 
+  // Function to sync TV UI elements to global state
+  function syncTvSettingsUI() {
+    if (btnTvAudio) {
+      btnTvAudio.classList.toggle('active-setting', tvAudioEnabled);
+      if (tvAudioEnabled) {
+        btnTvAudio.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`; // Unmuted Icon
+      } else {
+        btnTvAudio.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>`; // Muted Icon
+      }
+    }
+    if (btnTvTheater) {
+      btnTvTheater.classList.toggle('active-setting', tvTheaterEnabled);
+    }
+    if (btnTvHeaderToggle) {
+       btnTvHeaderToggle.classList.toggle('active-setting', document.body.classList.contains('tv-header-collapsed'));
+    }
+  }
+
+  // Initial Sync
+  syncTvSettingsUI();
+
   // Bind TV Settings Toggles
   if (btnTvAudio) {
     btnTvAudio.addEventListener('click', () => {
       tvAudioEnabled = !tvAudioEnabled;
-      if (tvAudioEnabled) {
-        btnTvAudio.classList.add('active-setting');
-        btnTvAudio.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`; // Unmuted Icon
-      } else {
-        btnTvAudio.classList.remove('active-setting');
-        btnTvAudio.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>`; // Muted Icon
-      }
+      localStorage.setItem('sas_tv_audio_enabled', tvAudioEnabled);
+      syncTvSettingsUI();
+      // Apply to any running videos immediately if possible
+      if (window.setTvActiveSlide) window.setTvActiveSlide(window.currentTvSlide);
     });
   }
 
   if (btnTvTheater) {
     btnTvTheater.addEventListener('click', () => {
       tvTheaterEnabled = !tvTheaterEnabled;
-      btnTvTheater.classList.toggle('active-setting', tvTheaterEnabled);
-      setActive(current);
+      localStorage.setItem('sas_tv_theater_enabled', tvTheaterEnabled);
+      syncTvSettingsUI();
+      if (window.setTvActiveSlide) window.setTvActiveSlide(window.currentTvSlide);
     });
   }
 
@@ -1546,6 +1575,7 @@ function showAppUI(userObj) {
     btnTvHeaderToggle.addEventListener('click', () => {
       const isCollapsed = document.body.classList.toggle('tv-header-collapsed');
       localStorage.setItem('sas_tv_header_collapsed', isCollapsed);
+      syncTvSettingsUI();
       // Ensure layout adjusts (if needed for any internal elements)
       window.dispatchEvent(new Event('resize'));
     });
@@ -1776,6 +1806,8 @@ function showAppUI(userObj) {
         document.body.classList.add('tv-header-collapsed');
       }
       if (btnTvHeaderToggle) btnTvHeaderToggle.classList.remove('hidden');
+      // Re-sync toggle buttons to reflect persisted state
+      syncTvSettingsUI();
 
       // Attempt actual fullscreen via API explicitly for the TV role
       try {
@@ -1804,6 +1836,8 @@ function showAppUI(userObj) {
       }
       tvSettingsBox.classList.remove('hidden');
       if (btnSidebarToggle) btnSidebarToggle.classList.remove('hidden');
+      // Re-sync toggle buttons to reflect persisted state
+      syncTvSettingsUI();
     } else {
       // For uploader and others, keep tv-settings hidden
       document.body.classList.remove('tv-mode');
@@ -2848,31 +2882,10 @@ if (logoutBtn) {
         // --- PHASE 13: TV SYNC LOGIC ---
 
         if (role === 'tv') {
-          // 1. Sync local toggles from Server Defaults
-          if (data.tvSettings) {
-            // Only auto-override if the UI buttons haven't triggered a deliberate user override
-            tvAudioEnabled = data.tvSettings.tvAudioEnabled;
-            tvTheaterEnabled = data.tvSettings.tvTheaterEnabled;
+          // TV toggle state is managed entirely via localStorage (like the view-menu)
+          syncTvSettingsUI();
 
-            // Visually update the TV header icons to match
-            const btnAudio = document.getElementById('tv-audio-toggle');
-            const btnTheater = document.getElementById('tv-fullscreen-toggle');
-
-            if (btnAudio) {
-              if (tvAudioEnabled) {
-                btnAudio.classList.add('active-setting');
-                btnAudio.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`;
-              } else {
-                btnAudio.classList.remove('active-setting');
-                btnAudio.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>`;
-              }
-            }
-            if (btnTheater) {
-              btnTheater.classList.toggle('active-setting', tvTheaterEnabled);
-            }
-          }
-
-          // 2. Hash Current Data for Background Refreshes
+          // Hash Current Data for Background Refreshes
           const newDataString = JSON.stringify(data.posts);
 
           if (!window.tvPostsDataHash) {
@@ -2894,12 +2907,6 @@ if (logoutBtn) {
                     globalCarouselTimer = null;
                   }
                     window.tvPostsDataHash = bgDataString;
-
-                    // Re-sync TV toggles just in case Admin changed them concurrently
-                    if (bgData.tvSettings) {
-                      tvAudioEnabled = bgData.tvSettings.tvAudioEnabled;
-                      tvTheaterEnabled = bgData.tvSettings.tvTheaterEnabled;
-                    }
 
                     renderPosts(bgData.posts, container, role);
                   }
@@ -3563,6 +3570,8 @@ if (logoutBtn) {
     }
 
     function setActive(index) {
+      window.currentTvSlide = index;
+      window.setTvActiveSlide = setActive;
       // First, iterate over all slides to pause videos that are no longer active
       slides.forEach(function (s, i) {
         if (i === index) {
@@ -3606,6 +3615,7 @@ if (logoutBtn) {
         else d.classList.remove('is-active');
       });
       current = index;
+      window.currentTvSlide = index;
       globalSlideGeneration++; // Invalidate any stale YT callbacks from the previous slide
       var myGeneration = globalSlideGeneration;
 
