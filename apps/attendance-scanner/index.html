@@ -155,6 +155,98 @@
             max-width: 300px;
         }
 
+        .custom-select-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 300px;
+            margin: 0 auto 15px auto;
+            z-index: 1001; /* Above other home contents */
+        }
+
+        .custom-select-trigger {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            padding: 15px 18px;
+            border-radius: 10px;
+            background: white;
+            color: var(--nbsc-blue);
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border: 2px solid transparent;
+        }
+
+        .custom-select-wrapper.is-open .custom-select-trigger {
+            border-color: var(--nbsc-gold);
+            transform: translateY(-2px);
+        }
+
+        .custom-options-list {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+            display: none;
+            flex-direction: column;
+            z-index: 1002;
+            animation: slideDown 0.2s ease-out;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .custom-select-wrapper.is-open .custom-options-list {
+            display: flex;
+        }
+
+        .custom-option {
+            padding: 14px 18px;
+            color: var(--nbsc-dark);
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-align: left;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            transition: background 0.2s, color 0.2s;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+
+        .custom-option:last-child { border-bottom: none; }
+
+        .custom-option:hover {
+            background: #f1f5f9;
+            color: var(--nbsc-blue);
+        }
+
+        .custom-option.is-selected {
+            background: rgba(0, 74, 153, 0.08);
+            color: var(--nbsc-blue);
+            border-left: 4px solid var(--nbsc-gold);
+        }
+
+        .custom-select-icon {
+            font-size: 1.2rem;
+            color: var(--nbsc-gold);
+            transition: transform 0.3s ease;
+        }
+
+        .custom-select-wrapper.is-open .custom-select-icon {
+            transform: rotate(180deg);
+        }
+
         /* ══════════════════════════════════════
             SCANNER SCREEN
         ══════════════════════════════════════ */
@@ -978,11 +1070,22 @@
         <div class="home-content">
             <h1>NBSC SAS</h1>
             <p>Attendance System</p>
-            <button class="btn-primary get-started-btn" onclick="enterScanner()">Start Scanning</button>
+            <div class="custom-select-wrapper" id="customEventDropdown">
+                <div class="custom-select-trigger" onclick="toggleCustomDropdown()">
+                    <span id="selectedEventLabel">-- SELECT EVENT --</span>
+                    <i class='bx bx-chevron-down custom-select-icon'></i>
+                </div>
+                <div class="custom-options-list" id="customOptionsList">
+                    <!-- Options injected via JS -->
+                    <div class="custom-option">Loading...</div>
+                </div>
+                <input type="hidden" id="eventSelector" value="">
+            </div>
+            <button class="btn-primary get-started-btn" id="startScanBtn" onclick="enterScanner()">Start Scanning</button>
             <br><br><br>
-            <button class="home-secondary-btn" onclick="downloadMasterlist()">⬇️ UPDATE OFFLINE DATA</button>
+            <button class="home-secondary-btn" onclick="downloadMasterlist()">UPDATE OFFLINE DATA</button>
             <button class="home-secondary-btn" onclick="superRefresh()"
-                style="border-color: rgba(220,53,69,0.5); color: #ff8e98; font-size: 9px; opacity: 0.8;">🚨 CLEAR ALL
+                style="border-color: rgba(220,53,69,0.5); color: #ff8e98; font-size: 9px; opacity: 0.8;">CLEAR ALL
                 SITE DATA & CACHE</button>
             <br>
             <button class="logout-btn-home" onclick="logoutScanner()">Logout from Portal</button>
@@ -1014,6 +1117,9 @@
             <div id="windowStatus" class="status-loading">
                 <div class="status-dot loading" id="statusDot"></div>
                 <span id="statusText">Checking window...</span>
+            </div>
+            <div style="background: var(--nbsc-dark); color: var(--nbsc-gold); text-align: center; padding: 6px; font-size: 0.75rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; border-bottom: 2px solid var(--border);">
+                EVENT: <span id="activeScannerEventName">NO EVENT SELECTED</span>
             </div>
         </div>
 
@@ -1149,15 +1255,33 @@
             const supabase = await initSupabase();
             if (!supabase) throw new Error("Supabase not initialized");
 
+            if (action === "getAvailableEvents") {
+                const now = new Date();
+                const todayStr = now.toISOString().split('T')[0];
+                const { data: events, error } = await supabase
+                    .from('sas_events')
+                    .select('*')
+                    .gte('event_date', todayStr)
+                    .order('event_date', { ascending: true });
+                if (error) throw error;
+                return events;
+            }
+
             if (action === "getWindowStatus") {
                 const now = new Date();
                 const todayStr = now.toISOString().split('T')[0];
                 const nowTime = now.toTimeString().split(' ')[0]; // HH:mm:ss
 
+                const eventId = localStorage.getItem('scannerEventId');
+                if (!eventId) {
+                    return { status: "error", message: "No Event Selected" };
+                }
+
                 const { data: schedules, error } = await supabase
                     .from('sas_schedules')
                     .select('*')
                     .eq('date', todayStr)
+                    .eq('event_id', eventId)
                     .eq('is_active', true);
 
                 if (error) {
@@ -1462,14 +1586,26 @@
         }
 
         function enterScanner() {
+            const evSel = document.getElementById('eventSelector');
+            if (evSel && !evSel.value) {
+                alert("Please select an Event first before scanning.");
+                return;
+            }
+            if (evSel && evSel.value) {
+                localStorage.setItem('scannerEventId', evSel.value);
+                localStorage.setItem('scannerEventName', evSel.options[evSel.selectedIndex].text);
+            }
+
             document.querySelector(".bottom-nav").style.setProperty("display", "flex", "important");
             document.getElementById("homeScreen").style.display = "none";
             document.getElementById("scannerScreen").style.display = "flex";
 
-            // Sync current user identity to the badge
             const userName = getCurrentUser();
             const badge = document.getElementById('activeScannerName');
             if (badge) badge.innerText = userName;
+
+            const eventBadge = document.getElementById('activeScannerEventName');
+            if(eventBadge) eventBadge.innerText = localStorage.getItem('scannerEventName') || 'NO EVENT SELECTED';
 
             updateQueueUI();
             initScanner();
@@ -2127,6 +2263,79 @@
             // Force reload
             window.location.reload(true);
         }
+
+        function toggleCustomDropdown() {
+            const wrapper = document.getElementById('customEventDropdown');
+            wrapper.classList.toggle('is-open');
+        }
+
+        // Close dropdown when clicking outside
+        window.addEventListener('click', function(e) {
+            const wrapper = document.getElementById('customEventDropdown');
+            if (wrapper && !wrapper.contains(e.target)) {
+                wrapper.classList.remove('is-open');
+            }
+        });
+
+        async function initEventDropdown() {
+            const list = document.getElementById('customOptionsList');
+            const label = document.getElementById('selectedEventLabel');
+            const hiddenInput = document.getElementById('eventSelector');
+            if (!list) return;
+
+            try {
+                const events = await callBackend("getAvailableEvents", {});
+                
+                if (events.length === 0) {
+                    list.innerHTML = '<div class="custom-option">No upcoming events</div>';
+                    return;
+                }
+
+                list.innerHTML = events.map(e => `
+                    <div class="custom-option" data-id="${e.id}" data-name="${e.name}" onclick="selectEventOption('${e.id}', '${e.name.replace(/'/g, "\\'")}')">
+                        ${e.name} <br> <small style="opacity: 0.6; font-size: 0.65rem;">${e.event_date}</small>
+                    </div>
+                `).join('');
+
+                const savedId = localStorage.getItem('scannerEventId');
+                const savedName = localStorage.getItem('scannerEventName');
+
+                if (savedId && events.some(e => e.id === savedId)) {
+                    hiddenInput.value = savedId;
+                    label.innerText = savedName;
+                    const option = list.querySelector(`[data-id="${savedId}"]`);
+                    if (option) option.classList.add('is-selected');
+                }
+            } catch (err) {
+                console.error(err);
+                list.innerHTML = '<div class="custom-option">Error loading events</div>';
+            }
+        }
+
+        function selectEventOption(id, name) {
+            const label = document.getElementById('selectedEventLabel');
+            const hiddenInput = document.getElementById('eventSelector');
+            const list = document.getElementById('customOptionsList');
+
+            hiddenInput.value = id;
+            label.innerText = name;
+            
+            // Mark as selected
+            list.querySelectorAll('.custom-option').forEach(opt => opt.classList.remove('is-selected'));
+            const selection = list.querySelector(`[data-id="${id}"]`);
+            if (selection) selection.classList.add('is-selected');
+
+            // Save to localStorage
+            localStorage.setItem('scannerEventId', id);
+            localStorage.setItem('scannerEventName', name);
+
+            // Close
+            toggleCustomDropdown();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initEventDropdown();
+        });
 
         // PWA: register service worker for install & offline
         if ('serviceWorker' in navigator) {
