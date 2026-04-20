@@ -487,6 +487,26 @@
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
 
+        .flip-camera-btn {
+            background: #f1f5f9;
+            color: var(--nbsc-blue);
+            border: 1px solid #e2e8f0;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: none; /* Hidden by default, shown if multi-camera */
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1.1rem;
+        }
+
+        .flip-camera-btn:active {
+            transform: rotate(180deg);
+            background: #e2e8f0;
+        }
+
         .camera-toggle-btn.btn-stop {
             background: #fee2e2;
             color: #dc2626;
@@ -1105,12 +1125,12 @@
                 <button onclick="logoutScanner()"
                     style="margin-left:auto; background:#fee2e2; color:#dc2626; border:none; padding:6px 10px; border-radius:6px; font-size:0.6rem; font-weight:800; cursor:pointer;">LOGOUT</button>
             </div>
+            <div style="background: var(--nbsc-dark); color: var(--nbsc-gold); text-align: center; padding: 6px; font-size: 0.75rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                EVENT: <span id="activeScannerEventName">NO EVENT SELECTED</span>
+            </div>
             <div id="windowStatus" class="status-loading">
                 <div class="status-dot loading" id="statusDot"></div>
                 <span id="statusText">Checking window...</span>
-            </div>
-            <div style="background: var(--nbsc-dark); color: var(--nbsc-gold); text-align: center; padding: 6px; font-size: 0.75rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; border-bottom: 2px solid var(--border);">
-                EVENT: <span id="activeScannerEventName">NO EVENT SELECTED</span>
             </div>
         </div>
 
@@ -1129,7 +1149,12 @@
                 <div class="qr-wrapper">
                     <div style="padding: 20px; display: flex; align-items: center; justify-content: space-between; background: #fff;">
                         <div class="manual-label" style="margin-bottom: 0;">Scanner</div>
-                        <button id="customToggle" class="camera-toggle-btn" onclick="toggleCameraState()">Start Scanning</button>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <button id="flipCameraBtn" class="flip-camera-btn" onclick="flipCamera()" title="Switch Camera">
+                                <i class='bx bx-refresh'></i>
+                            </button>
+                            <button id="customToggle" class="camera-toggle-btn" onclick="toggleCameraState()">Start Scanning</button>
+                        </div>
                     </div>
                     <div id="reader"></div>
                 </div>
@@ -1670,17 +1695,25 @@
                     return;
                 }
 
+                const format12h = (t) => {
+                    if (!t) return '';
+                    let [h, m] = t.split(':').map(Number);
+                    const mod = h >= 12 ? 'PM' : 'AM';
+                    h = h % 12 || 12;
+                    return `${h}:${String(m).padStart(2, '0')} ${mod}`;
+                };
+
                 if (res.isOpen) {
                     bar.className = 'status-open';
                     dot.className = 'status-dot open';
                     text.innerText = 'OPEN — ' + res.type
-                        + ' · ' + res.start + ' – ' + res.end;
+                        + ' · ' + format12h(res.start) + ' – ' + format12h(res.end);
                 } else {
                     bar.className = 'status-closed';
                     dot.className = 'status-dot closed';
 
                     if (res.nextType) {
-                        text.innerText = 'UPCOMING: ' + res.nextType + ' · ' + res.nextStart + ' – ' + res.nextEnd;
+                        text.innerText = 'UPCOMING: ' + res.nextType + ' · ' + format12h(res.nextStart) + ' – ' + format12h(res.nextEnd);
                     } else {
                         text.innerText = 'CLOSED — No more windows today';
                     }
@@ -1747,10 +1780,51 @@
                 customBtn.innerText = "Start Scanning";
                 customBtn.className = "camera-toggle-btn btn-start";
             }
+
+            // Periodically check for multiple cameras to show/hide Flip button
+            detectCameras();
         }
 
         // Keep custom toggle in sync with internal state changes
         setInterval(syncToggleBtn, 1000);
+
+        function flipCamera() {
+            // Find the selection dropdown inside the library UI
+            const select = document.querySelector("#reader__dashboard_section select");
+            if (!select || select.options.length <= 1) {
+                // If the library hasn't rendered it yet, try querying cameras directly
+                return;
+            }
+            
+            let nextIndex = select.selectedIndex + 1;
+            if (nextIndex >= select.options.length) nextIndex = 0;
+            
+            select.selectedIndex = nextIndex;
+            select.dispatchEvent(new Event('change'));
+            
+            // Visual feedback
+            const btn = document.getElementById('flipCameraBtn');
+            if (btn) {
+                btn.style.transform = "rotate(180deg)";
+                setTimeout(() => { btn.style.transform = "rotate(0deg)"; }, 400);
+            }
+        }
+
+        async function detectCameras() {
+            try {
+                // Use the library's static method to count cameras
+                const devices = await Html5Qrcode.getCameras();
+                const btn = document.getElementById('flipCameraBtn');
+                if (btn) {
+                    const shouldShow = devices && devices.length > 1;
+                    btn.style.display = shouldShow ? 'flex' : 'none';
+                }
+            } catch (e) {
+                // Might fail if camera permission is not yet granted
+                const btn = document.getElementById('flipCameraBtn');
+                if (btn) btn.style.display = 'none';
+            }
+        }
 
         function initScanner() {
             // Respect default off preference on first load or re-init
