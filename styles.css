@@ -429,11 +429,11 @@ body.fullscreen-active .home-header {
 .home-header-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .home-header-logo {
-  width: 76px;
+  width: 50px;
   height: auto;
   filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));
 }
