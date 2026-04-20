@@ -16,6 +16,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <script src="../../env.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --nbsc-blue: #004a99;
@@ -1082,9 +1083,11 @@
         let currentScanMode = "barcode"; // Default to Barcode (Col A)
         let isProcessing = false; // Flag to prevent double scanning
 
-        const GAS_URL = (window.ENV && window.ENV.SCANNER_GAS_URL)
-            ? window.ENV.SCANNER_GAS_URL
-            : "https://script.google.com/a/macros/nbsc.edu.ph/s/AKfycbwif9UQu1T_beROIwj4ZiJY_f0SlIDoUxt5p6xiAcO6nqEmpVyY2HygOJCxBR4YcGuRjw/exec";
+        // GAS_URL deprecated — Supabase migration complete (2026-04-20)
+        // Kept as historical reference only; no longer used.
+        // const GAS_URL = (window.ENV && window.ENV.SCANNER_GAS_URL)
+        //     ? window.ENV.SCANNER_GAS_URL
+        //     : "https://script.google.com/a/macros/nbsc.edu.ph/s/AKfycbwif9UQu1T_beROIwj4ZiJY_f0SlIDoUxt5p6xiAcO6nqEmpVyY2HygOJCxBR4YcGuRjw/exec";
 
         function getCurrentUser() {
             try {
@@ -1118,14 +1121,180 @@
         let currentWindowInfo = null;
 
         // ── Backend helper — replaces ALL google.script.run calls ──
+        // ── Supabase Initialization ──
+        let supabaseClient = null;
+        async function initSupabase() {
+            if (supabaseClient) return supabaseClient;
+            if (window.ENV && window.ENV.SUPABASE_URL && window.ENV.SUPABASE_ANON_KEY) {
+                supabaseClient = window.supabase.createClient(window.ENV.SUPABASE_URL, window.ENV.SUPABASE_ANON_KEY);
+                return supabaseClient;
+            }
+            console.error("Supabase credentials missing in env.js");
+            return null;
+        }
+
+        // ── Backend helper — Now using Supabase ──
         async function callBackend(action, params) {
-            const res = await fetch(GAS_URL, {
-                method: "POST",
-                headers: { "Content-Type": "text/plain" },
-                body: JSON.stringify({ action, ...params })
-            });
-            if (!res.ok) throw new Error("HTTP " + res.status);
-            return res.json();
+            const supabase = await initSupabase();
+            if (!supabase) throw new Error("Supabase not initialized");
+
+            if (action === "getWindowStatus") {
+                const now = new Date();
+                const todayStr = now.toISOString().split('T')[0];
+                const nowTime = now.toTimeString().split(' ')[0]; // HH:mm:ss
+
+                const { data: schedules, error } = await supabase
+                    .from('sas_schedules')
+                    .select('*')
+                    .eq('date', todayStr)
+                    .eq('is_active', true);
+
+                if (error) {
+                    console.error("getWindowStatus error:", error);
+                    if (error.code === '42P01') {
+                        return { status: "error", message: "Database not ready: sas_schedules table missing. Run the SQL migration." };
+                    }
+                    throw error;
+                }
+
+                // Find active window
+                const active = schedules.find(s => nowTime >= s.start_time && nowTime <= s.end_time);
+                if (active) {
+                    return {
+                        isOpen: true,
+                        type: active.label,
+                        id: active.id,
+                        start: active.start_time,
+                        end: active.end_time
+                    };
+                }
+
+                // Find next window
+                const next = schedules.filter(s => s.start_time > nowTime).sort((a,b) => a.start_time.localeCompare(b.start_time))[0];
+                return {
+                    isOpen: false,
+                    nextType: next ? next.label : null,
+                    nextStart: next ? next.start_time : null,
+                    nextEnd: next ? next.end_time : null,
+                    message: next ? "UPCOMING" : "CLOSED"
+                };
+            }
+
+            if (action === "checkTicket") {
+                const { scannedID, scannerUser, scanMode } = params;
+                const windowInfo = await callBackend("getWindowStatus");
+                if (!windowInfo.isOpen) return { status: "error", message: "🕒 WINDOW CLOSED" };
+
+                // 1. Resolve Student (ID or QR Token)
+                const matchCol = scanMode === 'qr' ? 'qr_token' : 'ID';
+                const { data: student, error: sErr } = await supabase
+                    .from('NBSC_masterlist')
+                    .select('ID, Name')
+                    .eq(matchCol, scannedID)
+                    .maybeSingle();
+
+                if (sErr) {
+                    console.error("checkTicket student lookup error:", sErr);
+                    if (sErr.code === '42P01') {
+                        return { status: "error", message: "Database error: NBSC_masterlist table missing." };
+                    }
+                    if (sErr.code === '42703') {
+                        return { status: "error", message: "Column '" + matchCol + "' does not exist on NBSC_masterlist." };
+                    }
+                    throw sErr;
+                }
+                if (!student) return { status: "error", message: `🚫 ${scanMode.toUpperCase()} UNKNOWN<br><small>${scannedID}</small>` };
+
+                // 2. Check for existing record
+                const { data: existing, error: lErr } = await supabase
+                    .from('sas_attendance_logs')
+                    .select('*')
+                    .eq('student_token', student.ID)
+                    .eq('schedule_id', windowInfo.id)
+                    .maybeSingle();
+
+                if (lErr) throw lErr;
+                if (existing) return { status: "error", message: `❌ ALREADY RECORDED<br>${student.Name.toUpperCase()}`, studentName: student.Name };
+
+                // 3. Insert Log
+                const { error: iErr } = await supabase
+                    .from('sas_attendance_logs')
+                    .insert([{
+                        student_token: student.ID,
+                        schedule_id: windowInfo.id,
+                        scanner_user: scannerUser,
+                        status: 'present'
+                    }]);
+
+                if (iErr) throw iErr;
+                return {
+                    status: "success",
+                    message: `✅ ${windowInfo.type} RECORDED<br><b>${student.Name.toUpperCase()}</b>`,
+                    studentName: student.Name,
+                    windowType: windowInfo.type
+                };
+            }
+
+            if (action === "flagStudent") {
+                const { scannedToken, reason, scannerUser } = params;
+                const windowInfo = await callBackend("getWindowStatus");
+                if (!windowInfo.isOpen) throw new Error("Window Closed");
+
+                const { data: student, error: sErr } = await supabase
+                    .from('NBSC_masterlist')
+                    .select('ID')
+                    .or(`ID.eq.${scannedToken},qr_token.eq.${scannedToken}`)
+                    .maybeSingle();
+                
+                if (sErr) {
+                    console.error("flagStudent lookup error:", sErr);
+                    if (sErr.code === '42P01') return { status: "error", message: "Database missing." };
+                    throw sErr;
+                }
+                if (!student) throw new Error("Student not found");
+
+                const { error } = await supabase
+                    .from('sas_attendance_logs')
+                    .upsert({
+                        student_token: student.ID,
+                        schedule_id: windowInfo.id,
+                        scanner_user: scannerUser,
+                        status: 'flagged',
+                        flag_reason: reason
+                    }, { onConflict: 'student_token,schedule_id' });
+
+                if (error) throw error;
+                return { status: "success" };
+            }
+
+            if (action === "syncOfflineScans") {
+                const { scansArray, scannerUser } = params;
+                for (const scan of scansArray) {
+                    await callBackend("checkTicket", { scannedID: scan.scannedID, scannerUser, scanMode: 'barcode' });
+                }
+                return { status: "success" };
+            }
+
+            if (action === "getOfflineMasterlist") {
+                const { data, error } = await supabase.from('NBSC_masterlist').select('ID, Name, qr_token');
+                if (error) {
+                    console.error("getOfflineMasterlist error:", error);
+                    if (error.code === '42P01') {
+                        throw new Error("NBSC_masterlist table missing. Run migration.");
+                    }
+                    throw error;
+                }
+                const master = {};
+                data.forEach(s => {
+                    if (s.ID) master[s.ID.toLowerCase()] = { name: s.Name, id: s.ID };
+                    if (s.qr_token) master[s.qr_token.toLowerCase()] = { name: s.Name, id: s.ID };
+                });
+                return master;
+            }
+
+            if (action === "ping") {
+                return { status: "success", message: "pong" };
+            }
         }
 
 
@@ -1318,9 +1487,7 @@
                     bar.className = 'status-open';
                     dot.className = 'status-dot open';
                     text.innerText = 'OPEN — ' + res.type
-                        + ' · ' + res.start + ' – ' + res.end
-                        + ' · Col ' + res.col
-                        + (res.isLate ? ' · LATE' : '');
+                        + ' · ' + res.start + ' – ' + res.end;
                 } else {
                     bar.className = 'status-closed';
                     dot.className = 'status-dot closed';
@@ -1805,9 +1972,20 @@
             if(navigator.onLine) {
                 log("Internet Connection: ONLINE");
                 try {
-                    const res = await callBackend("ping", {});
-                    log("Backend (GAS): RESPONDING");
-                } catch(e) { log("Backend (GAS): UNREACHABLE", false); }
+                    // Test Supabase connectivity with a simple schedule query
+                    const sup = await initSupabase();
+                    if (sup) {
+                        const { data, error } = await sup
+                            .from('sas_schedules')
+                            .select('count');
+                        if (error) throw error;
+                        log("Supabase DB: CONNECTED ✓");
+                    } else {
+                        log("Supabase: NOT INITIALIZED", false);
+                    }
+                } catch(e) {
+                    log("Supabase DB: UNREACHABLE ("+e.message+")", false);
+                }
             } else {
                 log("Internet Connection: OFFLINE (Sync will wait)");
             }
