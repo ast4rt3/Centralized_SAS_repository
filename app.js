@@ -389,6 +389,13 @@ function initUserMessaging() {
     renderContact(username, isOnline);
     unreadBadge.textContent = unreadCount;
     unreadBadge.classList.toggle('hidden', unreadCount === 0);
+
+    // --- Sync Header Badge ---
+    const headerBadge = document.getElementById('header-unread-badge');
+    if (headerBadge) {
+      headerBadge.textContent = unreadCount;
+      headerBadge.classList.toggle('hidden', unreadCount === 0);
+    }
   }
   
   function openConversation(username) {
@@ -1005,7 +1012,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    dateEl.textContent = now.toLocaleDateString('en-US', options);
+    const dateStr = now.toLocaleDateString('en-US', options);
+    dateEl.textContent = dateStr;
+
+    // --- New Header Clock Sync ---
+    const headerTime = document.getElementById('header-time-val');
+    const headerDate = document.getElementById('header-date-val');
+    if (headerTime) headerTime.textContent = timeStr.replace(/^0/, ''); // "9:41 AM"
+    if (headerDate) {
+      const shortDay = now.toLocaleDateString('en-US', { weekday: 'short' });
+      const shortMonth = now.toLocaleDateString('en-US', { month: 'short' });
+      const dayNum = now.getDate();
+      headerDate.textContent = `${shortDay}, ${shortMonth} ${dayNum}`;
+    }
   }
 
   async function updateWeather() {
@@ -1055,13 +1074,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const userDropdownName = document.getElementById('user-dropdown-name');
   const logoutBtn = document.getElementById('logout-btn');
 
-  // TV Settings UI Elements
-  const tvSettingsBox = document.getElementById('tv-settings');
-  const btnTvAudio = document.getElementById('tv-audio-toggle');
-  const btnTvTheater = document.getElementById('tv-fullscreen-toggle');
-  const btnTvHeaderToggle = document.getElementById('tv-header-toggle');
   const btnSidebarToggle = document.getElementById('sidebar-toggle');
   const btnAdminExitTv = document.getElementById('admin-exit-tv');
+
+  // TV View Settings (Restore missing definitions)
+  const tvSettingsBox = document.getElementById('tv-settings');
+  const btnTvAudio = document.getElementById('btn-tv-audio');
+  const btnTvTheater = document.getElementById('btn-tv-theater');
+  const btnTvHeaderToggle = document.getElementById('btn-tv-header-toggle');
+
+  let tvAudioEnabled = localStorage.getItem('sas_tv_audio_enabled') !== 'false'; // Default to true
+  let tvTheaterEnabled = localStorage.getItem('sas_tv_theater_enabled') === 'true'; // Default to false
 
   let systems = [];
   let systemsLoaded = false;
@@ -1089,13 +1112,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Admin Exit TV Logic
   if (btnAdminExitTv) {
     btnAdminExitTv.addEventListener('click', () => {
-      // Clear TV-specific states
       localStorage.removeItem('sas_admin_tv_view');
       document.body.classList.remove('tv-mode');
       document.body.classList.remove('tv-header-collapsed');
       
-      // The most robust way to restore the full Admin Dashboard layout
-      // after such heavy DOM/CSS manipulation is a clean reload to #home.
       window.location.hash = 'home';
       setTimeout(() => {
         window.location.reload();
@@ -1337,7 +1357,7 @@ document.addEventListener('DOMContentLoaded', () => {
           localStorage.setItem('sas_admin_tv_view', 'true');
           if (btnAdminExitTv) btnAdminExitTv.classList.remove('hidden');
           if (navToggle) navToggle.classList.add('hidden'); // Lock down sidebar
-          tvSettingsBox.classList.remove('hidden');
+          if (tvSettingsBox) tvSettingsBox.classList.remove('hidden');
           window.location.hash = 'home';
           closeNav();
           fetchPosts(); // Trigger carousel
@@ -1795,7 +1815,7 @@ function showAppUI(userObj) {
     // Adjust UI based on TV Mode
     if (userObj.role === 'tv') {
       document.body.classList.add('tv-mode');
-      tvSettingsBox.classList.remove('hidden');
+      if (tvSettingsBox) tvSettingsBox.classList.remove('hidden');
       if (btnAdminExitTv) btnAdminExitTv.classList.add('hidden');
       if (navToggle) navToggle.classList.add('hidden'); // No sidebar toggle for TV Role
       if (sidebar) sidebar.style.display = 'none'; // Explicitly hide sidebar element
@@ -1834,7 +1854,7 @@ function showAppUI(userObj) {
         if (sidebar) sidebar.style.display = '';
         if (btnTvHeaderToggle) btnTvHeaderToggle.classList.add('hidden');
       }
-      tvSettingsBox.classList.remove('hidden');
+      if (tvSettingsBox) tvSettingsBox.classList.remove('hidden');
       if (btnSidebarToggle) btnSidebarToggle.classList.remove('hidden');
       // Re-sync toggle buttons to reflect persisted state
       syncTvSettingsUI();
@@ -1842,11 +1862,10 @@ function showAppUI(userObj) {
       // For uploader and others, keep tv-settings hidden
       document.body.classList.remove('tv-mode');
       document.body.classList.add('dashboard-backdrop');
-      tvSettingsBox.classList.add('hidden');
+      if (tvSettingsBox) tvSettingsBox.classList.add('hidden');
       if (btnAdminExitTv) btnAdminExitTv.classList.add('hidden');
       if (navToggle) navToggle.classList.remove('hidden');
       if (sidebar) sidebar.style.display = '';
-      // Sidebar toggle is hidden by default in index.html, we only show it for Admins above
     }
 
     const navMessages = document.getElementById('nav-messages');

@@ -17,6 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+  <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
   <link rel="stylesheet" href="styles.css?v=12.2">
   <script>
     // TEMPORARILY DISABLED: Service Worker causing caching issues for new apps
@@ -628,31 +629,17 @@
           </div>
 
           <div class="home-header-meta">
-            <!-- TV Mode Custom Settings -->
-            <div class="tv-settings hidden" id="tv-settings">
-              <button id="tv-header-toggle" class="icon-btn" aria-label="Toggle Header" title="Collapse Header">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-                  stroke-linecap="round" stroke-linejoin="round" class="toggle-icon">
-                  <polyline points="15 18 9 12 15 6"></polyline>
-                </svg>
-              </button>
-              <button id="tv-audio-toggle" class="icon-btn" aria-label="Toggle Audio" title="Unmute Videos">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                  stroke-linecap="round" stroke-linejoin="round">
-                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-                  <line x1="23" y1="9" x2="17" y2="15"></line>
-                  <line x1="17" y1="9" x2="23" y2="15"></line>
-                </svg>
-              </button>
-              <button id="tv-fullscreen-toggle" class="icon-btn" aria-label="Toggle Video Expansion"
-                title="Expand Videos Only">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                  stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                  <line x1="8" y1="21" x2="16" y2="21"></line>
-                  <line x1="12" y1="17" x2="12" y2="21"></line>
-                </svg>
-              </button>
+            <!-- Header Actions: Messages & Live Clock -->
+            <div class="header-actions">
+              <a href="#messages" class="header-action-btn" id="header-msg-btn" title="Messages">
+                <i class='bx bx-message-square-detail'></i>
+                <span class="header-badge hidden" id="header-unread-badge">0</span>
+              </a>
+              <div class="header-separator"></div>
+              <div class="header-clock" id="header-clock-box">
+                <div class="header-time" id="header-time-val">--:-- --</div>
+                <div class="header-date" id="header-date-val">---, --- --</div>
+              </div>
             </div>
 
             <div class="user-menu" id="user-menu">
