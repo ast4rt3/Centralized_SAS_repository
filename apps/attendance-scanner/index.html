@@ -1220,7 +1220,7 @@
                 const { data: existing, error: lErr } = await supabase
                     .from('sas_attendance_logs')
                     .select('*')
-                    .eq('student_token', student.ID)
+                    .eq('student_id', student.ID)
                     .eq('schedule_id', windowInfo.id)
                     .maybeSingle();
 
@@ -1231,7 +1231,7 @@
                 const { error: iErr } = await supabase
                     .from('sas_attendance_logs')
                     .insert([{
-                        student_token: student.ID,
+                        student_id: student.ID,
                         schedule_id: windowInfo.id,
                         scanner_user: scannerUser,
                         status: 'present'
@@ -1267,12 +1267,12 @@
                 const { error } = await supabase
                     .from('sas_attendance_logs')
                     .upsert({
-                        student_token: student.ID,
+                        student_id: student.ID,
                         schedule_id: windowInfo.id,
                         scanner_user: scannerUser,
                         status: 'flagged',
                         flag_reason: reason
-                    }, { onConflict: 'student_token,schedule_id' });
+                    }, { onConflict: 'student_id,schedule_id' });
 
                 if (error) throw error;
                 return { status: "success" };

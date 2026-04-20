@@ -117,7 +117,7 @@
     <script src="../../env.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <!-- Inline diagnostics (remove in prod) -->
+    <!-- Inline diagnostics -->
     <script>
         (function() {
             console.log('🔍 DIAGNOSTIC: Inline preload check starting...');
@@ -139,7 +139,7 @@
         })();
     </script>
 
-    <!-- INLINED app.js to avoid path/caching issues -->
+    <!-- INLINED app.js — complete rewrite -->
     <script>
         // ========== BEGIN apps/schedule-manager/app.js ==========
         let supabaseClient;
@@ -154,18 +154,21 @@
         async function init() {
             console.log("🚀 Initializing Schedule Manager...");
             
+            // Guard: ENV
             if (!window.ENV?.SUPABASE_URL || !window.ENV?.SUPABASE_ANON_KEY) {
                 console.error("❌ Missing Supabase credentials");
                 showError("Supabase credentials missing in env.js");
                 return;
             }
             
+            // Guard: library
             if (!window.supabase) {
                 console.error("❌ Supabase library not loaded");
                 showError("Supabase library not loaded — check internet connection");
                 return;
             }
             
+            // Create client
             try {
                 supabaseClient = window.supabase.createClient(window.ENV.SUPABASE_URL, window.ENV.SUPABASE_ANON_KEY);
                 console.log("✅ Supabase client ready");
@@ -175,9 +178,11 @@
                 return;
             }
             
+            // UI setup
             document.getElementById('schedDate').valueAsDate = new Date();
             els.form.addEventListener('submit', handleFormSubmit);
             
+            // Load schedules
             try {
                 await loadSchedules();
                 console.log("✅ Schedules loaded");
@@ -196,36 +201,63 @@
 
         async function loadSchedules() {
             console.log("📡 Fetching schedules...");
-            const { data, error, status, statusText } = await supabaseClient
-                .from('sas_schedules')
-                .select('*')
-                .order('created_at', { ascending: false });
+            try {
+                // Step 1: Fetch raw schedules
+                const { data: schedules, error: schedErr } = await supabaseClient
+                    .from('sas_schedules')
+                    .select('*')
+                    .order('date', { ascending: false })
+                    .order('start_time', { ascending: false });
 
-            console.log('📊 Query raw response:', { 
-                rowCount: data?.length, 
-                error: error?.message, 
-                status, 
-                statusText,
-                firstRow: data?.[0] 
-            });
-
-            if (error) {
-                console.error("❌ Supabase Error:", error);
-                let msg = "Failed to load schedules.\n";
-                if (error.code === '42P01') {
-                    msg += "Table 'sas_schedules' not found.\n\nDid you run the SQL migration?";
-                } else if (error.code === '42501') {
-                    msg += "Permission denied — RLS may be enabled.\n\nRun: ALTER TABLE sas_schedules DISABLE ROW LEVEL SECURITY;";
-                } else {
-                    msg += "(" + (error.code || 'unknown') + ") " + error.message;
+                if (schedErr) {
+                    console.error("❌ Schedules query error:", schedErr);
+                    throw schedErr;
                 }
-                showError(msg);
-                els.grid.innerHTML = `<div style="text-align:center;padding:40px;color:red;">${msg.replace(/\n/g, '<br>')}</div>`;
-                return;
-            }
 
-            console.log('✅ Data received, rows:', data?.length);
-            renderSchedules(data);
+                console.log('📊 Raw schedules from DB:', schedules?.length, 'rows');
+                console.log('First schedule object:', schedules?.[0]);
+
+                if (!schedules || schedules.length === 0) {
+                    els.grid.innerHTML = `
+                        <div style="grid-column: 1/-1; text-align: center; padding: 48px; color: var(--text-muted);">
+                            <i class='bx bx-calendar-x' style="font-size: 3rem; margin-bottom: 16px; opacity: 0.5;"></i>
+                            <p>No schedules found. Create your first check-in window!</p>
+                        </div>
+                    `;
+                    els.stats.textContent = "0 Windows defined";
+                    return;
+                }
+
+                // Step 2: Fetch events
+                const eventIds = [...new Set(schedules.map(s => s.event_id).filter(Boolean))];
+                let eventsMap = {};
+
+                if (eventIds.length > 0) {
+                    const { data: events, error: evErr } = await supabaseClient
+                        .from('sas_events')
+                        .select('id, name')
+                        .in('id', eventIds);
+
+                    if (evErr) {
+                        console.warn("⚠️ Events query error:", evErr);
+                    } else if (events) {
+                        console.log('📅 Events loaded:', events.length);
+                        eventsMap = events.reduce((acc, e) => { acc[e.id] = e; return acc; }, {});
+                    }
+                }
+
+                // Step 3: Merge event name into each schedule
+                const merged = schedules.map(s => ({
+                    ...s,
+                    sas_events: s.event_id ? eventsMap[s.event_id] : null
+                }));
+
+                console.log('✅ Merged schedules with events:', merged.length);
+                renderSchedules(merged);
+            } catch (err) {
+                console.error("❌ loadSchedules failed:", err);
+                showError("Failed to load schedules:\n" + err.message);
+            }
         }
 
         function renderSchedules(schedules) {
@@ -247,6 +279,8 @@
                 const isActive = sched.is_active;
                 if (isActive) activeCount++;
 
+                const eventName = sched.sas_events?.name || (sched.date ? 'Event on ' + sched.date : 'Unknown Event');
+
                 const card = document.createElement('div');
                 card.className = `card ${isActive ? 'active' : ''}`;
                 card.innerHTML = `
@@ -254,6 +288,7 @@
                         <div>
                             <p class="card-date">${formatDate(sched.date)}</p>
                             <h3 class="card-label">${sched.label}</h3>
+                            <small style="color:var(--text-muted);font-size:0.75rem;">${eventName}</small>
                         </div>
                         <div class="status-pill ${isActive ? 'active' : ''}">
                             ${isActive ? 'Active' : 'Archived'}
@@ -281,24 +316,66 @@
 
         async function handleFormSubmit(e) {
             e.preventDefault();
-            const payload = {
-                label: document.getElementById('schedLabel').value,
-                date: document.getElementById('schedDate').value,
-                start_time: document.getElementById('startTime').value,
-                end_time: document.getElementById('endTime').value,
-                is_active: true
-            };
+            const label = document.getElementById('schedLabel').value;
+            const date = document.getElementById('schedDate').value;
+            const start_time = document.getElementById('startTime').value;
+            const end_time = document.getElementById('endTime').value;
 
-            console.log("🚀 Saving schedule:", payload);
-            const { error } = await supabaseClient
-                .from('sas_schedules')
-                .insert([payload]);
+            console.log("🚀 Saving schedule:", { label, date, start_time, end_time });
 
-            if (error) {
-                alert("Error saving: " + error.message);
-            } else {
-                closeModal();
-                loadSchedules();
+            try {
+                // 1. Find or create event for this date
+                let { data: events, error: evErr } = await supabaseClient
+                    .from('sas_events')
+                    .select('id')
+                    .eq('event_date', date);
+
+                if (evErr) throw evErr;
+
+                let event_id;
+                if (events && events.length > 0) {
+                    event_id = events[0].id;
+                    console.log("📅 Using existing event:", event_id);
+                } else {
+                    const eventName = 'Event on ' + date;
+                    const { data: newEvent, error: createErr } = await supabaseClient
+                        .from('sas_events')
+                        .insert([{
+                            event_date: date,
+                            name: eventName,
+                            description: 'Auto-created from schedule manager',
+                            created_by: 'system'
+                        }])
+                        .select('id')
+                        .single();
+
+                    if (createErr) throw createErr;
+                    event_id = newEvent.id;
+                    console.log("➕ Created new event:", event_id);
+                }
+
+                // 2. Insert schedule with event_id
+                const { error } = await supabaseClient
+                    .from('sas_schedules')
+                    .insert([{
+                        label,
+                        date,
+                        start_time,
+                        end_time,
+                        is_active: true,
+                        event_id
+                    }]);
+
+                if (error) {
+                    console.error("❌ Insert error:", error);
+                    alert("Error saving: " + error.message + "\n\nSee console for details.");
+                } else {
+                    closeModal();
+                    loadSchedules();
+                }
+            } catch (err) {
+                console.error("❌ Save failed:", err);
+                alert("Failed to save schedule: " + err.message);
             }
         }
 
@@ -339,7 +416,7 @@
             return `${h12}:${m} ${ampm}`;
         }
 
-        // Init on DOM ready
+        // Run init when DOM is ready
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', init);
         } else {
@@ -348,8 +425,8 @@
         // ========== END apps/schedule-manager/app.js ==========
     </script>
 
+    <!-- Global error handler -->
     <script>
-        // Global error handler
         window.addEventListener('error', (event) => {
             console.error('❌ GLOBAL ERROR:', event.error || event.message);
             const overlay = document.getElementById('loadingOverlay');
