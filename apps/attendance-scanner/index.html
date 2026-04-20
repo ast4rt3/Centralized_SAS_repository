@@ -590,123 +590,114 @@
 
         #result {
             display: none;
-            border-radius: 16px;
-            padding: 32px 20px 24px;
+            border-radius: 20px;
+            padding: 24px 24px 20px;
             text-align: center;
-            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.15);
-            animation: popIn 0.3s ease-out;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.5);
+            animation: premiumPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
         }
 
-        @keyframes popIn {
-            from {
-                opacity: 0;
-                transform: scale(0.95) translateY(8px);
-            }
-
-            to {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
-        }
-
-        .flag-btn {
-            margin-top: 15px;
-            background-color: #ffc107;
-            /* Warning Yellow */
-            color: #000;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            font-weight: bold;
-            cursor: pointer;
-            width: 100%;
-            transition: background 0.3s;
-        }
-
-        .flag-btn:hover {
-            background-color: #e0a800;
-        }
-
-        .result-card.warning {
-            border-left: 5px solid #ff9800;
-            background: #fff3e0;
-            padding: 10px;
+        @keyframes premiumPop {
+            from { opacity: 0; transform: scale(0.9) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
         }
 
         #result .result-icon {
-            font-size: 3rem;
-            margin-bottom: 10px;
+            font-size: 3.5rem;
+            margin-bottom: 12px;
             display: block;
+            filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.3));
         }
 
         #result h3 {
-            font-size: 1.5rem;
+            font-size: 0.8rem;
             font-weight: 800;
-            margin-bottom: 10px;
-            color: inherit;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            opacity: 0.9;
+        }
+
+        #result .student-name {
+            font-size: 1.6rem;
+            font-weight: 900;
+            margin-bottom: 12px;
+            line-height: 1.2;
+            color: white;
+            text-transform: uppercase;
         }
 
         #result p {
-            font-size: 1.05rem;
-            line-height: 1.6;
-            word-break: break-word;
+            font-size: 0.9rem;
+            margin-bottom: 16px;
+            opacity: 0.8;
+            font-weight: 600;
         }
 
         .success {
-            background: var(--success);
+            background: linear-gradient(135deg, #065f46 0%, #10b981 100%);
             color: white;
         }
 
         .error {
-            background: var(--error);
+            background: linear-gradient(135deg, #9f1239 0%, #f43f5e 100%);
             color: white;
         }
 
         .warning {
-            background: var(--orange);
+            background: linear-gradient(135deg, #92400e 0%, #f59e0b 100%);
             color: white;
         }
 
         .processing {
-            background: #6c757d;
+            background: var(--nbsc-dark);
             color: white;
-        }
-
-        /* Loading Spinner */
-        .spinner {
-            width: 40px;
-            height: 40px;
-            margin: 0 auto 15px auto;
-            border: 4px solid rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
-            border-top-color: #ffffff;
-            animation: spin 0.8s linear infinite;
-            display: block;
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
+            border: 2px solid rgba(255, 255, 255, 0.1) !important;
         }
 
         .scan-btn-next {
             background: white !important;
             color: var(--nbsc-dark) !important;
             border: none !important;
-            padding: 20px !important;
+            padding: 16px !important;
             border-radius: 12px !important;
             text-transform: uppercase !important;
-            font-weight: 800 !important;
-            font-size: 1rem !important;
+            font-weight: 900 !important;
+            font-size: 0.9rem !important;
             font-family: 'Montserrat', sans-serif !important;
             width: 100% !important;
-            margin-top: 20px !important;
             cursor: pointer !important;
-            letter-spacing: 0.5px !important;
+            letter-spacing: 1px !important;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
-            min-height: 58px !important;
+            transition: transform 0.2s;
         }
+
+        .scan-btn-next:active { transform: scale(0.98); }
+
+        .flag-btn {
+            margin-top: 12px;
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: 800;
+            font-size: 0.75rem;
+            cursor: pointer;
+            width: 100%;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .flag-btn:hover { background: rgba(255, 255, 255, 0.25); }
 
         /* ══════════════════════════════════════
             MODAL
@@ -1257,7 +1248,8 @@
 
             if (action === "getAvailableEvents") {
                 const now = new Date();
-                const todayStr = now.toISOString().split('T')[0];
+                // Use local date for event filtering
+                const todayStr = now.toLocaleDateString('en-CA');
                 const { data: events, error } = await supabase
                     .from('sas_events')
                     .select('*')
@@ -1269,13 +1261,20 @@
 
             if (action === "getWindowStatus") {
                 const now = new Date();
-                const todayStr = now.toISOString().split('T')[0];
+                // Use local date (YYYY-MM-DD) instead of UTC
+                const todayStr = now.toLocaleDateString('en-CA');
                 const nowTime = now.toTimeString().split(' ')[0]; // HH:mm:ss
 
                 const eventId = localStorage.getItem('scannerEventId');
                 if (!eventId) {
                     return { status: "error", message: "No Event Selected" };
                 }
+
+                // Helper: HH:mm[:ss] -> minutes since midnight
+                const toMin = (t) => {
+                    const [h, m] = t.split(':').map(Number);
+                    return (h * 60) + m;
+                };
 
                 const { data: schedules, error } = await supabase
                     .from('sas_schedules')
@@ -1287,13 +1286,22 @@
                 if (error) {
                     console.error("getWindowStatus error:", error);
                     if (error.code === '42P01') {
-                        return { status: "error", message: "Database not ready: sas_schedules table missing. Run the SQL migration." };
+                        return { status: "error", message: "Database not ready: sas_schedules table missing." };
                     }
                     throw error;
                 }
 
-                // Find active window
-                const active = schedules.find(s => nowTime >= s.start_time && nowTime <= s.end_time);
+                const nowM = toMin(nowTime);
+
+                // Find active window with midnight wrap support
+                const active = schedules.find(s => {
+                    const startM = toMin(s.start_time);
+                    const endM = toMin(s.end_time);
+                    return (startM <= endM) 
+                        ? (nowM >= startM && nowM <= endM) 
+                        : (nowM >= startM || nowM <= endM);
+                });
+
                 if (active) {
                     return {
                         isOpen: true,
@@ -1305,7 +1313,11 @@
                 }
 
                 // Find next window
-                const next = schedules.filter(s => s.start_time > nowTime).sort((a,b) => a.start_time.localeCompare(b.start_time))[0];
+                const future = schedules
+                    .filter(s => toMin(s.start_time) > nowM)
+                    .sort((a,b) => toMin(a.start_time) - toMin(b.start_time));
+                
+                const next = future[0];
                 return {
                     isOpen: false,
                     nextType: next ? next.label : null,
@@ -1411,16 +1423,39 @@
             }
 
             if (action === "getOfflineMasterlist") {
-                const { data, error } = await supabase.from('NBSC_masterlist').select('ID, Name, qr_token');
-                if (error) {
-                    console.error("getOfflineMasterlist error:", error);
-                    if (error.code === '42P01') {
-                        throw new Error("NBSC_masterlist table missing. Run migration.");
+                let allData = [];
+                let page = 0;
+                const pageSize = 1000;
+                let hasMore = true;
+
+                while (hasMore) {
+                    const { data, error } = await supabase
+                        .from('NBSC_masterlist')
+                        .select('ID, Name, qr_token')
+                        .range(page * pageSize, (page + 1) * pageSize - 1);
+
+                    if (error) {
+                        console.error("getOfflineMasterlist error:", error);
+                        if (error.code === '42P01') {
+                            throw new Error("NBSC_masterlist table missing. Run migration.");
+                        }
+                        throw error;
                     }
-                    throw error;
+
+                    if (data && data.length > 0) {
+                        allData = allData.concat(data);
+                        if (data.length < pageSize) {
+                            hasMore = false;
+                        } else {
+                            page++;
+                        }
+                    } else {
+                        hasMore = false;
+                    }
                 }
+
                 const master = {};
-                data.forEach(s => {
+                allData.forEach(s => {
                     if (s.ID) master[s.ID.toLowerCase()] = { name: s.Name, id: s.ID };
                     if (s.qr_token) master[s.qr_token.toLowerCase()] = { name: s.Name, id: s.ID };
                 });
@@ -1587,13 +1622,18 @@
 
         function enterScanner() {
             const evSel = document.getElementById('eventSelector');
+            const label = document.getElementById('selectedEventLabel');
+            
             if (evSel && !evSel.value) {
                 alert("Please select an Event first before scanning.");
                 return;
             }
-            if (evSel && evSel.value) {
+
+            // Persistence was already handled in selectEventOption, 
+            // but we ensure the session is synced here:
+            if (evSel && evSel.value && label) {
                 localStorage.setItem('scannerEventId', evSel.value);
-                localStorage.setItem('scannerEventName', evSel.options[evSel.selectedIndex].text);
+                localStorage.setItem('scannerEventName', label.innerText);
             }
 
             document.querySelector(".bottom-nav").style.setProperty("display", "flex", "important");
@@ -1786,13 +1826,15 @@
                 const winName = (currentWindowInfo && currentWindowInfo.isOpen) ? currentWindowInfo.type : "OFFLINE";
                 addToRecentScans(name.toUpperCase(), token, winName + " (SAVED)", isConsented);
 
-                resultDiv.className = isConsented ? "offline-consented" : "warning";
+                resultDiv.className = isConsented ? "success" : "warning";
+                const cardIcon = isConsented ? "bx-cloud-upload" : "bx-cloud-off";
                 resultDiv.innerHTML =
-                    "<span class=\"result-icon\">" + (isConsented ? "🔵" : "📴") + "</span>" +
-                    "<h3>" + (isConsented ? "OFFLINE SCAN — CONSENTED" : "OFFLINE SAVED") + "</h3>" +
-                    "<p><b>" + name.toUpperCase() + "</b></p>" +
+                    `<i class='bx ${cardIcon} result-icon'></i>` +
+                    "<h3>Offline Sync</h3>" +
+                    `<div class="student-name">${name.toUpperCase()}</div>` +
+                    `<p>${isConsented ? "RECORDED INTERNALLY" : "SAVED TO QUEUE"}</p>` +
                     "<button class=\"scan-btn-next\" onclick=\"resetScanner()\">NEXT SCAN</button>" +
-                    "<button class=\"flag-btn\" onclick=\"toggleFlagBox()\">🚩 FLAG THIS STUDENT</button>" +
+                    "<button class=\"flag-btn\" onclick=\"toggleFlagBox()\"><i class='bx bx-flag'></i> FLAG STUDENT</button>" +
                     "<div id=\"flagReasonBox\" style=\"display:none;background:rgba(0,0,0,0.15);border-radius:10px;padding:12px;margin-top:10px;\">" +
                     "<select id=\"flagReasonSelect\" style=\"width:100%;padding:12px;border-radius:8px;border:none;font-family:Montserrat,sans-serif;margin-bottom:10px;\">" +
                     "<option value=\"\">— Select Reason —</option>" +
@@ -1802,9 +1844,10 @@
                     "<option value=\"Already scanned elsewhere\">Already scanned elsewhere</option>" +
                     "<option value=\"Other\">Other</option>" +
                     "</select>" +
-                    "<p style=\"font-size:0.7rem;color:rgba(255,255,255,0.6);margin-bottom:8px;font-style:italic;\">⚠ Offline: flag syncs when online</p>" +
-                    "<button onclick=\"confirmOfflineFlag('" + token.replace(/'/g, "\\'") + "', '" + name.replace(/'/g, "\\'") + "')\" style=\"width:100%;padding:14px;background:#dc2626;color:white;border:none;border-radius:8px;font-weight:800;font-family:Montserrat,sans-serif;cursor:pointer;\">🚩 CONFIRM FLAG</button>" +
+                    "<p style=\"font-size:0.7rem;color:rgba(255,255,255,0.6);margin-bottom:8px;font-style:italic;\">Flag syncs when online</p>" +
+                    "<button onclick=\"confirmOfflineFlag('" + token.replace(/'/g, "\\'") + "', '" + name.replace(/'/g, "\\'") + "')\" style=\"width:100%;padding:14px;background:#dc2626;color:white;border:none;border-radius:8px;font-weight:800;font-family:Montserrat,sans-serif;cursor:pointer;\">CONFIRM FLAG</button>" +
                     "</div>";
+                return;
                 return;
             }
 
@@ -1820,7 +1863,8 @@
                 });
 
                 let colorClass = response.status === "success" ? "success" : response.status === "warning" ? "warning" : "error";
-                let icon = response.status === "success" ? "✅" : response.status === "warning" ? "⚠️" : "❌";
+                let icon = response.status === "success" ? "bx-check-double" : response.status === "warning" ? "bx-info-circle" : "bx-x-circle";
+                let statusHeader = response.status === "success" ? "Recorded" : response.status === "warning" ? "System Alert" : "Access Denied";
 
                 if (response.status === "success") {
                     addToRecentScans(response.studentName, token, response.windowType || "RECORDED", false);
@@ -1828,13 +1872,14 @@
 
                 const showFlag = response.status === "success" || response.status === "warning";
                 resultDiv.className = colorClass;
-                resultDiv.className = colorClass;
                 resultDiv.innerHTML =
-                    "<span class=\"result-icon\">" + icon + "</span>" +
-                    "<p>" + response.message + "</p>" +
+                    `<i class='bx ${icon} result-icon'></i>` +
+                    `<h3>${statusHeader}</h3>` +
+                    (response.studentName ? `<div class="student-name">${response.studentName.toUpperCase()}</div>` : "") +
+                    "<p>" + response.message.replace(/✅|❌|⚠️/g, '') + "</p>" +
                     "<button class=\"scan-btn-next\" onclick=\"resetScanner()\">NEXT SCAN</button>" +
                     (showFlag ?
-                        "<button class=\"flag-btn\" onclick=\"toggleFlagBox()\">🚩 FLAG THIS STUDENT</button>" +
+                        "<button class=\"flag-btn\" onclick=\"toggleFlagBox()\"><i class='bx bx-flag'></i> FLAG STUDENT</button>" +
                         "<div id=\"flagReasonBox\" style=\"display:none;background:rgba(0,0,0,0.15);border-radius:10px;padding:12px;margin-top:10px;\">" +
                         "<select id=\"flagReasonSelect\" style=\"width:100%;padding:12px;border-radius:8px;border:none;font-family:Montserrat,sans-serif;margin-bottom:10px;\">" +
                         "<option value=\"\">— Select Reason —</option>" +
@@ -1844,14 +1889,14 @@
                         "<option value=\"Already scanned elsewhere\">Already scanned elsewhere</option>" +
                         "<option value=\"Other\">Other</option>" +
                         "</select>" +
-                        "<button onclick=\"confirmOnlineFlag('" + token.replace(/'/g, "\\'") + "')\" style=\"width:100%;padding:14px;background:#dc2626;color:white;border:none;border-radius:8px;font-weight:800;font-family:Montserrat,sans-serif;cursor:pointer;\">🚩 CONFIRM FLAG</button>" +
+                        "<button onclick=\"confirmOnlineFlag('" + token.replace(/'/g, "\\'") + "')\" style=\"width:100%;padding:14px;background:#dc2626;color:white;border-radius:8px;font-weight:800;font-family:Montserrat,sans-serif;cursor:pointer;\">CONFIRM FLAG</button>" +
                         "</div>"
                         : "");
             } catch (e) {
                 console.error("Scanner error:", e);
                 const errMsg = e.message || e.toString() || "Could not reach server.";
                 resultDiv.className = "error";
-                resultDiv.innerHTML = "<span class=\"result-icon\">❌</span><h3>Connection Error</h3><p>" + errMsg + "</p><button class=\"scan-btn-next\" onclick=\"resetScanner()\">NEXT SCAN</button>";
+                resultDiv.innerHTML = `<i class='bx bx-wifi-off result-icon'></i><h3>Connection Failure</h3><p>${errMsg}</p><button class=\"scan-btn-next\" onclick=\"resetScanner()\">RETRY SCAN</button>`;
             }
         }
 

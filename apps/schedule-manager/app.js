@@ -1,8 +1,8 @@
 let supabaseClient;
 const els = {
-    grid: document.getElementById('scheduleGrid'),
-    form: document.getElementById('scheduleForm'),
-    modal: document.getElementById('modalOverlay'),
+    grid: document.getElementById('eventsContainer'), // Containers for event cards
+    form: document.getElementById('windowForm'),
+    modal: document.getElementById('windowModalOverlay'),
     loading: document.getElementById('loadingOverlay'),
     stats: document.getElementById('statsText')
 };
@@ -35,7 +35,8 @@ async function init() {
     }
     
     // UI setup
-    document.getElementById('schedDate').valueAsDate = new Date();
+    const today = new Date().toLocaleDateString('en-CA');
+    document.getElementById('windowDate').value = today;
     els.form.addEventListener('submit', handleFormSubmit);
     
     // Load schedules
@@ -143,12 +144,18 @@ function renderSchedules(schedules) {
 async function handleFormSubmit(e) {
     e.preventDefault();
     const payload = {
-        label: document.getElementById('schedLabel').value,
-        date: document.getElementById('schedDate').value,
+        label: document.getElementById('windowLabel').value,
+        date: document.getElementById('windowDate').value,
+        event_id: document.getElementById('windowEventSelect').value,
         start_time: document.getElementById('startTime').value,
         end_time: document.getElementById('endTime').value,
         is_active: true
     };
+
+    // Midnight cross warning
+    if (payload.start_time > payload.end_time) {
+        if (!confirm("Start time is AFTER end time. This will be treated as a midnight-crossing window (e.g. 11:00 PM to 01:00 AM). Continue?")) return;
+    }
 
     console.log("🚀 Saving schedule:", payload);
     const { error } = await supabaseClient
@@ -185,8 +192,13 @@ async function deleteSchedule(id) {
     else loadSchedules();
 }
 
-function openModal() { els.modal.style.display = 'flex'; }
-function closeModal() { els.modal.style.display = 'none'; els.form.reset(); document.getElementById('schedDate').valueAsDate = new Date(); }
+function openWindowModal() { els.modal.style.display = 'flex'; }
+function closeWindowModal() { 
+    els.modal.style.display = 'none'; 
+    els.form.reset(); 
+    const today = new Date().toLocaleDateString('en-CA');
+    document.getElementById('windowDate').value = today;
+}
 
 function formatDate(dateStr) {
     return new Date(dateStr).toLocaleDateString('en-US', { 
