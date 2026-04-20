@@ -471,6 +471,25 @@
             display: none !important;
         }
 
+        .flip-camera-btn {
+            background: #f1f5f9;
+            color: var(--nbsc-blue);
+            border: 1px solid #e2e8f0;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: none; /* Shown if multi-camera */
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1.1rem;
+        }
+
+        .flip-camera-btn:active {
+            transform: rotate(180deg);
+        }
+
         .camera-toggle-btn {
             background: var(--nbsc-blue);
             color: white;
@@ -487,24 +506,25 @@
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
 
-        .flip-camera-btn {
-            background: #f1f5f9;
-            color: var(--nbsc-blue);
+        .camera-select {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
             border: 1px solid #e2e8f0;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            display: none; /* Hidden by default, shown if multi-camera */
-            align-items: center;
-            justify-content: center;
+            border-radius: 10px;
+            padding: 8px 12px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--nbsc-dark);
+            outline: none;
             cursor: pointer;
-            transition: all 0.2s;
-            font-size: 1.1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            max-width: 120px;
+            text-overflow: ellipsis;
         }
 
-        .flip-camera-btn:active {
-            transform: rotate(180deg);
-            background: #e2e8f0;
+        .camera-select:focus {
+            border-color: var(--nbsc-gold);
         }
 
         .camera-toggle-btn.btn-stop {
@@ -1150,9 +1170,12 @@
                     <div style="padding: 20px; display: flex; align-items: center; justify-content: space-between; background: #fff;">
                         <div class="manual-label" style="margin-bottom: 0;">Scanner</div>
                         <div style="display: flex; gap: 8px; align-items: center;">
-                            <button id="flipCameraBtn" class="flip-camera-btn" onclick="flipCamera()" title="Switch Camera">
+                            <button id="flipCameraBtn" class="flip-camera-btn" onclick="flipCamera()" title="Cycle Camera">
                                 <i class='bx bx-refresh'></i>
                             </button>
+                            <select id="cameraSelector" class="camera-select" onchange="onCameraChange()" title="Select Camera">
+                                <option value="">Detecting...</option>
+                            </select>
                             <button id="customToggle" class="camera-toggle-btn" onclick="toggleCameraState()">Start Scanning</button>
                         </div>
                     </div>
@@ -1769,39 +1792,38 @@
 
         function syncToggleBtn() {
             const customBtn = document.getElementById('customToggle');
-            if (!customBtn || !html5QrcodeScanner) return;
+            if (!customBtn) return;
 
-            const state = (typeof html5QrcodeScanner.getState === 'function') ? html5QrcodeScanner.getState() : 0;
-            
-            if (state === 2) { // Scanning
+            if (isScannerStarted) {
                 customBtn.innerText = "Stop Scanning";
                 customBtn.className = "camera-toggle-btn btn-stop";
             } else {
                 customBtn.innerText = "Start Scanning";
                 customBtn.className = "camera-toggle-btn btn-start";
             }
-
-            // Periodically check for multiple cameras to show/hide Flip button
-            detectCameras();
         }
 
-        // Keep custom toggle in sync with internal state changes
-        setInterval(syncToggleBtn, 1000);
+        async function onCameraChange() {
+            if (isScannerStarted) {
+                await stopScanner();
+                await startScanner();
+            } else {
+                // Just save preference
+                const cameraId = document.getElementById('cameraSelector').value;
+                localStorage.setItem('lastPreferredCameraId', cameraId);
+            }
+        }
 
         function flipCamera() {
-            // Find the selection dropdown inside the library UI
-            const select = document.querySelector("#reader__dashboard_section select");
-            if (!select || select.options.length <= 1) {
-                // If the library hasn't rendered it yet, try querying cameras directly
-                return;
-            }
-            
-            let nextIndex = select.selectedIndex + 1;
-            if (nextIndex >= select.options.length) nextIndex = 0;
-            
-            select.selectedIndex = nextIndex;
-            select.dispatchEvent(new Event('change'));
-            
+            const selector = document.getElementById('cameraSelector');
+            if (!selector || selector.options.length <= 1) return;
+
+            let nextIndex = selector.selectedIndex + 1;
+            if (nextIndex >= selector.options.length) nextIndex = 0;
+
+            selector.selectedIndex = nextIndex;
+            onCameraChange(); // This is now stable with the new engine
+
             // Visual feedback
             const btn = document.getElementById('flipCameraBtn');
             if (btn) {
@@ -1810,67 +1832,107 @@
             }
         }
 
-        async function detectCameras() {
+        // Keep custom toggle in sync with internal state changes
+        setInterval(syncToggleBtn, 1000);
+
+        let html5QrCode = null;
+        let isScannerStarted = false;
+        let availableCameras = [];
+
+        async function loadCameras() {
             try {
-                // Use the library's static method to count cameras
-                const devices = await Html5Qrcode.getCameras();
-                const btn = document.getElementById('flipCameraBtn');
-                if (btn) {
-                    const shouldShow = devices && devices.length > 1;
-                    btn.style.display = shouldShow ? 'flex' : 'none';
+                availableCameras = await Html5Qrcode.getCameras();
+                const selector = document.getElementById('cameraSelector');
+                if (!selector) return;
+
+                selector.innerHTML = "";
+                if (!availableCameras || availableCameras.length === 0) {
+                    selector.innerHTML = "<option value=''>No Camera Found</option>";
+                    return;
                 }
+
+                availableCameras.forEach(cam => {
+                    const opt = document.createElement('option');
+                    opt.value = cam.id;
+                    opt.innerText = cam.label || `Camera ${availableCameras.indexOf(cam) + 1}`;
+                    selector.appendChild(opt);
+                });
+
+                const last = localStorage.getItem('lastPreferredCameraId');
+                if (last && availableCameras.some(c => c.id === last)) {
+                    selector.value = last;
+                }
+
+                // Show flip button if multi-camera
+                const flipBtn = document.getElementById('flipCameraBtn');
+                if (flipBtn) flipBtn.style.display = availableCameras.length > 1 ? 'flex' : 'none';
             } catch (e) {
-                // Might fail if camera permission is not yet granted
-                const btn = document.getElementById('flipCameraBtn');
-                if (btn) btn.style.display = 'none';
+                console.error("Camera fail:", e);
             }
+        }
+
+        async function toggleCameraState() {
+            if (!html5QrCode) initScanner();
+
+            if (isScannerStarted) {
+                await stopScanner();
+            } else {
+                await startScanner();
+            }
+            syncToggleBtn();
         }
 
         function initScanner() {
-            // Respect default off preference on first load or re-init
-            if (userCameraOff && !html5QrcodeScanner) {
-                console.log("Scanner init deferred until manual start");
-                return;
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("reader");
             }
-
-            if (html5QrcodeScanner) {
-                html5QrcodeScanner.clear().then(() => {
-                    renderScannerImpl();
-                }).catch(e => {
-                    renderScannerImpl();
-                });
-            } else {
-                renderScannerImpl();
-            }
+            loadCameras();
         }
 
-        function renderScannerImpl() {
-            let screenWidth = window.innerWidth || document.documentElement.clientWidth;
+        async function startScanner() {
+            if (!html5QrCode) initScanner();
+            const cameraId = document.getElementById('cameraSelector').value;
             
-            // Adjust box size: Barcode (wide/short), QR (square)
+            const screenWidth = window.innerWidth || document.documentElement.clientWidth;
             const boxWidth = currentScanMode === 'barcode' ? Math.min(screenWidth - 40, 320) : 250;
             const boxHeight = currentScanMode === 'barcode' ? 150 : 250;
 
-            html5QrcodeScanner = new Html5QrcodeScanner("reader", {
-                fps: 15,
-                qrbox: { width: boxWidth, height: boxHeight },
-                rememberLastUsedCamera: true,
-                supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
-            });
-            html5QrcodeScanner.render(processToken);
+            try {
+                await html5QrCode.start(
+                    cameraId,
+                    { fps: 15, qrbox: { width: boxWidth, height: boxHeight } },
+                    processToken
+                );
+                isScannerStarted = true;
+                userCameraOff = false;
+                if (cameraId) localStorage.setItem('lastPreferredCameraId', cameraId);
+            } catch (err) {
+                console.error("Start fail:", err);
+            }
         }
 
-        function resetScanner() {
-            // Delay enabling scans slightly to prevent immediate re-scan of the same code
+        async function stopScanner() {
+            if (html5QrCode && isScannerStarted) {
+                try {
+                    await html5QrCode.stop();
+                    isScannerStarted = false;
+                    userCameraOff = true;
+                } catch (e) {
+                    console.error("Stop fail:", e);
+                }
+            }
+        }
+
+        async function resetScanner() {
+            // Delay enabling scans slightly
             setTimeout(() => { isProcessing = false; }, 500);
             resultDiv.style.display = 'none';
             manualEntryDiv.style.display = 'block';
             
-            // Re-render ONLY if user hasn't explicitly stopped it
-            if (html5QrcodeScanner && !userCameraOff) {
-                html5QrcodeScanner.render(processToken);
+            // Re-start if user hasn't explicitly stopped it
+            if (html5QrCode && !userCameraOff && !isScannerStarted) {
+                startScanner();
             }
-            console.log("Scanner UI reset - Respecting preference:", userCameraOff ? "OFF" : "ON");
         }
 
         async function processToken(rawToken) {
