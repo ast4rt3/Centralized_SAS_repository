@@ -33,6 +33,8 @@ jobs:
           echo "  YOUTUBE_PROXY_URL: \"${{ secrets.YOUTUBE_PROXY_URL }}\"," >> env.js
           echo "  CLOUDINARY_CLOUD_NAME: \"${{ secrets.CLOUDINARY_CLOUD_NAME }}\"," >> env.js
           echo "  CLOUDINARY_UPLOAD_PRESET: \"${{ secrets.CLOUDINARY_UPLOAD_PRESET }}\"," >> env.js
+          echo "  SUPABASE_URL: \"${{ secrets.SUPABASE_URL }}\"," >> env.js
+          echo "  SUPABASE_ANON_KEY: \"${{ secrets.SUPABASE_ANON_KEY }}\"," >> env.js
           echo "  systems: $(cat systems.json)" >> env.js
           echo "};" >> env.js
 
@@ -125,6 +127,8 @@ jobs:
           echo "  YOUTUBE_PROXY_URL: \"${{ secrets.YOUTUBE_PROXY_URL }}\"," >> env.js
           echo "  CLOUDINARY_CLOUD_NAME: \"${{ secrets.CLOUDINARY_CLOUD_NAME }}\"," >> env.js
           echo "  CLOUDINARY_UPLOAD_PRESET: \"${{ secrets.CLOUDINARY_UPLOAD_PRESET }}\"," >> env.js
+          echo "  SUPABASE_URL: \"${{ secrets.SUPABASE_URL }}\"," >> env.js
+          echo "  SUPABASE_ANON_KEY: \"${{ secrets.SUPABASE_ANON_KEY }}\"," >> env.js
           echo "  systems: $(cat systems.json)" >> env.js
           echo "};" >> env.js
       - name: Setup Pages
