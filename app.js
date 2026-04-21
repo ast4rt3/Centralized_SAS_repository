@@ -2,13 +2,19 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebas
 import { getDatabase, ref, push, onChildAdded, onChildChanged, onValue, onDisconnect, set, remove, get, update, serverTimestamp, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
 
 // IMMEDIATE AUTH CHECK - Run BEFORE any UI is shown to prevent flash of unauthorized content
+// IMMEDIATE AUTH CHECK - Show landing page or dashboard depending on session
 (function() {
   const sessionData = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
-  if (!sessionData) {
-    // Not logged in - immediately show loading page to prevent home page flash
-    document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
-    var loadingPage = document.getElementById('loading');
-    if (loadingPage) loadingPage.classList.add('active');
+  const isLoginPage = window.location.hash === '#login';
+  
+  if (!sessionData && !isLoginPage) {
+    // Proactively show landing page to avoid blank screen while waiting for full init
+    const lp = document.getElementById('landing-page');
+    if (lp) lp.classList.remove('hidden');
+  } else if (!sessionData && isLoginPage) {
+    // Show login overlay immediately if explicitly requested
+    const lo = document.getElementById('login-overlay');
+    if (lo) lo.classList.remove('hidden');
   }
 })();
 
@@ -1213,6 +1219,44 @@ document.addEventListener('DOMContentLoaded', () => {
   const navToggle = document.getElementById('nav-toggle');
   const navOverlay = document.getElementById('nav-overlay');
 
+  // Landing Page Elements
+  const landingPage = document.getElementById('landing-page');
+  const lpLoginBtn = document.getElementById('lp-login-btn');
+  const lpMobileToggle = document.getElementById('lp-mobile-toggle');
+  const lpNavLinks = document.getElementById('lp-nav-links');
+
+  // Landing Page variables moved to appropriate scopes or hoisted functions
+
+  // Initialize Landing Page UI
+  if (landingPage) {
+    lpLoginBtn?.addEventListener('click', () => {
+      window.location.hash = 'login';
+      if (loginOverlay) loginOverlay.classList.remove('hidden');
+    });
+
+    lpMobileToggle?.addEventListener('click', () => {
+      lpNavLinks?.classList.toggle('active');
+    });
+
+    // Smooth scroll for LP links
+    lpNavLinks?.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', (e) => {
+        const href = link.getAttribute('href');
+        if (href.startsWith('#lp-')) {
+          e.preventDefault();
+          const target = document.querySelector(href);
+          if (target) {
+            target.scrollIntoView({ behavior: 'smooth' });
+            lpNavLinks.classList.remove('active');
+          }
+        }
+      });
+    });
+  }
+
+  window.showLandingPage = showLandingPage;
+  window.hideLandingPage = hideLandingPage;
+
   // New UI elements for login/user menu
   const loginOverlay = document.getElementById('login-overlay');
   const loginForm = document.getElementById('login-form');
@@ -1226,6 +1270,32 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnSidebarToggle = document.getElementById('sidebar-toggle');
   const btnAdminExitTv = document.getElementById('admin-exit-tv');
 
+  function showLandingPage() {
+    const lp = document.getElementById('landing-page');
+    const lo = document.getElementById('login-overlay');
+    const sb = document.querySelector('.sidebar');
+    const ct = document.querySelector('.content');
+    if (lp) {
+      lp.classList.remove('hidden');
+      document.body.classList.add('lp-mode');
+      if (sb) sb.classList.add('hidden');
+      if (ct) ct.classList.add('hidden');
+      if (lo) lo.classList.add('hidden');
+    }
+  }
+
+  function hideLandingPage() {
+    const lp = document.getElementById('landing-page');
+    const sb = document.querySelector('.sidebar');
+    const ct = document.querySelector('.content');
+    if (lp) {
+      lp.classList.add('hidden');
+      document.body.classList.remove('lp-mode');
+      if (sb && !document.body.classList.contains('tv-mode')) sb.classList.remove('hidden');
+      if (ct) ct.classList.remove('hidden');
+    }
+  }
+
   // TV View Settings (Restore missing definitions)
   const tvSettingsBox = document.getElementById('tv-settings');
   const btnTvAudio = document.getElementById('btn-tv-audio');
@@ -1234,6 +1304,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let tvAudioEnabled = localStorage.getItem('sas_tv_audio_enabled') !== 'false'; // Default to true
   let tvTheaterEnabled = localStorage.getItem('sas_tv_theater_enabled') === 'true'; // Default to false
+
+  // Scroll listener for landing page navbar
+  window.addEventListener('scroll', () => {
+    const navbar = document.querySelector('.lp-navbar');
+    const scrollPos = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
+    if (navbar && document.body.classList.contains('lp-mode')) {
+      if (scrollPos > 40) {
+        navbar.classList.add('scrolled');
+      } else {
+        navbar.classList.remove('scrolled');
+      }
+    }
+  }, { passive: true });
 
   let systems = [];
   let systemsLoaded = false;
@@ -1347,12 +1430,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function syncFromHash() {
     if (!systemsLoaded) {
-      // If called before config, defer until ready
       if (systemsPromise) {
         systemsPromise.then(() => syncFromHash());
       }
       return;
     }
+    
+    // Check if we should show landing page
+    const sessionLP = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
+    if (!sessionLP) {
+      if (window.location.hash === '#login') {
+        hideLandingPage();
+        const lo = document.getElementById('login-overlay');
+        if (lo) lo.classList.remove('hidden');
+      } else {
+        showLandingPage();
+        return;
+      }
+    } else {
+      hideLandingPage();
+      const lo = document.getElementById('login-overlay');
+      if (lo) lo.classList.add('hidden');
+    }
+
     var pageId = getHashPageId();
     
     // Lock scanner role to #attendance-scanner only
@@ -1401,16 +1501,23 @@ document.addEventListener('DOMContentLoaded', () => {
       closeNav();
       if (systemFrame) systemFrame.src = 'about:blank';
       showPage('home');
+      fetchPosts();
+      return;
+    }
+    
+    // Fallback for unauthorized/public hash navigation
+    if (!localStorage.getItem('sas_user_data') && pageId !== 'login') {
+      showLandingPage();
       return;
     }
 
     var sys = systems.find(function (s) { return s.id === pageId; });
     
     // --- RBAC CHECK ---
-    const sessionData = localStorage.getItem('sas_user_data');
     let userRole = 'guest';
-    if (sessionData) {
-      try { userRole = JSON.parse(sessionData).role; } catch(e) {}
+    const rbacSession = localStorage.getItem('sas_user_data');
+    if (rbacSession) {
+      try { userRole = JSON.parse(rbacSession).role; } catch(e) {}
     }
 
     if (!sys) {
@@ -1481,12 +1588,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderNav() {
-    const sessionData = localStorage.getItem('sas_user_data');
+    const navSession = localStorage.getItem('sas_user_data');
     let userRole = 'guest';
 
-    if (sessionData) {
+    if (navSession) {
       try {
-        const userData = JSON.parse(sessionData);
+        const userData = JSON.parse(navSession);
         userRole = userData.role;
       } catch (e) { }
     }
@@ -1689,8 +1796,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Helper functions for UI state
   function showLoginUI() {
+    hideLandingPage(); // Hide landing page when showing login
     document.body.classList.remove('system-mode');
-    if (loginOverlay) loginOverlay.classList.remove('hidden');
+    const lo = document.getElementById('login-overlay');
+    if (lo) lo.classList.remove('hidden');
     if (navToggle) navToggle.classList.add('hidden');
     if (userMenuBtn) userMenuBtn.hidden = true;
     const widget = document.getElementById('fb-chat-widget');
@@ -1740,12 +1849,18 @@ function showAppUI(userObj) {
 
 
   // Check login state on load
-  const sessionData = localStorage.getItem('sas_user_data');
-  if (sessionData) {
-    const userObj = JSON.parse(sessionData);
+  const initialSession = localStorage.getItem('sas_user_data');
+  if (initialSession) {
+    const userObj = JSON.parse(initialSession);
+    hideLandingPage();
     showAppUI(userObj);
   } else {
-    showLoginUI();
+    // If no session, show landing page unless hash is explicitly #login
+    if (window.location.hash === '#login') {
+      showLoginUI();
+    } else {
+      showLandingPage();
+    }
   }
 
   // Function to sync TV UI elements to global state

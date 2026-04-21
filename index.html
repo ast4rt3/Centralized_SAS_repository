@@ -524,9 +524,148 @@
     style="display:none; position:fixed; top:0; left:0; right:0; z-index:9999; background:#b91c1c; color:#fff; font-size:0.8rem; font-weight:700; text-align:center; padding:6px; letter-spacing:0.5px;">
     📡 No internet connection — showing cached content
   </div>
+
+  <!-- Landing Page Section (Public View) -->
+  <section id="landing-page" class="landing-page hidden">
+    <!-- Navigation Bar -->
+    <nav class="lp-navbar">
+      <div class="lp-container">
+        <div class="lp-logo">
+          <img src="assets/sas_logo.png" alt="NBSC Logo" class="lp-logo-img">
+        </div>
+        
+        <button class="lp-mobile-toggle" id="lp-mobile-toggle">
+          <i class='bx bx-menu'></i>
+        </button>
+
+        <ul class="lp-nav-links" id="lp-nav-links">
+          <li><a href="#lp-hero" class="active">Home</a></li>
+          <li><a href="#lp-services">Core Services</a></li>
+          <li><a href="#lp-activities">Recent Activities</a></li>
+          <li><a href="#lp-resources">Resources</a></li>
+        </ul>
+        
+        <div class="lp-nav-actions">
+          <button class="lp-btn-login" id="lp-login-btn">
+            <i class='bx bx-log-in-circle'></i> Log in
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header id="lp-hero" class="lp-hero">
+      <div class="lp-hero-overlay"></div>
+      <div class="lp-hero-content">
+        <h1 class="lp-hero-headline">Empowering Student Success</h1>
+        <p class="lp-hero-subtext">
+          Welcome to the official portal for Student Affairs and Services. We are dedicated to providing holistic support, fostering growth, and documenting student life activities.
+        </p>
+        <div class="lp-hero-actions">
+          <a href="#lp-services" class="lp-btn-primary">Explore Services</a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Core Services Overview -->
+    <section id="lp-services" class="lp-section">
+      <div class="lp-container">
+        <div class="lp-section-header">
+          <h2>Core Services</h2>
+          <p>Comprehensive support tailored for your academic and personal journey.</p>
+        </div>
+
+        <div class="lp-services-grid">
+          <div class="lp-service-card">
+            <div class="lp-service-icon"><i class='bx bx-user-voice'></i></div>
+            <h3 class="lp-service-title">Guidance & Counseling</h3>
+            <p class="lp-service-desc">
+              Professional counseling and dedicated support to help you navigate academic and personal challenges.
+            </p>
+          </div>
+
+          <div class="lp-service-card">
+            <div class="lp-service-icon"><i class='bx bx-check-shield'></i></div>
+            <h3 class="lp-service-title">Student Discipline</h3>
+            <p class="lp-service-desc">
+              Ensuring a safe, respectful, and orderly campus environment through fair implementation of institutional policies.
+            </p>
+          </div>
+
+          <div class="lp-service-card">
+            <div class="lp-service-icon"><i class='bx bx-award'></i></div>
+            <h3 class="lp-service-title">Scholarships</h3>
+            <p class="lp-service-desc">
+              Information and application processes for financial aid, grants, and merit-based scholarship programs.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Activity Documentation Feed -->
+    <section id="lp-activities" class="lp-section lp-bg-alt">
+      <div class="lp-container">
+        <div class="lp-section-header">
+          <h2>Recent Activities</h2>
+          <p>Documenting vibrant student life and institutional events at NBSC.</p>
+        </div>
+
+        <div class="lp-activities-grid">
+          <article class="lp-activity-card">
+            <div class="lp-activity-img-placeholder"><i class='bx bx-image-alt'></i></div>
+            <div class="lp-activity-content">
+              <span class="lp-activity-date"><i class='bx bx-calendar'></i> Oct 15, 2026</span>
+              <h3 class="lp-activity-title">Leadership Training Seminar</h3>
+              <p class="lp-activity-excerpt">A 3-day workshop focused on developing communication skills among student council officers.</p>
+            </div>
+          </article>
+
+          <article class="lp-activity-card">
+            <div class="lp-activity-img-placeholder"><i class='bx bx-image-alt'></i></div>
+            <div class="lp-activity-content">
+              <span class="lp-activity-date"><i class='bx bx-calendar'></i> Sep 28, 2026</span>
+              <h3 class="lp-activity-title">Intramurals Opening</h3>
+              <p class="lp-activity-excerpt">The annual sports festival kicked off with a parade of colors, encouraging camaraderie.</p>
+            </div>
+          </article>
+
+          <article class="lp-activity-card">
+            <div class="lp-activity-img-placeholder"><i class='bx bx-image-alt'></i></div>
+            <div class="lp-activity-content">
+              <span class="lp-activity-date"><i class='bx bx-calendar'></i> Aug 12, 2026</span>
+              <h3 class="lp-activity-title">Mental Health Awareness Week</h3>
+              <p class="lp-activity-excerpt">Interactive booths and counseling sessions organized to destigmatize mental health issues.</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="lp-footer">
+      <div class="lp-container lp-footer-content">
+        <div class="lp-footer-brand">
+          <img src="assets/sas_logo.png" alt="Logo" class="lp-footer-logo">
+          <span>NBSC SAS</span>
+        </div>
+        <div class="lp-footer-links">
+          <a href="#">Privacy Policy</a>
+          <a href="#">Terms of Service</a>
+        </div>
+        <div class="lp-footer-contact">
+          <p><i class='bx bx-envelope'></i> sas@nbsc.edu.ph</p>
+        </div>
+      </div>
+      <div class="lp-footer-bottom">
+        <p>&copy; 2026 Northern Bukidnon State College - Student Affairs and Services.</p>
+      </div>
+    </footer>
+  </section>
+
   <!-- Global Login Overlay -->
   <!-- Recommit for redeployment -->
-  <div id="login-overlay" class="login-overlay">
+  <div id="login-overlay" class="login-overlay hidden">
     <div class="login-card">
       <img src="assets/sas_logo_real.png" alt="NBSC Logo"
         class="login-logo">
@@ -558,10 +697,10 @@
   </button>
   <div id="nav-overlay" class="nav-overlay" hidden></div>
 
-  <aside class="sidebar">
+  <aside class="sidebar hidden">
     <div class="sidebar-header">
       <div class="sidebar-header-main" style="display: flex; align-items: center; justify-content: center; width: 100%;">
-        <img src="assets/sas logo.png" alt="SAS Brand" style="width: 75%; max-width: 150px; height: auto; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3));">
+        <img src="assets/sas_logo.png" alt="SAS Brand" style="width: 75%; max-width: 150px; height: auto; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3));">
       </div>
       <button id="sidebar-toggle" class="sidebar-toggle-btn hidden" title="Collapse Sidebar">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
@@ -596,7 +735,7 @@
     </div>
   </aside>
 
-  <main class="content">
+  <main class="content hidden">
     <div id="page-content" class="page-content">
       <!-- Loading (used when opening a deep-link hash directly) -->
       <section id="loading" class="page">
@@ -614,7 +753,7 @@
           <div id="tv-blurred-bg" class="tv-blurred-bg"></div>
         <header class="home-header">
           <div class="home-header-brand">
-            <img src="assets/sas_logo_real.png"
+            <img src="assets/sas_logo_real.png" id="sidebar-logo"
               class="home-header-logo" alt="NBSC Logo">
             <div class="home-header-text">
               <h1 class="home-header-title">NBSC SAS</h1>
