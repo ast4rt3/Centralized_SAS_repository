@@ -26,17 +26,22 @@ jobs:
         run: npm install
       
       - name: Generate env.js from Secrets
+        env:
+          FIREBASE_CONFIG: "${{ secrets['FIREBASE_CONFIG'] }}"
         run: |
-          echo "window.ENV = {" > env.js
-          echo "  BACKEND_GAS_URL: \"${{ secrets.BACKEND_GAS_URL }}\"," >> env.js
-          echo "  SCANNER_GAS_URL: \"${{ secrets.SCANNER_GAS_URL }}\"," >> env.js
-          echo "  YOUTUBE_PROXY_URL: \"${{ secrets.YOUTUBE_PROXY_URL }}\"," >> env.js
-          echo "  CLOUDINARY_CLOUD_NAME: \"${{ secrets.CLOUDINARY_CLOUD_NAME }}\"," >> env.js
-          echo "  CLOUDINARY_UPLOAD_PRESET: \"${{ secrets.CLOUDINARY_UPLOAD_PRESET }}\"," >> env.js
-          echo "  SUPABASE_URL: \"${{ secrets.SUPABASE_URL }}\"," >> env.js
-          echo "  SUPABASE_ANON_KEY: \"${{ secrets.SUPABASE_ANON_KEY }}\"," >> env.js
-          echo "  systems: $(cat systems.json)" >> env.js
-          echo "};" >> env.js
+          cat <<EOF > env.js
+          window.ENV = {
+            BACKEND_GAS_URL: "${{ secrets.BACKEND_GAS_URL }}",
+            SCANNER_GAS_URL: "${{ secrets.SCANNER_GAS_URL }}",
+            YOUTUBE_PROXY_URL: "${{ secrets.YOUTUBE_PROXY_URL }}",
+            CLOUDINARY_CLOUD_NAME: "${{ secrets.CLOUDINARY_CLOUD_NAME }}",
+            CLOUDINARY_UPLOAD_PRESET: "${{ secrets.CLOUDINARY_UPLOAD_PRESET }}",
+            SUPABASE_URL: "${{ secrets.SUPABASE_URL }}",
+            SUPABASE_ANON_KEY: "${{ secrets.SUPABASE_ANON_KEY }}",
+            FIREBASE_CONFIG: $FIREBASE_CONFIG,
+            systems: $(cat systems.json)
+          };
+          EOF
 
   # 2. AUTOMATED TESTS
   automated-tests:
@@ -120,17 +125,22 @@ jobs:
       # IMPORTANT: env.js needs to be regenerated in this job context because 
       # it wasn't part of the shared git repo (ignored)
       - name: Finalize env.js
+        env:
+          FIREBASE_CONFIG: "${{ secrets['FIREBASE_CONFIG'] }}"
         run: |
-          echo "window.ENV = {" > env.js
-          echo "  BACKEND_GAS_URL: \"${{ secrets.BACKEND_GAS_URL }}\"," >> env.js
-          echo "  SCANNER_GAS_URL: \"${{ secrets.SCANNER_GAS_URL }}\"," >> env.js
-          echo "  YOUTUBE_PROXY_URL: \"${{ secrets.YOUTUBE_PROXY_URL }}\"," >> env.js
-          echo "  CLOUDINARY_CLOUD_NAME: \"${{ secrets.CLOUDINARY_CLOUD_NAME }}\"," >> env.js
-          echo "  CLOUDINARY_UPLOAD_PRESET: \"${{ secrets.CLOUDINARY_UPLOAD_PRESET }}\"," >> env.js
-          echo "  SUPABASE_URL: \"${{ secrets.SUPABASE_URL }}\"," >> env.js
-          echo "  SUPABASE_ANON_KEY: \"${{ secrets.SUPABASE_ANON_KEY }}\"," >> env.js
-          echo "  systems: $(cat systems.json)" >> env.js
-          echo "};" >> env.js
+          cat <<EOF > env.js
+          window.ENV = {
+            BACKEND_GAS_URL: "${{ secrets.BACKEND_GAS_URL }}",
+            SCANNER_GAS_URL: "${{ secrets.SCANNER_GAS_URL }}",
+            YOUTUBE_PROXY_URL: "${{ secrets.YOUTUBE_PROXY_URL }}",
+            CLOUDINARY_CLOUD_NAME: "${{ secrets.CLOUDINARY_CLOUD_NAME }}",
+            CLOUDINARY_UPLOAD_PRESET: "${{ secrets.CLOUDINARY_UPLOAD_PRESET }}",
+            SUPABASE_URL: "${{ secrets.SUPABASE_URL }}",
+            SUPABASE_ANON_KEY: "${{ secrets.SUPABASE_ANON_KEY }}",
+            FIREBASE_CONFIG: $FIREBASE_CONFIG,
+            systems: $(cat systems.json)
+          };
+          EOF
       - name: Setup Pages
         uses: actions/configure-pages@v4
       - name: Upload Pages Artifact
