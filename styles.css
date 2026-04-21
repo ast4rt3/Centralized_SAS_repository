@@ -2300,6 +2300,141 @@ body.tv-mode .tv-time {
   /* Normalized for perfect alignment */
 }
 
+/* TV Website Config Bar (Admin) */
+.tv-website-config {
+  margin-top: 5px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  max-width: 500px;
+}
+
+.tv-url-input-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tv-url-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--nbsc-dark);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tv-url-input {
+  flex-grow: 1;
+  background: white;
+  border: 1px solid #cbd5e1;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: var(--nbsc-dark);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.tv-url-input:focus {
+  border-color: var(--nbsc-gold);
+}
+
+.tv-url-save-btn {
+  background: var(--nbsc-dark);
+  color: white;
+  border: none;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tv-url-save-btn:hover {
+  background: #002244;
+  transform: translateY(-1px);
+}
+
+/* System Portal Card Styling */
+.portal-config-container {
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.portal-url-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-family: var(--font-sans);
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.portal-url-input:focus {
+  border-color: var(--nbsc-gold);
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 15px rgba(250, 204, 21, 0.2);
+}
+
+.portal-save-btn {
+  background: var(--nbsc-gold);
+  color: var(--nbsc-dark);
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.portal-save-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(250, 204, 21, 0.4);
+}
+
+.portal-save-btn:active {
+  transform: translateY(0);
+}
+
+/* TV Website Slide (Interactive) */
+.website-slide-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: white;
+  pointer-events: all !important; /* Force interactivity */
+}
+
+/* Smart Cursor Auto-Hide */
+body.cursor-none, 
+body.cursor-none * {
+  cursor: none !important;
+}
+
+body.tv-mode {
+  transition: cursor 0.3s ease;
+}
+
 body.tv-mode .counter-column-wrapper {
   height: 40px !important;
   /* Shrunk height */

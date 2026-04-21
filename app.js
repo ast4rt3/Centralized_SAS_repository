@@ -1253,11 +1253,39 @@ document.addEventListener('DOMContentLoaded', () => {
     sidebar.classList.add('collapsed');
   }
 
-  // TV Header Collapse Persistence
-  const isTvHeaderCollapsed = localStorage.getItem('sas_tv_header_collapsed') === 'true';
-  if (isTvHeaderCollapsed) {
-    document.body.classList.add('tv-header-collapsed');
+  // Global TV Permanent URL Sync (via Firebase)
+  window.tvPermanentUrl = "";
+  if (userDb) {
+    const permUrlRef = ref(userDb, 'config/tv_permanent_url');
+    onValue(permUrlRef, (snapshot) => {
+      const globalUrl = snapshot.val();
+      if (globalUrl !== window.tvPermanentUrl) {
+        window.tvPermanentUrl = globalUrl || "";
+        console.log("Global TV URL Updated:", window.tvPermanentUrl);
+        // Force a re-render if we are in a state that shows posts
+        if (typeof fetchPosts === 'function') fetchPosts();
+      }
+    });
   }
+
+  // --- Smart Cursor Logic (TV Mode) ---
+  let cursorTimer;
+  function resetCursorTimer() {
+    if (!document.body.classList.contains('tv-mode')) {
+      document.body.classList.remove('cursor-none');
+      return;
+    }
+    document.body.classList.remove('cursor-none');
+    clearTimeout(cursorTimer);
+    cursorTimer = setTimeout(() => {
+      document.body.classList.add('cursor-none');
+    }, 5000); // 5 seconds of inactivity
+  }
+
+  window.addEventListener('mousemove', resetCursorTimer);
+  window.addEventListener('mousedown', resetCursorTimer);
+  window.addEventListener('scroll', resetCursorTimer);
+  window.addEventListener('touchstart', resetCursorTimer);
 
   // Admin Exit TV Logic
   if (btnAdminExitTv) {
@@ -3051,7 +3079,8 @@ if (logoutBtn) {
 
       loading.classList.add('hidden');
 
-      if (data.success && data.posts && data.posts.length > 0) {
+      // We proceed if data is success, even if posts are empty (to show permanent slides or admin tools)
+      if (data.success && data.posts) {
         // Determine role to decide which renderer to use
         let role = 'user';
         const sessionData = localStorage.getItem('sas_user_data');
@@ -3160,19 +3189,43 @@ if (logoutBtn) {
 
   function renderPosts(posts, container, role) {
     // Prevent duplicate dots/tickers on re-render by clearing elements leaked to body
-    const existingDots = document.body.querySelector('.home-news-dots');
-    if (existingDots) existingDots.remove();
-    const existingTicker = document.body.querySelector('.home-news-ticker');
-    if (existingTicker) existingTicker.remove();
+    const existingDots = document.body.querySelectorAll('.home-news-dots');
+    existingDots.forEach(el => el.remove());
+    const existingTicker = document.body.querySelectorAll('.home-news-ticker');
+    existingTicker.forEach(el => el.remove());
+
+    container.innerHTML = '';
+
+    // --- INJECT PERMANENT WEBSITE SLIDE ---
+    const isAdmin = role === 'admin' || role === 'superadmin';
+    const hasValidUrl = window.tvPermanentUrl && window.tvPermanentUrl.startsWith('http');
+    const isActualTvMode = role === 'tv' || document.body.classList.contains('tv-mode');
+    
+    // Always show to admins (so they can configure it) OR to everyone if it's a valid TV slide
+    if (isAdmin || (isActualTvMode && hasValidUrl)) {
+      // Check if already injected to prevent duplicates
+      if (!posts.some(p => p.timestamp && p.timestamp.startsWith('perm-website-'))) {
+        posts.push({
+          title: "Portal Access",
+          description: "Interactive Web Portal",
+          imageUrl: window.tvPermanentUrl || "",
+          type: "website",
+          displayDuration: 62,
+          timestamp: "perm-website-fixed",
+          showOnTv: "true"
+        });
+      }
+    }
 
     container.innerHTML = '';
     ytPlayers = {}; // Clear previous instances
 
-    const isActualTvMode = role === 'tv' || document.body.classList.contains('tv-mode');
-
     if (isActualTvMode) {
       const now = new Date();
       let tvPosts = posts.filter(p => {
+        // Keep the permanent website slide ONLY if the URL is valid
+        if (p.type === 'website') return hasValidUrl;
+
         // 1. Check showOnTv flag
         if (String(p.showOnTv).toLowerCase() === 'false') return false;
         
@@ -3190,6 +3243,7 @@ if (logoutBtn) {
         
         return true;
       });
+
 
       if (tvPosts.length === 0) {
         tvPosts = [{
@@ -3258,15 +3312,20 @@ if (logoutBtn) {
           const ytId = getYouTubeVideoId(post.imageUrl);
           const fbEmbedUrl = getFacebookVideoUrl(post.imageUrl);
 
-          const isVideo = ytId || fbEmbedUrl || 
+          const isWebsite = post.type === "website" || (!ytId && !fbEmbedUrl && !urlLower.includes('image') && !urlLower.includes('video') && urlLower.startsWith('http') && !urlLower.endsWith('.png') && !urlLower.endsWith('.jpg') && !urlLower.endsWith('.jpeg') && !urlLower.endsWith('.gif'));
+
+          const isVideo = !isWebsite && (ytId || fbEmbedUrl || 
             urlLower.includes('/video/upload/') ||
             urlLower.includes('docs.google.com/uc?') ||
             urlLower.includes('drive.google.com/uc?id=') ||
             urlLower.endsWith('.mp4') || urlLower.endsWith('.webm') || urlLower.endsWith('.mov') ||
             (urlLower.includes('drive.google.com') && urlLower.includes('type=video')) ||
-            (urlLower.includes('drive.google.com/file/d/') && urlLower.includes('/preview'));
+            (urlLower.includes('drive.google.com/file/d/') && urlLower.includes('/preview')));
 
-          if (isVideo) {
+          if (isWebsite) {
+            slide.classList.add('has-website');
+            slide.setAttribute('data-is-website', 'true');
+          } else if (isVideo) {
             slide.classList.add('has-video');
             const dId = getDriveId(post.imageUrl);
             if (dId) {
@@ -3286,7 +3345,13 @@ if (logoutBtn) {
 
           const bgHtml = bgThumb ? `<div class="home-news-image-bg" style="background-image: url('${bgThumb}')"></div>` : '';
 
-          if (ytId) {
+          if (isWebsite) {
+            imgHtml = `
+              <div style="position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden;">
+                 <iframe src="${post.imageUrl}" class="home-news-image website-slide-frame" style="border: none; width: 100%; height: 100%; position: relative; z-index: 2; ${styleStr}" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+              </div>
+            `;
+          } else if (ytId) {
             let ytParams = `autoplay=1&mute=1&controls=0&enablejsapi=1&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&showinfo=0&autohide=1`;
             if (startVal) ytParams += `&start=${startVal}`;
             // Adjust parameters based on whether we use a proxy or official YT
@@ -3456,7 +3521,14 @@ if (logoutBtn) {
           const ytId = getYouTubeVideoId(post.imageUrl);
           const fbEmbedUrl = getFacebookVideoUrl(post.imageUrl);
 
-          if (ytId) {
+          if (post.type === 'website') {
+            imgHtml = `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #0f172a; color: #facc15; border: 2px solid #facc15; border-radius: 8px;">
+              <div style="text-align: center;">
+                <i class='bx bx-tv' style="font-size: 40px; margin-bottom: 8px;"></i>
+                <div style="font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">System Portal</div>
+              </div>
+            </div>`;
+          } else if (ytId) {
             imgHtml = `<img src="https://img.youtube.com/vi/${ytId}/maxresdefault.jpg" class="post-image" style="${styleStr}" loading="lazy" onerror="this.src='https://img.youtube.com/vi/${ytId}/hqdefault.jpg'">`;
           } else if (fbEmbedUrl) {
             imgHtml = `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #000; color: white;">
@@ -3494,14 +3566,35 @@ if (logoutBtn) {
           schedulingLabel = `<div class="post-scheduled-label">${sText}${eText}</div>`;
         }
 
+        let cardContentHtml = `
+          <h3 class="post-title">${escapeHtml(post.title)}</h3>
+          <p class="post-desc">${escapeHtml(post.description)}</p>
+          ${schedulingLabel}
+        `;
+
+        // If it's the permanent website slide, show the configuration UI on the card
+        if (post.type === 'website' && (role === 'admin' || role === 'superadmin')) {
+          cardContentHtml = `
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom: 8px;">
+              <h3 class="post-title" style="margin:0;">${escapeHtml(post.title)}</h3>
+              <span style="background: var(--nbsc-gold); color:var(--nbsc-dark); font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px; text-transform:uppercase;">System</span>
+            </div>
+            <p class="post-desc" style="margin-bottom:12px;">${escapeHtml(post.description)}</p>
+            <div class="portal-config-container">
+              <input type="url" class="portal-url-input" value="${window.tvPermanentUrl}" placeholder="Enter Portal URL (https://...)">
+              <button class="portal-save-btn">
+                <i class='bx bx-save'></i> Update Portal Link
+              </button>
+            </div>
+          `;
+        }
+
         card.innerHTML = `
           <div class="post-image-container">
             ${imgHtml}
           </div>
           <div class="post-content">
-            <h3 class="post-title">${escapeHtml(post.title)}</h3>
-            <p class="post-desc">${escapeHtml(post.description)}</p>
-            ${schedulingLabel}
+            ${cardContentHtml}
           </div>
         `;
 
@@ -3509,132 +3602,81 @@ if (logoutBtn) {
           const actionArea = document.createElement('div');
           actionArea.className = 'post-card-actions';
 
-          const editBtn = document.createElement('button');
-          editBtn.className = 'secondary-btn edit-btn';
-          editBtn.textContent = 'Edit';
-          editBtn.onclick = () => {
-            const form = document.getElementById('add-post-form');
-            const modal = document.getElementById('add-post-modal');
+          // Standard Edit Button
+          if (post.type !== 'website') {
+            const editBtn = document.createElement('button');
+            editBtn.className = 'secondary-btn edit-btn';
+            editBtn.textContent = 'Edit';
+            editBtn.onclick = () => {
+                // ... Existing Edit Functionality ...
+                const form = document.getElementById('add-post-form');
+                const modal = document.getElementById('add-post-modal');
+                document.querySelector('.modal-title').textContent = "Edit Update";
+                document.getElementById('submit-post-btn').textContent = "Save Changes";
+                document.getElementById('post-title').value = post.title;
+                document.getElementById('post-desc').value = post.description;
+                if (document.getElementById('post-start-date')) document.getElementById('post-start-date').value = (post.startDate || '').replace(' ', 'T');
+                if (document.getElementById('post-end-date')) document.getElementById('post-end-date').value = (post.endDate || '').replace(' ', 'T');
+                const dSlider = document.getElementById('post-display-duration');
+                if (dSlider) dSlider.value = parseInt(post.displayDuration) || 25;
+                form.setAttribute('data-edit-timestamp', post.timestamp);
+                modal.classList.remove('hidden');
+            };
+            actionArea.appendChild(editBtn);
+          }
 
-            document.querySelector('.modal-title').textContent = "Edit Update";
-            document.getElementById('submit-post-btn').textContent = "Save Changes";
+          // Standard Delete Button
+          if (post.type !== 'website') {
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'secondary-btn delete-btn';
+            deleteBtn.textContent = 'Delete';
+            deleteBtn.onclick = async () => {
+              const confirmDelete = await showConfirm("Delete Post", "Are you sure you want to delete this specific post?", false, 'danger');
+              if (!confirmDelete) return;
+              const sessionData = localStorage.getItem('sas_user_data');
+              if (!sessionData) return;
+              const userObj = JSON.parse(sessionData);
+              deleteBtn.textContent = "Deleting...";
+              deleteBtn.disabled = true;
+              try {
+                const payload = { action: "deletePost", username: userObj.username, password: userObj.password, timestamp: post.timestamp };
+                const r = await fetch(BACKEND_GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+                const res = await r.json();
+                if (res.success) { showToast(res.message, 'success'); fetchPosts(); }
+                else { showToast(res.message || "Failed to delete.", 'error'); }
+              } catch (e) { showToast("Network error.", 'error'); } 
+              finally { deleteBtn.textContent = "Delete"; deleteBtn.disabled = false; }
+            };
+            actionArea.appendChild(deleteBtn);
+          }
 
-            document.getElementById('post-title').value = post.title;
-            document.getElementById('post-desc').value = post.description;
-            
-            if (document.getElementById('post-start-date')) document.getElementById('post-start-date').value = (post.startDate || '').replace(' ', 'T');
-            if (document.getElementById('post-end-date')) document.getElementById('post-end-date').value = (post.endDate || '').replace(' ', 'T');
-            
-            const dSlider = document.getElementById('post-display-duration');
-            const dValDisp = document.getElementById('post-display-duration-val');
-            if (dSlider) {
-              const dVal = parseInt(post.displayDuration) || 25;
-              dSlider.value = dVal;
-              if (dValDisp) dValDisp.textContent = dVal + 's';
-            }
-            
-            const urlForEdit = post.imageUrl || '';
-            const isLivePost = (post.isLive === true || post.isLive === "true");
-            const scope = isLivePost ? 'live' : 'url';
-            
-            const tabBtn = document.querySelector(`.upload-tab[data-tab="${scope}"]`);
-            if (tabBtn) tabBtn.click();
-            
-            const uploadTabsDiv = document.getElementById('upload-tabs');
-            if (uploadTabsDiv) uploadTabsDiv.style.display = 'none';
-
-            const els = getScopedElements(scope);
-             if (scope === 'url') {
-                const urlIn = document.getElementById('post-img');
-                urlIn.value = urlForEdit;
-                urlIn.style.display = 'none';
-                const hint = urlIn.nextElementSibling;
-                if (hint && hint.classList.contains('upload-hint')) hint.style.display = 'none';
-             }
-             else if (scope === 'live') document.getElementById('post-live-url').value = urlForEdit;
-
-            let p = post.imagePosition || '0 0';
-            let startVal = '';
-            let endVal = '';
-            if (p.includes('|')) {
-                const parts = p.split('|');
-                p = parts[0];
-                startVal = parts[1] || '';
-                endVal = parts[2] || '';
-            }
-
-            if (els.posInput) els.posInput.value = p;
-            if (els.sizeInput) els.sizeInput.value = post.imageSize || '1';
-            if (els.vStartHidden) els.vStartHidden.value = startVal;
-            if (els.vEndHidden) els.vEndHidden.value = endVal;
-
-            const isVideo = getYouTubeVideoId(urlForEdit) || getFacebookVideoUrl(urlForEdit) || 
-                            /\.(mp4|webm|mov|mkv|avi)$/i.test(urlForEdit.toLowerCase()) || 
-                            urlForEdit.includes('/video/upload/');
-
-            if (isVideo) {
-               if (window.loadPreviewVideo) window.loadPreviewVideo(urlForEdit, true, scope);
-            } else if (urlForEdit) {
-               if (els.previewImg && els.previewGroup) {
-                  els.previewImg.src = urlForEdit;
-                  els.previewGroup.classList.remove('hidden');
-               }
-            }
-
-            const initialZoom = parseFloat(post.imageSize) || 1;
-            const pParts = p.split(' ');
-            const trX = parseFloat(pParts[0]) || 0;
-            const trY = parseFloat(pParts[1]) || 0;
-            if (window.updateTransform) window.updateTransform(scope, initialZoom, trX, trY);
-
-            form.setAttribute('data-edit-timestamp', post.timestamp);
-            modal.classList.remove('hidden');
-          };
-          actionArea.appendChild(editBtn);
-
-          const deleteBtn = document.createElement('button');
-          deleteBtn.className = 'secondary-btn delete-btn';
-          deleteBtn.textContent = 'Delete';
-          deleteBtn.onclick = async () => {
-            const confirmDelete = await showConfirm("Delete Post", "Are you sure you want to delete this specific post?", false, 'danger');
-            if (!confirmDelete) return;
-
-            const sessionData = localStorage.getItem('sas_user_data');
-            if (!sessionData) return;
-
-            const userObj = JSON.parse(sessionData);
-
-            deleteBtn.textContent = "Deleting...";
-            deleteBtn.disabled = true;
-
-            try {
-              const payload = {
-                action: "deletePost",
-                username: userObj.username,
-                password: userObj.password,
-                timestamp: post.timestamp
-              };
-
-              const r = await fetch(BACKEND_GAS_URL, {
-                method: 'POST',
-                body: JSON.stringify(payload)
+          // Portal Save Logic (Specific to System Card)
+          if (post.type === 'website') {
+            const portalInput = card.querySelector('.portal-url-input');
+            const portalSave = card.querySelector('.portal-save-btn');
+            if (portalInput && portalSave) {
+              portalSave.addEventListener('click', async () => {
+                const newUrl = portalInput.value.trim();
+                if (!newUrl.startsWith('http')) {
+                  showToast("Please enter a valid URL starting with https://", "error");
+                  return;
+                }
+                portalSave.disabled = true;
+                const originalHtml = portalSave.innerHTML;
+                portalSave.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> Syncing...";
+                try {
+                  const permUrlRef = ref(userDb, 'config/tv_permanent_url');
+                  await set(permUrlRef, newUrl);
+                  showToast("Portal link updated globally!", "success");
+                } catch(e) {
+                  showToast("Sync failed. Check connection.", "error");
+                } finally {
+                  portalSave.disabled = false;
+                  portalSave.innerHTML = originalHtml;
+                }
               });
-
-              const responseData = await r.json();
-              if (responseData.success) {
-                showToast(responseData.message, 'success');
-                fetchPosts(); // Refresh UI instantly
-              } else {
-                showToast(responseData.message || "Failed to delete post.", 'error');
-              }
-            } catch (e) {
-              showToast("Network error. Could not delete post.", 'error');
-            } finally {
-              deleteBtn.textContent = "Delete";
-              deleteBtn.disabled = false;
             }
-          };
-          actionArea.appendChild(deleteBtn);
+          }
 
           const toggleTvBtn = document.createElement('button');
           toggleTvBtn.className = 'secondary-btn hide-btn';
@@ -3713,6 +3755,13 @@ if (logoutBtn) {
     // Clear ANY existing carousel timer/players to prevent leaks
     if (globalCarouselTimer) clearInterval(globalCarouselTimer);
     globalCarouselTimer = null;
+
+    dots.forEach(function (dot, i) {
+      dot.addEventListener('click', function () {
+        setActive(i);
+        preloadNext(i);
+      });
+    });
 
     Object.keys(ytPlayers).forEach(id => {
       try { ytPlayers[id].destroy(); } catch (e) { }
@@ -3807,6 +3856,7 @@ if (logoutBtn) {
       const iframeEl = activeSlide.querySelector('iframe.yt-video-frame');
       const fbIframeEl = activeSlide.querySelector('.fb-video-wrapper');
       const driveIframeEl = activeSlide.querySelector('iframe.drive-video-frame');
+      const websiteIframeEl = activeSlide.querySelector('iframe.website-slide-frame');
 
       const curStart = parseFloat(activeSlide.dataset.start) || 0;
       const curEnd = parseFloat(activeSlide.dataset.end) || 0;
@@ -3816,7 +3866,7 @@ if (logoutBtn) {
       const startMs = (customDuration && !isNaN(customDuration)) ? parseInt(customDuration) * 1000 : undefined;
 
       // Handle CSS Unified Fullscreen
-      const isVideoSlide = (videoEl || iframeEl || fbIframeEl || driveIframeEl);
+      const isVideoSlide = (videoEl || iframeEl || fbIframeEl || driveIframeEl || websiteIframeEl);
 
       if (isVideoSlide) {
         document.body.classList.add('video-fullscreen-active');
