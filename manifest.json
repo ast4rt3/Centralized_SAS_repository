@@ -9,13 +9,13 @@
   "orientation": "any",
   "icons": [
     {
-      "src": "assets/sas_logo_real.png",
+      "src": "assets/sas_logo_real.png?v=2",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "assets/sas_logo_real.png",
+      "src": "assets/sas_logo_real.png?v=2",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
@@ -23,4 +23,5 @@
   ],
   "categories": ["productivity", "utilities"],
   "screenshots": []
+
 }

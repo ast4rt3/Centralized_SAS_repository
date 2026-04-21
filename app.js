@@ -3987,9 +3987,10 @@ if (logoutBtn) {
           }, 1000);
         }
 
-        // Safety fallback: advance after custom duration or 3 minutes max even if video stalls, UNLESS it's live
-        if (!isLive) start(startMs || 180000);
-        else stop(); // For live, we rely on the heartbeat/ended events
+        // We rely on the native `onended` event for Cloudinary/direct videos instead of the slide timer.
+        // We set a very long 5-minute fallback just in case the browser hangs.
+        if (!isLive) start(300000); 
+        else stop(); // For live, we strictly rely on the heartbeat/ended events
       } else if (iframeEl && window.YT && window.YT.Player) {
         const iframeId = iframeEl.id;
         const myPlayerId = iframeId;
