@@ -3033,6 +3033,14 @@ if (logoutBtn) {
                cloudinaryUrl = cloudData.secure_url;
                cloudinaryPublicId = cloudData.public_id;
             }
+          } else if (isEdit && activeUploadTab === 'upload' && !file) {
+            // CRITICAL FIX: Preserve existing image data if no new file is uploaded during an edit!
+            cloudinaryUrl = form.getAttribute('data-existing-image-url') || "";
+            cloudinaryPublicId = form.getAttribute('data-existing-public-id') || "";
+            
+            // Re-apply existing position/size as well to prevent zoom reset
+            if (!imgPos || imgPos === "0 0") imgPos = form.getAttribute('data-existing-pos') || "0 0";
+            if (!imgSize || imgSize === "1") imgSize = form.getAttribute('data-existing-size') || "1";
           }
 
           // 3. Submit Payload
@@ -3641,6 +3649,13 @@ if (logoutBtn) {
                 if (document.getElementById('post-end-date')) document.getElementById('post-end-date').value = (post.endDate || '').replace(' ', 'T');
                 const dSlider = document.getElementById('post-display-duration');
                 if (dSlider) dSlider.value = parseInt(post.displayDuration) || 25;
+                
+                // Preserve media elements if not modified
+                form.setAttribute('data-existing-image-url', post.imageUrl || '');
+                form.setAttribute('data-existing-public-id', post.cloudinaryPublicId || '');
+                form.setAttribute('data-existing-pos', post.imagePosition || '');
+                form.setAttribute('data-existing-size', post.imageSize || '');
+                
                 form.setAttribute('data-edit-timestamp', post.timestamp);
                 modal.classList.remove('hidden');
             };
