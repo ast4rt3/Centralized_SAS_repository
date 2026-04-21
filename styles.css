@@ -2425,10 +2425,10 @@ body.tv-mode .tv-time {
   pointer-events: all !important; /* Force interactivity */
 }
 
-/* Smart Cursor Auto-Hide */
+/* Smart Cursor Auto-Hide (With Smart TV Hardware Cursor Fallback) */
 body.cursor-none, 
 body.cursor-none * {
-  cursor: none !important;
+  cursor: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='), none !important;
 }
 
 /* 
