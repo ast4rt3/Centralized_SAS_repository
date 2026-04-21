@@ -1253,8 +1253,9 @@ document.addEventListener('DOMContentLoaded', () => {
     sidebar.classList.add('collapsed');
   }
 
-  // Global TV Permanent URL Sync (via Firebase)
+  // Global TV Permanent URL & Duration Sync (via Firebase)
   window.tvPermanentUrl = "";
+  window.tvPermanentDuration = 60; // Default 60s
   if (userDb) {
     const permUrlRef = ref(userDb, 'config/tv_permanent_url');
     onValue(permUrlRef, (snapshot) => {
@@ -1263,6 +1264,16 @@ document.addEventListener('DOMContentLoaded', () => {
         window.tvPermanentUrl = globalUrl || "";
         console.log("Global TV URL Updated:", window.tvPermanentUrl);
         // Force a re-render if we are in a state that shows posts
+        if (typeof fetchPosts === 'function') fetchPosts();
+      }
+    });
+
+    const permDurRef = ref(userDb, 'config/tv_permanent_duration');
+    onValue(permDurRef, (snapshot) => {
+      const globalDur = snapshot.val();
+      if (globalDur !== null && globalDur !== window.tvPermanentDuration) {
+        window.tvPermanentDuration = parseInt(globalDur) || 60;
+        console.log("Global TV Duration Updated:", window.tvPermanentDuration);
         if (typeof fetchPosts === 'function') fetchPosts();
       }
     });
@@ -3210,7 +3221,7 @@ if (logoutBtn) {
           description: "Interactive Web Portal",
           imageUrl: window.tvPermanentUrl || "",
           type: "website",
-          displayDuration: 62,
+          displayDuration: window.tvPermanentDuration || 60,
           timestamp: "perm-website-fixed",
           showOnTv: "true"
         });
@@ -3581,9 +3592,12 @@ if (logoutBtn) {
             </div>
             <p class="post-desc" style="margin-bottom:12px;">${escapeHtml(post.description)}</p>
             <div class="portal-config-container">
-              <input type="url" class="portal-url-input" value="${window.tvPermanentUrl}" placeholder="Enter Portal URL (https://...)">
+              <div style="display:flex; gap:8px;">
+                <input type="url" class="portal-url-input" value="${window.tvPermanentUrl}" placeholder="Enter Portal URL (https://...)" style="flex: 1;">
+                <input type="number" class="portal-duration-input portal-url-input" value="${window.tvPermanentDuration || 60}" min="5" title="Duration in seconds" style="width: 80px; text-align: center;">
+              </div>
               <button class="portal-save-btn">
-                <i class='bx bx-save'></i> Update Portal Link
+                <i class='bx bx-save'></i> Update Portal Link & Duration
               </button>
             </div>
           `;
@@ -3653,11 +3667,14 @@ if (logoutBtn) {
           // Portal Save Logic (Specific to System Card)
           if (post.type === 'website') {
             const portalInput = card.querySelector('.portal-url-input');
+            const durationInput = card.querySelector('.portal-duration-input');
             const portalSave = card.querySelector('.portal-save-btn');
             if (portalInput && portalSave) {
               portalSave.addEventListener('click', async () => {
                 const newUrl = portalInput.value.trim();
-                if (!newUrl.startsWith('http')) {
+                const newDuration = parseInt(durationInput ? durationInput.value : "60") || 60;
+                
+                if (newUrl !== "" && !newUrl.startsWith('http')) {
                   showToast("Please enter a valid URL starting with https://", "error");
                   return;
                 }
@@ -3666,8 +3683,10 @@ if (logoutBtn) {
                 portalSave.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> Syncing...";
                 try {
                   const permUrlRef = ref(userDb, 'config/tv_permanent_url');
+                  const permDurRef = ref(userDb, 'config/tv_permanent_duration');
                   await set(permUrlRef, newUrl);
-                  showToast("Portal link updated globally!", "success");
+                  await set(permDurRef, newDuration);
+                  showToast("Portal settings updated globally!", "success");
                 } catch(e) {
                   showToast("Sync failed. Check connection.", "error");
                 } finally {
