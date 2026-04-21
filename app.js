@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
-import { getDatabase, ref, push, onChildAdded, onValue, onDisconnect, set, remove, get, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
+import { getDatabase, ref, push, onChildAdded, onChildChanged, onValue, onDisconnect, set, remove, get, update, serverTimestamp, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
 
 // IMMEDIATE AUTH CHECK - Run BEFORE any UI is shown to prevent flash of unauthorized content
 (function() {
@@ -161,11 +161,20 @@ let myUsername = (() => {
 let unreadCount = 0;
 let activeChatUser = null; 
 let activeMessengerUser = null; 
+const pageLoadTime = Date.now();
 
-function updateUnreadBadges(username) {
-  const isOnline = contactsMap[username] ? contactsMap[username].isOnline : false;
-  if (typeof renderContact === 'function') renderContact(username, isOnline);
-  
+function updateUnreadBadges() {
+  // Re-calculate unreadCount from individual contact counts to prevent desync
+  unreadCount = Object.values(contactsMap).reduce((sum, contact) => sum + (contact.unread || 0), 0);
+
+  // Update individual contact cards in sidebar if they are rendered
+  Object.keys(contactsMap).forEach(username => {
+    if (typeof window.renderContact === 'function') {
+      const isOnline = contactsMap[username].isOnline || false;
+      window.renderContact(username, isOnline);
+    }
+  });
+
   const unreadBadge = document.getElementById('fb-chat-unread');
   if (unreadBadge) {
     unreadBadge.textContent = unreadCount;
@@ -222,9 +231,85 @@ function showNotification(sender, text) {
   setTimeout(() => { if (toast.parentNode) toast.remove(); }, 8000);
 }
 
+function markMessagesAsRead(otherUser) {
+  if (!userDb || !myUsername || !otherUser) return;
+  const history = contactsMap[otherUser] ? (contactsMap[otherUser].history || []) : [];
+  const updates = {};
+  
+  history.forEach(msg => {
+    if (msg.receiver === myUsername && !msg.read && msg.id) {
+      updates[`user_messages/${msg.id}/read`] = true;
+      msg.read = true; // Update local state immediately
+    }
+  });
+
+  if (Object.keys(updates).length > 0) {
+    console.log(`[Messaging] Marking ${Object.keys(updates).length} messages from ${otherUser} as read.`);
+    update(ref(userDb), updates).catch(err => console.error("Failed to update read status:", err));
+    
+    // Optimistically clear counts locally to ensure UI updates instantly
+    if (contactsMap[otherUser]) {
+      contactsMap[otherUser].unread = 0;
+    }
+    
+    // Update global counter via re-calculating from all users to ensure accuracy
+    updateUnreadBadges();
+  }
+}
+
+// Mark all conversations as read
+function markAllMessagesAsRead() {
+  Object.keys(contactsMap).forEach(username => {
+    markMessagesAsRead(username);
+  });
+}
+
+// Background polling fallback to ensure count stays synced even if real-time listener stalls
+async function syncUnreadCountFromDb() {
+  if (!userDb || !myUsername || myUsername === 'Unknown') return;
+  
+  try {
+    const messagesRef = ref(userDb, 'user_messages');
+    // Normalize identity check to prevent case mismatches
+    const myId = myUsername.toLowerCase();
+    
+    // In Firebase RTDB, we can only filter by one child efficiently. 
+    // We'll query all messages received by the user and then filter 'read' status locally.
+    const q = query(messagesRef, orderByChild('receiver'), equalTo(myUsername));
+    const snapshot = await get(q);
+    
+    if (snapshot.exists()) {
+      const messages = snapshot.val();
+      const unreadPerUser = {};
+      
+      Object.values(messages).forEach(msg => {
+        if (msg.read === false) {
+          const sender = msg.sender;
+          if (sender) {
+            unreadPerUser[sender] = (unreadPerUser[sender] || 0) + 1;
+          }
+        }
+      });
+      
+      // Update contactsMap with correct unread counts
+      Object.keys(unreadPerUser).forEach(username => {
+        if (contactsMap[username]) {
+          contactsMap[username].unread = unreadPerUser[username];
+        }
+      });
+      
+      console.log(`[Messaging] Polling sync complete. Total unread recalculated.`);
+      updateUnreadBadges();
+    }
+  } catch (err) {
+    console.warn('[Messaging] Periodic sync failed:', err);
+  }
+}
+
 function initSharedMessaging() {
   if (!userDb || !myUsername || myUsername === 'Unknown') return;
   const baseRef = ref(userDb, 'user_messages');
+  
   onChildAdded(baseRef, (snapshot) => {
     const data = snapshot.val();
     if (!data || !data.sender || !data.receiver) return;
@@ -237,29 +322,35 @@ function initSharedMessaging() {
         if (typeof renderContact === 'function') renderContact(otherUser, false);
       }
       
-      contactsMap[otherUser].history.push(data);
+      const msgObj = { ...data, id: snapshot.key };
+      contactsMap[otherUser].history.push(msgObj);
       
-      // Check if conversation is open in EITHER UI
-      const isChatOpen = (activeChatUser === otherUser) || (activeMessengerUser === otherUser) || (window.activeMessengerUser === otherUser);
+      const isWidgetOpen = !document.getElementById('fb-chat-body')?.classList.contains('hidden');
+      const isWidgetConvOpen = !document.getElementById('fb-chat-conversation')?.classList.contains('hidden');
+      const isMessengerPage = window.location.hash === '#messages';
+
+      // Only suppress notifications if the specific conversation is actually VISIBLE on screen
+      const isChatOpen = (activeChatUser === otherUser && isWidgetOpen && isWidgetConvOpen) || 
+                         (activeMessengerUser === otherUser && isMessengerPage) || 
+                         (window.activeMessengerUser === otherUser && isMessengerPage);
       
       if (data.sender === otherUser && !isChatOpen && !data.read) {
         contactsMap[otherUser].unread++;
         unreadCount++;
         console.log(`[Messaging] Real-time unread increment: ${unreadCount} (from ${otherUser})`);
-        updateUnreadBadges(otherUser);
+        updateUnreadBadges();
         
-        const sd = localStorage.getItem('sas_user_data');
-        if (sd) {
-           try {
-             if (JSON.parse(sd).role === 'superadmin' && typeof showNotification === 'function') {
-                showNotification(otherUser, data.text);
-             }
-           } catch(e){}
+        if (typeof showNotification === 'function') {
+          const msgTime = data.timestamp ? new Date(data.timestamp).getTime() : 0;
+          // Only show pop-up notification if it's a NEW message sent after page load
+          if (msgTime > pageLoadTime) {
+            showNotification(otherUser, data.text);
+          }
         }
       }
       
       if (activeChatUser === otherUser && typeof renderMessage === 'function') {
-        renderMessage(data, data.sender === myUsername);
+        renderMessage(msgObj, data.sender === myUsername);
       }
       
       if ((activeMessengerUser === otherUser || window.activeMessengerUser === otherUser) && typeof window.refreshFullMessengerUI === 'function') {
@@ -267,6 +358,40 @@ function initSharedMessaging() {
       }
     }
   });
+
+  onChildChanged(baseRef, (snapshot) => {
+    const data = snapshot.val();
+    if (!data || !data.sender || !data.receiver) return;
+    
+    const otherUser = data.sender === myUsername ? data.receiver : data.sender;
+    if (contactsMap[otherUser]) {
+      const history = contactsMap[otherUser].history;
+      const msgIdx = history.findIndex(m => m.id === snapshot.key);
+      
+      if (msgIdx !== -1) {
+        const oldRead = history[msgIdx].read;
+        const newRead = data.read;
+        
+        // Update local object
+        history[msgIdx] = { ...data, id: snapshot.key };
+        
+        // If message was marked as read remotely, update local counts
+        if (!oldRead && newRead && data.receiver === myUsername) {
+          if (contactsMap[otherUser].unread > 0) {
+             contactsMap[otherUser].unread--;
+             unreadCount = Math.max(0, unreadCount - 1);
+             console.log(`[Messaging] Message marked read remotely. New unreadCount: ${unreadCount}`);
+             updateUnreadBadges();
+          }
+        }
+      }
+    }
+  });
+
+  // Start background fallback poll (every 2 minutes)
+  setInterval(syncUnreadCountFromDb, 120000);
+  // Perform initial sync on startup
+  setTimeout(syncUnreadCountFromDb, 5000);
 }
 
 function initUserMessaging() {
@@ -376,6 +501,8 @@ function initUserMessaging() {
 
   
   function renderContact(username, isOnline = true) {
+    window.renderContact = renderContact;
+
     let div = contactsMap[username].el;
     if (!div) {
       div = document.createElement('div');
@@ -423,10 +550,7 @@ function initUserMessaging() {
     conversation.classList.remove('hidden');
     messagesDiv.innerHTML = '';
     
-    const unread = contactsMap[username].unread || 0;
-    unreadCount = Math.max(0, unreadCount - unread);
-    contactsMap[username].unread = 0;
-    updateUnreadBadges(username);
+    markMessagesAsRead(username);
     
     // Render past messages
     contactsMap[username].history.forEach(msg => {
@@ -635,13 +759,11 @@ sorted.forEach(user => {
     }
 
     // Badge Sync Logic
-    const unread = contactsMap[user] ? (contactsMap[user].unread || 0) : 0;
-    unreadCount = Math.max(0, unreadCount - unread);
-    if(contactsMap[user]) contactsMap[user].unread = 0;
+    markMessagesAsRead(user);
     
     // Cross-sync with side chat
     activeChatUser = user; 
-    updateUnreadBadges(user);
+
 
     renderFullMessages();
     renderFullContacts();
@@ -1157,6 +1279,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function showPage(pageId) {
+    // Reset active messenger state when navigating away to ensure notifications resume
+    if (pageId !== 'messages') {
+      activeMessengerUser = null;
+      window.activeMessengerUser = null;
+    }
+    
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     const page = pageId === 'home'
       ? homePage
@@ -1699,6 +1827,16 @@ function showAppUI(userObj) {
       } else {
         loginError.textContent = "Please fill in all fields.";
         loginError.classList.remove('hidden');
+      }
+    });
+  }
+
+  // Clear unread notifications when clicking the messages button
+  const headerMsgBtn = document.getElementById('header-msg-btn');
+  if (headerMsgBtn) {
+    headerMsgBtn.addEventListener('click', () => {
+      if (typeof markAllMessagesAsRead === 'function') {
+        markAllMessagesAsRead();
       }
     });
   }

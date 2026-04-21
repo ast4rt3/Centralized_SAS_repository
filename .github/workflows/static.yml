@@ -64,10 +64,10 @@ jobs:
       - name: Syntax Check
         run: node scripts/ci-syntax-check.js
       - name: Run Trivy Security Scan
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           scan-type: 'fs'
-          security-checks: 'secret,vuln,misconfig'
+          scanners: 'secret,vuln,misconfig'
           exit-code: '1'
           severity: 'CRITICAL,HIGH'
 
