@@ -4719,65 +4719,7 @@ body.lp-mode .main-wrapper {
   font-size: 0.95rem;
 }
 
-/* --- Footer --- */
-.lp-footer {
-  background: #001a33;
-  color: var(--lp-white);
-  padding: 80px 0 30px;
-}
 
-.lp-footer-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 40px;
-  margin-bottom: 50px;
-}
-
-.lp-footer-brand {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  font-weight: 800;
-  font-size: 1.8rem;
-}
-
-.lp-footer-logo {
-  height: 50px;
-  width: auto;
-}
-
-.lp-footer-links {
-  display: flex;
-  gap: 30px;
-}
-
-.lp-footer-links a {
-  color: rgba(255, 255, 255, 0.7);
-  text-decoration: none;
-  font-weight: 500;
-  transition: 0.2s;
-}
-
-.lp-footer-links a:hover {
-  color: var(--lp-accent);
-}
-
-.lp-footer-contact {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.lp-footer-bottom {
-  text-align: center;
-  padding-top: 30px;
-  border-top: 1px solid rgba(255,255,255,0.1);
-  font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.5);
-}
 
 /* --- Responsive --- */
 @media (max-width: 991px) {
@@ -4794,9 +4736,18 @@ body.lp-mode .main-wrapper {
   .lp-section-header h2 {
     font-size: 2.2rem;
   }
-  
-  .lp-footer-content {
-    flex-direction: column;
-    text-align: center;
-  }
+}
+
+/* --- Simple Footer --- */
+.lp-footer {
+  background: #001a33;
+  color: rgba(255, 255, 255, 0.6);
+  padding: 40px 20px;
+  text-align: center;
+  font-size: 0.9rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.lp-footer p {
+  margin: 0;
 }
