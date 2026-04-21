@@ -1280,23 +1280,31 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- Smart Cursor Logic (TV Mode) ---
-  let cursorTimer;
-  function resetCursorTimer() {
-    if (!document.body.classList.contains('tv-mode')) {
+  let lastActivityTime = Date.now();
+  
+  function updateActivity() {
+    lastActivityTime = Date.now();
+    if (document.body.classList.contains('tv-mode')) {
       document.body.classList.remove('cursor-none');
-      return;
     }
-    document.body.classList.remove('cursor-none');
-    clearTimeout(cursorTimer);
-    cursorTimer = setTimeout(() => {
-      document.body.classList.add('cursor-none');
-    }, 5000); // 5 seconds of inactivity
   }
 
-  window.addEventListener('mousemove', resetCursorTimer);
-  window.addEventListener('mousedown', resetCursorTimer);
-  window.addEventListener('scroll', resetCursorTimer);
-  window.addEventListener('touchstart', resetCursorTimer);
+  window.addEventListener('mousemove', updateActivity);
+  window.addEventListener('mousedown', updateActivity);
+  window.addEventListener('scroll', updateActivity);
+  window.addEventListener('touchstart', updateActivity);
+  window.addEventListener('keydown', updateActivity); // Catch keyboard too
+
+  // Continually verify inactivity instead of relying purely on event-driven timeouts
+  setInterval(() => {
+    if (document.body.classList.contains('tv-mode')) {
+      if (Date.now() - lastActivityTime > 5000) {
+        document.body.classList.add('cursor-none');
+      }
+    } else {
+      document.body.classList.remove('cursor-none');
+    }
+  }, 1000);
 
   // Admin Exit TV Logic
   if (btnAdminExitTv) {

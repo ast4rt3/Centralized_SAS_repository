@@ -2431,6 +2431,16 @@ body.cursor-none * {
   cursor: none !important;
 }
 
+/* 
+ * CRITICAL FIX: Iframes (YouTube, Website Slide) have their own documents and 
+ * swallow cursor events. By disabling pointer events while resting, the mouse 
+ * falls through to the body and respects cursor: none. When the user moves 
+ * the mouse, it hits the body, removes the class, and restores interactivity. 
+ */
+body.cursor-none iframe {
+  pointer-events: none !important;
+}
+
 body.tv-mode {
   transition: cursor 0.3s ease;
 }
