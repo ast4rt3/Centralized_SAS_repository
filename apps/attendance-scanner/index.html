@@ -12,10 +12,22 @@
     <title>NBSC SAS Entrance Scanner</title>
 
     <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png">
+    <link rel="apple-touch-icon" href="../../assets/sas_logo_real.png">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <script src="../../env.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Fallback loader if primary CDN fails
+        if (typeof window.supabase === 'undefined') {
+            console.warn("Supabase CDN 1 failed, trying fallback...");
+            const s = document.createElement('script');
+            s.src = 'https://unpkg.com/@supabase/supabase-js@2';
+            s.onload = () => console.log("Fallback Supabase CDN loaded");
+            s.onerror = () => console.error("All CDNs failed — no Supabase library");
+            document.head.appendChild(s);
+        }
+    </script>
     <style>
         :root {
             --nbsc-blue: #004a99;
@@ -141,6 +153,98 @@
             margin-top: 14px;
             width: 100%;
             max-width: 300px;
+        }
+
+        .custom-select-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 300px;
+            margin: 0 auto 15px auto;
+            z-index: 1001; /* Above other home contents */
+        }
+
+        .custom-select-trigger {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            padding: 15px 18px;
+            border-radius: 10px;
+            background: white;
+            color: var(--nbsc-blue);
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border: 2px solid transparent;
+        }
+
+        .custom-select-wrapper.is-open .custom-select-trigger {
+            border-color: var(--nbsc-gold);
+            transform: translateY(-2px);
+        }
+
+        .custom-options-list {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+            display: none;
+            flex-direction: column;
+            z-index: 1002;
+            animation: slideDown 0.2s ease-out;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .custom-select-wrapper.is-open .custom-options-list {
+            display: flex;
+        }
+
+        .custom-option {
+            padding: 14px 18px;
+            color: var(--nbsc-dark);
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-align: left;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            transition: background 0.2s, color 0.2s;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+
+        .custom-option:last-child { border-bottom: none; }
+
+        .custom-option:hover {
+            background: #f1f5f9;
+            color: var(--nbsc-blue);
+        }
+
+        .custom-option.is-selected {
+            background: rgba(0, 74, 153, 0.08);
+            color: var(--nbsc-blue);
+            border-left: 4px solid var(--nbsc-gold);
+        }
+
+        .custom-select-icon {
+            font-size: 1.2rem;
+            color: var(--nbsc-gold);
+            transition: transform 0.3s ease;
+        }
+
+        .custom-select-wrapper.is-open .custom-select-icon {
+            transform: rotate(180deg);
         }
 
         /* ══════════════════════════════════════
@@ -367,6 +471,25 @@
             display: none !important;
         }
 
+        .flip-camera-btn {
+            background: #f1f5f9;
+            color: var(--nbsc-blue);
+            border: 1px solid #e2e8f0;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: none; /* Shown if multi-camera */
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1.1rem;
+        }
+
+        .flip-camera-btn:active {
+            transform: rotate(180deg);
+        }
+
         .camera-toggle-btn {
             background: var(--nbsc-blue);
             color: white;
@@ -381,6 +504,27 @@
             letter-spacing: 0.5px;
             transition: all 0.2s;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .camera-select {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 8px 12px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--nbsc-dark);
+            outline: none;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            max-width: 120px;
+            text-overflow: ellipsis;
+        }
+
+        .camera-select:focus {
+            border-color: var(--nbsc-gold);
         }
 
         .camera-toggle-btn.btn-stop {
@@ -486,123 +630,114 @@
 
         #result {
             display: none;
-            border-radius: 16px;
-            padding: 32px 20px 24px;
+            border-radius: 20px;
+            padding: 24px 24px 20px;
             text-align: center;
-            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.15);
-            animation: popIn 0.3s ease-out;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.5);
+            animation: premiumPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
         }
 
-        @keyframes popIn {
-            from {
-                opacity: 0;
-                transform: scale(0.95) translateY(8px);
-            }
-
-            to {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
-        }
-
-        .flag-btn {
-            margin-top: 15px;
-            background-color: #ffc107;
-            /* Warning Yellow */
-            color: #000;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            font-weight: bold;
-            cursor: pointer;
-            width: 100%;
-            transition: background 0.3s;
-        }
-
-        .flag-btn:hover {
-            background-color: #e0a800;
-        }
-
-        .result-card.warning {
-            border-left: 5px solid #ff9800;
-            background: #fff3e0;
-            padding: 10px;
+        @keyframes premiumPop {
+            from { opacity: 0; transform: scale(0.9) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
         }
 
         #result .result-icon {
-            font-size: 3rem;
-            margin-bottom: 10px;
+            font-size: 3.5rem;
+            margin-bottom: 12px;
             display: block;
+            filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.3));
         }
 
         #result h3 {
-            font-size: 1.5rem;
+            font-size: 0.8rem;
             font-weight: 800;
-            margin-bottom: 10px;
-            color: inherit;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            opacity: 0.9;
+        }
+
+        #result .student-name {
+            font-size: 1.6rem;
+            font-weight: 900;
+            margin-bottom: 12px;
+            line-height: 1.2;
+            color: white;
+            text-transform: uppercase;
         }
 
         #result p {
-            font-size: 1.05rem;
-            line-height: 1.6;
-            word-break: break-word;
+            font-size: 0.9rem;
+            margin-bottom: 16px;
+            opacity: 0.8;
+            font-weight: 600;
         }
 
         .success {
-            background: var(--success);
+            background: linear-gradient(135deg, #065f46 0%, #10b981 100%);
             color: white;
         }
 
         .error {
-            background: var(--error);
+            background: linear-gradient(135deg, #9f1239 0%, #f43f5e 100%);
             color: white;
         }
 
         .warning {
-            background: var(--orange);
+            background: linear-gradient(135deg, #92400e 0%, #f59e0b 100%);
             color: white;
         }
 
         .processing {
-            background: #6c757d;
+            background: var(--nbsc-dark);
             color: white;
-        }
-
-        /* Loading Spinner */
-        .spinner {
-            width: 40px;
-            height: 40px;
-            margin: 0 auto 15px auto;
-            border: 4px solid rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
-            border-top-color: #ffffff;
-            animation: spin 0.8s linear infinite;
-            display: block;
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
+            border: 2px solid rgba(255, 255, 255, 0.1) !important;
         }
 
         .scan-btn-next {
             background: white !important;
             color: var(--nbsc-dark) !important;
             border: none !important;
-            padding: 20px !important;
+            padding: 16px !important;
             border-radius: 12px !important;
             text-transform: uppercase !important;
-            font-weight: 800 !important;
-            font-size: 1rem !important;
+            font-weight: 900 !important;
+            font-size: 0.9rem !important;
             font-family: 'Montserrat', sans-serif !important;
             width: 100% !important;
-            margin-top: 20px !important;
             cursor: pointer !important;
-            letter-spacing: 0.5px !important;
+            letter-spacing: 1px !important;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
-            min-height: 58px !important;
+            transition: transform 0.2s;
         }
+
+        .scan-btn-next:active { transform: scale(0.98); }
+
+        .flag-btn {
+            margin-top: 12px;
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: 800;
+            font-size: 0.75rem;
+            cursor: pointer;
+            width: 100%;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .flag-btn:hover { background: rgba(255, 255, 255, 0.25); }
 
         /* ══════════════════════════════════════
             MODAL
@@ -961,16 +1096,27 @@
     </div>
 
     <div id="homeScreen">
-        <img src="https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png" class="home-logo"
+        <img src="../../assets/sas_logo_real.png" class="home-logo"
             alt="NBSC Logo">
         <div class="home-content">
             <h1>NBSC SAS</h1>
             <p>Attendance System</p>
-            <button class="btn-primary get-started-btn" onclick="enterScanner()">Start Scanning</button>
+            <div class="custom-select-wrapper" id="customEventDropdown">
+                <div class="custom-select-trigger" onclick="toggleCustomDropdown()">
+                    <span id="selectedEventLabel">-- SELECT EVENT --</span>
+                    <i class='bx bx-chevron-down custom-select-icon'></i>
+                </div>
+                <div class="custom-options-list" id="customOptionsList">
+                    <!-- Options injected via JS -->
+                    <div class="custom-option">Loading...</div>
+                </div>
+                <input type="hidden" id="eventSelector" value="">
+            </div>
+            <button class="btn-primary get-started-btn" id="startScanBtn" onclick="enterScanner()">Start Scanning</button>
             <br><br><br>
-            <button class="home-secondary-btn" onclick="downloadMasterlist()">⬇️ UPDATE OFFLINE DATA</button>
+            <button class="home-secondary-btn" onclick="downloadMasterlist()">UPDATE OFFLINE DATA</button>
             <button class="home-secondary-btn" onclick="superRefresh()"
-                style="border-color: rgba(220,53,69,0.5); color: #ff8e98; font-size: 9px; opacity: 0.8;">🚨 CLEAR ALL
+                style="border-color: rgba(220,53,69,0.5); color: #ff8e98; font-size: 9px; opacity: 0.8;">CLEAR ALL
                 SITE DATA & CACHE</button>
             <br>
             <button class="logout-btn-home" onclick="logoutScanner()">Logout from Portal</button>
@@ -999,6 +1145,9 @@
                 <button onclick="logoutScanner()"
                     style="margin-left:auto; background:#fee2e2; color:#dc2626; border:none; padding:6px 10px; border-radius:6px; font-size:0.6rem; font-weight:800; cursor:pointer;">LOGOUT</button>
             </div>
+            <div style="background: var(--nbsc-dark); color: var(--nbsc-gold); text-align: center; padding: 6px; font-size: 0.75rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                EVENT: <span id="activeScannerEventName">NO EVENT SELECTED</span>
+            </div>
             <div id="windowStatus" class="status-loading">
                 <div class="status-dot loading" id="statusDot"></div>
                 <span id="statusText">Checking window...</span>
@@ -1020,7 +1169,15 @@
                 <div class="qr-wrapper">
                     <div style="padding: 20px; display: flex; align-items: center; justify-content: space-between; background: #fff;">
                         <div class="manual-label" style="margin-bottom: 0;">Scanner</div>
-                        <button id="customToggle" class="camera-toggle-btn" onclick="toggleCameraState()">Start Scanning</button>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <button id="flipCameraBtn" class="flip-camera-btn" onclick="flipCamera()" title="Cycle Camera">
+                                <i class='bx bx-refresh'></i>
+                            </button>
+                            <select id="cameraSelector" class="camera-select" onchange="onCameraChange()" title="Select Camera">
+                                <option value="">Detecting...</option>
+                            </select>
+                            <button id="customToggle" class="camera-toggle-btn" onclick="toggleCameraState()">Start Scanning</button>
+                        </div>
                     </div>
                     <div id="reader"></div>
                 </div>
@@ -1082,9 +1239,11 @@
         let currentScanMode = "barcode"; // Default to Barcode (Col A)
         let isProcessing = false; // Flag to prevent double scanning
 
-        const GAS_URL = (window.ENV && window.ENV.SCANNER_GAS_URL)
-            ? window.ENV.SCANNER_GAS_URL
-            : "https://script.google.com/a/macros/nbsc.edu.ph/s/AKfycbwif9UQu1T_beROIwj4ZiJY_f0SlIDoUxt5p6xiAcO6nqEmpVyY2HygOJCxBR4YcGuRjw/exec";
+        // GAS_URL deprecated — Supabase migration complete (2026-04-20)
+        // Kept as historical reference only; no longer used.
+        // const GAS_URL = (window.ENV && window.ENV.SCANNER_GAS_URL)
+        //     ? window.ENV.SCANNER_GAS_URL
+        //     : "https://script.google.com/a/macros/nbsc.edu.ph/s/AKfycbwif9UQu1T_beROIwj4ZiJY_f0SlIDoUxt5p6xiAcO6nqEmpVyY2HygOJCxBR4YcGuRjw/exec";
 
         function getCurrentUser() {
             try {
@@ -1118,14 +1277,242 @@
         let currentWindowInfo = null;
 
         // ── Backend helper — replaces ALL google.script.run calls ──
+        // ── Supabase Initialization ──
+        let supabaseClient = null;
+        async function initSupabase() {
+            if (supabaseClient) return supabaseClient;
+            if (window.ENV && window.ENV.SUPABASE_URL && window.ENV.SUPABASE_ANON_KEY) {
+                supabaseClient = window.supabase.createClient(window.ENV.SUPABASE_URL, window.ENV.SUPABASE_ANON_KEY);
+                return supabaseClient;
+            }
+            console.error("Supabase credentials missing in env.js");
+            return null;
+        }
+
+        // ── Backend helper — Now using Supabase ──
         async function callBackend(action, params) {
-            const res = await fetch(GAS_URL, {
-                method: "POST",
-                headers: { "Content-Type": "text/plain" },
-                body: JSON.stringify({ action, ...params })
-            });
-            if (!res.ok) throw new Error("HTTP " + res.status);
-            return res.json();
+            const supabase = await initSupabase();
+            if (!supabase) throw new Error("Supabase not initialized");
+
+            if (action === "getAvailableEvents") {
+                const now = new Date();
+                // Use local date for event filtering
+                const todayStr = now.toLocaleDateString('en-CA');
+                const { data: events, error } = await supabase
+                    .from('sas_events')
+                    .select('*')
+                    .gte('event_date', todayStr)
+                    .order('event_date', { ascending: true });
+                if (error) throw error;
+                return events;
+            }
+
+            if (action === "getWindowStatus") {
+                const now = new Date();
+                // Use local date (YYYY-MM-DD) instead of UTC
+                const todayStr = now.toLocaleDateString('en-CA');
+                const nowTime = now.toTimeString().split(' ')[0]; // HH:mm:ss
+
+                const eventId = localStorage.getItem('scannerEventId');
+                if (!eventId) {
+                    return { status: "error", message: "No Event Selected" };
+                }
+
+                // Helper: HH:mm[:ss] -> minutes since midnight
+                const toMin = (t) => {
+                    const [h, m] = t.split(':').map(Number);
+                    return (h * 60) + m;
+                };
+
+                const { data: schedules, error } = await supabase
+                    .from('sas_schedules')
+                    .select('*')
+                    .eq('date', todayStr)
+                    .eq('event_id', eventId)
+                    .eq('is_active', true);
+
+                if (error) {
+                    console.error("getWindowStatus error:", error);
+                    if (error.code === '42P01') {
+                        return { status: "error", message: "Database not ready: sas_schedules table missing." };
+                    }
+                    throw error;
+                }
+
+                const nowM = toMin(nowTime);
+
+                // Find active window with midnight wrap support
+                const active = schedules.find(s => {
+                    const startM = toMin(s.start_time);
+                    const endM = toMin(s.end_time);
+                    return (startM <= endM) 
+                        ? (nowM >= startM && nowM <= endM) 
+                        : (nowM >= startM || nowM <= endM);
+                });
+
+                if (active) {
+                    return {
+                        isOpen: true,
+                        type: active.label,
+                        id: active.id,
+                        start: active.start_time,
+                        end: active.end_time
+                    };
+                }
+
+                // Find next window
+                const future = schedules
+                    .filter(s => toMin(s.start_time) > nowM)
+                    .sort((a,b) => toMin(a.start_time) - toMin(b.start_time));
+                
+                const next = future[0];
+                return {
+                    isOpen: false,
+                    nextType: next ? next.label : null,
+                    nextStart: next ? next.start_time : null,
+                    nextEnd: next ? next.end_time : null,
+                    message: next ? "UPCOMING" : "CLOSED"
+                };
+            }
+
+            if (action === "checkTicket") {
+                const { scannedID, scannerUser, scanMode } = params;
+                const windowInfo = await callBackend("getWindowStatus");
+                if (!windowInfo.isOpen) return { status: "error", message: "🕒 WINDOW CLOSED" };
+
+                // 1. Resolve Student (ID or QR Token)
+                const matchCol = scanMode === 'qr' ? 'qr_token' : 'ID';
+                const { data: student, error: sErr } = await supabase
+                    .from('NBSC_masterlist')
+                    .select('ID, Name')
+                    .eq(matchCol, scannedID)
+                    .maybeSingle();
+
+                if (sErr) {
+                    console.error("checkTicket student lookup error:", sErr);
+                    if (sErr.code === '42P01') {
+                        return { status: "error", message: "Database error: NBSC_masterlist table missing." };
+                    }
+                    if (sErr.code === '42703') {
+                        return { status: "error", message: "Column '" + matchCol + "' does not exist on NBSC_masterlist." };
+                    }
+                    throw sErr;
+                }
+                if (!student) return { status: "error", message: `🚫 ${scanMode.toUpperCase()} UNKNOWN<br><small>${scannedID}</small>` };
+
+                // 2. Check for existing record
+                const { data: existing, error: lErr } = await supabase
+                    .from('sas_attendance_logs')
+                    .select('*')
+                    .eq('student_id', student.ID)
+                    .eq('schedule_id', windowInfo.id)
+                    .maybeSingle();
+
+                if (lErr) throw lErr;
+                if (existing) return { status: "error", message: `❌ ALREADY RECORDED<br>${student.Name.toUpperCase()}`, studentName: student.Name };
+
+                // 3. Insert Log
+                const { error: iErr } = await supabase
+                    .from('sas_attendance_logs')
+                    .insert([{
+                        student_id: student.ID,
+                        schedule_id: windowInfo.id,
+                        scanner_user: scannerUser,
+                        status: 'present'
+                    }]);
+
+                if (iErr) throw iErr;
+                return {
+                    status: "success",
+                    message: `✅ ${windowInfo.type} RECORDED<br><b>${student.Name.toUpperCase()}</b>`,
+                    studentName: student.Name,
+                    windowType: windowInfo.type
+                };
+            }
+
+            if (action === "flagStudent") {
+                const { scannedToken, reason, scannerUser } = params;
+                const windowInfo = await callBackend("getWindowStatus");
+                if (!windowInfo.isOpen) throw new Error("Window Closed");
+
+                const { data: student, error: sErr } = await supabase
+                    .from('NBSC_masterlist')
+                    .select('ID')
+                    .or(`ID.eq.${scannedToken},qr_token.eq.${scannedToken}`)
+                    .maybeSingle();
+                
+                if (sErr) {
+                    console.error("flagStudent lookup error:", sErr);
+                    if (sErr.code === '42P01') return { status: "error", message: "Database missing." };
+                    throw sErr;
+                }
+                if (!student) throw new Error("Student not found");
+
+                const { error } = await supabase
+                    .from('sas_attendance_logs')
+                    .upsert({
+                        student_id: student.ID,
+                        schedule_id: windowInfo.id,
+                        scanner_user: scannerUser,
+                        status: 'flagged',
+                        flag_reason: reason
+                    }, { onConflict: 'student_id,schedule_id' });
+
+                if (error) throw error;
+                return { status: "success" };
+            }
+
+            if (action === "syncOfflineScans") {
+                const { scansArray, scannerUser } = params;
+                for (const scan of scansArray) {
+                    await callBackend("checkTicket", { scannedID: scan.scannedID, scannerUser, scanMode: 'barcode' });
+                }
+                return { status: "success" };
+            }
+
+            if (action === "getOfflineMasterlist") {
+                let allData = [];
+                let page = 0;
+                const pageSize = 1000;
+                let hasMore = true;
+
+                while (hasMore) {
+                    const { data, error } = await supabase
+                        .from('NBSC_masterlist')
+                        .select('ID, Name, qr_token')
+                        .range(page * pageSize, (page + 1) * pageSize - 1);
+
+                    if (error) {
+                        console.error("getOfflineMasterlist error:", error);
+                        if (error.code === '42P01') {
+                            throw new Error("NBSC_masterlist table missing. Run migration.");
+                        }
+                        throw error;
+                    }
+
+                    if (data && data.length > 0) {
+                        allData = allData.concat(data);
+                        if (data.length < pageSize) {
+                            hasMore = false;
+                        } else {
+                            page++;
+                        }
+                    } else {
+                        hasMore = false;
+                    }
+                }
+
+                const master = {};
+                allData.forEach(s => {
+                    if (s.ID) master[s.ID.toLowerCase()] = { name: s.Name, id: s.ID };
+                    if (s.qr_token) master[s.qr_token.toLowerCase()] = { name: s.Name, id: s.ID };
+                });
+                return master;
+            }
+
+            if (action === "ping") {
+                return { status: "success", message: "pong" };
+            }
         }
 
 
@@ -1282,14 +1669,31 @@
         }
 
         function enterScanner() {
+            const evSel = document.getElementById('eventSelector');
+            const label = document.getElementById('selectedEventLabel');
+            
+            if (evSel && !evSel.value) {
+                alert("Please select an Event first before scanning.");
+                return;
+            }
+
+            // Persistence was already handled in selectEventOption, 
+            // but we ensure the session is synced here:
+            if (evSel && evSel.value && label) {
+                localStorage.setItem('scannerEventId', evSel.value);
+                localStorage.setItem('scannerEventName', label.innerText);
+            }
+
             document.querySelector(".bottom-nav").style.setProperty("display", "flex", "important");
             document.getElementById("homeScreen").style.display = "none";
             document.getElementById("scannerScreen").style.display = "flex";
 
-            // Sync current user identity to the badge
             const userName = getCurrentUser();
             const badge = document.getElementById('activeScannerName');
             if (badge) badge.innerText = userName;
+
+            const eventBadge = document.getElementById('activeScannerEventName');
+            if(eventBadge) eventBadge.innerText = localStorage.getItem('scannerEventName') || 'NO EVENT SELECTED';
 
             updateQueueUI();
             initScanner();
@@ -1314,19 +1718,25 @@
                     return;
                 }
 
+                const format12h = (t) => {
+                    if (!t) return '';
+                    let [h, m] = t.split(':').map(Number);
+                    const mod = h >= 12 ? 'PM' : 'AM';
+                    h = h % 12 || 12;
+                    return `${h}:${String(m).padStart(2, '0')} ${mod}`;
+                };
+
                 if (res.isOpen) {
                     bar.className = 'status-open';
                     dot.className = 'status-dot open';
                     text.innerText = 'OPEN — ' + res.type
-                        + ' · ' + res.start + ' – ' + res.end
-                        + ' · Col ' + res.col
-                        + (res.isLate ? ' · LATE' : '');
+                        + ' · ' + format12h(res.start) + ' – ' + format12h(res.end);
                 } else {
                     bar.className = 'status-closed';
                     dot.className = 'status-dot closed';
 
                     if (res.nextType) {
-                        text.innerText = 'UPCOMING: ' + res.nextType + ' · ' + res.nextStart + ' – ' + res.nextEnd;
+                        text.innerText = 'UPCOMING: ' + res.nextType + ' · ' + format12h(res.nextStart) + ' – ' + format12h(res.nextEnd);
                     } else {
                         text.innerText = 'CLOSED — No more windows today';
                     }
@@ -1382,11 +1792,9 @@
 
         function syncToggleBtn() {
             const customBtn = document.getElementById('customToggle');
-            if (!customBtn || !html5QrcodeScanner) return;
+            if (!customBtn) return;
 
-            const state = (typeof html5QrcodeScanner.getState === 'function') ? html5QrcodeScanner.getState() : 0;
-            
-            if (state === 2) { // Scanning
+            if (isScannerStarted) {
                 customBtn.innerText = "Stop Scanning";
                 customBtn.className = "camera-toggle-btn btn-stop";
             } else {
@@ -1395,54 +1803,136 @@
             }
         }
 
+        async function onCameraChange() {
+            if (isScannerStarted) {
+                await stopScanner();
+                await startScanner();
+            } else {
+                // Just save preference
+                const cameraId = document.getElementById('cameraSelector').value;
+                localStorage.setItem('lastPreferredCameraId', cameraId);
+            }
+        }
+
+        function flipCamera() {
+            const selector = document.getElementById('cameraSelector');
+            if (!selector || selector.options.length <= 1) return;
+
+            let nextIndex = selector.selectedIndex + 1;
+            if (nextIndex >= selector.options.length) nextIndex = 0;
+
+            selector.selectedIndex = nextIndex;
+            onCameraChange(); // This is now stable with the new engine
+
+            // Visual feedback
+            const btn = document.getElementById('flipCameraBtn');
+            if (btn) {
+                btn.style.transform = "rotate(180deg)";
+                setTimeout(() => { btn.style.transform = "rotate(0deg)"; }, 400);
+            }
+        }
+
         // Keep custom toggle in sync with internal state changes
         setInterval(syncToggleBtn, 1000);
 
-        function initScanner() {
-            // Respect default off preference on first load or re-init
-            if (userCameraOff && !html5QrcodeScanner) {
-                console.log("Scanner init deferred until manual start");
-                return;
-            }
+        let html5QrCode = null;
+        let isScannerStarted = false;
+        let availableCameras = [];
 
-            if (html5QrcodeScanner) {
-                html5QrcodeScanner.clear().then(() => {
-                    renderScannerImpl();
-                }).catch(e => {
-                    renderScannerImpl();
+        async function loadCameras() {
+            try {
+                availableCameras = await Html5Qrcode.getCameras();
+                const selector = document.getElementById('cameraSelector');
+                if (!selector) return;
+
+                selector.innerHTML = "";
+                if (!availableCameras || availableCameras.length === 0) {
+                    selector.innerHTML = "<option value=''>No Camera Found</option>";
+                    return;
+                }
+
+                availableCameras.forEach(cam => {
+                    const opt = document.createElement('option');
+                    opt.value = cam.id;
+                    opt.innerText = cam.label || `Camera ${availableCameras.indexOf(cam) + 1}`;
+                    selector.appendChild(opt);
                 });
-            } else {
-                renderScannerImpl();
+
+                const last = localStorage.getItem('lastPreferredCameraId');
+                if (last && availableCameras.some(c => c.id === last)) {
+                    selector.value = last;
+                }
+
+                // Show flip button if multi-camera
+                const flipBtn = document.getElementById('flipCameraBtn');
+                if (flipBtn) flipBtn.style.display = availableCameras.length > 1 ? 'flex' : 'none';
+            } catch (e) {
+                console.error("Camera fail:", e);
             }
         }
 
-        function renderScannerImpl() {
-            let screenWidth = window.innerWidth || document.documentElement.clientWidth;
+        async function toggleCameraState() {
+            if (!html5QrCode) initScanner();
+
+            if (isScannerStarted) {
+                await stopScanner();
+            } else {
+                await startScanner();
+            }
+            syncToggleBtn();
+        }
+
+        function initScanner() {
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("reader");
+            }
+            loadCameras();
+        }
+
+        async function startScanner() {
+            if (!html5QrCode) initScanner();
+            const cameraId = document.getElementById('cameraSelector').value;
             
-            // Adjust box size: Barcode (wide/short), QR (square)
+            const screenWidth = window.innerWidth || document.documentElement.clientWidth;
             const boxWidth = currentScanMode === 'barcode' ? Math.min(screenWidth - 40, 320) : 250;
             const boxHeight = currentScanMode === 'barcode' ? 150 : 250;
 
-            html5QrcodeScanner = new Html5QrcodeScanner("reader", {
-                fps: 15,
-                qrbox: { width: boxWidth, height: boxHeight },
-                rememberLastUsedCamera: true,
-                supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
-            });
-            html5QrcodeScanner.render(processToken);
+            try {
+                await html5QrCode.start(
+                    cameraId,
+                    { fps: 15, qrbox: { width: boxWidth, height: boxHeight } },
+                    processToken
+                );
+                isScannerStarted = true;
+                userCameraOff = false;
+                if (cameraId) localStorage.setItem('lastPreferredCameraId', cameraId);
+            } catch (err) {
+                console.error("Start fail:", err);
+            }
         }
 
-        function resetScanner() {
-            // Delay enabling scans slightly to prevent immediate re-scan of the same code
+        async function stopScanner() {
+            if (html5QrCode && isScannerStarted) {
+                try {
+                    await html5QrCode.stop();
+                    isScannerStarted = false;
+                    userCameraOff = true;
+                } catch (e) {
+                    console.error("Stop fail:", e);
+                }
+            }
+        }
+
+        async function resetScanner() {
+            // Delay enabling scans slightly
             setTimeout(() => { isProcessing = false; }, 500);
             resultDiv.style.display = 'none';
             manualEntryDiv.style.display = 'block';
             
-            // Re-render ONLY if user hasn't explicitly stopped it
-            if (html5QrcodeScanner && !userCameraOff) {
-                html5QrcodeScanner.render(processToken);
+            // Re-start if user hasn't explicitly stopped it
+            if (html5QrCode && !userCameraOff && !isScannerStarted) {
+                startScanner();
             }
-            console.log("Scanner UI reset - Respecting preference:", userCameraOff ? "OFF" : "ON");
         }
 
         async function processToken(rawToken) {
@@ -1472,13 +1962,15 @@
                 const winName = (currentWindowInfo && currentWindowInfo.isOpen) ? currentWindowInfo.type : "OFFLINE";
                 addToRecentScans(name.toUpperCase(), token, winName + " (SAVED)", isConsented);
 
-                resultDiv.className = isConsented ? "offline-consented" : "warning";
+                resultDiv.className = isConsented ? "success" : "warning";
+                const cardIcon = isConsented ? "bx-cloud-upload" : "bx-cloud-off";
                 resultDiv.innerHTML =
-                    "<span class=\"result-icon\">" + (isConsented ? "🔵" : "📴") + "</span>" +
-                    "<h3>" + (isConsented ? "OFFLINE SCAN — CONSENTED" : "OFFLINE SAVED") + "</h3>" +
-                    "<p><b>" + name.toUpperCase() + "</b></p>" +
+                    `<i class='bx ${cardIcon} result-icon'></i>` +
+                    "<h3>Offline Sync</h3>" +
+                    `<div class="student-name">${name.toUpperCase()}</div>` +
+                    `<p>${isConsented ? "RECORDED INTERNALLY" : "SAVED TO QUEUE"}</p>` +
                     "<button class=\"scan-btn-next\" onclick=\"resetScanner()\">NEXT SCAN</button>" +
-                    "<button class=\"flag-btn\" onclick=\"toggleFlagBox()\">🚩 FLAG THIS STUDENT</button>" +
+                    "<button class=\"flag-btn\" onclick=\"toggleFlagBox()\"><i class='bx bx-flag'></i> FLAG STUDENT</button>" +
                     "<div id=\"flagReasonBox\" style=\"display:none;background:rgba(0,0,0,0.15);border-radius:10px;padding:12px;margin-top:10px;\">" +
                     "<select id=\"flagReasonSelect\" style=\"width:100%;padding:12px;border-radius:8px;border:none;font-family:Montserrat,sans-serif;margin-bottom:10px;\">" +
                     "<option value=\"\">— Select Reason —</option>" +
@@ -1488,9 +1980,10 @@
                     "<option value=\"Already scanned elsewhere\">Already scanned elsewhere</option>" +
                     "<option value=\"Other\">Other</option>" +
                     "</select>" +
-                    "<p style=\"font-size:0.7rem;color:rgba(255,255,255,0.6);margin-bottom:8px;font-style:italic;\">⚠ Offline: flag syncs when online</p>" +
-                    "<button onclick=\"confirmOfflineFlag('" + token.replace(/'/g, "\\'") + "', '" + name.replace(/'/g, "\\'") + "')\" style=\"width:100%;padding:14px;background:#dc2626;color:white;border:none;border-radius:8px;font-weight:800;font-family:Montserrat,sans-serif;cursor:pointer;\">🚩 CONFIRM FLAG</button>" +
+                    "<p style=\"font-size:0.7rem;color:rgba(255,255,255,0.6);margin-bottom:8px;font-style:italic;\">Flag syncs when online</p>" +
+                    "<button onclick=\"confirmOfflineFlag('" + token.replace(/'/g, "\\'") + "', '" + name.replace(/'/g, "\\'") + "')\" style=\"width:100%;padding:14px;background:#dc2626;color:white;border:none;border-radius:8px;font-weight:800;font-family:Montserrat,sans-serif;cursor:pointer;\">CONFIRM FLAG</button>" +
                     "</div>";
+                return;
                 return;
             }
 
@@ -1506,7 +1999,8 @@
                 });
 
                 let colorClass = response.status === "success" ? "success" : response.status === "warning" ? "warning" : "error";
-                let icon = response.status === "success" ? "✅" : response.status === "warning" ? "⚠️" : "❌";
+                let icon = response.status === "success" ? "bx-check-double" : response.status === "warning" ? "bx-info-circle" : "bx-x-circle";
+                let statusHeader = response.status === "success" ? "Recorded" : response.status === "warning" ? "System Alert" : "Access Denied";
 
                 if (response.status === "success") {
                     addToRecentScans(response.studentName, token, response.windowType || "RECORDED", false);
@@ -1514,13 +2008,14 @@
 
                 const showFlag = response.status === "success" || response.status === "warning";
                 resultDiv.className = colorClass;
-                resultDiv.className = colorClass;
                 resultDiv.innerHTML =
-                    "<span class=\"result-icon\">" + icon + "</span>" +
-                    "<p>" + response.message + "</p>" +
+                    `<i class='bx ${icon} result-icon'></i>` +
+                    `<h3>${statusHeader}</h3>` +
+                    (response.studentName ? `<div class="student-name">${response.studentName.toUpperCase()}</div>` : "") +
+                    "<p>" + response.message.replace(/✅|❌|⚠️/g, '') + "</p>" +
                     "<button class=\"scan-btn-next\" onclick=\"resetScanner()\">NEXT SCAN</button>" +
                     (showFlag ?
-                        "<button class=\"flag-btn\" onclick=\"toggleFlagBox()\">🚩 FLAG THIS STUDENT</button>" +
+                        "<button class=\"flag-btn\" onclick=\"toggleFlagBox()\"><i class='bx bx-flag'></i> FLAG STUDENT</button>" +
                         "<div id=\"flagReasonBox\" style=\"display:none;background:rgba(0,0,0,0.15);border-radius:10px;padding:12px;margin-top:10px;\">" +
                         "<select id=\"flagReasonSelect\" style=\"width:100%;padding:12px;border-radius:8px;border:none;font-family:Montserrat,sans-serif;margin-bottom:10px;\">" +
                         "<option value=\"\">— Select Reason —</option>" +
@@ -1530,14 +2025,14 @@
                         "<option value=\"Already scanned elsewhere\">Already scanned elsewhere</option>" +
                         "<option value=\"Other\">Other</option>" +
                         "</select>" +
-                        "<button onclick=\"confirmOnlineFlag('" + token.replace(/'/g, "\\'") + "')\" style=\"width:100%;padding:14px;background:#dc2626;color:white;border:none;border-radius:8px;font-weight:800;font-family:Montserrat,sans-serif;cursor:pointer;\">🚩 CONFIRM FLAG</button>" +
+                        "<button onclick=\"confirmOnlineFlag('" + token.replace(/'/g, "\\'") + "')\" style=\"width:100%;padding:14px;background:#dc2626;color:white;border-radius:8px;font-weight:800;font-family:Montserrat,sans-serif;cursor:pointer;\">CONFIRM FLAG</button>" +
                         "</div>"
                         : "");
             } catch (e) {
                 console.error("Scanner error:", e);
                 const errMsg = e.message || e.toString() || "Could not reach server.";
                 resultDiv.className = "error";
-                resultDiv.innerHTML = "<span class=\"result-icon\">❌</span><h3>Connection Error</h3><p>" + errMsg + "</p><button class=\"scan-btn-next\" onclick=\"resetScanner()\">NEXT SCAN</button>";
+                resultDiv.innerHTML = `<i class='bx bx-wifi-off result-icon'></i><h3>Connection Failure</h3><p>${errMsg}</p><button class=\"scan-btn-next\" onclick=\"resetScanner()\">RETRY SCAN</button>`;
             }
         }
 
@@ -1805,9 +2300,20 @@
             if(navigator.onLine) {
                 log("Internet Connection: ONLINE");
                 try {
-                    const res = await callBackend("ping", {});
-                    log("Backend (GAS): RESPONDING");
-                } catch(e) { log("Backend (GAS): UNREACHABLE", false); }
+                    // Test Supabase connectivity with a simple schedule query
+                    const sup = await initSupabase();
+                    if (sup) {
+                        const { data, error } = await sup
+                            .from('sas_schedules')
+                            .select('count');
+                        if (error) throw error;
+                        log("Supabase DB: CONNECTED ✓");
+                    } else {
+                        log("Supabase: NOT INITIALIZED", false);
+                    }
+                } catch(e) {
+                    log("Supabase DB: UNREACHABLE ("+e.message+")", false);
+                }
             } else {
                 log("Internet Connection: OFFLINE (Sync will wait)");
             }
@@ -1938,6 +2444,79 @@
             // Force reload
             window.location.reload(true);
         }
+
+        function toggleCustomDropdown() {
+            const wrapper = document.getElementById('customEventDropdown');
+            wrapper.classList.toggle('is-open');
+        }
+
+        // Close dropdown when clicking outside
+        window.addEventListener('click', function(e) {
+            const wrapper = document.getElementById('customEventDropdown');
+            if (wrapper && !wrapper.contains(e.target)) {
+                wrapper.classList.remove('is-open');
+            }
+        });
+
+        async function initEventDropdown() {
+            const list = document.getElementById('customOptionsList');
+            const label = document.getElementById('selectedEventLabel');
+            const hiddenInput = document.getElementById('eventSelector');
+            if (!list) return;
+
+            try {
+                const events = await callBackend("getAvailableEvents", {});
+                
+                if (events.length === 0) {
+                    list.innerHTML = '<div class="custom-option">No upcoming events</div>';
+                    return;
+                }
+
+                list.innerHTML = events.map(e => `
+                    <div class="custom-option" data-id="${e.id}" data-name="${e.name}" onclick="selectEventOption('${e.id}', '${e.name.replace(/'/g, "\\'")}')">
+                        ${e.name} <br> <small style="opacity: 0.6; font-size: 0.65rem;">${e.event_date}</small>
+                    </div>
+                `).join('');
+
+                const savedId = localStorage.getItem('scannerEventId');
+                const savedName = localStorage.getItem('scannerEventName');
+
+                if (savedId && events.some(e => e.id === savedId)) {
+                    hiddenInput.value = savedId;
+                    label.innerText = savedName;
+                    const option = list.querySelector(`[data-id="${savedId}"]`);
+                    if (option) option.classList.add('is-selected');
+                }
+            } catch (err) {
+                console.error(err);
+                list.innerHTML = '<div class="custom-option">Error loading events</div>';
+            }
+        }
+
+        function selectEventOption(id, name) {
+            const label = document.getElementById('selectedEventLabel');
+            const hiddenInput = document.getElementById('eventSelector');
+            const list = document.getElementById('customOptionsList');
+
+            hiddenInput.value = id;
+            label.innerText = name;
+            
+            // Mark as selected
+            list.querySelectorAll('.custom-option').forEach(opt => opt.classList.remove('is-selected'));
+            const selection = list.querySelector(`[data-id="${id}"]`);
+            if (selection) selection.classList.add('is-selected');
+
+            // Save to localStorage
+            localStorage.setItem('scannerEventId', id);
+            localStorage.setItem('scannerEventName', name);
+
+            // Close
+            toggleCustomDropdown();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initEventDropdown();
+        });
 
         // PWA: register service worker for install & offline
         if ('serviceWorker' in navigator) {

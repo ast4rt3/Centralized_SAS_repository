@@ -9,13 +9,13 @@
   "orientation": "any",
   "icons": [
     {
-      "src": "https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png",
+      "src": "assets/sas_logo_real.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png",
+      "src": "assets/sas_logo_real.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

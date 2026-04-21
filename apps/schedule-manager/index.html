@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAS Scanner Schedule Manager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <style>
+        :root {
+            --nbsc-blue: #004a99;
+            --nbsc-dark: #0f172a;
+            --nbsc-mid: #1e293b;
+            --nbsc-gold: #f0ad4e;
+            --border: rgba(255, 255, 255, 0.1);
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            --font-sans: 'Montserrat', sans-serif;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: var(--font-sans); background: var(--nbsc-dark); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+        .header { padding: 24px; background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        .header-brand { display: flex; align-items: center; gap: 12px; }
+        .header-logo { width: 44px; height: auto; }
+        .header-text h1 { font-size: 1.2rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+        .actions-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
+        .btn { padding: 10px 20px; border-radius: 8px; border: none; font-weight: 800; font-family: var(--font-sans); text-transform: uppercase; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s; }
+        .btn-primary { background: var(--nbsc-gold); color: #000; }
+        .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+        .btn-outline:hover { background: rgba(255,255,255,0.05); }
+        .btn-danger { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; }
+        .btn-danger:hover { background: rgba(239, 68, 68, 0.25); border-color: rgba(239, 68, 68, 0.5); color: #f87171; }
+        /* Events Container */
+        .events-container { display: flex; flex-direction: column; gap: 24px; padding-bottom: 32px; }
+        
+        /* Event Card */
+        .event-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); transition: transform 0.2s, box-shadow 0.2s; }
+        .event-card:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,0.4); border-color: rgba(255,255,255,0.12); }
+        .event-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; background: rgba(0,0,0,0.2); border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; user-select: none; }
+        .event-header-left { display: flex; align-items: center; gap: 16px; }
+        .event-toggle { font-size: 1.5rem; color: var(--nbsc-gold); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .event-card.collapsed .event-toggle { transform: rotate(-90deg); }
+        .event-title { font-size: 1.1rem; font-weight: 800; color: #fff; letter-spacing: 0.5px; }
+        .event-meta { font-size: 0.85rem; color: var(--text-muted); display: flex; gap: 12px; margin-top: 4px; flex-wrap: wrap; }
+        .event-meta span { display: inline-flex; align-items: center; gap: 4px; }
+        .event-badge { background: rgba(240, 173, 78, 0.15); color: var(--nbsc-gold); padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; border: 1px solid rgba(240, 173, 78, 0.2); }
+        
+        /* Schedule Windows Grid */
+        .windows-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; padding: 24px; background: rgba(255,255,255,0.02); transition: all 0.3s ease; }
+        .event-card.collapsed .windows-list { display: none; }
+        
+        .window-item { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; transition: background 0.2s, border-color 0.2s; position: relative; overflow: hidden; }
+        .window-item:hover { background: rgba(15, 23, 42, 0.9); border-color: rgba(255,255,255,0.15); }
+        .window-item::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #4b5563; transition: background 0.3s; }
+        .window-item.is-active::before { background: #10b981; }
+        
+        .window-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .window-name { font-weight: 700; color: #fff; font-size: 1rem; }
+        
+        .window-details { display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem; color: var(--text-muted); }
+        .window-details p { display: flex; align-items: center; gap: 6px; }
+        .window-details i { font-size: 1rem; color: var(--nbsc-gold); opacity: 0.8; }
+        
+        .window-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05); }
+        
+        .status-pill { padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; display: inline-flex; align-items: center; gap: 4px; }
+        .status-pill.active { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); }
+        .status-pill.inactive { background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.2); }
+        
+        .btn-icon { width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; }
+        .btn-icon i { font-size: 1.1rem; }
+        .action-group { display: flex; gap: 8px; }
+        
+        .empty-state { text-align: center; padding: 48px; color: var(--text-muted); }
+        .empty-state i { font-size: 3rem; margin-bottom: 16px; opacity: 0.5; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal { background: var(--nbsc-mid); border: 1px solid var(--border); border-radius: 16px; padding: 32px; width: 90%; max-width: 500px; box-shadow: var(--shadow); }
+        form.modal-form { display: flex; flex-direction: column; gap: 20px; }
+        .form-group { display: flex; flex-direction: column; gap: 8px; }
+        .form-group label { font-size: 0.8rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; }
+        .form-group input, .form-group select { padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: rgba(0,0,0,0.2); color: white; font-family: var(--font-sans); }
+        .form-group select { cursor: pointer; outline: none; }
+        .form-group select option { background: var(--nbsc-mid); color: white; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .hidden { display: none !important; }
+        #loadingOverlay { position: fixed; inset: 0; background: var(--nbsc-dark); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2000; }
+        .spinner { width: 50px; height: 50px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--nbsc-gold); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (max-width: 600px) { .header { padding: 16px; } .container { padding: 16px; } .actions-bar { flex-direction: column; align-items: stretch; } }
+    </style>
+</head>
+<body>
+    <div id="loadingOverlay">
+        <div class="spinner"></div>
+        <p>Initializing Supabase...</p>
+    </div>
+
+    <header class="header">
+        <div class="header-brand">
+            <img src="../../assets/sas_logo_real.png" class="header-logo" alt="NBSC Logo">
+            <div class="header-text"><h1>Scanner Schedule Manager</h1></div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-outline" onclick="openEventModal()"><i class='bx bx-folder'></i> New Event</button>
+            <button class="btn btn-primary" onclick="openWindowModal()"><i class='bx bx-plus'></i> New Window</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="actions-bar">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <button class="btn btn-outline" onclick="loadSchedules()"><i class='bx bx-refresh'></i> Refresh</button>
+                <p id="statsText" style="color: var(--text-muted); font-size: 0.9rem; font-weight: 600;"></p>
+            </div>
+        </div>
+
+        <div id="eventsContainer" class="events-container">
+            <!-- Event cards will be dynamically inserted here -->
+        </div>
+
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <i class='bx bx-calendar-x'></i>
+            <p>No schedules found. Create your first check-in window!</p>
+        </div>
+    </div>
+
+    <!-- Event Modal -->
+    <div id="eventModalOverlay" class="modal-overlay">
+        <div class="modal">
+            <h2 style="margin-bottom: 24px; font-weight: 800;">Create Event</h2>
+            <form id="eventForm" class="modal-form">
+                <div class="form-group">
+                    <label>Event Name</label>
+                    <input type="text" id="eventName" placeholder="e.g. Foundation Day" required>
+                </div>
+                <div class="form-group">
+                    <label>Event Date</label>
+                    <input type="date" id="eventDate" required>
+                </div>
+                <div class="form-group">
+                    <label>Description (optional)</label>
+                    <input type="text" id="eventDesc" placeholder="Brief description...">
+                </div>
+                <div style="display: flex; gap: 12px; margin-top: 12px;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Create Event</button>
+                    <button type="button" class="btn btn-outline" onclick="closeEventModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Window Modal -->
+    <div id="windowModalOverlay" class="modal-overlay">
+        <div class="modal">
+            <h2 style="margin-bottom: 24px; font-weight: 800;">Create Scanning Window</h2>
+            <form id="windowForm" class="modal-form">
+                <div class="form-group">
+                    <label>Window Name</label>
+                    <input type="text" id="windowLabel" placeholder="e.g. Morning Parade" required>
+                </div>
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="windowDate" required onchange="loadEventsForDate()">
+                </div>
+                <div class="form-group">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                        <label>Target Event</label>
+                        <span style="font-size: 0.7rem; color: var(--nbsc-gold); text-transform: uppercase; font-weight: 800; opacity: 0.8;">Or Create New</span>
+                    </div>
+                    <select id="windowEventSelect" required>
+                        <option value="">Loading events...</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Start Time</label>
+                        <input type="time" id="startTime" required>
+                    </div>
+                    <div class="form-group">
+                        <label>End Time</label>
+                        <input type="time" id="endTime" required>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 12px; margin-top: 12px;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Save Window</button>
+                    <button type="button" class="btn btn-outline" onclick="closeWindowModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div id="confirmModalOverlay" class="modal-overlay">
+        <div class="modal" style="max-width: 400px; text-align: center;">
+            <div style="font-size: 3.5rem; color: #ef4444; margin-bottom: 12px;"><i class='bx bx-error-circle'></i></div>
+            <h2 id="confirmTitle" style="margin-bottom: 16px; font-weight: 800;">Are you sure?</h2>
+            <p id="confirmMessage" style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 24px; line-height: 1.5;"></p>
+            <div style="display: flex; gap: 12px;">
+                <button type="button" class="btn btn-outline" id="confirmCancelBtn" style="flex: 1;">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmOkBtn" style="flex: 1;">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dependencies -->
+    <script src="../../env.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Inline diagnostics -->
+    <script>
+        (function() {
+            console.log('🔍 DIAGNOSTIC: Inline preload check starting...');
+            if (!window.ENV) { console.error('❌ env.js missing'); }
+            else { console.log('✅ env.js loaded', { url: window.ENV.SUPABASE_URL?.substring(0,30)+'...', keyPresent: !!window.ENV.SUPABASE_ANON_KEY }); }
+            if (!window.supabase) { console.error('❌ Supabase library not loaded'); }
+            else { console.log('✅ Supabase library present'); }
+            window.addEventListener('load', () => setTimeout(async () => {
+                if (window.supabase && window.ENV) {
+                    try {
+                        const client = window.supabase.createClient(window.ENV.SUPABASE_URL, window.ENV.SUPABASE_ANON_KEY);
+                        const { data, error } = await client.from('sas_schedules').select('count').limit(1);
+                        if (error) console.error('❌ DB test failed:', error);
+                        else console.log('✅ DB reachable, schedule count =', data);
+                    } catch(e) { console.error('❌ DB test exception:', e); }
+                }
+                console.log('🔍 POST-LOAD CHECK:', { initExists: typeof init, clientExists: typeof supabaseClient, loadingDisplay: getComputedStyle(document.getElementById('loadingOverlay')).display });
+            }, 1000));
+        })();
+    </script>
+
+    <!-- INLINED app.js — complete rewrite -->
+    <script>
+        // ========== BEGIN apps/schedule-manager/app.js ==========
+        let supabaseClient;
+        let allEventsCache = []; // Cache all events for dropdown
+        const els = {
+            container: document.getElementById('eventsContainer'),
+            emptyState: document.getElementById('emptyState'),
+            // Forms
+            eventForm: document.getElementById('eventForm'),
+            windowForm: document.getElementById('windowForm'),
+            // Modals
+            eventModal: document.getElementById('eventModalOverlay'),
+            windowModal: document.getElementById('windowModalOverlay'),
+            confirmModal: document.getElementById('confirmModalOverlay'),
+            confirmTitle: document.getElementById('confirmTitle'),
+            confirmMessage: document.getElementById('confirmMessage'),
+            confirmOkBtn: document.getElementById('confirmOkBtn'),
+            confirmCancelBtn: document.getElementById('confirmCancelBtn'),
+            // Window form fields
+            windowDate: document.getElementById('windowDate'),
+            windowEventSelect: document.getElementById('windowEventSelect'),
+            // Standard
+            loading: document.getElementById('loadingOverlay'),
+            stats: document.getElementById('statsText')
+        };
+
+        async function init() {
+            console.log("🚀 Initializing Scanner Schedule Manager...");
+            
+            // Guard: ENV
+            if (!window.ENV?.SUPABASE_URL || !window.ENV?.SUPABASE_ANON_KEY) {
+                console.error("❌ Missing Supabase credentials");
+                showError("Supabase credentials missing in env.js");
+                return;
+            }
+            
+            // Guard: library
+            if (!window.supabase) {
+                console.error("❌ Supabase library not loaded");
+                showError("Supabase library not loaded — check internet connection");
+                return;
+            }
+            
+            // Create client
+            try {
+                supabaseClient = window.supabase.createClient(window.ENV.SUPABASE_URL, window.ENV.SUPABASE_ANON_KEY);
+                console.log("✅ Supabase client ready");
+            } catch (e) {
+                console.error("❌ Client creation failed:", e);
+                showError("Failed to create Supabase client:\n" + e.message);
+                return;
+            }
+            
+            // UI setup
+            document.getElementById('windowDate').valueAsDate = new Date();
+            document.getElementById('eventDate').valueAsDate = new Date();
+            els.eventForm.addEventListener('submit', handleEventFormSubmit);
+            els.windowForm.addEventListener('submit', handleWindowFormSubmit);
+            
+            // Escape key closes modals
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeEventModal();
+                    closeWindowModal();
+                    if (els.confirmModal && els.confirmModal.style.display === 'flex') {
+                        els.confirmCancelBtn.click();
+                    }
+                }
+            });
+            
+            // Load schedules
+            try {
+                await loadSchedules();
+                console.log("✅ Schedules loaded");
+            } catch (e) {
+                console.error("❌ loadSchedules failed:", e);
+            }
+            
+            els.loading.classList.add('hidden');
+            console.log("✅ Init complete");
+        }
+
+        function showError(msg) {
+            alert(msg);
+            els.loading.classList.add('hidden');
+        }
+
+        async function loadSchedules() {
+            console.log("📡 Fetching schedules...");
+            try {
+                // Step 1: Fetch ALL events and cache them FIRST
+                const { data: events, error: evErr } = await supabaseClient
+                    .from('sas_events')
+                    .select('*')
+                    .order('event_date', { ascending: false });
+
+                if (evErr) throw evErr;
+                allEventsCache = events || [];
+                const eventsMap = allEventsCache.reduce((acc, e) => { acc[e.id] = e; return acc; }, {});
+
+                // Step 2: Fetch raw schedules
+                const { data: schedules, error: schedErr } = await supabaseClient
+                    .from('sas_schedules')
+                    .select('*')
+                    .order('date', { ascending: false })
+                    .order('start_time', { ascending: false });
+
+                if (schedErr) throw schedErr;
+
+                // Step 3: Merge event name into each schedule
+                const merged = (schedules || []).map(s => ({
+                    ...s,
+                    sas_events: s.event_id ? eventsMap[s.event_id] : null
+                }));
+
+                console.log('✅ Events loaded:', allEventsCache.length, '| Schedules loaded:', merged.length);
+                renderSchedules(merged, allEventsCache);
+            } catch (err) {
+                console.error("❌ loadSchedules failed:", err);
+                showError("Failed to load schedules:\n" + err.message);
+            }
+        }
+
+        function renderSchedules(schedules, events = []) {
+            const container = els.container;
+            const emptyState = els.emptyState;
+            
+            els.stats.textContent = '';
+            
+            if (events.length === 0 && (!schedules || schedules.length === 0)) {
+                container.style.display = 'none';
+                emptyState.style.display = 'block';
+                els.stats.textContent = "0 Events";
+                return;
+            }
+            
+            container.style.display = 'flex';
+            emptyState.style.display = 'none';
+            
+            // Initialize collapsed state for each event
+            const eventRows = {};
+            
+            // Pre-fill with all events so empty events show up
+            events.forEach(evt => {
+                eventRows[evt.id] = {
+                    event: evt,
+                    schedules: [],
+                    collapsed: false
+                };
+            });
+
+            schedules.forEach(s => {
+                const eventKey = s.event_id || 'no-event';
+                if (!eventRows[eventKey]) {
+                    eventRows[eventKey] = {
+                        event: s.sas_events || { name: 'No Event', event_date: s.date },
+                        schedules: [],
+                        collapsed: false  // Default: expanded
+                    };
+                }
+                eventRows[eventKey].schedules.push(s);
+            });
+            
+            // Copy existing collapse states from window.eventRowsData if available
+            if (window.eventRowsData) {
+                Object.keys(eventRows).forEach(key => {
+                    if (window.eventRowsData[key]) {
+                        eventRows[key].collapsed = window.eventRowsData[key].collapsed;
+                    }
+                });
+            }
+            window.eventRowsData = eventRows;
+            
+            let activeCount = 0;
+            container.innerHTML = '';
+            
+            // Render event groups (sorted by event date descending)
+            Object.values(eventRows)
+                .sort((a, b) => new Date(b.event.event_date || 0) - new Date(a.event.event_date || 0))
+                .forEach(group => {
+                const event = group.event;
+                const scheduleCount = group.schedules.length;
+                const activeInGroup = group.schedules.filter(s => s.is_active).length;
+                activeCount += activeInGroup;
+                
+                const eventKey = event.id || 'no-event';
+                const isCollapsed = group.collapsed ? 'collapsed' : '';
+                
+                // Construct the Event Card DOM
+                const card = document.createElement('div');
+                card.className = `event-card ${isCollapsed}`;
+                card.dataset.eventKey = eventKey;
+                
+                card.innerHTML = `
+                    <div class="event-header" onclick="toggleEvent('${eventKey}')">
+                        <div class="event-header-left">
+                            <i class='bx bxs-chevron-down event-toggle'></i>
+                            <div>
+                                <h3 class="event-title">${escapeHtml(event.name || 'No Event')}</h3>
+                                <div class="event-meta">
+                                    <span title="Date"><i class='bx bx-calendar'></i> ${formatDate(event.event_date)}</span>
+                                    <span class="event-badge"><i class='bx bx-windows'></i> ${scheduleCount} Window${scheduleCount !== 1 ? 's' : ''} (${activeInGroup} Active)</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="action-group">
+                            <button class="btn btn-outline btn-icon delete-event-btn" onclick="event.stopPropagation(); deleteEvent('${event.id}', '${escapeHtml(event.name).replace(/'/g, "\\'")}')" title="Delete Event" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.2);">
+                                <i class='bx bx-trash'></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="windows-list" id="windows-${eventKey}">
+                        ${group.schedules.length === 0 ? '<div style="color: var(--text-muted); font-size: 0.9rem; font-style: italic; grid-column: 1/-1;">No windows defined for this event.</div>' : ''}
+                    </div>
+                `;
+                container.appendChild(card);
+                
+                const windowsList = card.querySelector('.windows-list');
+                
+                // Render schedule windows
+                group.schedules.forEach(sched => {
+                    const statusClass = sched.is_active ? 'active' : 'inactive';
+                    const statusLabel = sched.is_active ? 'Active' : 'Archived';
+                    const activeStateClass = sched.is_active ? 'is-active' : '';
+                    
+                    const windowItem = document.createElement('div');
+                    windowItem.className = `window-item ${activeStateClass}`;
+                    windowItem.innerHTML = `
+                        <div class="window-header">
+                            <div class="window-name">${escapeHtml(sched.label)}</div>
+                            <span class="status-pill ${statusClass}"><i class='bx ${sched.is_active ? 'bx-check-circle' : 'bx-archive'}'></i> ${statusLabel}</span>
+                        </div>
+                        <div class="window-details">
+                            <p><i class='bx bx-time-five'></i> ${formatTime(sched.start_time)} – ${formatTime(sched.end_time)}</p>
+                        </div>
+                        <div class="window-actions">
+                            <button class="btn btn-outline" onclick="toggleStatus('${sched.id}', ${sched.is_active})" style="padding: 4px 10px; font-size: 0.75rem;">
+                                <i class='bx ${sched.is_active ? 'bx-archive-in' : 'bx-play-circle'}'></i>
+                                ${sched.is_active ? 'Deactivate' : 'Activate'}
+                            </button>
+                            <button class="btn btn-outline btn-icon" onclick="deleteSchedule('${sched.id}')" title="Delete Window" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.2);">
+                                <i class='bx bx-trash'></i>
+                            </button>
+                        </div>
+                    `;
+                    windowsList.appendChild(windowItem);
+                });
+            });
+            
+            els.stats.textContent = `${events.length} Event${events.length !== 1 ? 's' : ''}`;
+        }
+
+        async function handleWindowFormSubmit(e) {
+            e.preventDefault();
+            const label = document.getElementById('windowLabel').value;
+            const date = document.getElementById('windowDate').value;
+            const start_time = document.getElementById('startTime').value;
+            const end_time = document.getElementById('endTime').value;
+            const eventSelect = document.getElementById('windowEventSelect');
+            const selectedEventId = eventSelect.value;
+
+            console.log("🚀 Saving window:", { label, date, start_time, end_time, selectedEventId });
+
+            try {
+                let event_id;
+                
+                if (selectedEventId === '__new__' || !selectedEventId) {
+                    // Create new event for this date
+                    const eventName = 'Event on ' + date;
+                    const { data: newEvent, error: createErr } = await supabaseClient
+                        .from('sas_events')
+                        .insert([{
+                            event_date: date,
+                            name: eventName,
+                            description: 'Auto-created from window creation',
+                            created_by: 'system'
+                        }])
+                        .select('id')
+                        .single();
+
+                    if (createErr) throw createErr;
+                    event_id = newEvent.id;
+                    console.log("➕ Created new event:", event_id);
+                } else {
+                    // Use existing event
+                    event_id = selectedEventId;
+                    console.log("📅 Using selected event:", event_id);
+                }
+
+                // Insert schedule with event_id
+                const { error } = await supabaseClient
+                    .from('sas_schedules')
+                    .insert([{
+                        label,
+                        date,
+                        start_time,
+                        end_time,
+                        is_active: true,
+                        event_id
+                    }]);
+
+                if (error) {
+                    console.error("❌ Insert error:", error);
+                    alert("Error saving: " + error.message + "\n\nSee console for details.");
+                } else {
+                    closeWindowModal();
+                    loadSchedules();
+                }
+            } catch (err) {
+                console.error("❌ Save failed:", err);
+                alert("Failed to save schedule: " + err.message);
+            }
+        }
+
+        async function toggleStatus(id, currentStatus) {
+            const { error } = await supabaseClient
+                .from('sas_schedules')
+                .update({ is_active: !currentStatus })
+                .eq('id', id);
+
+            if (error) alert("Error: " + error.message);
+            else loadSchedules();
+        }
+
+        function confirmAction(message, title = "Are you sure?") {
+            return new Promise((resolve) => {
+                els.confirmTitle.textContent = title;
+                els.confirmMessage.textContent = message;
+                els.confirmModal.style.display = 'flex';
+
+                const handleConfirm = () => { cleanup(); resolve(true); };
+                const handleCancel = () => { cleanup(); resolve(false); };
+
+                const cleanup = () => {
+                    els.confirmModal.style.display = 'none';
+                    els.confirmOkBtn.removeEventListener('click', handleConfirm);
+                    els.confirmCancelBtn.removeEventListener('click', handleCancel);
+                };
+
+                els.confirmOkBtn.addEventListener('click', handleConfirm);
+                els.confirmCancelBtn.addEventListener('click', handleCancel);
+            });
+        }
+
+        async function deleteSchedule(id) {
+            const confirmed = await confirmAction("Are you sure you want to delete this window and ALL associated attendance logs?", "Delete Window");
+            if (!confirmed) return;
+
+            const { error } = await supabaseClient
+                .from('sas_schedules')
+                .delete()
+                .eq('id', id);
+
+            if (error) alert("Error: " + error.message);
+            else loadSchedules();
+        }
+
+        async function handleEventFormSubmit(e) {
+            e.preventDefault();
+            const name = document.getElementById('eventName').value;
+            const event_date = document.getElementById('eventDate').value;
+            const description = document.getElementById('eventDesc').value || null;
+
+            console.log("🚀 Creating event:", { name, event_date, description });
+
+            try {
+                const { error } = await supabaseClient
+                    .from('sas_events')
+                    .insert([{
+                        event_date,
+                        name,
+                        description,
+                        created_by: 'system'
+                    }]);
+
+                if (error) {
+                    console.error("❌ Event insert error:", error);
+                    alert("Error saving event: " + error.message + "\n\nSee console for details.");
+                } else {
+                    closeEventModal();
+                    loadSchedules();
+                }
+            } catch (err) {
+                console.error("❌ Save event failed:", err);
+                alert("Failed to save event: " + err.message);
+            }
+        }
+
+        function toggleEvent(eventKey) {
+            const eventCard = document.querySelector(`.event-card[data-event-key="${eventKey}"]`);
+            if (!eventCard) return;
+            
+            eventCard.classList.toggle('collapsed');
+            if (window.eventRowsData && window.eventRowsData[eventKey]) {
+                window.eventRowsData[eventKey].collapsed = eventCard.classList.contains('collapsed');
+            }
+        }
+        async function deleteEvent(eventId, eventName) {
+            const confirmed = await confirmAction(`Delete event "${eventName}" and ALL its windows? This cannot be undone.`, "Delete Event");
+            if (!confirmed) return;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('sas_events')
+                    .delete()
+                    .eq('id', eventId);
+
+                if (error) throw error;
+                loadSchedules();
+            } catch (err) {
+                alert("Failed to delete event: " + err.message);
+            }
+        }
+
+        // Modal operations
+        function openEventModal() { 
+            document.getElementById('eventDate').valueAsDate = new Date();
+            els.eventModal.style.display = 'flex'; 
+        }
+        function closeEventModal() { 
+            els.eventModal.style.display = 'none'; 
+            els.eventForm.reset(); 
+            document.getElementById('eventDate').valueAsDate = new Date();
+        }
+        
+        function openWindowModal() { 
+            const today = new Date().toISOString().split('T')[0];
+            els.windowDate.value = today;
+            els.windowModal.style.display = 'flex'; 
+            loadEventsForDate(); // Populate dropdown for today's date
+        }
+        function closeWindowModal() { 
+            els.windowModal.style.display = 'none'; 
+            els.windowForm.reset(); 
+        }
+
+        // Load events for the selected date into the dropdown
+        async function loadEventsForDate() {
+            const selectedDate = els.windowDate.value;
+            if (!selectedDate) return;
+            
+            // If cache empty, fetch all events first
+            if (allEventsCache.length === 0) {
+                try {
+                    const { data: allEvents, error } = await supabaseClient
+                        .from('sas_events')
+                        .select('*')
+                        .order('event_date', { ascending: false });
+                    if (!error && allEvents) {
+                        allEventsCache = allEvents;
+                        console.log('📅 Events cached for dropdown:', allEvents.length);
+                    }
+                } catch (e) {
+                    console.warn('Failed to pre-cache events:', e);
+                }
+            }
+            
+            // Find matching events from cache
+            const matchingEvents = allEventsCache.filter(e => e.event_date === selectedDate);
+            
+            // Build options
+            let options = '<option value="" disabled selected>-- Select an Event --</option>';
+            if (matchingEvents.length === 0) {
+                options = `<option value="__new__" selected>✦ Create new event for ${selectedDate}</option>`;
+            } else {
+                matchingEvents.forEach(e => {
+                    options += `<option value="${e.id}">${escapeHtml(e.name)}</option>`;
+                });
+                options += `<option disabled>────────────────────</option>`;
+                options += `<option value="__new__">✦ Create new event (Auto-populated)</option>`;
+            }
+            els.windowEventSelect.innerHTML = options;
+        }
+
+        function formatDate(dateStr) {
+            return new Date(dateStr).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        function formatTime(timeStr) {
+            const [h, m] = timeStr.split(':');
+            const hour = parseInt(h);
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            const h12 = hour % 12 || 12;
+            return `${h12}:${m} ${ampm}`;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatDate(dateStr) {
+            return new Date(dateStr).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        function formatTime(timeStr) {
+            const [h, m] = timeStr.split(':');
+            const hour = parseInt(h);
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            const h12 = hour % 12 || 12;
+            return `${h12}:${m} ${ampm}`;
+        }
+
+        // Run init when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+        // ========== END apps/schedule-manager/app.js ==========
+    </script>
+
+    <!-- Global error handler -->
+    <script>
+        window.addEventListener('error', (event) => {
+            console.error('❌ GLOBAL ERROR:', event.error || event.message);
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.innerHTML = `<div style="color:#ef4444;text-align:center;max-width:600px;padding:20px;"><h2>❌ Startup Error</h2><p><strong>${event.message}</strong></p><p style="font-size:0.8rem;color:#94a3b8;margin-top:12px;">Check console (F12) for full stack trace.</p><button onclick="location.reload()" style="margin-top:16px;padding:8px 16px;background:#004a99;color:white;border:none;border-radius:6px;cursor:pointer;">Retry</button></div>`;
+            }
+        });
+    </script>
+</body>
+</html>

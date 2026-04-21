@@ -11,8 +11,8 @@
   {
     "id": "schedule-manager",
     "name": "Schedule Manager",
-    "description": "Google Apps Script schedule manager connected to Attendance Scanner.",
-    "url": "https://script.google.com/a/macros/nbsc.edu.ph/s/AKfycbyKLYEUfTct6AG91A7hTrD3qf62ti9qBbvLiLGdNYRStaVK6mRIwyqqfkCgQZnbeUIECQ/exec",
+    "description": "SAS schedule manager with Supabase backend.",
+    "url": "apps/schedule-manager/index.html",
     "external": false,
     "section": "Attendance",
     "roles": ["admin"]

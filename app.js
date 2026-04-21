@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
-import { getDatabase, ref, push, onChildAdded, onValue, onDisconnect, set, remove, get, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
+import { getDatabase, ref, push, onChildAdded, onChildChanged, onValue, onDisconnect, set, remove, get, update, serverTimestamp, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
 
 // IMMEDIATE AUTH CHECK - Run BEFORE any UI is shown to prevent flash of unauthorized content
 (function() {
@@ -13,6 +13,14 @@ import { getDatabase, ref, push, onChildAdded, onValue, onDisconnect, set, remov
 })();
 
 const BACKEND_GAS_URL = window.ENV?.BACKEND_GAS_URL || "YOUR_NEW_BACKEND_GAS_URL_HERE";
+
+// Global Utility: Escape HTML to prevented XSS
+const escapeHtml = (text) => {
+  if (typeof text !== 'string') return text;
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+};
 
 // Initialize Firebase Realtime Database for Admin Chat
 let db;
@@ -78,11 +86,7 @@ function displayMessage(data, isMe) {
     timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
   
-  const escapeHtml = (text) => {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  };
+  
   
   bubble.innerHTML = `
     ${!isMe ? `<div class="chat-sender">${escapeHtml(data.sender || 'Unknown')}</div>` : ''}
@@ -153,6 +157,243 @@ let myUsername = (() => {
   return 'Unknown';
 })();
 
+// --- SHARED MESSAGING STATE (GLOBAL) ---
+let unreadCount = 0;
+let activeChatUser = null; 
+let activeMessengerUser = null; 
+const pageLoadTime = Date.now();
+
+function updateUnreadBadges() {
+  // Re-calculate unreadCount from individual contact counts to prevent desync
+  unreadCount = Object.values(contactsMap).reduce((sum, contact) => sum + (contact.unread || 0), 0);
+
+  // Update individual contact cards in sidebar if they are rendered
+  Object.keys(contactsMap).forEach(username => {
+    if (typeof window.renderContact === 'function') {
+      const isOnline = contactsMap[username].isOnline || false;
+      window.renderContact(username, isOnline);
+    }
+  });
+
+  const unreadBadge = document.getElementById('fb-chat-unread');
+  if (unreadBadge) {
+    unreadBadge.textContent = unreadCount;
+    unreadBadge.classList.toggle('hidden', unreadCount === 0);
+  }
+
+  const headerBadge = document.getElementById('header-unread-badge');
+  if (headerBadge) {
+    headerBadge.textContent = unreadCount;
+    headerBadge.classList.toggle('hidden', unreadCount === 0);
+  }
+  
+  if (typeof renderFullContacts === 'function') {
+     const messagesPage = document.getElementById('messages');
+     if (messagesPage && (messagesPage.classList.contains('active') || messagesPage.style.display !== 'none')) {
+       renderFullContacts();
+     }
+  }
+}
+
+function showNotification(sender, text) {
+  let container = document.getElementById('fb-chat-notifications');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'fb-chat-notifications';
+    container.className = 'fb-chat-notifications';
+    document.body.appendChild(container);
+  }
+  
+  const toast = document.createElement('div');
+  toast.className = 'fb-chat-toast';
+  toast.onclick = () => {
+    // If widget exists, open it. Otherwise show warning or redirect.
+    if (typeof openConversation === 'function') {
+        openConversation(sender);
+    } else {
+        window.location.hash = 'messages';
+    }
+    toast.remove();
+  };
+  
+  const displaySender = document.createElement('span');
+  displaySender.className = 'fb-chat-toast-sender';
+  displaySender.textContent = sender;
+  
+  const displayText = document.createElement('p');
+  displayText.className = 'fb-chat-toast-text';
+  displayText.textContent = text;
+  
+  toast.appendChild(displaySender);
+  toast.appendChild(displayText);
+  container.appendChild(toast);
+  
+  setTimeout(() => { if (toast.parentNode) toast.remove(); }, 8000);
+}
+
+function markMessagesAsRead(otherUser) {
+  if (!userDb || !myUsername || !otherUser) return;
+  const history = contactsMap[otherUser] ? (contactsMap[otherUser].history || []) : [];
+  const updates = {};
+  
+  history.forEach(msg => {
+    if (msg.receiver === myUsername && !msg.read && msg.id) {
+      updates[`user_messages/${msg.id}/read`] = true;
+      msg.read = true; // Update local state immediately
+    }
+  });
+
+  if (Object.keys(updates).length > 0) {
+    console.log(`[Messaging] Marking ${Object.keys(updates).length} messages from ${otherUser} as read.`);
+    update(ref(userDb), updates).catch(err => console.error("Failed to update read status:", err));
+    
+    // Optimistically clear counts locally to ensure UI updates instantly
+    if (contactsMap[otherUser]) {
+      contactsMap[otherUser].unread = 0;
+    }
+    
+    // Update global counter via re-calculating from all users to ensure accuracy
+    updateUnreadBadges();
+  }
+}
+
+// Mark all conversations as read
+function markAllMessagesAsRead() {
+  Object.keys(contactsMap).forEach(username => {
+    markMessagesAsRead(username);
+  });
+}
+
+// Background polling fallback to ensure count stays synced even if real-time listener stalls
+async function syncUnreadCountFromDb() {
+  if (!userDb || !myUsername || myUsername === 'Unknown') return;
+  
+  try {
+    const messagesRef = ref(userDb, 'user_messages');
+    // Normalize identity check to prevent case mismatches
+    const myId = myUsername.toLowerCase();
+    
+    // In Firebase RTDB, we can only filter by one child efficiently. 
+    // We'll query all messages received by the user and then filter 'read' status locally.
+    const q = query(messagesRef, orderByChild('receiver'), equalTo(myUsername));
+    const snapshot = await get(q);
+    
+    if (snapshot.exists()) {
+      const messages = snapshot.val();
+      const unreadPerUser = {};
+      
+      Object.values(messages).forEach(msg => {
+        if (msg.read === false) {
+          const sender = msg.sender;
+          if (sender) {
+            unreadPerUser[sender] = (unreadPerUser[sender] || 0) + 1;
+          }
+        }
+      });
+      
+      // Update contactsMap with correct unread counts
+      Object.keys(unreadPerUser).forEach(username => {
+        if (contactsMap[username]) {
+          contactsMap[username].unread = unreadPerUser[username];
+        }
+      });
+      
+      console.log(`[Messaging] Polling sync complete. Total unread recalculated.`);
+      updateUnreadBadges();
+    }
+  } catch (err) {
+    console.warn('[Messaging] Periodic sync failed:', err);
+  }
+}
+
+function initSharedMessaging() {
+  if (!userDb || !myUsername || myUsername === 'Unknown') return;
+  const baseRef = ref(userDb, 'user_messages');
+  
+  onChildAdded(baseRef, (snapshot) => {
+    const data = snapshot.val();
+    if (!data || !data.sender || !data.receiver) return;
+    
+    if (data.sender === myUsername || data.receiver === myUsername) {
+      const otherUser = data.sender === myUsername ? data.receiver : data.sender;
+      
+      if (!contactsMap[otherUser]) {
+        contactsMap[otherUser] = { unread: 0, el: null, history: [], isOnline: false };
+        if (typeof renderContact === 'function') renderContact(otherUser, false);
+      }
+      
+      const msgObj = { ...data, id: snapshot.key };
+      contactsMap[otherUser].history.push(msgObj);
+      
+      const isWidgetOpen = !document.getElementById('fb-chat-body')?.classList.contains('hidden');
+      const isWidgetConvOpen = !document.getElementById('fb-chat-conversation')?.classList.contains('hidden');
+      const isMessengerPage = window.location.hash === '#messages';
+
+      // Only suppress notifications if the specific conversation is actually VISIBLE on screen
+      const isChatOpen = (activeChatUser === otherUser && isWidgetOpen && isWidgetConvOpen) || 
+                         (activeMessengerUser === otherUser && isMessengerPage) || 
+                         (window.activeMessengerUser === otherUser && isMessengerPage);
+      
+      if (data.sender === otherUser && !isChatOpen && !data.read) {
+        contactsMap[otherUser].unread++;
+        unreadCount++;
+        console.log(`[Messaging] Real-time unread increment: ${unreadCount} (from ${otherUser})`);
+        updateUnreadBadges();
+        
+        if (typeof showNotification === 'function') {
+          const msgTime = data.timestamp ? new Date(data.timestamp).getTime() : 0;
+          // Only show pop-up notification if it's a NEW message sent after page load
+          if (msgTime > pageLoadTime) {
+            showNotification(otherUser, data.text);
+          }
+        }
+      }
+      
+      if (activeChatUser === otherUser && typeof renderMessage === 'function') {
+        renderMessage(msgObj, data.sender === myUsername);
+      }
+      
+      if ((activeMessengerUser === otherUser || window.activeMessengerUser === otherUser) && typeof window.refreshFullMessengerUI === 'function') {
+        window.refreshFullMessengerUI();
+      }
+    }
+  });
+
+  onChildChanged(baseRef, (snapshot) => {
+    const data = snapshot.val();
+    if (!data || !data.sender || !data.receiver) return;
+    
+    const otherUser = data.sender === myUsername ? data.receiver : data.sender;
+    if (contactsMap[otherUser]) {
+      const history = contactsMap[otherUser].history;
+      const msgIdx = history.findIndex(m => m.id === snapshot.key);
+      
+      if (msgIdx !== -1) {
+        const oldRead = history[msgIdx].read;
+        const newRead = data.read;
+        
+        // Update local object
+        history[msgIdx] = { ...data, id: snapshot.key };
+        
+        // If message was marked as read remotely, update local counts
+        if (!oldRead && newRead && data.receiver === myUsername) {
+          if (contactsMap[otherUser].unread > 0) {
+             contactsMap[otherUser].unread--;
+             unreadCount = Math.max(0, unreadCount - 1);
+             console.log(`[Messaging] Message marked read remotely. New unreadCount: ${unreadCount}`);
+             updateUnreadBadges();
+          }
+        }
+      }
+    }
+  });
+
+  // Start background fallback poll (every 2 minutes)
+  setInterval(syncUnreadCountFromDb, 120000);
+  // Perform initial sync on startup
+  setTimeout(syncUnreadCountFromDb, 5000);
+}
+
 function initUserMessaging() {
   if (!userDb || userChatInitialized) return;
   
@@ -174,9 +415,7 @@ function initUserMessaging() {
   const unreadBadge = document.getElementById('fb-chat-unread');
   
   let isWidgetOpen = false;
-  let activeChatUser = null;
-
-  let unreadCount = 0;
+  // activeChatUser and unreadCount moved to shared scope
   
   const sessionData = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
   if (sessionData) {
@@ -258,89 +497,12 @@ function initUserMessaging() {
     contactsList.classList.remove('hidden');
   });
   
-  // Listen to messages globally to build contact history
-  const baseRef = ref(userDb, 'user_messages');
-  onChildAdded(baseRef, (snapshot) => {
-    const data = snapshot.val();
-    if (!data.sender || !data.receiver) return;
-    
-    if (data.sender === myUsername || data.receiver === myUsername) {
-      const otherUser = data.sender === myUsername ? data.receiver : data.sender;
-      
-      if (!contactsMap[otherUser]) {
-        contactsMap[otherUser] = { unread: 0, el: null, history: [], isOnline: false };
-        renderContact(otherUser, false);
-      }
-      
-      contactsMap[otherUser].history.push(data);
-      
-      if (data.sender === otherUser && activeChatUser !== otherUser && !data.read) {
-        contactsMap[otherUser].unread++;
-        unreadCount++;
-        updateUnreadBadges(otherUser);
-        
-        // Notification for Superadmin
-        const sessionData = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
-        let userRole = '';
-        if (sessionData) { try { userRole = JSON.parse(sessionData).role; } catch(e) {} }
-        
-        if (userRole === 'Superadmin') {
-           showNotification(otherUser, data.text);
-        }
-      }
-      
-      if (activeChatUser === otherUser) {
-        renderMessage(data, data.sender === myUsername);
-      }
-    }
-  });
+  // This listener is now moved to the shared scope to support both UIs
 
-  function showNotification(sender, text) {
-    let container = document.getElementById('fb-chat-notifications');
-    if (!container) {
-      container = document.createElement('div');
-      container.id = 'fb-chat-notifications';
-      container.className = 'fb-chat-notifications';
-      document.body.appendChild(container);
-    }
-    
-    const toast = document.createElement('div');
-    toast.className = 'fb-chat-toast';
-    toast.onclick = () => {
-      if (!isWidgetOpen) {
-          header.click();
-      }
-      openConversation(sender);
-      toast.remove();
-    };
-    
-    const displaySender = document.createElement('span');
-    displaySender.className = 'fb-chat-toast-sender';
-    displaySender.textContent = sender;
-    
-    const displayText = document.createElement('p');
-    displayText.className = 'fb-chat-toast-text';
-    displayText.textContent = text;
-    
-    toast.appendChild(displaySender);
-    toast.appendChild(displayText);
-    container.appendChild(toast);
-    
-    // Audio alert
-    try {
-      const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
-      audio.volume = 0.5;
-      audio.play();
-    } catch(e) {}
-    
-    setTimeout(() => {
-      toast.style.opacity = '0';
-      toast.style.transform = 'translateX(20px)';
-      setTimeout(() => toast.remove(), 200);
-    }, 5000);
-  }
   
   function renderContact(username, isOnline = true) {
+    window.renderContact = renderContact;
+
     let div = contactsMap[username].el;
     if (!div) {
       div = document.createElement('div');
@@ -350,11 +512,6 @@ function initUserMessaging() {
       contactsMap[username].el = div;
     }
     const unread = contactsMap[username].unread || 0;
-    
-    // Quick escape HTML
-    const escapeHtml = (text) => {
-      const div = document.createElement('div'); div.textContent = text; return div.innerHTML;
-    };
     
     const statusIndicator = isOnline 
        ? '<span style="display:inline-block; width:8px; height:8px; background:#16a34a; border-radius:50%; margin-right:8px; box-shadow:0 0 4px #16a34a;"></span>'
@@ -384,12 +541,7 @@ function initUserMessaging() {
     }
   }
   
-  function updateUnreadBadges(username) {
-    const isOnline = contactsMap[username] ? contactsMap[username].isOnline : false;
-    renderContact(username, isOnline);
-    unreadBadge.textContent = unreadCount;
-    unreadBadge.classList.toggle('hidden', unreadCount === 0);
-  }
+  // Global updateUnreadBadges handles these now
   
   function openConversation(username) {
     activeChatUser = username;
@@ -398,10 +550,7 @@ function initUserMessaging() {
     conversation.classList.remove('hidden');
     messagesDiv.innerHTML = '';
     
-    const unread = contactsMap[username].unread || 0;
-    unreadCount = Math.max(0, unreadCount - unread);
-    contactsMap[username].unread = 0;
-    updateUnreadBadges(username);
+    markMessagesAsRead(username);
     
     // Render past messages
     contactsMap[username].history.forEach(msg => {
@@ -423,9 +572,6 @@ function initUserMessaging() {
       timeStr = new Date(data.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
     }
     
-    const escapeHtml = (text) => {
-      const div = document.createElement('div'); div.textContent = text; return div.innerHTML;
-    };
     
     bubble.innerHTML = `
       <div class="fb-chat-text">${escapeHtml(data.text || '')}</div>
@@ -458,6 +604,7 @@ function initUserMessaging() {
 
 window.addEventListener('DOMContentLoaded', () => {
     initUserMessaging();
+    initSharedMessaging(); // Initialize the universal listener
     setTimeout(initFullMessenger, 2000); // Give Firebase a moment to sync
 });
 
@@ -490,7 +637,7 @@ function initFullMessenger() {
   const activeAvatar = document.getElementById('active-avatar');
   const activeStatus = document.getElementById('active-chat-status');
 
-  let activeUser = null;
+  // activeMessengerUser is now in shared scope
 
   
   // Immediate initial render
@@ -543,23 +690,23 @@ function initFullMessenger() {
     // FILTER: Only show users with history OR forced active
     const sorted = Object.keys(contactsMap).filter(user => {
        const info = contactsMap[user];
-       const hasHistory = info.history && info.history.length > 0;
-       return hasHistory || user === activeUser;
-    }).sort((a,b) => {
-       const aOnline = contactsMap[a].isOnline ? 1 : 0;
-       const bOnline = contactsMap[b].isOnline ? 1 : 0;
-       return bOnline - aOnline;
-    });
+        const hasHistory = info.history && info.history.length > 0;
+        return hasHistory || user === activeMessengerUser;
+     }).sort((a,b) => {
+        const aOnline = contactsMap[a].isOnline ? 1 : 0;
+        const bOnline = contactsMap[b].isOnline ? 1 : 0;
+        return bOnline - aOnline;
+     });
 
-    if (sorted.length === 0) {
-      contactsList.innerHTML = '<div style="padding:20px; text-align:center; color:#94a3b8; font-size:0.8rem;">No conversations yet.<br>Click "+" to start one.</div>';
-      return;
-    }
+     if (sorted.length === 0) {
+       contactsList.innerHTML = '<div style="padding:20px; text-align:center; color:#94a3b8; font-size:0.8rem;">No conversations yet.<br>Click "+" to start one.</div>';
+       return;
+     }
 
 sorted.forEach(user => {
       const info = contactsMap[user];
       const card = document.createElement('div');
-      card.className = `contact-card ${activeUser === user ? 'active' : ''}`;
+      card.className = `contact-card ${activeMessengerUser === user ? 'active' : ''}`;
       card.onclick = () => selectContact(user);
 
       const displayName = info.displayName || user;
@@ -588,42 +735,55 @@ sorted.forEach(user => {
   }
 
   function selectContact(user) {
-    activeUser = user;
+    activeMessengerUser = user;
+    window.activeMessengerUser = user;
     if(emptyView) emptyView.style.display = 'none';
     if(chatView) chatView.classList.remove('hidden');
     
-    const contact = contactsMap[user];
-    const displayName = contact.displayName || user;
-    const initial = displayName.charAt(0).toUpperCase();
-    const profilePicHtml = contact.profilePic && contact.profilePic.startsWith('http')
-      ? `<img src="${contact.profilePic}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`
-      : `<span>${initial}</span>`;
-    
-    activeName.textContent = displayName;
-    activeAvatar.innerHTML = profilePicHtml;
-    
-    const isOnline = contactsMap[user].isOnline;
-    activeStatus.textContent = isOnline ? 'Active Now' : 'Offline';
-    activeStatus.className = isOnline ? 'status-online' : 'status-offline';
+    // Update Header
+    const info = contactsMap[user];
+    const displayName = info ? (info.displayName || user) : user;
+    if(activeName) activeName.textContent = displayName;
+    if(activeAvatar) {
+      const initial = displayName.charAt(0).toUpperCase();
+      if (info && info.profilePic && info.profilePic.startsWith('http')) {
+        activeAvatar.innerHTML = `<img src="${info.profilePic}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+      } else {
+        activeAvatar.textContent = initial;
+      }
+    }
+    if(activeStatus) {
+      const isOnline = info ? info.isOnline : false;
+      activeStatus.textContent = isOnline ? 'Active Now' : 'Offline';
+      activeStatus.className = isOnline ? 'status-online' : 'status-offline';
+    }
 
-    contactsMap[user].unread = 0;
+    // Badge Sync Logic
+    markMessagesAsRead(user);
+    
+    // Cross-sync with side chat
+    activeChatUser = user; 
+
+
     renderFullMessages();
     renderFullContacts();
     if(window.toggleMessengerMobile) window.toggleMessengerMobile(true);
   }
 
   function renderFullMessages() {
-    if(!activeUser || !messagesDiv) return;
+    if(!activeMessengerUser || !messagesDiv) return;
     messagesDiv.innerHTML = '';
-    const history = contactsMap[activeUser].history || [];
+    const history = contactsMap[activeMessengerUser] ? (contactsMap[activeMessengerUser].history || []) : [];
     
+    console.log(`[Messenger] Rendering ${history.length} messages for ${activeMessengerUser}`);
+
     history.forEach(data => {
       const isMe = data.sender === myUsername;
       const bubble = document.createElement('div');
       bubble.className = `msg-bubble ${isMe ? 'msg-bubble-me' : 'msg-bubble-other'}`;
       const time = data.timestamp ? new Date(data.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
       bubble.innerHTML = `
-        <div class="msg-text">${data.text}</div>
+        <div class="msg-text">${data.text || ''}</div>
         <span class="msg-time">${time}</span>
       `;
       messagesDiv.appendChild(bubble);
@@ -631,12 +791,14 @@ sorted.forEach(user => {
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
   }
 
+  // Create fixed global hook
+  window.refreshFullMessengerUI = renderFullMessages;
+
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     const text = input.value.trim();
-    if (text && activeUser) {
-      // Re-read identity at send time as a safety net in case
-      // the module-level IIFE ran before the session cookie was set.
+    if (text && activeMessengerUser) {
+      // Re-read identity
       if (myUsername === 'Unknown') {
         try {
           const raw = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
@@ -644,13 +806,13 @@ sorted.forEach(user => {
         } catch(e) {}
       }
       if (myUsername === 'Unknown') {
-        console.warn('[Messenger] Cannot send: user identity not yet resolved. Please wait.');
+        console.warn('[Messenger] Cannot send: identity unknown.');
         return;
       }
       const baseRef = ref(userDb, 'user_messages');
       push(baseRef, {
         sender: myUsername,
-        receiver: activeUser,
+        receiver: activeMessengerUser,
         text: text,
         timestamp: serverTimestamp(),
         read: false
@@ -660,13 +822,7 @@ sorted.forEach(user => {
     }
   });
 
-  const baseRef = ref(userDb, 'user_messages');
-  onChildAdded(baseRef, (snap) => {
-     const data = snap.val();
-     if(activeUser && (data.sender === activeUser || data.receiver === activeUser)) {
-        setTimeout(renderFullMessages, 200);
-     }
-  });
+  // Global onChildAdded listener in Shared Scope handles this now
 
   window.openNewMessageModal = async function() {
     const modal = document.getElementById('new-message-modal');
@@ -1005,7 +1161,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    dateEl.textContent = now.toLocaleDateString('en-US', options);
+    const dateStr = now.toLocaleDateString('en-US', options);
+    dateEl.textContent = dateStr;
+
+    // --- New Header Clock Sync ---
+    const headerTime = document.getElementById('header-time-val');
+    const headerDate = document.getElementById('header-date-val');
+    if (headerTime) headerTime.textContent = timeStr.replace(/^0/, ''); // "9:41 AM"
+    if (headerDate) {
+      const shortDay = now.toLocaleDateString('en-US', { weekday: 'short' });
+      const shortMonth = now.toLocaleDateString('en-US', { month: 'short' });
+      const dayNum = now.getDate();
+      headerDate.textContent = `${shortDay}, ${shortMonth} ${dayNum}`;
+    }
   }
 
   async function updateWeather() {
@@ -1055,20 +1223,25 @@ document.addEventListener('DOMContentLoaded', () => {
   const userDropdownName = document.getElementById('user-dropdown-name');
   const logoutBtn = document.getElementById('logout-btn');
 
-  // TV Settings UI Elements
-  const tvSettingsBox = document.getElementById('tv-settings');
-  const btnTvAudio = document.getElementById('tv-audio-toggle');
-  const btnTvTheater = document.getElementById('tv-fullscreen-toggle');
-  const btnTvHeaderToggle = document.getElementById('tv-header-toggle');
   const btnSidebarToggle = document.getElementById('sidebar-toggle');
   const btnAdminExitTv = document.getElementById('admin-exit-tv');
+
+  // TV View Settings (Restore missing definitions)
+  const tvSettingsBox = document.getElementById('tv-settings');
+  const btnTvAudio = document.getElementById('btn-tv-audio');
+  const btnTvTheater = document.getElementById('btn-tv-theater');
+  const btnTvHeaderToggle = document.getElementById('btn-tv-header-toggle');
+
+  let tvAudioEnabled = localStorage.getItem('sas_tv_audio_enabled') !== 'false'; // Default to true
+  let tvTheaterEnabled = localStorage.getItem('sas_tv_theater_enabled') === 'true'; // Default to false
 
   let systems = [];
   let systemsLoaded = false;
   let systemsPromise = null;
   let ytPlayers = {}; // Persistent store for YT players
   let globalCarouselTimer = null;
-  let globalSlideGeneration = 0;
+  let globalSlideGeneration = 0;  // Messaging state moved to top level
+;
 
   // TV Carousel State Exporters (for toggle responsiveness)
   window.currentTvSlide = 0;
@@ -1089,13 +1262,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Admin Exit TV Logic
   if (btnAdminExitTv) {
     btnAdminExitTv.addEventListener('click', () => {
-      // Clear TV-specific states
       localStorage.removeItem('sas_admin_tv_view');
       document.body.classList.remove('tv-mode');
       document.body.classList.remove('tv-header-collapsed');
       
-      // The most robust way to restore the full Admin Dashboard layout
-      // after such heavy DOM/CSS manipulation is a clean reload to #home.
       window.location.hash = 'home';
       setTimeout(() => {
         window.location.reload();
@@ -1109,6 +1279,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function showPage(pageId) {
+    // Reset active messenger state when navigating away to ensure notifications resume
+    if (pageId !== 'messages') {
+      activeMessengerUser = null;
+      window.activeMessengerUser = null;
+    }
+    
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     const page = pageId === 'home'
       ? homePage
@@ -1337,7 +1513,7 @@ document.addEventListener('DOMContentLoaded', () => {
           localStorage.setItem('sas_admin_tv_view', 'true');
           if (btnAdminExitTv) btnAdminExitTv.classList.remove('hidden');
           if (navToggle) navToggle.classList.add('hidden'); // Lock down sidebar
-          tvSettingsBox.classList.remove('hidden');
+          if (tvSettingsBox) tvSettingsBox.classList.remove('hidden');
           window.location.hash = 'home';
           closeNav();
           fetchPosts(); // Trigger carousel
@@ -1357,11 +1533,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function escapeHtml(text) {
-    var div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
 
   function showToast(message, type = 'info') {
     const container = document.getElementById('toast-container');
@@ -1660,6 +1831,16 @@ function showAppUI(userObj) {
     });
   }
 
+  // Clear unread notifications when clicking the messages button
+  const headerMsgBtn = document.getElementById('header-msg-btn');
+  if (headerMsgBtn) {
+    headerMsgBtn.addEventListener('click', () => {
+      if (typeof markAllMessagesAsRead === 'function') {
+        markAllMessagesAsRead();
+      }
+    });
+  }
+
   function finishInit() {
     document.querySelector('.nav-item[data-page="home"]').addEventListener('click', function (e) {
       e.preventDefault();
@@ -1795,7 +1976,7 @@ function showAppUI(userObj) {
     // Adjust UI based on TV Mode
     if (userObj.role === 'tv') {
       document.body.classList.add('tv-mode');
-      tvSettingsBox.classList.remove('hidden');
+      if (tvSettingsBox) tvSettingsBox.classList.remove('hidden');
       if (btnAdminExitTv) btnAdminExitTv.classList.add('hidden');
       if (navToggle) navToggle.classList.add('hidden'); // No sidebar toggle for TV Role
       if (sidebar) sidebar.style.display = 'none'; // Explicitly hide sidebar element
@@ -1834,7 +2015,7 @@ function showAppUI(userObj) {
         if (sidebar) sidebar.style.display = '';
         if (btnTvHeaderToggle) btnTvHeaderToggle.classList.add('hidden');
       }
-      tvSettingsBox.classList.remove('hidden');
+      if (tvSettingsBox) tvSettingsBox.classList.remove('hidden');
       if (btnSidebarToggle) btnSidebarToggle.classList.remove('hidden');
       // Re-sync toggle buttons to reflect persisted state
       syncTvSettingsUI();
@@ -1842,11 +2023,10 @@ function showAppUI(userObj) {
       // For uploader and others, keep tv-settings hidden
       document.body.classList.remove('tv-mode');
       document.body.classList.add('dashboard-backdrop');
-      tvSettingsBox.classList.add('hidden');
+      if (tvSettingsBox) tvSettingsBox.classList.add('hidden');
       if (btnAdminExitTv) btnAdminExitTv.classList.add('hidden');
       if (navToggle) navToggle.classList.remove('hidden');
       if (sidebar) sidebar.style.display = '';
-      // Sidebar toggle is hidden by default in index.html, we only show it for Admins above
     }
 
     const navMessages = document.getElementById('nav-messages');
@@ -3166,7 +3346,7 @@ if (logoutBtn) {
               </div>
             `;
           } else {
-            const fbPlaceholder = 'https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png';
+            const fbPlaceholder = 'assets/sas_logo_real.png';
             imgHtml = `
               <div style="position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden;">
                  ${bgHtml}
@@ -3175,7 +3355,7 @@ if (logoutBtn) {
             `;
           }
         } else {
-          imgHtml = `<div class="home-news-image" style="background:var(--nbsc-dark); display:flex; flex-direction:column; align-items:center; justify-content:center; color:white; padding: 20px; text-align: center;"><img src="https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png" style="height:60px; margin-bottom:10px; opacity:0.3"></div>`;
+          imgHtml = `<div class="home-news-image" style="background:var(--nbsc-dark); display:flex; flex-direction:column; align-items:center; justify-content:center; color:white; padding: 20px; text-align: center;"><img src="assets/sas_logo_real.png" style="height:60px; margin-bottom:10px; opacity:0.3"></div>`;
         }
 
         let liveBadgeHtml = '';
@@ -3298,7 +3478,7 @@ if (logoutBtn) {
           } else if (urlLower.includes('drive.google.com/file/d/') && urlLower.includes('/preview')) {
             imgHtml = `<iframe src="${post.imageUrl}" class="post-image" style="border: none; ${styleStr}"></iframe>`;
           } else {
-            const fallbackSquare = 'https://nbsc.edu.ph/wp-content/uploads/2024/03/cropped-NBSC_NewLogo_icon.png';
+            const fallbackSquare = 'assets/sas_logo_real.png';
             imgHtml = `<img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="post-image" style="${styleStr}" loading="lazy" onerror="this.onerror=null; this.src='${fallbackSquare}'; this.style.objectFit='contain'; this.style.opacity='0.2';">`;
           }
           
@@ -4126,11 +4306,6 @@ if (logoutBtn) {
       if (elements.nextBtn) elements.nextBtn.disabled = currentPage >= totalPages;
     }
 
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
 
     window.deleteMessage = async function(type, key) {
       if (!confirm(`Delete this ${type} message?`)) return;

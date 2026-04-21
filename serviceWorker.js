@@ -4,9 +4,9 @@
 // No buttons required — runs invisibly in the background
 // ================================================================
 
-const CACHE_VERSION = 'sas-tv-v83';
-const CACHE_POST_DATA = 'sas-posts-v1';
-const CACHE_MEDIA = 'sas-media-v1';
+const CACHE_VERSION = 'sas-tv-v84';
+const CACHE_POST_DATA = 'sas-posts-v2';
+const CACHE_MEDIA = 'sas-media-v2';
 
 // App shell — files to cache immediately on install
 const APP_SHELL = [
@@ -54,26 +54,32 @@ self.addEventListener('fetch', event => {
   // Only handle GET requests
   if (req.method !== 'GET') return;
 
-  // ---- Strategy: NETWORK FIRST → cache fallback ----
-  // Used for: Configuration files (always get latest)
-  const configFiles = ['env.js', 'manifest.json', 'version.json'];
-  if (configFiles.some(f => url.pathname.endsWith(f))) {
-    event.respondWith(
-      fetch(req)
-        .then(res => {
-          if (!res || !res.ok) return res;
-          const clone = res.clone();
-          caches.open(CACHE_VERSION).then(cache => cache.put(req, clone));
-          return res;
-        })
-        .catch(() => caches.match(req).then(cached => cached || new Response('', { status: 404, statusText: 'Not Found' })))
-    );
-    return;
-  }
+   // ---- Strategy: NETWORK FIRST → cache fallback ----
+   // Used for: Configuration files (always get latest)
+   const configFiles = ['env.js', 'manifest.json', 'version.json'];
+   
+   // EXCLUDE: App files — always fetch fresh
+   // Use .includes() for better compatibility with sub-folder deployments (e.g. GitHub Pages)
+   if (url.pathname.includes('/apps/')) {
+     event.respondWith(fetch(req));
+     return;
+   }
+
+   if (configFiles.some(f => url.pathname.endsWith(f))) {
+     event.respondWith(
+       fetch(req)
+         .then(res => {
+           if (!res || !res.ok) return res;
+           const clone = res.clone();
+           caches.open(CACHE_VERSION).then(cache => cache.put(req, clone));
+           return res;
+         })
+         .catch(() => caches.match(req).then(cached => cached || new Response('', { status: 404, statusText: 'Not Found' })))
+     );
+     return;
+   }
 
   // ---- Skip non-cacheable YouTube/Google API resources ----
-  // YouTube video content itself can't be cached (CORS), but
-  // we still let the request go through normally
   const skip = [
     'youtube.com', 'youtu.be', 'ytimg.com',
     'googletagmanager.com', 'google-analytics.com',
@@ -132,6 +138,13 @@ self.addEventListener('fetch', event => {
 
   // ---- Strategy: CACHE FIRST → network fallback ----
   // Used for: app shell (HTML, CSS, JS)
+  // EXCLUDE: /apps/schedule-manager — handled separately (no caching)
+  if (url.origin === self.location.origin && url.pathname.includes('/apps/schedule-manager/')) {
+    // Bypass cache entirely for Schedule Manager — always fetch fresh
+    event.respondWith(fetch(req));
+    return;
+  }
+
   event.respondWith(
     caches.match(req).then(cached => {
       if (cached) return cached;

@@ -1,4 +1,4 @@
-﻿/* SAS Portal - Layout & theme */
+/* SAS Portal - Layout & theme */
 :root {
   /* Scrollbar Colors */
   --sb-track: transparent;
@@ -139,12 +139,12 @@ body.tv-mode .sidebar {
 }
 
 .sidebar-header {
-  padding: 1.25rem 1rem;
+  padding: 0.75rem 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 72px;
+  min-height: 60px;
 }
 
 .sidebar-header-main {
@@ -429,11 +429,11 @@ body.fullscreen-active .home-header {
 .home-header-brand {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 .home-header-logo {
-  width: 54px;
+  width: 50px;
   height: auto;
   filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));
 }
@@ -904,42 +904,83 @@ body.system-mode .content {
   background: rgba(249, 168, 38, 0.1);
 }
 
-body.tv-mode .tv-settings .icon-btn.active-setting {
-  color: var(--nbsc-gold) !important;
-  background: rgba(249, 168, 38, 0.2) !important;
-  box-shadow: 0 0 15px rgba(249, 168, 38, 0.4) !important;
-}
-
-.admin-tv-settings .icon-btn.active-setting {
-  color: #fff;
-  background: var(--nbsc-blue);
-  box-shadow: 0 2px 4px rgba(0, 74, 153, 0.3);
-}
-
-.tv-settings {
+.header-actions {
   display: flex;
   align-items: center;
-  margin-right: 16px;
-  padding-right: 16px;
-  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  gap: 16px;
+  margin-right: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 6px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
 }
 
-.tv-settings .icon-btn {
-  color: rgba(255, 255, 255, 0.75);
+.header-action-btn {
+  position: relative;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  padding: 6px;
+  border-radius: 10px;
+  text-decoration: none;
 }
 
-.tv-settings .icon-btn:hover {
-  color: #ffffff;
+.header-action-btn:hover {
+  color: #fff;
   background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
 }
 
-body.tv-mode .tv-settings .icon-btn {
-  color: rgba(255, 255, 255, 0.7);
+.header-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: #f43f5e; /* Rose 500 */
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 800;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #001f3f; 
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
-body.tv-mode .tv-settings .icon-btn:hover {
+.header-separator {
+  width: 1px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.header-clock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-family: var(--font-sans);
+  line-height: 1.2;
+}
+
+.header-time {
+  font-size: 0.85rem;
+  font-weight: 800;
   color: #ffffff;
-  background: rgba(255, 255, 255, 0.1);
+  letter-spacing: 0.5px;
+}
+
+.header-date {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
 }
 
 .user-menu {
