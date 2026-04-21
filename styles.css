@@ -1937,7 +1937,8 @@ body.tv-mode .nav-toggle {
   }
 }
 
-body.tv-mode .posts-header {
+body.tv-mode .posts-header,
+body.tv-mode .header-actions {
   display: none !important;
 }
 
@@ -1971,7 +1972,7 @@ body.tv-mode.tv-header-collapsed .home-header {
 }
 
 body.tv-mode.tv-header-collapsed .home-header-brand,
-body.tv-mode.tv-header-collapsed .tv-settings button:not(#tv-header-toggle),
+body.tv-mode.tv-header-collapsed .tv-settings button:not(#btn-tv-header-toggle),
 body.tv-mode.tv-header-collapsed .user-menu {
   opacity: 0;
   pointer-events: none;
@@ -1985,7 +1986,7 @@ body.tv-mode.tv-header-collapsed .tv-clock {
 }
 
 /* Float the toggle button when collapsed */
-body.tv-mode.tv-header-collapsed #tv-header-toggle {
+body.tv-mode.tv-header-collapsed #btn-tv-header-toggle {
   position: fixed !important;
   left: 15px !important;
   top: 80px !important;
@@ -2105,15 +2106,81 @@ body.tv-mode .home-header-meta {
   margin-top: auto !important;
 }
 
+.tv-settings {
+  display: none;
+}
+
 body.tv-mode .tv-settings {
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
-  /* Ensure toggles are centered */
-  gap: 12px !important;
-  padding: 0 !important;
+  gap: 18px !important;
+  padding: 10px 0 !important;
   margin: 0 !important;
   border: none !important;
+  width: 100%;
+}
+
+/* Premium TV Setting Buttons */
+.tv-setting-btn {
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 14px !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  padding: 0 !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.tv-setting-btn:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: #fff !important;
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.tv-setting-btn:active {
+  transform: translateY(0) scale(0.95);
+}
+
+/* Glowing Active State */
+.tv-setting-btn.active-setting {
+  background: rgba(240, 173, 78, 0.1) !important;
+  border-color: var(--nbsc-gold) !important;
+  color: var(--nbsc-gold) !important;
+  box-shadow: 0 0 20px rgba(240, 173, 78, 0.3), inset 0 0 10px rgba(240, 173, 78, 0.1) !important;
+}
+
+.tv-setting-btn.active-setting:after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at center, rgba(240, 173, 78, 0.2) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.tv-setting-btn svg {
+  width: 22px !important;
+  height: 22px !important;
+  transition: transform 0.3s ease;
+}
+
+.tv-setting-btn:hover svg {
+  transform: rotate(5deg) scale(1.1);
 }
 
 body.tv-mode .icon-btn svg,
