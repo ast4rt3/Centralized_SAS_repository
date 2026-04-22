@@ -1,4 +1,4 @@
-# Welcome to the SAS Portal
+# Welcome to the SAS Portal.
 
 The **SAS Portal** is a centralized, high-performance gateway designed to streamline access to the entire ecosystem of SAS systems. More than just a directory, it serves as a secure and interactive hub where data management, reporting, and real-time announcements converge.
 
