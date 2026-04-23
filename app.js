@@ -118,6 +118,17 @@ if (window.ENV && window.ENV.FIREBASE_CONFIG) {
   }
 }
 
+// Optional second database used by superadmin database health checks.
+let storageCheckDb = null;
+if (window.ENV && window.ENV.STORAGE_CHECK_FIREBASE_CONFIG) {
+  try {
+    const storageApp = initializeApp(window.ENV.STORAGE_CHECK_FIREBASE_CONFIG, "storageCheckApp");
+    storageCheckDb = getDatabase(storageApp);
+  } catch (e) {
+    console.error("Storage check firebase init failed:", e);
+  }
+}
+
 let contactsMap = {};
 
 async function fetchSpreadsheetUsers() {
@@ -4366,17 +4377,33 @@ if (logoutBtn) {
   // --- DATABASE MANAGEMENT (Superadmin Only) ---
   async function initDatabaseManagement() {
     if (!userDb) return;
+    try {
+      const raw = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data') || '{}';
+      const role = (JSON.parse(raw).role || '').toLowerCase();
+      if (role !== 'superadmin') return;
+    } catch (e) {
+      return;
+    }
 
     const refreshBtn = document.getElementById('db-refresh-btn');
     if (!refreshBtn || !userDb) return;
+    const dbSection = document.getElementById('database');
+    if (dbSection?.dataset.initialized === 'true') return;
+    if (dbSection) dbSection.dataset.initialized = 'true';
 
     let allMessages = [];
     let filteredMessages = [];
     let currentPage = 1;
     let perPage = 25;
     let uniqueUsers = new Set();
+    let cloudinaryStorageInfo = { usedText: '--', ratio: 0 };
+    let supabaseStorageInfo = { usedText: '--', ratio: 0 };
+    const revealedTargets = { gas: false, fbMsg: false, fbStore: false, supabase: false, cloudinary: false };
+    let pendingRevealTarget = null;
+    let lastStatusSnapshot = { gasState: 'Checking...', fbMsgState: 'Checking...', fbStoreState: 'Checking...', supabaseState: 'Checking...', cloudinaryState: 'Checking...', storagePath: 'user_messages' };
 
     const elements = {
+      refreshBtn: refreshBtn,
       tbody: document.getElementById('db-messages-tbody'),
       search: document.getElementById('db-search-input'),
       filterType: document.getElementById('db-filter-type'),
@@ -4394,11 +4421,401 @@ if (logoutBtn) {
       totalStat: document.getElementById('db-total-messages'),
       userCount: document.getElementById('db-user-messages-count'),
       adminCount: document.getElementById('db-admin-messages-count'),
-      activeUsers: document.getElementById('db-active-users')
+      activeUsers: document.getElementById('db-active-users'),
+      tabMessaging: document.getElementById('db-tab-messaging'),
+      tabStorage: document.getElementById('db-tab-storage'),
+      panelMessaging: document.getElementById('db-panel-messaging'),
+      panelStorage: document.getElementById('db-panel-storage'),
+      storagePath: document.getElementById('db-storage-path'),
+      storageRefreshBtn: document.getElementById('db-storage-refresh-btn'),
+      storageTbody: document.getElementById('db-storage-tbody'),
+      targetModal: document.getElementById('db-target-modal'),
+      targetForm: document.getElementById('db-target-form'),
+      targetPassword: document.getElementById('db-target-password'),
+      targetCancel: document.getElementById('db-target-cancel'),
+      targetError: document.getElementById('db-target-error')
     };
+
+    async function checkGasStatus() {
+      if (!BACKEND_GAS_URL) return 'Not Configured';
+      try {
+        const res = await fetch(BACKEND_GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'ping' }) });
+        // Even if 'Unknown action' returned, if status is 200/204 it's online
+        return res.ok || res.status === 200 ? 'Online' : `Error (${res.status})`;
+      } catch (e) { return 'Offline'; }
+    }
+
+    async function checkDatabaseStatus(dbInstance, probePath) {
+      if (!dbInstance) return 'Not Configured';
+      try {
+        const snap = await get(ref(dbInstance, probePath));
+        return snap.exists() ? 'Online' : 'Online (Empty)';
+      } catch (err) {
+        return `Offline (${err.message || 'error'})`;
+      }
+    }
+
+    async function checkSupabaseStatus() {
+      const supabaseUrl = window.ENV?.SUPABASE_URL;
+      const anonKey = window.ENV?.SUPABASE_ANON_KEY;
+      if (!supabaseUrl || !anonKey) return 'Not Configured';
+      try {
+        const res = await fetch(`${supabaseUrl}/rest/v1/`, {
+          method: 'GET',
+          headers: {
+            apikey: anonKey,
+            Authorization: `Bearer ${anonKey}`
+          }
+        });
+        return `Online (${res.status})`;
+      } catch (err) {
+        return 'Offline';
+      }
+    }
+
+    async function checkCloudinaryStatus() {
+      const cloudName = window.ENV?.CLOUDINARY_CLOUD_NAME;
+      if (!cloudName) return 'Not Configured';
+      const testUrl = `https://res.cloudinary.com/${encodeURIComponent(cloudName)}/image/upload/sample`;
+      try {
+        const res = await fetch(testUrl, { method: 'GET', mode: 'cors' });
+        return `Online (${res.status})`;
+      } catch (err) {
+        return 'Offline';
+      }
+    }
+
+    function getStatusCheckTimeLabel() {
+      return new Date().toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      });
+    }
+
+    function setCloudinaryUsageFallback(text) {
+      if (elements.cloudinaryImpressions) elements.cloudinaryImpressions.textContent = text;
+      if (elements.cloudinaryAssets) elements.cloudinaryAssets.textContent = text;
+      if (elements.cloudinaryTransformations) elements.cloudinaryTransformations.textContent = text;
+      if (elements.cloudinaryBandwidth) elements.cloudinaryBandwidth.textContent = text;
+      if (elements.cloudinaryStorage) elements.cloudinaryStorage.textContent = text;
+      cloudinaryStorageInfo = { usedText: '--', ratio: 0 };
+    }
+
+    function formatBytes(value) {
+      const num = Number(value);
+      if (!Number.isFinite(num) || num < 0) return '--';
+      if (num < 1024) return `${num.toFixed(0)} B`;
+      if (num < 1024 * 1024) return `${(num / 1024).toFixed(2)} KB`;
+      if (num < 1024 * 1024 * 1024) return `${(num / (1024 * 1024)).toFixed(2)} MB`;
+      return `${(num / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+    }
+
+    async function loadSupabaseUsageOverview() {
+      const supabaseUrl = window.ENV?.SUPABASE_URL;
+      const anonKey = window.ENV?.SUPABASE_ANON_KEY;
+      if (!supabaseUrl || !anonKey) {
+        supabaseStorageInfo = { usedText: 'Not Configured', ratio: 0 };
+        return;
+      }
+
+      const tables = ['sas_attendance_logs', 'sas_schedules'];
+      let totalRows = 0;
+
+      try {
+        const counts = await Promise.all(tables.map(async (table) => {
+          try {
+            const res = await fetch(`${supabaseUrl}/rest/v1/${table}?select=count`, {
+              headers: {
+                apikey: anonKey,
+                Authorization: `Bearer ${anonKey}`,
+                Range: '0-0',
+                Prefer: 'count=exact'
+              }
+            });
+            if (!res.ok) return 0;
+            const contentRange = res.headers.get('content-range');
+            if (contentRange) {
+              const count = parseInt(contentRange.split('/')[1]);
+              return Number.isFinite(count) ? count : 0;
+            }
+            return 0;
+          } catch (e) { return 0; }
+        }));
+
+        totalRows = counts.reduce((a, b) => a + b, 0);
+        
+        // Estimation: ~200 bytes per row + some overhead
+        const estimatedBytes = totalRows * 200;
+        const limitBytes = 500 * 1024 * 1024; // Supabase free tier db limit is 500MB
+        const ratio = Math.min(100, Math.max(0.1, (estimatedBytes / limitBytes) * 100));
+        
+        supabaseStorageInfo = { 
+          usedText: `${totalRows.toLocaleString()} rows / ~${(estimatedBytes / (1024 * 1024)).toFixed(2)} MB estimated`,
+          ratio: Number(ratio.toFixed(2))
+        };
+      } catch (err) {
+        supabaseStorageInfo = { usedText: 'Error fetching', ratio: 0 };
+      }
+    }
+
+    async function loadCloudinaryUsageOverview() {
+      if (!BACKEND_GAS_URL || !BACKEND_GAS_URL.startsWith('https://')) {
+        setCloudinaryUsageFallback('N/A');
+        return;
+      }
+
+      const defaultLimitGb = Number(window.ENV?.CLOUDINARY_STORAGE_LIMIT_GB || 15);
+      const fallbackLimitBytes = Number.isFinite(defaultLimitGb) && defaultLimitGb > 0
+        ? defaultLimitGb * 1024 * 1024 * 1024
+        : 15 * 1024 * 1024 * 1024;
+
+      const applyUsageToUi = (usage, periodLabel) => {
+        const storageBytes = Number(usage.storage);
+        const storageLimitBytes = Number(usage.storageLimit || usage.storage_limit || usage.limit);
+        const effectiveLimit = Number.isFinite(storageLimitBytes) && storageLimitBytes > 0
+          ? storageLimitBytes
+          : fallbackLimitBytes;
+        const ratio = Number.isFinite(storageBytes) && storageBytes >= 0
+          ? Math.min(100, Math.max(0, (storageBytes / effectiveLimit) * 100))
+          : 0;
+        const usedLine = `${formatBytes(storageBytes)} / ${formatBytes(effectiveLimit)} used`;
+
+        if (elements.cloudinaryImpressions) elements.cloudinaryImpressions.textContent = usage.impressions ?? '--';
+        if (elements.cloudinaryAssets) elements.cloudinaryAssets.textContent = usage.assets ?? '--';
+        if (elements.cloudinaryTransformations) elements.cloudinaryTransformations.textContent = usage.transformations ?? '--';
+        if (elements.cloudinaryBandwidth) elements.cloudinaryBandwidth.textContent = usage.bandwidthFormatted || formatBytes(usage.bandwidth);
+        if (elements.cloudinaryStorage) elements.cloudinaryStorage.textContent = usage.storageFormatted || formatBytes(usage.storage);
+        if (elements.cloudinaryPeriodLabel && periodLabel) elements.cloudinaryPeriodLabel.textContent = periodLabel;
+        cloudinaryStorageInfo = { usedText: usedLine, ratio: Number(ratio.toFixed(1)) };
+      };
+
+      const estimateCloudinaryUsageFromPosts = async () => {
+        try {
+          const postsRes = await fetch(BACKEND_GAS_URL, { method: 'GET' });
+          if (!postsRes.ok) throw new Error('Posts fetch failed');
+          const postsPayload = await postsRes.json();
+          const posts = Array.isArray(postsPayload?.posts) ? postsPayload.posts : [];
+          const cloudName = window.ENV?.CLOUDINARY_CLOUD_NAME || '';
+          const urls = [...new Set(
+            posts
+              .map(p => (p?.imageUrl || '').trim())
+              .filter(url => url.includes('res.cloudinary.com') && (!cloudName || url.includes(`/res.cloudinary.com/${cloudName}/`) || url.includes(`res.cloudinary.com/${cloudName}/`)))
+          )];
+
+          let totalBytes = 0;
+          for (const url of urls.slice(0, 50)) {
+            try {
+              const headRes = await fetch(url, { method: 'HEAD', mode: 'cors' });
+              const len = Number(headRes.headers.get('content-length') || 0);
+              if (Number.isFinite(len) && len > 0) totalBytes += len;
+            } catch (e) {
+              // Ignore per-asset failures and continue estimating.
+            }
+          }
+
+          applyUsageToUi({
+            impressions: '--',
+            assets: urls.length,
+            transformations: '--',
+            bandwidth: null,
+            storage: totalBytes,
+            storageLimit: fallbackLimitBytes
+          }, 'Estimated from current posts');
+        } catch (e) {
+          setCloudinaryUsageFallback('N/A');
+          if (elements.cloudinaryPeriodLabel) elements.cloudinaryPeriodLabel.textContent = 'Usage unavailable';
+        }
+      };
+
+      try {
+        const res = await fetch(BACKEND_GAS_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'cloudinaryUsageOverview' })
+        });
+        if (!res.ok) return estimateCloudinaryUsageFromPosts();
+
+        const payload = await res.json();
+        if (payload?.success === false && /Unknown action/i.test(payload?.message || '')) {
+          return estimateCloudinaryUsageFromPosts();
+        }
+        const usage = payload?.usage || payload?.data || {};
+        if (!usage || typeof usage !== 'object') {
+          return estimateCloudinaryUsageFromPosts();
+        }
+        applyUsageToUi(usage, 'Last 30 days');
+      } catch (err) {
+        await estimateCloudinaryUsageFromPosts();
+      }
+    }
+
+    function renderStorageStatusRows(gasState, fbMsgState, fbStoreState, supabaseState, cloudinaryState, storagePath) {
+      if (!elements.storageTbody) return;
+      const targetValues = {
+        gas: BACKEND_GAS_URL || 'Not Configured',
+        fbMsg: window.ENV?.FIREBASE_CONFIG?.databaseURL || 'Not Configured',
+        fbStore: window.ENV?.STORAGE_CHECK_FIREBASE_CONFIG?.databaseURL || 'Not Configured',
+        supabase: window.ENV?.SUPABASE_URL || 'Not Configured',
+        cloudinary: window.ENV?.CLOUDINARY_CLOUD_NAME || 'Not Configured'
+      };
+      const maskedText = '********';
+      const targetCellHtml = (key) => {
+        const isRevealed = revealedTargets[key];
+        const shownValue = isRevealed ? targetValues[key] : maskedText;
+        const icon = isRevealed ? '&#128065;&#65039;' : '&#128584;';
+        return `
+          <div class="db-target-cell">
+            <span class="db-target-value">${escapeHtml(shownValue)}</span>
+            <button class="db-target-eye" type="button" title="Reveal target" onclick="dbPromptRevealTarget('${key}')">${icon}</button>
+          </div>
+        `;
+      };
+      elements.storageTbody.innerHTML = `
+        <tr>
+          <td>Google Sheets (GAS Backend)</td>
+          <td>${targetCellHtml('gas')}</td>
+          <td>${escapeHtml(gasState)}</td>
+          <td class="db-table-storage-cell">
+            <div class="db-mini-storage-text">~10M Cells Limit</div>
+            <div class="db-mini-storage-bar">
+              <div class="db-mini-storage-fill" style="width:0.1%;"></div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>Firebase Messaging</td>
+          <td>${targetCellHtml('fbMsg')}</td>
+          <td>${escapeHtml(fbMsgState)}</td>
+          <td class="db-table-storage-cell">
+            <div class="db-mini-storage-text">1GB Limit (Free)</div>
+            <div class="db-mini-storage-bar">
+              <div class="db-mini-storage-fill" style="width:0.1%;"></div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>Firebase Storage DB</td>
+          <td>${targetCellHtml('fbStore')}</td>
+          <td>${escapeHtml(fbStoreState)}</td>
+          <td class="db-table-storage-cell">
+            <div class="db-mini-storage-text">1GB Limit (Free)</div>
+            <div class="db-mini-storage-bar">
+              <div class="db-mini-storage-fill" style="width:0.1%;"></div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>Supabase Database</td>
+          <td>${targetCellHtml('supabase')}</td>
+          <td>${escapeHtml(supabaseState)}</td>
+          <td class="db-table-storage-cell">
+            <div class="db-mini-storage-text">${escapeHtml(supabaseStorageInfo.usedText)} (500MB Limit)</div>
+            <div class="db-mini-storage-bar">
+              <div class="db-mini-storage-fill" style="width:${supabaseStorageInfo.ratio}%;"></div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>Cloudinary Media</td>
+          <td>${targetCellHtml('cloudinary')}</td>
+          <td>${escapeHtml(cloudinaryState)}</td>
+          <td class="db-table-storage-cell">
+            <div class="db-mini-storage-text">${escapeHtml(cloudinaryStorageInfo.usedText)} (${window.ENV?.CLOUDINARY_STORAGE_LIMIT_GB || 15}GB Limit)</div>
+            <div class="db-mini-storage-bar">
+              <div class="db-mini-storage-fill" style="width:${cloudinaryStorageInfo.ratio}%;"></div>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+
+    function switchDbPanel(view) {
+      const showMessaging = view !== 'storage';
+      if (elements.panelMessaging) elements.panelMessaging.classList.toggle('hidden', !showMessaging);
+      if (elements.panelStorage) elements.panelStorage.classList.toggle('hidden', showMessaging);
+      if (elements.tabMessaging) elements.tabMessaging.classList.toggle('active', showMessaging);
+      if (elements.tabStorage) elements.tabStorage.classList.toggle('active', !showMessaging);
+    }
+
+    async function updateDatabaseStatuses() {
+      const storagePath = (elements.storagePath?.value || '').trim() || window.ENV?.STORAGE_CHECK_PATH || 'storage_check_health';
+      const [gasState, fbMsgState, fbStoreState, supabaseState, cloudinaryState] = await Promise.all([
+        checkGasStatus(),
+        checkDatabaseStatus(userDb, 'user_messages'),
+        checkDatabaseStatus(storageCheckDb, storagePath),
+        checkSupabaseStatus(),
+        checkCloudinaryStatus()
+      ]);
+      lastStatusSnapshot = { gasState, fbMsgState, fbStoreState, supabaseState, cloudinaryState, storagePath };
+
+      renderStorageStatusRows(gasState, fbMsgState, fbStoreState, supabaseState, cloudinaryState, storagePath);
+      
+      await Promise.all([
+        loadCloudinaryUsageOverview(),
+        loadSupabaseUsageOverview()
+      ]);
+      
+      // Re-render table so "Storage Currently" reflects the latest usage fetch.
+      renderStorageStatusRows(gasState, fbMsgState, fbStoreState, supabaseState, cloudinaryState, storagePath);
+    }
+
+    function rerenderStorageRows() {
+      renderStorageStatusRows(
+        lastStatusSnapshot.gasState,
+        lastStatusSnapshot.fbMsgState,
+        lastStatusSnapshot.fbStoreState,
+        lastStatusSnapshot.supabaseState,
+        lastStatusSnapshot.cloudinaryState,
+        lastStatusSnapshot.storagePath
+      );
+    }
+
+    function closeTargetModal() {
+      pendingRevealTarget = null;
+      if (elements.targetModal) elements.targetModal.classList.add('hidden');
+      if (elements.targetPassword) elements.targetPassword.value = '';
+      if (elements.targetError) elements.targetError.textContent = '';
+    }
+
+    window.dbPromptRevealTarget = function(targetKey) {
+      pendingRevealTarget = targetKey;
+      if (elements.targetError) elements.targetError.textContent = '';
+      if (elements.targetPassword) elements.targetPassword.value = '';
+      if (elements.targetModal) elements.targetModal.classList.remove('hidden');
+      if (elements.targetPassword) elements.targetPassword.focus();
+    };
+
+    elements.targetCancel?.addEventListener('click', closeTargetModal);
+    elements.targetModal?.addEventListener('click', (e) => {
+      if (e.target === elements.targetModal) closeTargetModal();
+    });
+    elements.targetForm?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (!pendingRevealTarget) return;
+      const enteredPassword = (elements.targetPassword?.value || '').trim();
+      let sessionPassword = '';
+      try {
+        const raw = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data') || '{}';
+        sessionPassword = JSON.parse(raw).password || '';
+      } catch (err) {}
+
+      if (!sessionPassword) {
+        if (elements.targetError) elements.targetError.textContent = 'Session password is unavailable. Please sign in again.';
+        return;
+      }
+      if (enteredPassword !== sessionPassword) {
+        if (elements.targetError) elements.targetError.textContent = 'Invalid password.';
+        return;
+      }
+      revealedTargets[pendingRevealTarget] = true;
+      closeTargetModal();
+      rerenderStorageRows();
+    });
 
     async function loadMessages() {
       try {
+        await updateDatabaseStatuses();
         const userSnap = await get(ref(userDb, 'user_messages'));
         const adminSnap = await get(ref(userDb, 'admin_messages'));
 
@@ -4428,6 +4845,7 @@ if (logoutBtn) {
         showToast('Messages loaded', 'success');
       } catch (err) {
         console.error("Failed to load messages:", err);
+        await updateDatabaseStatuses();
         showToast('Error loading: ' + err.message, 'error');
       }
     }
@@ -4560,6 +4978,9 @@ if (logoutBtn) {
     });
 
     elements.refreshBtn?.addEventListener('click', loadMessages);
+    elements.storageRefreshBtn?.addEventListener('click', updateDatabaseStatuses);
+    elements.tabMessaging?.addEventListener('click', () => switchDbPanel('messaging'));
+    elements.tabStorage?.addEventListener('click', () => switchDbPanel('storage'));
 
     elements.exportBtn?.addEventListener('click', () => {
       const dataStr = JSON.stringify(filteredMessages, null, 2);
@@ -4603,6 +5024,7 @@ if (logoutBtn) {
       }
     });
 
+    switchDbPanel('messaging');
     loadMessages();
   }
 

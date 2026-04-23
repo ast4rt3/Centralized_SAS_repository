@@ -1046,83 +1046,137 @@
 
       <section id="database" class="page" style="background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); padding: 20px; min-height: 100vh;">
         <div class="page-header">
-          <h2>Messaging Database</h2>
+          <h2>Database Management</h2>
         </div>
-        
-        <!-- Stats Cards -->
-        <div class="db-stats">
-          <div class="db-stat-card">
-            <div class="db-stat-value" id="db-total-messages">0</div>
-            <div class="db-stat-label">Total Messages</div>
-          </div>
-          <div class="db-stat-card">
-            <div class="db-stat-value" id="db-user-messages-count">0</div>
-            <div class="db-stat-label">User Messages</div>
-          </div>
-          <div class="db-stat-card">
-            <div class="db-stat-value" id="db-admin-messages-count">0</div>
-            <div class="db-stat-label">Admin Messages</div>
-          </div>
-          <div class="db-stat-card">
-            <div class="db-stat-value" id="db-active-users">0</div>
-            <div class="db-stat-label">Active Users</div>
-          </div>
+
+        <div class="db-tab-nav">
+          <button id="db-tab-messaging" class="db-tab-btn active" type="button">Messaging Database</button>
+          <button id="db-tab-storage" class="db-tab-btn" type="button">Storage Database</button>
         </div>
-        
-        <!-- Control Panel -->
-        <div class="db-controls">
-          <div class="db-search">
-            <input type="text" id="db-search-input" placeholder="Search messages...">
+
+        <div id="db-panel-messaging" class="db-tab-panel">
+          <!-- Stats Cards -->
+          <div class="db-stats">
+            <div class="db-stat-card">
+              <div class="db-stat-value" id="db-total-messages">0</div>
+              <div class="db-stat-label">Total Messages</div>
+            </div>
+            <div class="db-stat-card">
+              <div class="db-stat-value" id="db-user-messages-count">0</div>
+              <div class="db-stat-label">User Messages</div>
+            </div>
+            <div class="db-stat-card">
+              <div class="db-stat-value" id="db-admin-messages-count">0</div>
+              <div class="db-stat-label">Admin Messages</div>
+            </div>
+            <div class="db-stat-card">
+              <div class="db-stat-value" id="db-active-users">0</div>
+              <div class="db-stat-label">Active Users</div>
+            </div>
           </div>
-          <div class="db-filters">
-            <select id="db-filter-type">
-              <option value="all">All Types</option>
-              <option value="user">User Messages</option>
-              <option value="admin">Admin Messages</option>
+
+          <!-- Control Panel -->
+          <div class="db-controls">
+            <div class="db-search">
+              <input type="text" id="db-search-input" placeholder="Search messages...">
+            </div>
+            <div class="db-filters">
+              <select id="db-filter-type">
+                <option value="all">All Types</option>
+                <option value="user">User Messages</option>
+                <option value="admin">Admin Messages</option>
+              </select>
+              <select id="db-filter-user">
+                <option value="">All Users</option>
+              </select>
+              <input type="date" id="db-filter-date-from" placeholder="From">
+              <input type="date" id="db-filter-date-to" placeholder="To">
+            </div>
+            <div class="db-actions">
+              <button id="db-refresh-btn" class="btn btn-primary">Refresh</button>
+              <button id="db-export-btn" class="btn btn-secondary">Export</button>
+              <button id="db-delete-filtered-btn" class="btn btn-warning">Delete Filtered</button>
+              <button id="db-clear-all-btn" class="btn btn-danger">Clear All</button>
+            </div>
+          </div>
+
+          <!-- Messages Table -->
+          <div class="db-table-wrapper">
+            <table class="db-table">
+              <thead>
+                <tr>
+                  <th><input type="checkbox" id="db-select-all"></th>
+                  <th>Type</th>
+                  <th>From</th>
+                  <th>To</th>
+                  <th>Message</th>
+                  <th>Timestamp</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="db-messages-tbody">
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div class="db-pagination">
+            <button id="db-prev-btn" class="btn btn-secondary">&larr; Previous</button>
+            <span id="db-page-info">Page 1 of 1</span>
+            <button id="db-next-btn" class="btn btn-secondary">Next &rarr;</button>
+            <select id="db-per-page">
+              <option value="25">25 per page</option>
+              <option value="50">50 per page</option>
+              <option value="100">100 per page</option>
             </select>
-            <select id="db-filter-user">
-              <option value="">All Users</option>
-            </select>
-            <input type="date" id="db-filter-date-from" placeholder="From">
-            <input type="date" id="db-filter-date-to" placeholder="To">
-          </div>
-          <div class="db-actions">
-            <button id="db-refresh-btn" class="btn btn-primary">Refresh</button>
-            <button id="db-export-btn" class="btn btn-secondary">Export</button>
-            <button id="db-delete-filtered-btn" class="btn btn-warning">Delete Filtered</button>
-            <button id="db-clear-all-btn" class="btn btn-danger">Clear All</button>
           </div>
         </div>
-        
-        <!-- Messages Table -->
-        <div class="db-table-wrapper">
-          <table class="db-table">
-            <thead>
-              <tr>
-                <th><input type="checkbox" id="db-select-all"></th>
-                <th>Type</th>
-                <th>From</th>
-                <th>To</th>
-                <th>Message</th>
-                <th>Timestamp</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="db-messages-tbody">
-            </tbody>
-          </table>
+
+        <div id="db-panel-storage" class="db-tab-panel hidden">
+
+          <div class="db-controls">
+            <div class="db-search">
+              <input id="db-storage-path" type="text" placeholder="Storage path to probe (optional)">
+            </div>
+            <div class="db-actions">
+              <button id="db-storage-refresh-btn" class="btn btn-primary">Refresh Status</button>
+            </div>
+          </div>
+
+          <div class="db-table-wrapper">
+            <table class="db-table">
+              <thead>
+                <tr>
+                  <th>Service</th>
+                  <th>Target</th>
+                  <th>Status</th>
+                  <th>Storage Currently</th>
+                </tr>
+              </thead>
+              <tbody id="db-storage-tbody"></tbody>
+            </table>
+          </div>
         </div>
-        
-        <!-- Pagination -->
-        <div class="db-pagination">
-          <button id="db-prev-btn" class="btn btn-secondary">&larr; Previous</button>
-          <span id="db-page-info">Page 1 of 1</span>
-          <button id="db-next-btn" class="btn btn-secondary">Next &rarr;</button>
-          <select id="db-per-page">
-            <option value="25">25 per page</option>
-            <option value="50">50 per page</option>
-            <option value="100">100 per page</option>
-          </select>
+
+        <div id="db-target-modal" class="modal-overlay hidden">
+          <div class="modal-card" style="max-width: 420px;">
+            <div class="modal-header">
+              <h3 class="modal-title">Reveal Target</h3>
+            </div>
+            <form id="db-target-form" class="modal-form">
+              <div class="modal-body">
+                <div class="input-group">
+                  <label for="db-target-password">Enter your password to view target</label>
+                  <input id="db-target-password" type="password" autocomplete="current-password" required>
+                  <small id="db-target-error" style="display:block; margin-top:6px; color:#ef4444;"></small>
+                </div>
+              </div>
+              <div class="modal-actions">
+                <button type="button" id="db-target-cancel" class="btn btn-secondary">Cancel</button>
+                <button type="submit" class="btn btn-primary">Unlock</button>
+              </div>
+            </form>
+          </div>
         </div>
       </section>
     </div>
