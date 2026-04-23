@@ -542,6 +542,7 @@
           <li><a href="#lp-hero" class="active">Home</a></li>
           <li><a href="#lp-about">About</a></li>
           <li><a href="#lp-services">Our Services</a></li>
+          <li><a href="#lp-documents">Documents</a></li>
           <li><a href="#lp-activities">Recent Activities</a></li>
         </ul>
         
@@ -639,6 +640,45 @@
             </p>
           </div>
 
+        </div>
+      </div>
+    </section>
+
+    <!-- Documents Section -->
+    <section id="lp-documents" class="lp-section">
+      <div class="lp-container">
+        <div class="lp-section-header">
+          <h2>Official Documents</h2>
+          <p>Signed issuances, memos, advisories, forms, and resolutions from SASDD-NBSC.</p>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="lp-docs-filter-bar">
+          <div class="lp-docs-category-tabs" id="lp-docs-category-tabs">
+            <button class="lp-docs-tab active" data-cat="">All</button>
+            <button class="lp-docs-tab" data-cat="Memo">Memo</button>
+            <button class="lp-docs-tab" data-cat="Advisory">Advisory</button>
+            <button class="lp-docs-tab" data-cat="Form">Form</button>
+            <button class="lp-docs-tab" data-cat="Resolution">Resolution</button>
+            <button class="lp-docs-tab" data-cat="Issuance">Issuance</button>
+          </div>
+          <select id="lp-docs-year" class="lp-docs-year-select">
+            <option value="">All Years</option>
+          </select>
+        </div>
+
+        <!-- Document Grid -->
+        <div class="lp-docs-grid" id="lp-docs-grid">
+          <!-- Skeleton -->
+          <div class="lp-doc-skeleton"></div>
+          <div class="lp-doc-skeleton"></div>
+          <div class="lp-doc-skeleton"></div>
+          <div class="lp-doc-skeleton"></div>
+        </div>
+
+        <div id="lp-docs-empty" class="lp-docs-empty hidden">
+          <i class='bx bx-folder-open'></i>
+          <p>No documents found for this filter.</p>
         </div>
       </div>
     </section>
@@ -908,6 +948,9 @@
               </div>
               <button id="clear-cache-btn" class="add-post-btn hidden" style="background:#b91c1c; border-color:#991b1b;" aria-label="Clear System Data">
                 <span class="plus-icon">⚠</span> Clear Data
+              </button>
+              <button id="manage-lp-docs-btn" class="add-post-btn hidden" style="background:#6d28d9; border-color:#7c3aed;" aria-label="Manage Documents">
+                <span class="plus-icon">📄</span> Documents
               </button>
               <button id="manage-lp-activities-btn" class="add-post-btn hidden" style="background:#0f766e; border-color:#0d9488;" aria-label="Manage Landing Page Activities">
                 <span class="plus-icon">🖼</span> LP Activities
@@ -1558,6 +1601,63 @@
     </div>
   </div>
 
-</body>
+  <!-- LP Documents Manager Modal -->
+  <div id="lp-docs-modal" class="modal-overlay hidden">
+    <div class="modal-card lp-act-modal-card">
+      <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <h3 class="modal-title">Manage Official Documents</h3>
+        <button id="lp-docs-modal-close" class="icon-btn" style="color:#64748b; font-size:1.5rem; background:none; border:none; cursor:pointer;">&times;</button>
+      </div>
+
+      <!-- Current Documents List -->
+      <div class="lp-act-modal-section">
+        <div class="lp-act-section-label">Current Documents</div>
+        <div id="lp-docs-current-list" class="lp-act-current-list">
+          <div class="lp-act-loading"><div class="spinner" style="width:24px;height:24px;"></div><span>Loading&hellip;</span></div>
+        </div>
+      </div>
+
+      <!-- Add New Document Form -->
+      <div class="lp-act-modal-section" style="border-top:1px solid #e2e8f0; padding-top:20px;">
+        <div class="lp-act-section-label">Add New Document</div>
+        <form id="lp-docs-add-form">
+          <div class="input-group">
+            <label for="lp-doc-title">Document Title <span style="color:#ef4444;">*</span></label>
+            <input type="text" id="lp-doc-title" required placeholder="e.g. SC Resolution No. 2026-001">
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+            <div class="input-group">
+              <label for="lp-doc-category">Category <span style="color:#ef4444;">*</span></label>
+              <select id="lp-doc-category" required>
+                <option value="">— Select —</option>
+                <option value="Memo">Memo</option>
+                <option value="Advisory">Advisory</option>
+                <option value="Form">Form</option>
+                <option value="Resolution">Resolution</option>
+                <option value="Issuance">Issuance</option>
+              </select>
+            </div>
+            <div class="input-group">
+              <label for="lp-doc-date">Date Issued <span style="color:#ef4444;">*</span></label>
+              <input type="date" id="lp-doc-date" required>
+            </div>
+          </div>
+          <div class="input-group">
+            <label for="lp-doc-url">Document URL <span style="color:#ef4444;">*</span></label>
+            <input type="url" id="lp-doc-url" required placeholder="https://drive.google.com/file/d/...">
+            <span style="font-size:0.75rem; color:#94a3b8; margin-top:4px; display:block;">Paste a Google Drive share link or any public PDF link. Viewers will open it in a new browser tab.</span>
+          </div>
+          <div class="input-group">
+            <label for="lp-doc-desc">Short Description <span style="font-size:0.8rem; font-weight:400; color:#94a3b8;">(optional)</span></label>
+            <textarea id="lp-doc-desc" rows="2" placeholder="Brief note about this document&hellip;"></textarea>
+          </div>
+          <div id="lp-docs-form-error" class="login-error hidden"></div>
+          <div class="modal-actions" style="margin-top:16px;">
+            <button type="submit" id="lp-docs-submit-btn" class="primary-btn" style="width:100%; background:#6d28d9;">Add Document</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 
 </html>

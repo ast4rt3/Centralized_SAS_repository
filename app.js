@@ -613,6 +613,7 @@ window.addEventListener('DOMContentLoaded', () => {
     initSharedMessaging(); // Initialize the universal listener
     setTimeout(initFullMessenger, 2000); // Give Firebase a moment to sync
     initLpActivities(); // Load dynamic landing page activities (public)
+    initLpDocuments();  // Load dynamic landing page documents (public)
 });
 
 
@@ -1325,7 +1326,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let systemsPromise = null;
   let ytPlayers = {}; // Persistent store for YT players
   let globalCarouselTimer = null;
-  let globalSlideGeneration = 0;  // Messaging state moved to top level
+  let globalSlideGeneration = 0;
+  // Messaging state moved to top level
 ;
 
   // TV Carousel State Exporters (for toggle responsiveness)
@@ -1848,6 +1850,7 @@ function showAppUI(userObj) {
     finishInit();
     initUserMessaging();
     initLpActivitiesAdmin(userObj); // Admin LP activities management
+    initLpDocumentsAdmin(userObj);  // Admin LP documents management
 }
 
 
@@ -4923,6 +4926,51 @@ let _lpAllActivities = [];
 function initLpActivities() {
   if (!userDb) return;
   const grid = document.getElementById('lp-activities-grid');
+
+  // ---- LP Nav Active State Management ----
+  const lpNavLinks = document.querySelectorAll('.lp-nav-links a');
+
+  function setLpActiveLink(href) {
+    lpNavLinks.forEach(a => {
+      a.classList.toggle('active', a.getAttribute('href') === href);
+    });
+  }
+
+  // Click: set immediately
+  lpNavLinks.forEach(a => {
+    a.addEventListener('click', () => {
+      setLpActiveLink(a.getAttribute('href'));
+    });
+  });
+
+  // Scroll: use IntersectionObserver to detect visible section
+  const lpSections = document.querySelectorAll(
+    '#lp-hero, #lp-about, #lp-services, #lp-documents, #lp-activities'
+  );
+
+  if (lpSections.length && typeof IntersectionObserver !== 'undefined') {
+    const observer = new IntersectionObserver((entries) => {
+      // Find the entry that is most in view
+      let best = null;
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          if (!best || entry.intersectionRatio > best.intersectionRatio) {
+            best = entry;
+          }
+        }
+      });
+      if (best) {
+        setLpActiveLink('#' + best.target.id);
+      }
+    }, {
+      threshold: [0.3, 0.5],
+      rootMargin: '-10% 0px -10% 0px'
+    });
+
+    lpSections.forEach(sec => observer.observe(sec));
+  }
+
+  // ---- Firebase activities listener ----
   if (!grid) return;
 
   const lpRef = ref(userDb, 'lp_activities');
@@ -4981,7 +5029,7 @@ function renderLpActivities(activities, grid) {
     }
 
     const imgHtml = act.imageUrl
-      ? `<img class="lp-activity-img" src="${escapeHtml(act.imageUrl)}" alt="${escapeHtml(act.title)}" loading="lazy" onerror="this.parentNode.innerHTML='<div class=&quot;lp-activity-img-placeholder&quot;><i class=&quot;bx bx-image-alt&quot;></i></div>'">`
+      ? `<img class="lp-activity-img" src="${escapeHtml(act.imageUrl)}" alt="${escapeHtml(act.title)}" loading="lazy" onerror="this.parentNode.innerHTML='<div class=\'lp-activity-img-placeholder\'><i class=\'bx bx-image-alt\'></i></div>'">`
       : `<div class="lp-activity-img-placeholder"><i class='bx bx-image-alt'></i></div>`;
 
     card.innerHTML = `
@@ -5273,7 +5321,7 @@ function initLpActivitiesAdmin(userObj) {
       }
 
       const thumbHtml = act.imageUrl
-        ? `<div class="lp-act-item-thumb"><img src="${escapeHtml(act.imageUrl)}" alt="" onerror="this.parentNode.innerHTML='<i class=&quot;bx bx-image-alt&quot;></i>'"></div>`
+        ? `<div class="lp-act-item-thumb"><img src="${escapeHtml(act.imageUrl)}" alt="" onerror="this.parentNode.innerHTML='<i class=\'bx bx-image-alt\'></i>'"></div>`
         : `<div class="lp-act-item-thumb"><i class='bx bx-image-alt'></i></div>`;
 
       row.innerHTML = `
@@ -5362,9 +5410,9 @@ function initLpActivitiesAdmin(userObj) {
         // Upload to Cloudinary
         const fd = new FormData();
         fd.append('file', file);
-        fd.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+        fd.append('upload_preset', window.ENV?.CLOUDINARY_UPLOAD_PRESET || 'sas_uploads');
         fd.append('folder', 'sas_lp_activities');
-        const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${window.ENV?.CLOUDINARY_CLOUD_NAME}/image/upload`, {
           method: 'POST',
           body: fd
         });
@@ -5395,4 +5443,238 @@ function initLpActivitiesAdmin(userObj) {
       if (formError) { formError.textContent = err.message; formError.classList.remove('hidden'); }
     }
   });
+}
+
+/* =========================================================
+   LP DOCUMENTS SYSTEM
+   ========================================================= */
+
+let _lpAllDocuments = [];
+let _lpDocFilterCat = '';
+let _lpDocFilterYear = '';
+
+function initLpDocuments() {
+  if (!userDb) return;
+  const grid = document.getElementById('lp-docs-grid');
+  const emptyState = document.getElementById('lp-docs-empty');
+  const catTabs = document.querySelectorAll('.lp-docs-tab');
+  const yearSelect = document.getElementById('lp-docs-year');
+  if (!grid) return;
+
+  const docsRef = ref(userDb, 'lp_documents');
+
+  // Sync from Firebase
+  onValue(docsRef, (snapshot) => {
+    const data = snapshot.val();
+    if (!data) {
+      _lpAllDocuments = [];
+      renderLpDocuments();
+      return;
+    }
+
+    _lpAllDocuments = Object.entries(data).map(([id, val]) => ({ id, ...val }))
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    updateLpDocYears();
+    renderLpDocuments();
+  });
+
+  // Category Filtering
+  catTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      catTabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      _lpDocFilterCat = tab.getAttribute('data-cat') || '';
+      renderLpDocuments();
+    });
+  });
+
+  // Year Filtering
+  if (yearSelect) {
+    yearSelect.addEventListener('change', () => {
+      _lpDocFilterYear = yearSelect.value;
+      renderLpDocuments();
+    });
+  }
+
+  function updateLpDocYears() {
+    if (!yearSelect) return;
+    const years = [...new Set(_lpAllDocuments.map(d => new Date(d.date).getFullYear()))].sort((a, b) => b - a);
+    const current = yearSelect.value;
+    yearSelect.innerHTML = '<option value="">All Years</option>' + 
+      years.map(y => `<option value="${y}" ${y == current ? 'selected' : ''}>${y}</option>`).join('');
+  }
+
+  function renderLpDocuments() {
+    grid.innerHTML = '';
+    
+    const filtered = _lpAllDocuments.filter(doc => {
+      const matchCat = !_lpDocFilterCat || doc.category === _lpDocFilterCat;
+      const matchYear = !_lpDocFilterYear || new Date(doc.date).getFullYear().toString() === _lpDocFilterYear;
+      return matchCat && matchYear;
+    });
+
+    if (filtered.length === 0) {
+      if (emptyState) emptyState.classList.remove('hidden');
+      return;
+    }
+
+    if (emptyState) emptyState.classList.add('hidden');
+
+    filtered.forEach(doc => {
+      const card = document.createElement('div');
+      card.className = 'lp-doc-card';
+      card.setAttribute('data-cat', doc.category || 'Memo');
+      
+      const dateObj = new Date(doc.date);
+      const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+      card.innerHTML = `
+        <div class="lp-doc-card-top">
+          <div class="lp-doc-icon">
+            <i class='bx ${getDocIcon(doc.category)}'></i>
+          </div>
+          <div class="lp-doc-meta">
+            <span class="lp-doc-badge">${doc.category || 'Memo'}</span>
+            <h4 class="lp-doc-title">${escapeHtml(doc.title)}</h4>
+            <div class="lp-doc-date">
+              <i class='bx bx-calendar'></i> ${dateStr}
+            </div>
+          </div>
+        </div>
+        ${doc.description ? `<p class="lp-doc-desc">${escapeHtml(doc.description)}</p>` : '<div style="flex:1"></div>'}
+        <a href="${doc.url}" target="_blank" rel="noopener" class="lp-doc-view-btn">
+          <i class='bx bx-show-alt'></i> View Document
+        </a>
+      `;
+      grid.appendChild(card);
+    });
+  }
+
+  function getDocIcon(cat) {
+    switch(cat) {
+      case 'Memo': return 'bx-file';
+      case 'Advisory': return 'bx-info-circle';
+      case 'Form': return 'bx-edit-alt';
+      case 'Resolution': return 'bx-badge-check';
+      case 'Issuance': return 'bx-certification';
+      default: return 'bx-file';
+    }
+  }
+}
+
+// ---- ADMIN: Manage Documents ----
+function initLpDocumentsAdmin(userObj) {
+  if (!userDb || !userObj) return;
+  const role = userObj.role?.toLowerCase();
+  if (role !== 'admin' && role !== 'superadmin') return;
+
+  const manageBtn = document.getElementById('manage-lp-docs-btn');
+  const modal = document.getElementById('lp-docs-modal');
+  const closeBtn = document.getElementById('lp-docs-modal-close');
+  const currentList = document.getElementById('lp-docs-current-list');
+  const addForm = document.getElementById('lp-docs-add-form');
+  const submitBtn = document.getElementById('lp-docs-submit-btn');
+  const formError = document.getElementById('lp-docs-form-error');
+
+  if (!manageBtn || !modal) return;
+  manageBtn.classList.remove('hidden');
+
+  manageBtn.onclick = () => {
+    modal.classList.remove('hidden');
+    loadCurrentDocs();
+  };
+
+  closeBtn.onclick = () => modal.classList.add('hidden');
+  
+  // Close on Escape
+  const handleEsc = (e) => { if (e.key === 'Escape') modal.classList.add('hidden'); };
+  document.addEventListener('keydown', handleEsc);
+
+  function loadCurrentDocs() {
+    if (!currentList) return;
+    currentList.innerHTML = '<div class="lp-act-loading"><div class="spinner" style="width:24px;height:24px;"></div><span>Loading&hellip;</span></div>';
+
+    const docsRef = ref(userDb, 'lp_documents');
+    get(docsRef).then(snapshot => {
+      const data = snapshot.val();
+      currentList.innerHTML = '';
+      if (!data) {
+        currentList.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8;font-size:0.85rem;">No documents found.</div>';
+        return;
+      }
+
+      Object.entries(data).sort((a,b) => new Date(b[1].date) - new Date(a[1].date)).forEach(([id, doc]) => {
+        const row = document.createElement('div');
+        row.className = 'lp-doc-item';
+        row.innerHTML = `
+          <div class="lp-doc-item-badge">${doc.category || 'Memo'}</div>
+          <div class="lp-doc-item-info">
+            <div class="lp-doc-item-title">${escapeHtml(doc.title)}</div>
+            <div class="lp-doc-item-date">${doc.date}</div>
+          </div>
+          <button class="icon-btn delete-doc-btn" data-id="${id}" title="Delete Document" style="color:#ef4444; background:none; border:none; cursor:pointer; font-size:1.1rem;">
+            <i class='bx bx-trash'></i>
+          </button>
+        `;
+
+        row.querySelector('.delete-doc-btn').onclick = async function() {
+          const confirmed = await lpShowConfirm('Delete Document', 'Are you sure you want to delete this document? This cannot be undone.');
+          if (confirmed) {
+            await remove(ref(userDb, `lp_documents/${id}`));
+            showToast('Document deleted', 'info');
+            loadCurrentDocs();
+          }
+        };
+
+        currentList.appendChild(row);
+      });
+    });
+  }
+
+  addForm.onsubmit = async (e) => {
+    e.preventDefault();
+    if (formError) formError.classList.add('hidden');
+
+    const title = document.getElementById('lp-doc-title').value.trim();
+    const category = document.getElementById('lp-doc-category').value;
+    const date = document.getElementById('lp-doc-date').value;
+    const url = document.getElementById('lp-doc-url').value.trim();
+    const description = document.getElementById('lp-doc-desc').value.trim();
+
+    if (!title || !category || !date || !url) {
+      if (formError) { formError.textContent = 'All starred fields are required.'; formError.classList.remove('hidden'); }
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Adding Document...';
+
+    try {
+      const newDoc = {
+        title,
+        category,
+        date,
+        url,
+        description,
+        createdAt: serverTimestamp()
+      };
+
+      await push(ref(userDb, 'lp_documents'), newDoc);
+      showToast('Document added successfully!', 'success');
+      addForm.reset();
+      loadCurrentDocs();
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Add Document';
+    } catch(err) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Add Document';
+      if (formError) { formError.textContent = err.message; formError.classList.remove('hidden'); }
+    }
+  };
+
+  function lpShowConfirm(title, message) {
+    if (typeof showConfirm === 'function') return showConfirm(title, message, false, 'danger');
+    return Promise.resolve(window.confirm(message));
+  }
 }
