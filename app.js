@@ -4442,6 +4442,7 @@ if (logoutBtn) {
       panelMultimedia: document.getElementById('db-panel-multimedia'),
       mediaSearch: document.getElementById('db-media-search'),
       mediaRefreshBtn: document.getElementById('db-media-refresh-btn'),
+      mediaFlushBtn: document.getElementById('db-media-flush-btn'),
       mediaGrid: document.getElementById('db-media-grid')
     };
 
@@ -4858,12 +4859,118 @@ if (logoutBtn) {
       );
     }
 
-    window.dbDeleteMedia = async function(publicId, resourceType) {
-      const confirmMsg = `CAUTION: This will delete the asset from Cloudinary AND remove any linked TV posts or Landing Page activities. This action is permanent.`;
-      const confirmed = (typeof showConfirm === 'function') 
-        ? await showConfirm('Cascading Deletion', confirmMsg, false, 'danger')
-        : window.confirm(confirmMsg);
+    async function flushMultimediaDatabase() {
+      const confirmMsg = 'This will scan your system (TV Posts, User Profiles, and Landing Page) and delete ANY Cloudinary assets that are not currently being used. This cannot be undone. Please enter your password to confirm.';
+      
+      const raw = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data') || '{}';
+      const userObj = JSON.parse(raw);
+
+      let confirmed = false;
+      if (typeof showConfirm === 'function') {
+        const inputPass = await showConfirm('Flush Unused Assets', confirmMsg, true, 'danger');
+        if (inputPass === userObj.password) {
+          confirmed = true;
+        } else if (inputPass !== null) {
+          showToast('Incorrect password.', 'error');
+          return;
+        }
+      } else {
+        confirmed = window.confirm(confirmMsg);
+      }
+
+      if (!confirmed) return;
+
+      showToast('Scanning for used assets...', 'info');
+
+      try {
+        const raw = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data') || '{}';
+        const userObj = JSON.parse(raw);
+
+        // 1. Get used IDs from Firebase (Landing Page)
+        const lpRef = ref(userDb, 'lp_activities');
+        const lpSnap = await get(lpRef);
+        const lpData = lpSnap.val() || {};
+        const usedIdsFromFirebase = [];
+
+        Object.values(lpData).forEach(act => {
+          const id = extractCloudinaryId(act.imageUrl);
+          if (id) usedIdsFromFirebase.push(id);
+        });
+
+        // 2. Trigger GAS Flush
+        const res = await fetch(BACKEND_GAS_URL, {
+          method: 'POST',
+          body: JSON.stringify({ 
+            action: 'flushMultimedia',
+            firebaseUsedIds: usedIdsFromFirebase,
+            username: userObj.username,
+            password: userObj.password
+          })
+        });
+        const payload = await res.json();
+
+        if (payload.success) {
+          showToast(payload.message || 'Flush completed successfully!', 'success');
+          loadMultimediaDatabase(); // Refresh grid
+        } else {
+          showToast('Flush failed: ' + payload.message, 'error');
+        }
+      } catch (err) {
+        showToast('Flush error: ' + err.message, 'error');
+      }
+    }
+
+    function extractCloudinaryId(url) {
+      if (!url || typeof url !== 'string' || !url.includes('res.cloudinary.com')) return null;
+      const parts = url.split('/upload/');
+      if (parts.length < 2) return null;
+      
+      const segments = parts[1].split('/');
+      let startIndex = 0;
+      
+      // Skip transformation/version segments
+      while (startIndex < segments.length) {
+        const seg = segments[startIndex];
+        // Versions match v123456789
+        const isVersion = seg.startsWith('v') && /^\d+$/.test(seg.substring(1));
+        // Transformations usually have commas or specific short-codes like c_fill, w_100
+        const isTransformation = seg.includes(',') || (seg.length < 12 && (seg.includes('_') || seg.includes('=') || /^[acdegilmostwx]\d+/.test(seg)));
         
+        if (isVersion || isTransformation) {
+          startIndex++;
+          continue;
+        }
+        break;
+      }
+      
+      let idWithExt = segments.slice(startIndex).join('/');
+      const dotIdx = idWithExt.lastIndexOf('.');
+      if (dotIdx > -1) {
+        const ext = idWithExt.substring(dotIdx + 1);
+        if (!ext.includes('/') && ext.length <= 5) idWithExt = idWithExt.substring(0, dotIdx);
+      }
+      return decodeURIComponent(idWithExt);
+    }
+
+    window.dbDeleteMedia = async function(publicId, resourceType) {
+      const confirmMsg = `CAUTION: This will delete the asset from Cloudinary AND remove any linked TV posts or Landing Page activities. Please enter your password to proceed.`;
+      
+      const raw = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data') || '{}';
+      const userObj = JSON.parse(raw);
+
+      let confirmed = false;
+      if (typeof showConfirm === 'function') {
+        const inputPass = await showConfirm('Confirm Deletion', confirmMsg, true, 'danger');
+        if (inputPass === userObj.password) {
+          confirmed = true;
+        } else if (inputPass !== null) {
+          showToast('Incorrect password.', 'error');
+          return;
+        }
+      } else {
+        confirmed = window.confirm(confirmMsg);
+      }
+
       if (!confirmed) return;
 
       showToast('Initiating cascading deletion...', 'info');
@@ -5124,6 +5231,7 @@ if (logoutBtn) {
     elements.tabStorage?.addEventListener('click', () => switchDbPanel('storage'));
     elements.tabMultimedia?.addEventListener('click', () => switchDbPanel('multimedia'));
     elements.mediaRefreshBtn?.addEventListener('click', () => loadMultimediaDatabase());
+    elements.mediaFlushBtn?.addEventListener('click', () => flushMultimediaDatabase());
 
     elements.exportBtn?.addEventListener('click', () => {
       const dataStr = JSON.stringify(filteredMessages, null, 2);
@@ -6001,6 +6109,7 @@ function initLpActivitiesAdmin(userObj) {
       showToast('Activity added to landing page!', 'success');
       resetLpForm();
       loadCurrentActivities(); // refresh list
+      modal.classList.add('hidden');
 
     } catch(err) {
       submitBtn.disabled = false;
