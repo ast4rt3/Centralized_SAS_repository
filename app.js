@@ -200,6 +200,7 @@ let myUsername = (() => {
 
 // --- SHARED MESSAGING STATE (GLOBAL) ---
 let unreadCount = 0;
+let sharedMessagingInitialized = false;
 let activeChatUser = null; 
 let activeMessengerUser = null; 
 const pageLoadTime = Date.now();
@@ -348,7 +349,8 @@ async function syncUnreadCountFromDb() {
 }
 
 function initSharedMessaging() {
-  if (!userDb || !myUsername || myUsername === 'Unknown') return;
+  if (!userDb || !myUsername || myUsername === 'Unknown' || sharedMessagingInitialized) return;
+  sharedMessagingInitialized = true;
   const baseRef = ref(userDb, 'user_messages');
   
   onChildAdded(baseRef, (snapshot) => {
@@ -1850,6 +1852,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     
 function showAppUI(userObj) {
+  if (userObj && userObj.username) {
+    myUsername = userObj.username;
+  }
   if (loginOverlay) loginOverlay.classList.add('hidden');
   
   // Apply theme immediately from localStorage or user data
@@ -1884,6 +1889,7 @@ function showAppUI(userObj) {
     setupUserMenu(userObj);
     finishInit();
     initUserMessaging();
+    initSharedMessaging(); // Ensure real-time listeners start after identity is known
     initLpActivitiesAdmin(userObj); // Admin LP activities management
     initLpDocumentsAdmin(userObj);  // Admin LP documents management
 }
