@@ -524,9 +524,240 @@
     style="display:none; position:fixed; top:0; left:0; right:0; z-index:9999; background:#b91c1c; color:#fff; font-size:0.8rem; font-weight:700; text-align:center; padding:6px; letter-spacing:0.5px;">
     📡 No internet connection — showing cached content
   </div>
+
+  <!-- Landing Page Section (Public View) -->
+  <section id="landing-page" class="landing-page hidden">
+    <!-- Navigation Bar -->
+    <nav class="lp-navbar">
+      <div class="lp-container">
+        <div class="lp-logo">
+          <img src="assets/sas_logo.png" alt="NBSC Logo" class="lp-logo-img">
+        </div>
+        
+        <button class="lp-mobile-toggle" id="lp-mobile-toggle">
+          <i class='bx bx-menu'></i>
+        </button>
+
+        <ul class="lp-nav-links" id="lp-nav-links">
+          <li><a href="#lp-hero" class="active">Home</a></li>
+          <li><a href="#lp-about">About</a></li>
+          <li><a href="#lp-services">Our Services</a></li>
+          <li><a href="#lp-documents">Documents</a></li>
+          <li><a href="#lp-activities">Recent Activities</a></li>
+        </ul>
+        
+        <div class="lp-nav-actions">
+          <button class="lp-btn-login" id="lp-login-btn">
+            <i class='bx bx-log-in-circle'></i> Log in
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header id="lp-hero" class="lp-hero">
+      <div class="lp-hero-overlay"></div>
+      <div class="lp-hero-content">
+        <h1 class="lp-hero-headline">Student Affairs &amp; Services</h1>
+        <p class="lp-hero-subtext">
+          The Student Affairs &amp; Services and Development Division of Northern Bukidnon State College (SASDD-NBSC) &mdash; serving students with holistic programs, welfare support, and development opportunities.
+        </p>
+        <div class="lp-hero-actions">
+          <a href="#lp-about" class="lp-btn-primary">Learn More</a>
+        </div>
+      </div>
+    </header>
+
+    <!-- About / Objective Section -->
+    <section id="lp-about" class="lp-section">
+      <div class="lp-container">
+        <div class="lp-section-header">
+          <h2>Our Objective</h2>
+          <p>The SASDD-NBSC serves as the implementing unit of the rules, policies, and regulations of the college and of those of CHED in relation to student-related concerns.</p>
+        </div>
+        <div class="lp-objective-grid">
+          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Assists students in transition to college life</span></div>
+          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Help students to explore and clarify their values</span></div>
+          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Encourages the development of relationships of friendship and a sense of belonging to a campus community</span></div>
+          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Assists in identifying financial aid resources for further education</span></div>
+          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Creates opportunities to expand the cultural and aesthetic horizons of students</span></div>
+          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Teaches students how to solve personal and group conflicts</span></div>
+          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Provides special programs and services for students who have learning difficulties</span></div>
+          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Contributes to the understanding and appreciation of ethnic differences, racial or otherwise</span></div>
+          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Creates opportunities for leadership development</span></div>
+          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Establishes programs that encourage a healthy lifestyle and reduce misbehavior</span></div>
+          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Provides opportunities for recreation and leisure</span></div>
+          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Provides counseling and career guidance, helping to clarify professional goals, and exploring options for further study or employment</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Services Section -->
+    <section id="lp-services" class="lp-section lp-bg-alt">
+      <div class="lp-container">
+        <div class="lp-section-header">
+          <h2>Our Services</h2>
+          <p>Comprehensive programs designed to support student welfare and foster holistic development.</p>
+        </div>
+
+        <div class="lp-services-grid">
+
+          <!-- Student Welfare Services -->
+          <div class="lp-service-card">
+            <div class="lp-service-icon"><i class='bx bx-heart'></i></div>
+            <h3 class="lp-service-title">Student Welfare Services</h3>
+            <ul class="lp-service-list">
+              <li><i class='bx bx-check'></i> Information and Orientation Services</li>
+              <li><i class='bx bx-check'></i> Guidance and Counselling Services</li>
+              <li><i class='bx bx-check'></i> Career and Job Placement Services</li>
+              <li><i class='bx bx-check'></i> Economic Enterprise Development</li>
+            </ul>
+          </div>
+
+          <!-- Student Development Services -->
+          <div class="lp-service-card">
+            <div class="lp-service-icon"><i class='bx bx-group'></i></div>
+            <h3 class="lp-service-title">Student Development Services</h3>
+            <ul class="lp-service-list">
+              <li><i class='bx bx-check'></i> Student Organizations &amp; Activities</li>
+              <li><i class='bx bx-check'></i> Young Entrepreneurs' Club (YEC)</li>
+              <li><i class='bx bx-check'></i> Educators' Club (E-Club)</li>
+              <li><i class='bx bx-check'></i> Infotech Club &amp; MathSci Club</li>
+              <li><i class='bx bx-check'></i> NBSC Dance Company &amp; Kinetics Club</li>
+              <li><i class='bx bx-check'></i> Peer Counselors' Club</li>
+              <li><i class='bx bx-check'></i> English Club &amp; Young Historians' Club</li>
+              <li><i class='bx bx-check'></i> Leadership Training</li>
+              <li><i class='bx bx-check'></i> College Supreme Government</li>
+            </ul>
+          </div>
+
+          <!-- Leadership & Advocacy -->
+          <div class="lp-service-card">
+            <div class="lp-service-icon"><i class='bx bx-shield-quarter'></i></div>
+            <h3 class="lp-service-title">Leadership &amp; Advocacy</h3>
+            <p class="lp-service-desc">
+              Cultivating student leaders through training programs, organizational management, and institutional advocacy aligned with CHED mandates.
+            </p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Documents Section -->
+    <section id="lp-documents" class="lp-section">
+      <div class="lp-container">
+        <div class="lp-section-header">
+          <h2>Official Documents</h2>
+          <p>Signed issuances, memos, advisories, forms, and resolutions from SASDD-NBSC.</p>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="lp-docs-filter-bar">
+          <div class="lp-docs-category-tabs" id="lp-docs-category-tabs">
+            <button class="lp-docs-tab active" data-cat="">All</button>
+            <button class="lp-docs-tab" data-cat="Memo">Memo</button>
+            <button class="lp-docs-tab" data-cat="Advisory">Advisory</button>
+            <button class="lp-docs-tab" data-cat="Form">Form</button>
+            <button class="lp-docs-tab" data-cat="Resolution">Resolution</button>
+            <button class="lp-docs-tab" data-cat="Issuance">Issuance</button>
+          </div>
+          <select id="lp-docs-year" class="lp-docs-year-select">
+            <option value="">All Years</option>
+          </select>
+        </div>
+
+        <!-- Document Grid -->
+        <div class="lp-docs-grid" id="lp-docs-grid">
+          <!-- Skeleton -->
+          <div class="lp-doc-skeleton"></div>
+          <div class="lp-doc-skeleton"></div>
+          <div class="lp-doc-skeleton"></div>
+          <div class="lp-doc-skeleton"></div>
+        </div>
+
+        <div id="lp-docs-empty" class="lp-docs-empty hidden">
+          <i class='bx bx-folder-open'></i>
+          <p>No documents found for this filter.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Activity Documentation Feed -->
+    <section id="lp-activities" class="lp-section lp-bg-alt">
+      <div class="lp-container">
+        <div class="lp-section-header">
+          <h2>Recent Activities</h2>
+          <p>Documenting vibrant student life and institutional events at NBSC.</p>
+        </div>
+
+        <div class="lp-activities-grid" id="lp-activities-grid">
+          <!-- Skeleton loading state -->
+          <div class="lp-activity-skeleton"><div class="lp-skeleton-img"></div><div class="lp-skeleton-body"><div class="lp-skeleton-line short"></div><div class="lp-skeleton-line"></div><div class="lp-skeleton-line medium"></div></div></div>
+          <div class="lp-activity-skeleton"><div class="lp-skeleton-img"></div><div class="lp-skeleton-body"><div class="lp-skeleton-line short"></div><div class="lp-skeleton-line"></div><div class="lp-skeleton-line medium"></div></div></div>
+          <div class="lp-activity-skeleton"><div class="lp-skeleton-img"></div><div class="lp-skeleton-body"><div class="lp-skeleton-line short"></div><div class="lp-skeleton-line"></div><div class="lp-skeleton-line medium"></div></div></div>
+        </div>
+
+        <!-- See More button — always visible, opens full-page activities view -->
+        <div class="lp-view-all-wrap" id="lp-view-all-wrap" style="display:none;">
+          <button id="lp-view-all-btn" class="lp-view-all-btn">
+            See More Activities
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="lp-footer">
+      <div class="lp-container">
+        <p>&copy; 2026 Northern Bukidnon State College. All rights reserved.</p>
+      </div>
+    </footer>
+
+  </section>
+
+  <!-- Full-Page Activities Overlay -->
+  <div id="lp-all-activities-page" class="lp-all-activities-page" aria-hidden="true">
+    <!-- Sticky Header -->
+    <header class="lp-all-act-header">
+      <button id="lp-all-act-back" class="lp-all-act-back" aria-label="Back to landing page">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        Back
+      </button>
+      <div class="lp-all-act-title">
+        <img src="assets/sas_logo.png" alt="NBSC" class="lp-all-act-logo">
+        <span>NBSC — All Activities</span>
+      </div>
+      <div class="lp-all-act-count" id="lp-all-act-total"></div>
+    </header>
+
+    <!-- Search & Filter Bar -->
+    <div class="lp-all-act-toolbar">
+      <div class="lp-all-act-search-wrap">
+        <i class='bx bx-search'></i>
+        <input type="text" id="lp-all-act-search" placeholder="Search activities..." autocomplete="off">
+      </div>
+      <select id="lp-all-act-year" class="lp-all-act-filter">
+        <option value="">All Years</option>
+      </select>
+    </div>
+
+    <!-- Grid -->
+    <div class="lp-all-act-grid-wrap">
+      <div class="lp-all-act-grid" id="lp-all-act-grid">
+        <!-- Populated by JS -->
+      </div>
+      <div id="lp-all-act-empty" class="lp-all-act-empty hidden">
+        <i class='bx bx-search-alt'></i>
+        <p>No activities match your search.</p>
+      </div>
+    </div>
+  </div>
+
   <!-- Global Login Overlay -->
   <!-- Recommit for redeployment -->
-  <div id="login-overlay" class="login-overlay">
+  <div id="login-overlay" class="login-overlay hidden">
     <div class="login-card">
       <img src="assets/sas_logo_real.png" alt="NBSC Logo"
         class="login-logo">
@@ -558,10 +789,10 @@
   </button>
   <div id="nav-overlay" class="nav-overlay" hidden></div>
 
-  <aside class="sidebar">
+  <aside class="sidebar hidden">
     <div class="sidebar-header">
       <div class="sidebar-header-main" style="display: flex; align-items: center; justify-content: center; width: 100%;">
-        <img src="assets/sas logo.png" alt="SAS Brand" style="width: 75%; max-width: 150px; height: auto; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3));">
+        <img src="assets/sas_logo.png" alt="SAS Brand" style="width: 75%; max-width: 150px; height: auto; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3));">
       </div>
       <button id="sidebar-toggle" class="sidebar-toggle-btn hidden" title="Collapse Sidebar">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
@@ -596,7 +827,7 @@
     </div>
   </aside>
 
-  <main class="content">
+  <main class="content hidden">
     <div id="page-content" class="page-content">
       <!-- Loading (used when opening a deep-link hash directly) -->
       <section id="loading" class="page">
@@ -614,7 +845,7 @@
           <div id="tv-blurred-bg" class="tv-blurred-bg"></div>
         <header class="home-header">
           <div class="home-header-brand">
-            <img src="assets/sas_logo_real.png"
+            <img src="assets/sas_logo_real.png" id="sidebar-logo"
               class="home-header-logo" alt="NBSC Logo">
             <div class="home-header-text">
               <h1 class="home-header-title">NBSC SAS</h1>
@@ -718,6 +949,12 @@
               <button id="clear-cache-btn" class="add-post-btn hidden" style="background:#b91c1c; border-color:#991b1b;" aria-label="Clear System Data">
                 <span class="plus-icon">⚠</span> Clear Data
               </button>
+              <button id="manage-lp-docs-btn" class="add-post-btn hidden" style="background:#6d28d9; border-color:#7c3aed;" aria-label="Manage Documents">
+                <span class="plus-icon">📄</span> Documents
+              </button>
+              <button id="manage-lp-activities-btn" class="add-post-btn hidden" style="background:#0f766e; border-color:#0d9488;" aria-label="Manage Landing Page Activities">
+                <span class="plus-icon">🖼</span> LP Activities
+              </button>
               <button id="add-post-btn" class="add-post-btn hidden" aria-label="Add New Post">
                 <span class="plus-icon">+</span> Add Post
               </button>
@@ -809,83 +1046,154 @@
 
       <section id="database" class="page" style="background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); padding: 20px; min-height: 100vh;">
         <div class="page-header">
-          <h2>Messaging Database</h2>
+          <h2>Database Management</h2>
         </div>
-        
-        <!-- Stats Cards -->
-        <div class="db-stats">
-          <div class="db-stat-card">
-            <div class="db-stat-value" id="db-total-messages">0</div>
-            <div class="db-stat-label">Total Messages</div>
-          </div>
-          <div class="db-stat-card">
-            <div class="db-stat-value" id="db-user-messages-count">0</div>
-            <div class="db-stat-label">User Messages</div>
-          </div>
-          <div class="db-stat-card">
-            <div class="db-stat-value" id="db-admin-messages-count">0</div>
-            <div class="db-stat-label">Admin Messages</div>
-          </div>
-          <div class="db-stat-card">
-            <div class="db-stat-value" id="db-active-users">0</div>
-            <div class="db-stat-label">Active Users</div>
-          </div>
+
+        <div class="db-tab-nav">
+          <button id="db-tab-messaging" class="db-tab-btn active" type="button">Messaging Database</button>
+          <button id="db-tab-storage" class="db-tab-btn" type="button">Storage Database</button>
+          <button id="db-tab-multimedia" class="db-tab-btn" type="button">Multimedia Database</button>
         </div>
-        
-        <!-- Control Panel -->
-        <div class="db-controls">
-          <div class="db-search">
-            <input type="text" id="db-search-input" placeholder="Search messages...">
+
+        <div id="db-panel-messaging" class="db-tab-panel">
+          <!-- Stats Cards -->
+          <div class="db-stats">
+            <div class="db-stat-card">
+              <div class="db-stat-value" id="db-total-messages">0</div>
+              <div class="db-stat-label">Total Messages</div>
+            </div>
+            <div class="db-stat-card">
+              <div class="db-stat-value" id="db-user-messages-count">0</div>
+              <div class="db-stat-label">User Messages</div>
+            </div>
+            <div class="db-stat-card">
+              <div class="db-stat-value" id="db-admin-messages-count">0</div>
+              <div class="db-stat-label">Admin Messages</div>
+            </div>
+            <div class="db-stat-card">
+              <div class="db-stat-value" id="db-active-users">0</div>
+              <div class="db-stat-label">Active Users</div>
+            </div>
           </div>
-          <div class="db-filters">
-            <select id="db-filter-type">
-              <option value="all">All Types</option>
-              <option value="user">User Messages</option>
-              <option value="admin">Admin Messages</option>
+
+          <!-- Control Panel -->
+          <div class="db-controls">
+            <div class="db-search">
+              <input type="text" id="db-search-input" placeholder="Search messages...">
+            </div>
+            <div class="db-filters">
+              <select id="db-filter-type">
+                <option value="all">All Types</option>
+                <option value="user">User Messages</option>
+                <option value="admin">Admin Messages</option>
+              </select>
+              <select id="db-filter-user">
+                <option value="">All Users</option>
+              </select>
+              <input type="date" id="db-filter-date-from" placeholder="From">
+              <input type="date" id="db-filter-date-to" placeholder="To">
+            </div>
+            <div class="db-actions">
+              <button id="db-refresh-btn" class="btn btn-primary">Refresh</button>
+              <button id="db-export-btn" class="btn btn-secondary">Export</button>
+              <button id="db-delete-filtered-btn" class="btn btn-warning">Delete Filtered</button>
+              <button id="db-clear-all-btn" class="btn btn-danger">Clear All</button>
+            </div>
+          </div>
+
+          <!-- Messages Table -->
+          <div class="db-table-wrapper">
+            <table class="db-table">
+              <thead>
+                <tr>
+                  <th><input type="checkbox" id="db-select-all"></th>
+                  <th>Type</th>
+                  <th>From</th>
+                  <th>To</th>
+                  <th>Message</th>
+                  <th>Timestamp</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="db-messages-tbody">
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div class="db-pagination">
+            <button id="db-prev-btn" class="btn btn-secondary">&larr; Previous</button>
+            <span id="db-page-info">Page 1 of 1</span>
+            <button id="db-next-btn" class="btn btn-secondary">Next &rarr;</button>
+            <select id="db-per-page">
+              <option value="25">25 per page</option>
+              <option value="50">50 per page</option>
+              <option value="100">100 per page</option>
             </select>
-            <select id="db-filter-user">
-              <option value="">All Users</option>
-            </select>
-            <input type="date" id="db-filter-date-from" placeholder="From">
-            <input type="date" id="db-filter-date-to" placeholder="To">
-          </div>
-          <div class="db-actions">
-            <button id="db-refresh-btn" class="btn btn-primary">Refresh</button>
-            <button id="db-export-btn" class="btn btn-secondary">Export</button>
-            <button id="db-delete-filtered-btn" class="btn btn-warning">Delete Filtered</button>
-            <button id="db-clear-all-btn" class="btn btn-danger">Clear All</button>
           </div>
         </div>
-        
-        <!-- Messages Table -->
-        <div class="db-table-wrapper">
-          <table class="db-table">
-            <thead>
-              <tr>
-                <th><input type="checkbox" id="db-select-all"></th>
-                <th>Type</th>
-                <th>From</th>
-                <th>To</th>
-                <th>Message</th>
-                <th>Timestamp</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="db-messages-tbody">
-            </tbody>
-          </table>
+
+        <div id="db-panel-storage" class="db-tab-panel hidden">
+
+          <div class="db-controls">
+            <div class="db-search">
+              <input id="db-storage-path" type="text" placeholder="Storage path to probe (optional)">
+            </div>
+            <div class="db-actions">
+              <button id="db-storage-refresh-btn" class="btn btn-primary">Refresh Status</button>
+            </div>
+          </div>
+
+          <div class="db-table-wrapper">
+            <table class="db-table">
+              <thead>
+                <tr>
+                  <th>Service</th>
+                  <th>Target</th>
+                  <th>Status</th>
+                  <th>Storage Currently</th>
+                  <th>Recommendation</th>
+                </tr>
+              </thead>
+              <tbody id="db-storage-tbody"></tbody>
+            </table>
+          </div>
         </div>
-        
-        <!-- Pagination -->
-        <div class="db-pagination">
-          <button id="db-prev-btn" class="btn btn-secondary">&larr; Previous</button>
-          <span id="db-page-info">Page 1 of 1</span>
-          <button id="db-next-btn" class="btn btn-secondary">Next &rarr;</button>
-          <select id="db-per-page">
-            <option value="25">25 per page</option>
-            <option value="50">50 per page</option>
-            <option value="100">100 per page</option>
-          </select>
+
+        <div id="db-panel-multimedia" class="db-tab-panel hidden">
+          <div class="db-controls">
+            <div class="db-search">
+              <input id="db-media-search" type="text" placeholder="Search by public ID or format...">
+            </div>
+            <div class="db-actions">
+              <button id="db-media-refresh-btn" class="btn btn-primary">Refresh Assets</button>
+              <button id="db-media-flush-btn" class="btn btn-secondary" style="border-color:#ef4444; color:#ef4444;">Flush Unused</button>
+            </div>
+          </div>
+          <div id="db-media-grid" class="db-media-grid">
+            <div class="db-media-loading">Loading Cloudinary assets...</div>
+          </div>
+        </div>
+
+        <div id="db-target-modal" class="modal-overlay hidden">
+          <div class="modal-card" style="max-width: 420px;">
+            <div class="modal-header">
+              <h3 class="modal-title">Reveal Target</h3>
+            </div>
+            <form id="db-target-form" class="modal-form">
+              <div class="modal-body">
+                <div class="input-group">
+                  <label for="db-target-password">Enter your password to view target</label>
+                  <input id="db-target-password" type="password" autocomplete="current-password" required>
+                  <small id="db-target-error" style="display:block; margin-top:6px; color:#ef4444;"></small>
+                </div>
+              </div>
+              <div class="modal-actions">
+                <button type="button" id="db-target-cancel" class="btn btn-secondary">Cancel</button>
+                <button type="submit" class="btn btn-primary">Unlock</button>
+              </div>
+            </form>
+          </div>
         </div>
       </section>
     </div>
@@ -1180,7 +1488,7 @@
   
   <!-- Environment Configuration -->
   <script src="env.js?v=3"></script>
-  <script type="module" src="app.js?v=22"></script>
+  <script type="module" src="app.js?v=23"></script>
 
 <!-- New Message Modal -->
   <div id="new-message-modal" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:2000; align-items:center; justify-content:center;">
@@ -1284,6 +1592,143 @@
     </div>
   </div>
 
-</body>
+  <!-- LP Activities Manager Modal -->
+  <div id="lp-activities-modal" class="modal-overlay hidden">
+    <div class="modal-card lp-act-modal-card">
+      <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <h3 class="modal-title">Manage Landing Page Activities</h3>
+        <button id="lp-act-modal-close" class="icon-btn" style="color:#64748b; font-size:1.5rem; background:none; border:none; cursor:pointer;">&times;</button>
+      </div>
+
+      <!-- Current Activities List -->
+      <div class="lp-act-modal-section">
+        <div class="lp-act-section-label">Current Activities</div>
+        <div id="lp-act-current-list" class="lp-act-current-list">
+          <div class="lp-act-loading"><div class="spinner" style="width:24px;height:24px;"></div><span>Loading…</span></div>
+        </div>
+      </div>
+
+      <!-- Add New Activity Form -->
+      <div class="lp-act-modal-section" style="border-top: 1px solid #e2e8f0; padding-top:20px;">
+        <div class="lp-act-section-label">Add New Activity</div>
+        <form id="lp-act-add-form">
+          <div class="input-group">
+            <label for="lp-act-title">Title <span style="color:#ef4444;">*</span></label>
+            <input type="text" id="lp-act-title" required placeholder="e.g. Leadership Training Seminar">
+          </div>
+          <div class="input-group">
+            <label for="lp-act-excerpt">Short Description <span style="color:#ef4444;">*</span></label>
+            <textarea id="lp-act-excerpt" rows="2" required placeholder="A brief summary of the activity…"></textarea>
+          </div>
+          <div class="input-group">
+            <label for="lp-act-date">Activity Date <span style="color:#ef4444;">*</span></label>
+            <input type="date" id="lp-act-date" required>
+          </div>
+
+          <!-- Image Upload Tabs -->
+          <div class="input-group">
+            <label>Activity Image</label>
+            <div class="upload-tabs" id="lp-act-upload-tabs">
+              <button type="button" class="upload-tab active" data-lptab="file">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                Upload File
+              </button>
+              <button type="button" class="upload-tab" data-lptab="url">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                Use URL
+              </button>
+            </div>
+            <!-- File Tab -->
+            <div id="lp-act-panel-file" class="lp-act-upload-panel">
+              <label for="lp-act-img-file" class="file-upload-label" id="lp-act-file-label" style="min-height:80px;">
+                <div class="upload-icon-wrapper">
+                  <svg class="camera-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                </div>
+                <div class="upload-text-content">
+                  <span id="lp-act-file-label-text">Click or drag image here</span>
+                  <span class="upload-hint">JPG, PNG, GIF (Max 10MB)</span>
+                </div>
+              </label>
+              <input type="file" id="lp-act-img-file" accept="image/*" style="display:none;">
+              <div id="lp-act-img-preview" class="lp-act-img-preview hidden">
+                <img id="lp-act-preview-img" src="" alt="Preview">
+              </div>
+            </div>
+            <!-- URL Tab -->
+            <div id="lp-act-panel-url" class="lp-act-upload-panel hidden">
+              <input type="url" id="lp-act-img-url" placeholder="https://example.com/image.jpg">
+              <div id="lp-act-url-preview" class="lp-act-img-preview hidden" style="margin-top:10px;">
+                <img id="lp-act-url-preview-img" src="" alt="URL Preview">
+              </div>
+            </div>
+          </div>
+
+          <div id="lp-act-form-error" class="login-error hidden"></div>
+          <div class="modal-actions" style="margin-top:16px;">
+            <button type="submit" id="lp-act-submit-btn" class="primary-btn" style="width:100%;">Add Activity</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- LP Documents Manager Modal -->
+  <div id="lp-docs-modal" class="modal-overlay hidden">
+    <div class="modal-card lp-act-modal-card">
+      <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <h3 class="modal-title">Manage Official Documents</h3>
+        <button id="lp-docs-modal-close" class="icon-btn" style="color:#64748b; font-size:1.5rem; background:none; border:none; cursor:pointer;">&times;</button>
+      </div>
+
+      <!-- Current Documents List -->
+      <div class="lp-act-modal-section">
+        <div class="lp-act-section-label">Current Documents</div>
+        <div id="lp-docs-current-list" class="lp-act-current-list">
+          <div class="lp-act-loading"><div class="spinner" style="width:24px;height:24px;"></div><span>Loading&hellip;</span></div>
+        </div>
+      </div>
+
+      <!-- Add New Document Form -->
+      <div class="lp-act-modal-section" style="border-top:1px solid #e2e8f0; padding-top:20px;">
+        <div class="lp-act-section-label">Add New Document</div>
+        <form id="lp-docs-add-form">
+          <div class="input-group">
+            <label for="lp-doc-title">Document Title <span style="color:#ef4444;">*</span></label>
+            <input type="text" id="lp-doc-title" required placeholder="e.g. SC Resolution No. 2026-001">
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+            <div class="input-group">
+              <label for="lp-doc-category">Category <span style="color:#ef4444;">*</span></label>
+              <select id="lp-doc-category" required>
+                <option value="">— Select —</option>
+                <option value="Memo">Memo</option>
+                <option value="Advisory">Advisory</option>
+                <option value="Form">Form</option>
+                <option value="Resolution">Resolution</option>
+                <option value="Issuance">Issuance</option>
+              </select>
+            </div>
+            <div class="input-group">
+              <label for="lp-doc-date">Date Issued <span style="color:#ef4444;">*</span></label>
+              <input type="date" id="lp-doc-date" required>
+            </div>
+          </div>
+          <div class="input-group">
+            <label for="lp-doc-url">Document URL <span style="color:#ef4444;">*</span></label>
+            <input type="url" id="lp-doc-url" required placeholder="https://drive.google.com/file/d/...">
+            <span style="font-size:0.75rem; color:#94a3b8; margin-top:4px; display:block;">Paste a Google Drive share link or any public PDF link. Viewers will open it in a new browser tab.</span>
+          </div>
+          <div class="input-group">
+            <label for="lp-doc-desc">Short Description <span style="font-size:0.8rem; font-weight:400; color:#94a3b8;">(optional)</span></label>
+            <textarea id="lp-doc-desc" rows="2" placeholder="Brief note about this document&hellip;"></textarea>
+          </div>
+          <div id="lp-docs-form-error" class="login-error hidden"></div>
+          <div class="modal-actions" style="margin-top:16px;">
+            <button type="submit" id="lp-docs-submit-btn" class="primary-btn" style="width:100%; background:#6d28d9;">Add Document</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 
 </html>

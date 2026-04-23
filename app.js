@@ -2,13 +2,19 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebas
 import { getDatabase, ref, push, onChildAdded, onChildChanged, onValue, onDisconnect, set, remove, get, update, serverTimestamp, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
 
 // IMMEDIATE AUTH CHECK - Run BEFORE any UI is shown to prevent flash of unauthorized content
+// IMMEDIATE AUTH CHECK - Show landing page or dashboard depending on session
 (function() {
   const sessionData = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
-  if (!sessionData) {
-    // Not logged in - immediately show loading page to prevent home page flash
-    document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
-    var loadingPage = document.getElementById('loading');
-    if (loadingPage) loadingPage.classList.add('active');
+  const isLoginPage = window.location.hash === '#login';
+  
+  if (!sessionData && !isLoginPage) {
+    // Proactively show landing page to avoid blank screen while waiting for full init
+    const lp = document.getElementById('landing-page');
+    if (lp) lp.classList.remove('hidden');
+  } else if (!sessionData && isLoginPage) {
+    // Show login overlay immediately if explicitly requested
+    const lo = document.getElementById('login-overlay');
+    if (lo) lo.classList.remove('hidden');
   }
 })();
 
@@ -110,6 +116,20 @@ if (window.ENV && window.ENV.FIREBASE_CONFIG) {
   } catch(e) {
     console.error("User messaging firebase init failed:", e);
   }
+}
+
+// Optional second database used by superadmin database health checks.
+let storageCheckDb = null;
+if (window.ENV && window.ENV.STORAGE_CHECK_FIREBASE_CONFIG) {
+  try {
+    const storageApp = initializeApp(window.ENV.STORAGE_CHECK_FIREBASE_CONFIG, "storageCheckApp");
+    storageCheckDb = getDatabase(storageApp);
+  } catch (e) {
+    console.error("Storage check firebase init failed:", e);
+  }
+} else if (userDb) {
+  // Fallback to main messaging database for storage health probes if not specifically defined
+  storageCheckDb = userDb;
 }
 
 let contactsMap = {};
@@ -606,7 +626,10 @@ window.addEventListener('DOMContentLoaded', () => {
     initUserMessaging();
     initSharedMessaging(); // Initialize the universal listener
     setTimeout(initFullMessenger, 2000); // Give Firebase a moment to sync
+    initLpActivities(); // Load dynamic landing page activities (public)
+    initLpDocuments();  // Load dynamic landing page documents (public)
 });
+
 
 
 
@@ -1213,6 +1236,44 @@ document.addEventListener('DOMContentLoaded', () => {
   const navToggle = document.getElementById('nav-toggle');
   const navOverlay = document.getElementById('nav-overlay');
 
+  // Landing Page Elements
+  const landingPage = document.getElementById('landing-page');
+  const lpLoginBtn = document.getElementById('lp-login-btn');
+  const lpMobileToggle = document.getElementById('lp-mobile-toggle');
+  const lpNavLinks = document.getElementById('lp-nav-links');
+
+  // Landing Page variables moved to appropriate scopes or hoisted functions
+
+  // Initialize Landing Page UI
+  if (landingPage) {
+    lpLoginBtn?.addEventListener('click', () => {
+      window.location.hash = 'login';
+      if (loginOverlay) loginOverlay.classList.remove('hidden');
+    });
+
+    lpMobileToggle?.addEventListener('click', () => {
+      lpNavLinks?.classList.toggle('active');
+    });
+
+    // Smooth scroll for LP links
+    lpNavLinks?.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', (e) => {
+        const href = link.getAttribute('href');
+        if (href.startsWith('#lp-')) {
+          e.preventDefault();
+          const target = document.querySelector(href);
+          if (target) {
+            target.scrollIntoView({ behavior: 'smooth' });
+            lpNavLinks.classList.remove('active');
+          }
+        }
+      });
+    });
+  }
+
+  window.showLandingPage = showLandingPage;
+  window.hideLandingPage = hideLandingPage;
+
   // New UI elements for login/user menu
   const loginOverlay = document.getElementById('login-overlay');
   const loginForm = document.getElementById('login-form');
@@ -1226,6 +1287,32 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnSidebarToggle = document.getElementById('sidebar-toggle');
   const btnAdminExitTv = document.getElementById('admin-exit-tv');
 
+  function showLandingPage() {
+    const lp = document.getElementById('landing-page');
+    const lo = document.getElementById('login-overlay');
+    const sb = document.querySelector('.sidebar');
+    const ct = document.querySelector('.content');
+    if (lp) {
+      lp.classList.remove('hidden');
+      document.body.classList.add('lp-mode');
+      if (sb) sb.classList.add('hidden');
+      if (ct) ct.classList.add('hidden');
+      if (lo) lo.classList.add('hidden');
+    }
+  }
+
+  function hideLandingPage() {
+    const lp = document.getElementById('landing-page');
+    const sb = document.querySelector('.sidebar');
+    const ct = document.querySelector('.content');
+    if (lp) {
+      lp.classList.add('hidden');
+      document.body.classList.remove('lp-mode');
+      if (sb && !document.body.classList.contains('tv-mode')) sb.classList.remove('hidden');
+      if (ct) ct.classList.remove('hidden');
+    }
+  }
+
   // TV View Settings (Restore missing definitions)
   const tvSettingsBox = document.getElementById('tv-settings');
   const btnTvAudio = document.getElementById('btn-tv-audio');
@@ -1235,12 +1322,26 @@ document.addEventListener('DOMContentLoaded', () => {
   let tvAudioEnabled = localStorage.getItem('sas_tv_audio_enabled') !== 'false'; // Default to true
   let tvTheaterEnabled = localStorage.getItem('sas_tv_theater_enabled') === 'true'; // Default to false
 
+  // Scroll listener for landing page navbar
+  window.addEventListener('scroll', () => {
+    const navbar = document.querySelector('.lp-navbar');
+    const scrollPos = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
+    if (navbar && document.body.classList.contains('lp-mode')) {
+      if (scrollPos > 40) {
+        navbar.classList.add('scrolled');
+      } else {
+        navbar.classList.remove('scrolled');
+      }
+    }
+  }, { passive: true });
+
   let systems = [];
   let systemsLoaded = false;
   let systemsPromise = null;
   let ytPlayers = {}; // Persistent store for YT players
   let globalCarouselTimer = null;
-  let globalSlideGeneration = 0;  // Messaging state moved to top level
+  let globalSlideGeneration = 0;
+  // Messaging state moved to top level
 ;
 
   // TV Carousel State Exporters (for toggle responsiveness)
@@ -1347,12 +1448,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function syncFromHash() {
     if (!systemsLoaded) {
-      // If called before config, defer until ready
       if (systemsPromise) {
         systemsPromise.then(() => syncFromHash());
       }
       return;
     }
+    
+    // Check if we should show landing page
+    const sessionLP = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
+    if (!sessionLP) {
+      if (window.location.hash === '#login') {
+        hideLandingPage();
+        const lo = document.getElementById('login-overlay');
+        if (lo) lo.classList.remove('hidden');
+      } else {
+        showLandingPage();
+        return;
+      }
+    } else {
+      hideLandingPage();
+      const lo = document.getElementById('login-overlay');
+      if (lo) lo.classList.add('hidden');
+    }
+
     var pageId = getHashPageId();
     
     // Lock scanner role to #attendance-scanner only
@@ -1401,16 +1519,23 @@ document.addEventListener('DOMContentLoaded', () => {
       closeNav();
       if (systemFrame) systemFrame.src = 'about:blank';
       showPage('home');
+      fetchPosts();
+      return;
+    }
+    
+    // Fallback for unauthorized/public hash navigation
+    if (!localStorage.getItem('sas_user_data') && pageId !== 'login') {
+      showLandingPage();
       return;
     }
 
     var sys = systems.find(function (s) { return s.id === pageId; });
     
     // --- RBAC CHECK ---
-    const sessionData = localStorage.getItem('sas_user_data');
     let userRole = 'guest';
-    if (sessionData) {
-      try { userRole = JSON.parse(sessionData).role; } catch(e) {}
+    const rbacSession = localStorage.getItem('sas_user_data');
+    if (rbacSession) {
+      try { userRole = JSON.parse(rbacSession).role; } catch(e) {}
     }
 
     if (!sys) {
@@ -1481,12 +1606,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderNav() {
-    const sessionData = localStorage.getItem('sas_user_data');
+    const navSession = localStorage.getItem('sas_user_data');
     let userRole = 'guest';
 
-    if (sessionData) {
+    if (navSession) {
       try {
-        const userData = JSON.parse(sessionData);
+        const userData = JSON.parse(navSession);
         userRole = userData.role;
       } catch (e) { }
     }
@@ -1607,6 +1732,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }, 4000);
   }
+  window.showToast = showToast;
 
   function showConfirm(title, message, showPassword = false, type = 'info') {
     return new Promise((resolve) => {
@@ -1689,8 +1815,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Helper functions for UI state
   function showLoginUI() {
+    hideLandingPage(); // Hide landing page when showing login
     document.body.classList.remove('system-mode');
-    if (loginOverlay) loginOverlay.classList.remove('hidden');
+    const lo = document.getElementById('login-overlay');
+    if (lo) lo.classList.remove('hidden');
     if (navToggle) navToggle.classList.add('hidden');
     if (userMenuBtn) userMenuBtn.hidden = true;
     const widget = document.getElementById('fb-chat-widget');
@@ -1735,17 +1863,26 @@ function showAppUI(userObj) {
     setupUserMenu(userObj);
     finishInit();
     initUserMessaging();
+    initLpActivitiesAdmin(userObj); // Admin LP activities management
+    initLpDocumentsAdmin(userObj);  // Admin LP documents management
 }
 
 
 
+
   // Check login state on load
-  const sessionData = localStorage.getItem('sas_user_data');
-  if (sessionData) {
-    const userObj = JSON.parse(sessionData);
+  const initialSession = localStorage.getItem('sas_user_data');
+  if (initialSession) {
+    const userObj = JSON.parse(initialSession);
+    hideLandingPage();
     showAppUI(userObj);
   } else {
-    showLoginUI();
+    // If no session, show landing page unless hash is explicitly #login
+    if (window.location.hash === '#login') {
+      showLoginUI();
+    } else {
+      showLandingPage();
+    }
   }
 
   // Function to sync TV UI elements to global state
@@ -4243,17 +4380,34 @@ if (logoutBtn) {
   // --- DATABASE MANAGEMENT (Superadmin Only) ---
   async function initDatabaseManagement() {
     if (!userDb) return;
+    try {
+      const raw = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data') || '{}';
+      const role = (JSON.parse(raw).role || '').toLowerCase();
+      if (role !== 'superadmin') return;
+    } catch (e) {
+      return;
+    }
 
     const refreshBtn = document.getElementById('db-refresh-btn');
     if (!refreshBtn || !userDb) return;
+    const dbSection = document.getElementById('database');
+    if (dbSection?.dataset.initialized === 'true') return;
+    if (dbSection) dbSection.dataset.initialized = 'true';
 
     let allMessages = [];
     let filteredMessages = [];
     let currentPage = 1;
     let perPage = 25;
     let uniqueUsers = new Set();
+    let cloudinaryStorageInfo = { usedText: '--', ratio: 0 };
+    let supabaseStorageInfo = { usedText: '--', ratio: 0 };
+    const revealedTargets = { gas: false, fbMsg: false, fbStore: false, supabase: false, cloudinary: false };
+    let pendingRevealTarget = null;
+    let lastStatusSnapshot = { gasState: 'Checking...', fbMsgState: 'Checking...', fbStoreState: 'Checking...', supabaseState: 'Checking...', cloudinaryState: 'Checking...', storagePath: 'user_messages' };
+    let lastCloudinaryProbeAsset = null;
 
     const elements = {
+      refreshBtn: refreshBtn,
       tbody: document.getElementById('db-messages-tbody'),
       search: document.getElementById('db-search-input'),
       filterType: document.getElementById('db-filter-type'),
@@ -4271,11 +4425,645 @@ if (logoutBtn) {
       totalStat: document.getElementById('db-total-messages'),
       userCount: document.getElementById('db-user-messages-count'),
       adminCount: document.getElementById('db-admin-messages-count'),
-      activeUsers: document.getElementById('db-active-users')
+      activeUsers: document.getElementById('db-active-users'),
+      tabMessaging: document.getElementById('db-tab-messaging'),
+      tabStorage: document.getElementById('db-tab-storage'),
+      panelMessaging: document.getElementById('db-panel-messaging'),
+      panelStorage: document.getElementById('db-panel-storage'),
+      storagePath: document.getElementById('db-storage-path'),
+      storageRefreshBtn: document.getElementById('db-storage-refresh-btn'),
+      storageTbody: document.getElementById('db-storage-tbody'),
+      targetModal: document.getElementById('db-target-modal'),
+      targetForm: document.getElementById('db-target-form'),
+      targetPassword: document.getElementById('db-target-password'),
+      targetCancel: document.getElementById('db-target-cancel'),
+      targetError: document.getElementById('db-target-error'),
+      tabMultimedia: document.getElementById('db-tab-multimedia'),
+      panelMultimedia: document.getElementById('db-panel-multimedia'),
+      mediaSearch: document.getElementById('db-media-search'),
+      mediaRefreshBtn: document.getElementById('db-media-refresh-btn'),
+      mediaFlushBtn: document.getElementById('db-media-flush-btn'),
+      mediaGrid: document.getElementById('db-media-grid')
     };
+
+    async function checkGasStatus() {
+      if (!BACKEND_GAS_URL) return 'Not Configured';
+      try {
+        const res = await fetch(BACKEND_GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'ping' }) });
+        // Even if 'Unknown action' returned, if status is 200/204 it's online
+        return res.ok || res.status === 200 ? 'Online' : `Error (${res.status})`;
+      } catch (e) { return 'Offline'; }
+    }
+
+    async function checkDatabaseStatus(dbInstance, probePath) {
+      if (!dbInstance) return 'Optional / Not Linked';
+      try {
+        const snap = await get(ref(dbInstance, probePath));
+        return snap.exists() ? 'Online' : 'Online (Empty)';
+      } catch (err) {
+        return `Error (${err.code || 'Forbidden'})`;
+      }
+    }
+
+    async function checkSupabaseStatus() {
+      const supabaseUrl = window.ENV?.SUPABASE_URL;
+      const anonKey = window.ENV?.SUPABASE_ANON_KEY;
+      if (!supabaseUrl || !anonKey) return 'Not Configured';
+      try {
+        // Probing a specific table instead of root to avoid 401 on protected schemas
+        const res = await fetch(`${supabaseUrl}/rest/v1/sas_attendance_logs?select=id&limit=1`, {
+          method: 'GET',
+          headers: {
+            apikey: anonKey,
+            Authorization: `Bearer ${anonKey}`
+          }
+        });
+        if (res.status === 200 || res.status === 204) return 'Online';
+        return `Online (${res.status})`;
+      } catch (err) {
+        return 'Offline';
+      }
+    }
+
+    async function checkCloudinaryStatus() {
+      const cloudName = window.ENV?.CLOUDINARY_CLOUD_NAME;
+      if (!cloudName) return 'Not Configured';
+      // Use a real asset if we've successfully fetched one before, otherwise fallback to sample
+      const testUrl = lastCloudinaryProbeAsset || `https://res.cloudinary.com/${encodeURIComponent(cloudName)}/image/upload/sample`;
+      try {
+        const res = await fetch(testUrl, { method: 'HEAD', cache: 'no-cache' });
+        // Any response from Cloudinary (even 404/403) means the service is reachable for this cloud name
+        if (res.status < 500) return 'Online';
+        return `Error (${res.status})`;
+      } catch (err) {
+        return 'Offline';
+      }
+    }
+
+    function getStatusCheckTimeLabel() {
+      return new Date().toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      });
+    }
+
+    function setCloudinaryUsageFallback(text) {
+      if (elements.cloudinaryImpressions) elements.cloudinaryImpressions.textContent = text;
+      if (elements.cloudinaryAssets) elements.cloudinaryAssets.textContent = text;
+      if (elements.cloudinaryTransformations) elements.cloudinaryTransformations.textContent = text;
+      if (elements.cloudinaryBandwidth) elements.cloudinaryBandwidth.textContent = text;
+      if (elements.cloudinaryStorage) elements.cloudinaryStorage.textContent = text;
+      cloudinaryStorageInfo = { usedText: '--', ratio: 0 };
+    }
+
+    function formatBytes(value) {
+      const num = Number(value);
+      if (!Number.isFinite(num) || num < 0) return '--';
+      if (num < 1024) return `${num.toFixed(0)} B`;
+      if (num < 1024 * 1024) return `${(num / 1024).toFixed(2)} KB`;
+      if (num < 1024 * 1024 * 1024) return `${(num / (1024 * 1024)).toFixed(2)} MB`;
+      return `${(num / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+    }
+
+    async function loadSupabaseUsageOverview() {
+      const supabaseUrl = window.ENV?.SUPABASE_URL;
+      const anonKey = window.ENV?.SUPABASE_ANON_KEY;
+      if (!supabaseUrl || !anonKey) {
+        supabaseStorageInfo = { usedText: 'Not Configured', ratio: 0 };
+        return;
+      }
+
+      const tables = ['sas_attendance_logs', 'sas_schedules', 'sas_events', 'NBSC_masterlist'];
+      let totalRows = 0;
+
+      try {
+        const counts = await Promise.all(tables.map(async (table) => {
+          try {
+            const res = await fetch(`${supabaseUrl}/rest/v1/${table}?select=count`, {
+              headers: {
+                apikey: anonKey,
+                Authorization: `Bearer ${anonKey}`,
+                Range: '0-0',
+                Prefer: 'count=exact'
+              }
+            });
+            if (!res.ok) return 0;
+            const contentRange = res.headers.get('content-range');
+            if (contentRange) {
+              const count = parseInt(contentRange.split('/')[1]);
+              return Number.isFinite(count) ? count : 0;
+            }
+            return 0;
+          } catch (e) { return 0; }
+        }));
+
+        totalRows = counts.reduce((a, b) => a + b, 0);
+        
+        // Estimation: ~200 bytes per row + some overhead
+        const estimatedBytes = totalRows * 200;
+        const limitBytes = 500 * 1024 * 1024; // Supabase free tier db limit is 500MB
+        const ratio = Math.min(100, Math.max(0.1, (estimatedBytes / limitBytes) * 100));
+        
+        supabaseStorageInfo = { 
+          usedText: `${totalRows.toLocaleString()} rows / ~${(estimatedBytes / (1024 * 1024)).toFixed(2)} MB estimated`,
+          ratio: Number(ratio.toFixed(2))
+        };
+      } catch (err) {
+        supabaseStorageInfo = { usedText: 'Error fetching', ratio: 0 };
+      }
+    }
+
+    async function loadCloudinaryUsageOverview() {
+      if (!BACKEND_GAS_URL || !BACKEND_GAS_URL.startsWith('https://')) {
+        setCloudinaryUsageFallback('N/A');
+        return;
+      }
+
+      const defaultLimitGb = Number(window.ENV?.CLOUDINARY_STORAGE_LIMIT_GB || 15);
+      const fallbackLimitBytes = Number.isFinite(defaultLimitGb) && defaultLimitGb > 0
+        ? defaultLimitGb * 1024 * 1024 * 1024
+        : 15 * 1024 * 1024 * 1024;
+
+      const applyUsageToUi = (usage, periodLabel) => {
+        const storageBytes = Number(usage.storage);
+        const storageLimitBytes = Number(usage.storageLimit || usage.storage_limit || usage.limit);
+        const effectiveLimit = Number.isFinite(storageLimitBytes) && storageLimitBytes > 0
+          ? storageLimitBytes
+          : fallbackLimitBytes;
+        const ratio = Number.isFinite(storageBytes) && storageBytes >= 0
+          ? Math.min(100, Math.max(0, (storageBytes / effectiveLimit) * 100))
+          : 0;
+        const usedLine = `${formatBytes(storageBytes)} / ${formatBytes(effectiveLimit)} used`;
+
+        if (elements.cloudinaryImpressions) elements.cloudinaryImpressions.textContent = usage.impressions ?? '--';
+        if (elements.cloudinaryAssets) elements.cloudinaryAssets.textContent = usage.assets ?? '--';
+        if (elements.cloudinaryTransformations) elements.cloudinaryTransformations.textContent = usage.transformations ?? '--';
+        if (elements.cloudinaryBandwidth) elements.cloudinaryBandwidth.textContent = usage.bandwidthFormatted || formatBytes(usage.bandwidth);
+        if (elements.cloudinaryStorage) elements.cloudinaryStorage.textContent = usage.storageFormatted || formatBytes(usage.storage);
+        if (elements.cloudinaryPeriodLabel && periodLabel) elements.cloudinaryPeriodLabel.textContent = periodLabel;
+        cloudinaryStorageInfo = { usedText: usedLine, ratio: Number(ratio.toFixed(1)) };
+      };
+
+      const estimateCloudinaryUsageFromPosts = async () => {
+        try {
+          const postsRes = await fetch(BACKEND_GAS_URL, { method: 'GET' });
+          if (!postsRes.ok) throw new Error('Posts fetch failed');
+          const postsPayload = await postsRes.json();
+          const posts = Array.isArray(postsPayload?.posts) ? postsPayload.posts : [];
+          const cloudName = window.ENV?.CLOUDINARY_CLOUD_NAME || '';
+          const urls = [...new Set(
+            posts
+              .map(p => (p?.imageUrl || '').trim())
+              .filter(url => url.includes('res.cloudinary.com') && (!cloudName || url.includes(`/res.cloudinary.com/${cloudName}/`) || url.includes(`res.cloudinary.com/${cloudName}/`)))
+          )];
+
+          let totalBytes = 0;
+          for (const url of urls.slice(0, 50)) {
+            try {
+              const headRes = await fetch(url, { method: 'HEAD', mode: 'cors' });
+              const len = Number(headRes.headers.get('content-length') || 0);
+              if (Number.isFinite(len) && len > 0) totalBytes += len;
+            } catch (e) {
+              // Ignore per-asset failures and continue estimating.
+            }
+          }
+
+          applyUsageToUi({
+            impressions: '--',
+            assets: urls.length,
+            transformations: '--',
+            bandwidth: null,
+            storage: totalBytes,
+            storageLimit: fallbackLimitBytes
+          }, 'Estimated from current posts');
+        } catch (e) {
+          setCloudinaryUsageFallback('N/A');
+          if (elements.cloudinaryPeriodLabel) elements.cloudinaryPeriodLabel.textContent = 'Usage unavailable';
+        }
+      };
+
+      try {
+        const res = await fetch(BACKEND_GAS_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'cloudinaryUsageOverview' })
+        });
+        if (!res.ok) return estimateCloudinaryUsageFromPosts();
+
+        const payload = await res.json();
+        if (payload?.success === false && /Unknown action/i.test(payload?.message || '')) {
+          return estimateCloudinaryUsageFromPosts();
+        }
+        const usage = payload?.usage || payload?.data || {};
+        if (!usage || typeof usage !== 'object') {
+          return estimateCloudinaryUsageFromPosts();
+        }
+        applyUsageToUi(usage, 'Last 30 days');
+      } catch (err) {
+        await estimateCloudinaryUsageFromPosts();
+      }
+    }
+
+    function renderStorageStatusRows(gasState, fbMsgState, fbStoreState, supabaseState, cloudinaryState, storagePath) {
+      if (!elements.storageTbody) return;
+      const targetValues = {
+        gas: BACKEND_GAS_URL || 'Not Configured',
+        fbMsg: window.ENV?.FIREBASE_CONFIG?.databaseURL || 'Not Configured',
+        fbStore: window.ENV?.STORAGE_CHECK_FIREBASE_CONFIG?.databaseURL || (storageCheckDb && storageCheckDb === userDb ? (window.ENV?.FIREBASE_CONFIG?.databaseURL || 'Not Configured') : 'Not Configured'),
+        supabase: window.ENV?.SUPABASE_URL || 'Not Configured',
+        cloudinary: window.ENV?.CLOUDINARY_CLOUD_NAME || 'Not Configured'
+      };
+      const maskedText = '********';
+      const targetCellHtml = (key) => {
+        const val = targetValues[key];
+        if (!val || val === 'Not Configured') {
+          return '<span style="color:#64748b; font-style:italic; font-size:0.8rem;">None / Not Set</span>';
+        }
+        const isRevealed = revealedTargets[key];
+        const shownValue = isRevealed ? val : maskedText;
+        const icon = isRevealed ? '&#128065;&#65039;' : '&#128584;';
+        return `
+          <div class="db-target-cell">
+            <span class="db-target-value">${escapeHtml(shownValue)}</span>
+            <button class="db-target-eye" type="button" title="Reveal target" onclick="dbPromptRevealTarget('${key}')">${icon}</button>
+          </div>
+        `;
+      };
+      const getRec = (ratio) => {
+        if (ratio >= 90) return `<span style="color:#ef4444; font-weight:700;">🚨 Upgrade Recommended</span>`;
+        if (ratio >= 70) return `<span style="color:#f59e0b; font-weight:700;">⚠️ Warning (Usage High)</span>`;
+        return `<span style="color:#22c55e; font-weight:700;">✅ Optimal (Healthy)</span>`;
+      };
+
+      elements.storageTbody.innerHTML = `
+        <tr>
+          <td>Google Sheets (GAS Backend)</td>
+          <td>${targetCellHtml('gas')}</td>
+          <td>${escapeHtml(gasState)}</td>
+          <td class="db-table-storage-cell">
+            <div class="db-mini-storage-text">~10M Cells Limit</div>
+            <div class="db-mini-storage-bar">
+              <div class="db-mini-storage-fill" style="width:0.1%;"></div>
+            </div>
+          </td>
+          <td>${getRec(0.1)}</td>
+        </tr>
+        <tr>
+          <td>Firebase Messaging</td>
+          <td>${targetCellHtml('fbMsg')}</td>
+          <td>${escapeHtml(fbMsgState)}</td>
+          <td class="db-table-storage-cell">
+            <div class="db-mini-storage-text">1GB Limit (Free)</div>
+            <div class="db-mini-storage-bar">
+              <div class="db-mini-storage-fill" style="width:0.1%;"></div>
+            </div>
+          </td>
+          <td>${getRec(0.1)}</td>
+        </tr>
+        <tr>
+          <td>Firebase Storage DB</td>
+          <td>${targetCellHtml('fbStore')}</td>
+          <td>${escapeHtml(fbStoreState)}</td>
+          <td class="db-table-storage-cell">
+            <div class="db-mini-storage-text">1GB Limit (Free)</div>
+            <div class="db-mini-storage-bar">
+              <div class="db-mini-storage-fill" style="width:0.1%;"></div>
+            </div>
+          </td>
+          <td>${(fbStoreState === 'Optional / Not Linked' && !storageCheckDb) ? 'N/A' : getRec(0.1)}</td>
+        </tr>
+        <tr>
+          <td>Supabase Database</td>
+          <td>${targetCellHtml('supabase')}</td>
+          <td>${escapeHtml(supabaseState)}</td>
+          <td class="db-table-storage-cell">
+            <div class="db-mini-storage-text">${escapeHtml(supabaseStorageInfo.usedText)} (500MB Limit)</div>
+            <div class="db-mini-storage-bar">
+              <div class="db-mini-storage-fill" style="width:${supabaseStorageInfo.ratio}%;"></div>
+            </div>
+          </td>
+          <td>${getRec(supabaseStorageInfo.ratio)}</td>
+        </tr>
+        <tr>
+          <td>Cloudinary Media</td>
+          <td>${targetCellHtml('cloudinary')}</td>
+          <td>${escapeHtml(cloudinaryState)}</td>
+          <td class="db-table-storage-cell">
+            <div class="db-mini-storage-text">${escapeHtml(cloudinaryStorageInfo.usedText)} (${window.ENV?.CLOUDINARY_STORAGE_LIMIT_GB || 15}GB Limit)</div>
+            <div class="db-mini-storage-bar">
+              <div class="db-mini-storage-fill" style="width:${cloudinaryStorageInfo.ratio}%;"></div>
+            </div>
+          </td>
+          <td>${getRec(cloudinaryStorageInfo.ratio)}</td>
+        </tr>
+      `;
+    }
+
+    function switchDbPanel(view) {
+      if (elements.panelMessaging) elements.panelMessaging.classList.toggle('hidden', view !== 'messaging');
+      if (elements.panelStorage) elements.panelStorage.classList.toggle('hidden', view !== 'storage');
+      if (elements.panelMultimedia) elements.panelMultimedia.classList.toggle('hidden', view !== 'multimedia');
+      
+      if (elements.tabMessaging) elements.tabMessaging.classList.toggle('active', view === 'messaging');
+      if (elements.tabStorage) elements.tabStorage.classList.toggle('active', view === 'storage');
+      if (elements.tabMultimedia) elements.tabMultimedia.classList.toggle('active', view === 'multimedia');
+      
+      if (view === 'multimedia') loadMultimediaDatabase();
+    }
+
+    async function loadMultimediaDatabase() {
+      if (!elements.mediaGrid) return;
+      elements.mediaGrid.innerHTML = '<div class="db-media-loading"><div class="spinner"></div><span>Fetching Cloudinary assets...</span></div>';
+      
+      try {
+        const res = await fetch(BACKEND_GAS_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'listMultimedia' })
+        });
+        const payload = await res.json();
+        
+        if (!payload.success) {
+          elements.mediaGrid.innerHTML = `<div class="db-media-error">Error: ${escapeHtml(payload.message)}</div>`;
+          return;
+        }
+        
+        const resources = payload.resources || [];
+        if (resources.length > 0 && resources[0].secure_url) {
+          lastCloudinaryProbeAsset = resources[0].secure_url;
+        }
+        
+        if (resources.length === 0) {
+          elements.mediaGrid.innerHTML = '<div class="db-media-empty">No assets found in Cloudinary.</div>';
+          return;
+        }
+        
+        elements.mediaGrid.innerHTML = resources.map(res => {
+          // Use thumbnail transform for preview
+          const thumbUrl = res.secure_url.replace('/upload/', '/upload/w_200,h_200,c_fill/');
+          const date = new Date(res.created_at).toLocaleDateString();
+          const size = (res.bytes / 1024 / 1024).toFixed(2) + ' MB';
+          
+          return `
+            <div class="db-media-card" title="${escapeHtml(res.public_id)}">
+              <div class="db-media-preview">
+                <img src="${thumbUrl}" alt="${escapeHtml(res.public_id)}" loading="lazy">
+              </div>
+              <div class="db-media-info">
+                <div class="db-media-id">${escapeHtml(res.public_id)}</div>
+                <div class="db-media-meta">${res.format.toUpperCase()} &bull; ${size} &bull; ${date}</div>
+              </div>
+              <div class="db-media-actions">
+                <a href="${res.secure_url}" target="_blank" class="db-media-btn" title="Open Full Size">View</a>
+                <button class="db-media-btn delete" onclick="dbDeleteMedia('${res.public_id}', '${res.resource_type}')" title="Delete Everywhere">Delete</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+        
+      } catch (err) {
+        elements.mediaGrid.innerHTML = `<div class="db-media-error">Network error while fetching assets.</div>`;
+      }
+    }
+
+    async function updateDatabaseStatuses() {
+      const storagePath = (elements.storagePath?.value || '').trim() || window.ENV?.STORAGE_CHECK_PATH || 'storage_check_health';
+      const [gasState, fbMsgState, fbStoreState, supabaseState, cloudinaryState] = await Promise.all([
+        checkGasStatus(),
+        checkDatabaseStatus(userDb, 'user_messages'),
+        checkDatabaseStatus(storageCheckDb, storagePath),
+        checkSupabaseStatus(),
+        checkCloudinaryStatus()
+      ]);
+      lastStatusSnapshot = { gasState, fbMsgState, fbStoreState, supabaseState, cloudinaryState, storagePath };
+
+      renderStorageStatusRows(gasState, fbMsgState, fbStoreState, supabaseState, cloudinaryState, storagePath);
+      
+      await Promise.all([
+        loadCloudinaryUsageOverview(),
+        loadSupabaseUsageOverview()
+      ]);
+      
+      // Re-render table so "Storage Currently" reflects the latest usage fetch.
+      renderStorageStatusRows(gasState, fbMsgState, fbStoreState, supabaseState, cloudinaryState, storagePath);
+    }
+
+    function rerenderStorageRows() {
+      renderStorageStatusRows(
+        lastStatusSnapshot.gasState,
+        lastStatusSnapshot.fbMsgState,
+        lastStatusSnapshot.fbStoreState,
+        lastStatusSnapshot.supabaseState,
+        lastStatusSnapshot.cloudinaryState,
+        lastStatusSnapshot.storagePath
+      );
+    }
+
+    async function flushMultimediaDatabase() {
+      const confirmMsg = 'This will scan your system (TV Posts, User Profiles, and Landing Page) and delete ANY Cloudinary assets that are not currently being used. This cannot be undone. Please enter your password to confirm.';
+      
+      const raw = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data') || '{}';
+      const userObj = JSON.parse(raw);
+
+      let confirmed = false;
+      if (typeof showConfirm === 'function') {
+        const inputPass = await showConfirm('Flush Unused Assets', confirmMsg, true, 'danger');
+        if (inputPass === userObj.password) {
+          confirmed = true;
+        } else if (inputPass !== null) {
+          showToast('Incorrect password.', 'error');
+          return;
+        }
+      } else {
+        confirmed = window.confirm(confirmMsg);
+      }
+
+      if (!confirmed) return;
+
+      showToast('Scanning for used assets...', 'info');
+
+      try {
+        const raw = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data') || '{}';
+        const userObj = JSON.parse(raw);
+
+        // 1. Get used IDs from Firebase (Landing Page)
+        const lpRef = ref(userDb, 'lp_activities');
+        const lpSnap = await get(lpRef);
+        const lpData = lpSnap.val() || {};
+        const usedIdsFromFirebase = [];
+
+        Object.values(lpData).forEach(act => {
+          const id = extractCloudinaryId(act.imageUrl);
+          if (id) usedIdsFromFirebase.push(id);
+        });
+
+        // 2. Trigger GAS Flush
+        const res = await fetch(BACKEND_GAS_URL, {
+          method: 'POST',
+          body: JSON.stringify({ 
+            action: 'flushMultimedia',
+            firebaseUsedIds: usedIdsFromFirebase,
+            username: userObj.username,
+            password: userObj.password
+          })
+        });
+        const payload = await res.json();
+
+        if (payload.success) {
+          showToast(payload.message || 'Flush completed successfully!', 'success');
+          loadMultimediaDatabase(); // Refresh grid
+        } else {
+          showToast('Flush failed: ' + payload.message, 'error');
+        }
+      } catch (err) {
+        showToast('Flush error: ' + err.message, 'error');
+      }
+    }
+
+    function extractCloudinaryId(url) {
+      if (!url || typeof url !== 'string' || !url.includes('res.cloudinary.com')) return null;
+      const parts = url.split('/upload/');
+      if (parts.length < 2) return null;
+      
+      const segments = parts[1].split('/');
+      let startIndex = 0;
+      
+      // Skip transformation/version segments
+      while (startIndex < segments.length) {
+        const seg = segments[startIndex];
+        // Versions match v123456789
+        const isVersion = seg.startsWith('v') && /^\d+$/.test(seg.substring(1));
+        // Transformations usually have commas or specific short-codes like c_fill, w_100
+        const isTransformation = seg.includes(',') || (seg.length < 12 && (seg.includes('_') || seg.includes('=') || /^[acdegilmostwx]\d+/.test(seg)));
+        
+        if (isVersion || isTransformation) {
+          startIndex++;
+          continue;
+        }
+        break;
+      }
+      
+      let idWithExt = segments.slice(startIndex).join('/');
+      const dotIdx = idWithExt.lastIndexOf('.');
+      if (dotIdx > -1) {
+        const ext = idWithExt.substring(dotIdx + 1);
+        if (!ext.includes('/') && ext.length <= 5) idWithExt = idWithExt.substring(0, dotIdx);
+      }
+      return decodeURIComponent(idWithExt);
+    }
+
+    window.dbDeleteMedia = async function(publicId, resourceType) {
+      const confirmMsg = `CAUTION: This will delete the asset from Cloudinary AND remove any linked TV posts or Landing Page activities. Please enter your password to proceed.`;
+      
+      const raw = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data') || '{}';
+      const userObj = JSON.parse(raw);
+
+      let confirmed = false;
+      if (typeof showConfirm === 'function') {
+        const inputPass = await showConfirm('Confirm Deletion', confirmMsg, true, 'danger');
+        if (inputPass === userObj.password) {
+          confirmed = true;
+        } else if (inputPass !== null) {
+          showToast('Incorrect password.', 'error');
+          return;
+        }
+      } else {
+        confirmed = window.confirm(confirmMsg);
+      }
+
+      if (!confirmed) return;
+
+      showToast('Initiating cascading deletion...', 'info');
+
+      try {
+        const raw = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data') || '{}';
+        const userObj = JSON.parse(raw);
+
+        // 1. Cascading delete from Firebase Landing Page Activities
+        const lpRef = ref(userDb, 'lp_activities');
+        const lpSnap = await get(lpRef);
+        const lpData = lpSnap.val() || {};
+        let deletedLpCount = 0;
+
+        for (const [key, act] of Object.entries(lpData)) {
+          // Check if the activity uses this Cloudinary asset
+          if (act.imageUrl && act.imageUrl.includes(publicId)) {
+            await remove(ref(userDb, `lp_activities/${key}`));
+            deletedLpCount++;
+          }
+        }
+
+        // 2. Call GAS to delete from Cloudinary and Spreadsheet Posts
+        const res = await fetch(BACKEND_GAS_URL, {
+          method: 'POST',
+          body: JSON.stringify({ 
+            action: 'deleteMultimedia', 
+            publicId, 
+            resourceType,
+            username: userObj.username,
+            password: userObj.password
+          })
+        });
+        const payload = await res.json();
+
+        if (payload.success) {
+          let msg = payload.message;
+          if (deletedLpCount > 0) msg += ` (and ${deletedLpCount} Landing Page activity removed)`;
+          showToast(msg, 'success');
+          loadMultimediaDatabase(); // Refresh grid
+        } else {
+          showToast('Error: ' + payload.message, 'error');
+        }
+      } catch (err) {
+        showToast('Cascading deletion failed: ' + err.message, 'error');
+      }
+    };
+
+    function closeTargetModal() {
+      pendingRevealTarget = null;
+      if (elements.targetModal) elements.targetModal.classList.add('hidden');
+      if (elements.targetPassword) elements.targetPassword.value = '';
+      if (elements.targetError) elements.targetError.textContent = '';
+    }
+
+    window.dbPromptRevealTarget = function(targetKey) {
+      pendingRevealTarget = targetKey;
+      if (elements.targetError) elements.targetError.textContent = '';
+      if (elements.targetPassword) elements.targetPassword.value = '';
+      if (elements.targetModal) elements.targetModal.classList.remove('hidden');
+      if (elements.targetPassword) elements.targetPassword.focus();
+    };
+
+    elements.targetCancel?.addEventListener('click', closeTargetModal);
+    elements.targetModal?.addEventListener('click', (e) => {
+      if (e.target === elements.targetModal) closeTargetModal();
+    });
+    elements.targetForm?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (!pendingRevealTarget) return;
+      const enteredPassword = (elements.targetPassword?.value || '').trim();
+      let sessionPassword = '';
+      try {
+        const raw = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data') || '{}';
+        sessionPassword = JSON.parse(raw).password || '';
+      } catch (err) {}
+
+      if (!sessionPassword) {
+        if (elements.targetError) elements.targetError.textContent = 'Session password is unavailable. Please sign in again.';
+        return;
+      }
+      if (enteredPassword !== sessionPassword) {
+        if (elements.targetError) elements.targetError.textContent = 'Invalid password.';
+        return;
+      }
+      revealedTargets[pendingRevealTarget] = true;
+      closeTargetModal();
+      rerenderStorageRows();
+    });
 
     async function loadMessages() {
       try {
+        await updateDatabaseStatuses();
         const userSnap = await get(ref(userDb, 'user_messages'));
         const adminSnap = await get(ref(userDb, 'admin_messages'));
 
@@ -4305,6 +5093,7 @@ if (logoutBtn) {
         showToast('Messages loaded', 'success');
       } catch (err) {
         console.error("Failed to load messages:", err);
+        await updateDatabaseStatuses();
         showToast('Error loading: ' + err.message, 'error');
       }
     }
@@ -4437,6 +5226,12 @@ if (logoutBtn) {
     });
 
     elements.refreshBtn?.addEventListener('click', loadMessages);
+    elements.storageRefreshBtn?.addEventListener('click', updateDatabaseStatuses);
+    elements.tabMessaging?.addEventListener('click', () => switchDbPanel('messaging'));
+    elements.tabStorage?.addEventListener('click', () => switchDbPanel('storage'));
+    elements.tabMultimedia?.addEventListener('click', () => switchDbPanel('multimedia'));
+    elements.mediaRefreshBtn?.addEventListener('click', () => loadMultimediaDatabase());
+    elements.mediaFlushBtn?.addEventListener('click', () => flushMultimediaDatabase());
 
     elements.exportBtn?.addEventListener('click', () => {
       const dataStr = JSON.stringify(filteredMessages, null, 2);
@@ -4480,6 +5275,7 @@ if (logoutBtn) {
       }
     });
 
+    switchDbPanel('messaging');
     loadMessages();
   }
 
@@ -4791,3 +5587,768 @@ if (logoutBtn) {
     }
   })();
 });
+
+// =============================================================
+// LP ACTIVITIES SYSTEM
+// =============================================================
+
+// Cache all activities for the full-page view
+let _lpAllActivities = [];
+
+// --- PUBLIC: load & render activities on landing page ---
+function initLpActivities() {
+  if (!userDb) return;
+  const grid = document.getElementById('lp-activities-grid');
+
+  // ---- LP Nav Active State Management ----
+  const lpNavLinks = document.querySelectorAll('.lp-nav-links a');
+
+  function setLpActiveLink(href) {
+    lpNavLinks.forEach(a => {
+      a.classList.toggle('active', a.getAttribute('href') === href);
+    });
+  }
+
+  // Click: set immediately
+  lpNavLinks.forEach(a => {
+    a.addEventListener('click', () => {
+      setLpActiveLink(a.getAttribute('href'));
+    });
+  });
+
+  // Scroll: use IntersectionObserver to detect visible section
+  const lpSections = document.querySelectorAll(
+    '#lp-hero, #lp-about, #lp-services, #lp-documents, #lp-activities'
+  );
+
+  if (lpSections.length && typeof IntersectionObserver !== 'undefined') {
+    const observer = new IntersectionObserver((entries) => {
+      // Find the entry that is most in view
+      let best = null;
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          if (!best || entry.intersectionRatio > best.intersectionRatio) {
+            best = entry;
+          }
+        }
+      });
+      if (best) {
+        setLpActiveLink('#' + best.target.id);
+      }
+    }, {
+      threshold: [0.3, 0.5],
+      rootMargin: '-10% 0px -10% 0px'
+    });
+
+    lpSections.forEach(sec => observer.observe(sec));
+  }
+
+  // ---- Firebase activities listener ----
+  if (!grid) return;
+
+  const lpRef = ref(userDb, 'lp_activities');
+  onValue(lpRef, (snapshot) => {
+    const data = snapshot.val();
+    const activities = data
+      ? Object.entries(data)
+          .map(([key, val]) => ({ id: key, ...val }))
+          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+      : [];
+
+    // Cache for full-page view
+    _lpAllActivities = activities;
+
+    // Teaser: show latest 6
+    renderLpActivities(activities.slice(0, 6), grid);
+
+    // Always show "See More" button
+    const viewAllWrap = document.getElementById('lp-view-all-wrap');
+    if (viewAllWrap) viewAllWrap.style.display = 'block';
+
+    // Keep full-page grid in sync if it's open
+    if (document.getElementById('lp-all-activities-page')?.classList.contains('lp-all-act-open')) {
+      renderLpAllActGrid(_lpAllActivities);
+    }
+  });
+
+  // Wire up the full-page
+  initLpAllActivitiesPage();
+}
+
+function renderLpActivities(activities, grid) {
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  if (activities.length === 0) {
+    grid.innerHTML = `
+      <div class="lp-activities-empty">
+        <i class='bx bx-calendar-x'></i>
+        <p>No activities yet. Check back soon!</p>
+      </div>`;
+    return;
+  }
+
+  activities.forEach((act, idx) => {
+    const card = document.createElement('article');
+    card.className = 'lp-activity-card';
+    card.style.animationDelay = `${idx * 0.08}s`;
+
+    let dateStr = act.date || '';
+    if (dateStr) {
+      try {
+        const d = new Date(dateStr + 'T00:00:00');
+        dateStr = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      } catch(e) {}
+    }
+
+    const imgHtml = act.imageUrl
+      ? `<img class="lp-activity-img" src="${escapeHtml(act.imageUrl)}" alt="${escapeHtml(act.title)}" loading="lazy" onerror="this.parentNode.innerHTML='<div class=\'lp-activity-img-placeholder\'><i class=\'bx bx-image-alt\'></i></div>'">`
+      : `<div class="lp-activity-img-placeholder"><i class='bx bx-image-alt'></i></div>`;
+
+    card.innerHTML = `
+      ${imgHtml}
+      <div class="lp-activity-content">
+        <span class="lp-activity-date"><i class='bx bx-calendar'></i> ${escapeHtml(dateStr)}</span>
+        <h3 class="lp-activity-title">${escapeHtml(act.title)}</h3>
+        <p class="lp-activity-excerpt">${escapeHtml(act.excerpt || '')}</p>
+      </div>`;
+
+    grid.appendChild(card);
+  });
+}
+
+// --- FULL-PAGE ACTIVITIES VIEW ---
+function initLpAllActivitiesPage() {
+  const page       = document.getElementById('lp-all-activities-page');
+  const viewAllBtn = document.getElementById('lp-view-all-btn');
+  const backBtn    = document.getElementById('lp-all-act-back');
+  const searchInput = document.getElementById('lp-all-act-search');
+  const yearSelect  = document.getElementById('lp-all-act-year');
+
+  if (!page || !viewAllBtn) return;
+
+  // Open
+  viewAllBtn.addEventListener('click', () => {
+    page.classList.add('lp-all-act-open');
+    page.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    // Reset search
+    if (searchInput) searchInput.value = '';
+    if (yearSelect)  yearSelect.value  = '';
+    buildYearFilter();
+    renderLpAllActGrid(_lpAllActivities);
+    if (searchInput) searchInput.focus();
+  });
+
+  // Close
+  if (backBtn) {
+    backBtn.addEventListener('click', closeLpAllPage);
+  }
+
+  // Escape key closes
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && page.classList.contains('lp-all-act-open')) closeLpAllPage();
+  });
+
+  function closeLpAllPage() {
+    page.classList.remove('lp-all-act-open');
+    page.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+
+  // Build year filter options from data
+  function buildYearFilter() {
+    if (!yearSelect) return;
+    const years = new Set();
+    _lpAllActivities.forEach(a => {
+      if (a.date) {
+        const y = a.date.slice(0, 4);
+        if (y) years.add(y);
+      }
+    });
+    // Keep "All Years" option, rebuild the rest
+    yearSelect.innerHTML = '<option value="">All Years</option>';
+    [...years].sort((a, b) => b - a).forEach(y => {
+      const opt = document.createElement('option');
+      opt.value = y;
+      opt.textContent = y;
+      yearSelect.appendChild(opt);
+    });
+  }
+
+  // Search + year filter
+  let searchTimeout;
+  function applyFilters() {
+    const q    = (searchInput?.value || '').trim().toLowerCase();
+    const year = yearSelect?.value || '';
+    const filtered = _lpAllActivities.filter(a => {
+      const matchesQ    = !q || (a.title || '').toLowerCase().includes(q) || (a.excerpt || '').toLowerCase().includes(q);
+      const matchesYear = !year || (a.date || '').startsWith(year);
+      return matchesQ && matchesYear;
+    });
+    renderLpAllActGrid(filtered);
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(applyFilters, 250);
+    });
+  }
+  if (yearSelect) {
+    yearSelect.addEventListener('change', applyFilters);
+  }
+}
+
+function renderLpAllActGrid(activities) {
+  const grid  = document.getElementById('lp-all-act-grid');
+  const empty = document.getElementById('lp-all-act-empty');
+  const total = document.getElementById('lp-all-act-total');
+  if (!grid) return;
+
+  if (total) total.textContent = `${activities.length} ${activities.length === 1 ? 'activity' : 'activities'}`;
+
+  if (activities.length === 0) {
+    grid.innerHTML = '';
+    if (empty) empty.classList.remove('hidden');
+    return;
+  }
+  if (empty) empty.classList.add('hidden');
+
+  grid.innerHTML = '';
+  activities.forEach((act, idx) => {
+    const card = document.createElement('article');
+    card.className = 'lp-all-act-card';
+    card.style.animationDelay = `${Math.min(idx, 12) * 0.05}s`;
+
+    let dateStr = act.date || '';
+    if (dateStr) {
+      try {
+        const d = new Date(dateStr + 'T00:00:00');
+        dateStr = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      } catch(e) {}
+    }
+
+    const imgHtml = act.imageUrl
+      ? `<img class="lp-all-act-card-img" src="${escapeHtml(act.imageUrl)}" alt="${escapeHtml(act.title)}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling?.style.setProperty('display','flex')">`
+      : '';
+    const placeholderHtml = !act.imageUrl
+      ? `<div class="lp-all-act-card-img-placeholder"><i class='bx bx-image-alt'></i></div>`
+      : `<div class="lp-all-act-card-img-placeholder" style="display:none"><i class='bx bx-image-alt'></i></div>`;
+
+    card.innerHTML = `
+      ${imgHtml}${placeholderHtml}
+      <div class="lp-all-act-card-body">
+        <div class="lp-all-act-card-date"><i class='bx bx-calendar'></i> ${escapeHtml(dateStr)}</div>
+        <h3 class="lp-all-act-card-title">${escapeHtml(act.title)}</h3>
+        <p class="lp-all-act-card-excerpt">${escapeHtml(act.excerpt || '')}</p>
+      </div>`;
+
+    grid.appendChild(card);
+  });
+}
+
+// --- ADMIN: modal for managing LP activities ---
+function initLpActivitiesAdmin(userObj) {
+  if (!userObj || !userDb) return;
+  const role = (userObj.role || '').toLowerCase();
+  if (role !== 'admin' && role !== 'superadmin') return;
+
+  // Show the admin button
+  const manageBtn = document.getElementById('manage-lp-activities-btn');
+  if (manageBtn) manageBtn.classList.remove('hidden');
+
+  // Grab modal elements
+  const modal        = document.getElementById('lp-activities-modal');
+  const closeBtn     = document.getElementById('lp-act-modal-close');
+  const currentList  = document.getElementById('lp-act-current-list');
+  const addForm      = document.getElementById('lp-act-add-form');
+  const titleInput   = document.getElementById('lp-act-title');
+  const excerptInput = document.getElementById('lp-act-excerpt');
+  const dateInput    = document.getElementById('lp-act-date');
+  const fileInput    = document.getElementById('lp-act-img-file');
+  const urlInput     = document.getElementById('lp-act-img-url');
+  const fileLabel    = document.getElementById('lp-act-file-label');
+  const fileLabelTxt = document.getElementById('lp-act-file-label-text');
+  const previewImg   = document.getElementById('lp-act-preview-img');
+  const previewWrap  = document.getElementById('lp-act-img-preview');
+  const urlPreviewImg  = document.getElementById('lp-act-url-preview-img');
+  const urlPreviewWrap = document.getElementById('lp-act-url-preview');
+  const submitBtn    = document.getElementById('lp-act-submit-btn');
+  const formError    = document.getElementById('lp-act-form-error');
+
+  if (!modal || !addForm) return;
+
+  // Track current active tab and activities snapshot
+  let activeLpTab = 'file';
+  let lpActivitiesSnapshot = {};
+
+  // ---- Open / Close ----
+  if (manageBtn) {
+    manageBtn.addEventListener('click', () => {
+      modal.classList.remove('hidden');
+      loadCurrentActivities();
+      resetLpForm();
+    });
+  }
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
+  }
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.classList.add('hidden');
+  });
+
+  // ---- Tab Switching ----
+  document.querySelectorAll('#lp-act-upload-tabs .upload-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#lp-act-upload-tabs .upload-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeLpTab = btn.dataset.lptab;
+
+      document.getElementById('lp-act-panel-file').classList.toggle('hidden', activeLpTab !== 'file');
+      document.getElementById('lp-act-panel-url').classList.toggle('hidden', activeLpTab !== 'url');
+    });
+  });
+
+  // ---- File input preview ----
+  if (fileInput && fileLabel) {
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+      if (fileLabelTxt) fileLabelTxt.textContent = '✅ ' + file.name;
+      if (fileLabel) fileLabel.classList.add('file-selected');
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (previewImg) previewImg.src = e.target.result;
+        if (previewWrap) previewWrap.classList.remove('hidden');
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Drag-and-drop
+    fileLabel.addEventListener('dragover', (e) => { e.preventDefault(); fileLabel.classList.add('drag-over'); });
+    fileLabel.addEventListener('dragleave', () => fileLabel.classList.remove('drag-over'));
+    fileLabel.addEventListener('drop', (e) => {
+      e.preventDefault();
+      fileLabel.classList.remove('drag-over');
+      if (e.dataTransfer.files[0]) {
+        fileInput.files = e.dataTransfer.files;
+        fileInput.dispatchEvent(new Event('change'));
+      }
+    });
+  }
+
+  // ---- URL input preview (debounced) ----
+  if (urlInput) {
+    let urlTimeout;
+    urlInput.addEventListener('input', () => {
+      clearTimeout(urlTimeout);
+      urlTimeout = setTimeout(() => {
+        const url = urlInput.value.trim();
+        if (url && urlPreviewImg && urlPreviewWrap) {
+          urlPreviewImg.src = url;
+          urlPreviewImg.onload  = () => urlPreviewWrap.classList.remove('hidden');
+          urlPreviewImg.onerror = () => urlPreviewWrap.classList.add('hidden');
+        } else if (urlPreviewWrap) {
+          urlPreviewWrap.classList.add('hidden');
+        }
+      }, 600);
+    });
+  }
+
+  // ---- Load current activities into list ----
+  function loadCurrentActivities() {
+    if (!currentList) return;
+    currentList.innerHTML = '<div class="lp-act-loading"><div class="spinner" style="width:24px;height:24px;"></div><span>Loading…</span></div>';
+
+    const lpRef = ref(userDb, 'lp_activities');
+    get(lpRef).then((snapshot) => {
+      lpActivitiesSnapshot = snapshot.val() || {};
+      renderCurrentList();
+    }).catch(() => {
+      currentList.innerHTML = '<div class="lp-act-empty-msg">Could not load activities.</div>';
+    });
+  }
+
+  function renderCurrentList() {
+    if (!currentList) return;
+    currentList.innerHTML = '';
+    const entries = Object.entries(lpActivitiesSnapshot)
+      .sort(([,a],[,b]) => (b.createdAt || 0) - (a.createdAt || 0));
+
+    if (entries.length === 0) {
+      currentList.innerHTML = '<div class="lp-act-empty-msg">No activities yet. Add one below!</div>';
+      return;
+    }
+
+    entries.forEach(([key, act]) => {
+      const row = document.createElement('div');
+      row.className = 'lp-act-item';
+
+      let dateStr = act.date || '';
+      if (dateStr) {
+        try {
+          const d = new Date(dateStr + 'T00:00:00');
+          dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        } catch(e) {}
+      }
+
+      const thumbHtml = act.imageUrl
+        ? `<div class="lp-act-item-thumb"><img src="${escapeHtml(act.imageUrl)}" alt="" onerror="this.parentNode.innerHTML='<i class=\'bx bx-image-alt\'></i>'"></div>`
+        : `<div class="lp-act-item-thumb"><i class='bx bx-image-alt'></i></div>`;
+
+      row.innerHTML = `
+        ${thumbHtml}
+        <div class="lp-act-item-info">
+          <div class="lp-act-item-title">${escapeHtml(act.title || '')}</div>
+          <div class="lp-act-item-date">${escapeHtml(dateStr)}</div>
+        </div>
+        <button type="button" class="lp-act-delete-btn" data-key="${escapeHtml(key)}" aria-label="Delete activity">Delete</button>`;
+
+      const delBtn = row.querySelector('.lp-act-delete-btn');
+      delBtn.addEventListener('click', async () => {
+        const confirmed = await lpShowConfirm(
+          'Delete Activity',
+          `Are you sure you want to remove "${act.title}"? This cannot be undone.`
+        );
+        if (!confirmed) return;
+        delBtn.disabled = true;
+        delBtn.textContent = 'Deleting…';
+        try {
+          await remove(ref(userDb, `lp_activities/${key}`));
+          delete lpActivitiesSnapshot[key];
+          renderCurrentList();
+          showToast('Activity deleted.', 'success');
+        } catch(err) {
+          delBtn.disabled = false;
+          delBtn.textContent = 'Delete';
+          showToast('Delete failed: ' + err.message, 'error');
+        }
+      });
+
+      currentList.appendChild(row);
+    });
+  }
+
+  // ---- Simple inline confirm (reuses the existing showConfirm if available) ----
+  function lpShowConfirm(title, message) {
+    if (typeof showConfirm === 'function') return showConfirm(title, message, false, 'danger');
+    return Promise.resolve(window.confirm(message));
+  }
+
+  // ---- Form Reset ----
+  function resetLpForm() {
+    if (addForm) addForm.reset();
+    if (fileLabelTxt) fileLabelTxt.textContent = 'Click or drag image here';
+    if (fileLabel) fileLabel.classList.remove('file-selected', 'drag-over');
+    if (previewWrap) previewWrap.classList.add('hidden');
+    if (urlPreviewWrap) urlPreviewWrap.classList.add('hidden');
+    if (formError) formError.classList.add('hidden');
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Add Activity'; }
+    // Reset to file tab
+    document.querySelectorAll('#lp-act-upload-tabs .upload-tab').forEach(b => b.classList.remove('active'));
+    const firstTab = document.querySelector('#lp-act-upload-tabs .upload-tab[data-lptab="file"]');
+    if (firstTab) firstTab.classList.add('active');
+    activeLpTab = 'file';
+    document.getElementById('lp-act-panel-file')?.classList.remove('hidden');
+    document.getElementById('lp-act-panel-url')?.classList.add('hidden');
+  }
+
+  // ---- Form Submit ----
+  addForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (formError) formError.classList.add('hidden');
+
+    const title   = (titleInput?.value || '').trim();
+    const excerpt = (excerptInput?.value || '').trim();
+    const date    = (dateInput?.value || '').trim();
+
+    if (!title || !excerpt || !date) {
+      if (formError) { formError.textContent = 'Title, description and date are required.'; formError.classList.remove('hidden'); }
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Uploading…';
+
+    try {
+      let imageUrl = '';
+
+      if (activeLpTab === 'url') {
+        imageUrl = (urlInput?.value || '').trim();
+      } else if (activeLpTab === 'file' && fileInput?.files[0]) {
+        const file = fileInput.files[0];
+        if (file.size > 10 * 1024 * 1024) throw new Error('File too large (max 10 MB).');
+
+        // Upload to Cloudinary
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('upload_preset', window.ENV?.CLOUDINARY_UPLOAD_PRESET || 'sas_uploads');
+        fd.append('folder', 'sas_lp_activities');
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${window.ENV?.CLOUDINARY_CLOUD_NAME}/image/upload`, {
+          method: 'POST',
+          body: fd
+        });
+        const cloudData = await res.json();
+        if (!cloudData.secure_url) throw new Error(cloudData.error?.message || 'Cloudinary upload failed.');
+        imageUrl = cloudData.secure_url;
+      }
+
+      // Save to Firebase
+      const newActivity = {
+        title,
+        excerpt,
+        date,
+        imageUrl,
+        uploadedBy: userObj.username || 'admin',
+        createdAt: Date.now()
+      };
+
+      await push(ref(userDb, 'lp_activities'), newActivity);
+
+      showToast('Activity added to landing page!', 'success');
+      resetLpForm();
+      loadCurrentActivities(); // refresh list
+      modal.classList.add('hidden');
+
+    } catch(err) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Add Activity';
+      if (formError) { formError.textContent = err.message; formError.classList.remove('hidden'); }
+    }
+  });
+}
+
+/* =========================================================
+   LP DOCUMENTS SYSTEM
+   ========================================================= */
+
+let _lpAllDocuments = [];
+let _lpDocFilterCat = '';
+let _lpDocFilterYear = '';
+
+function initLpDocuments() {
+  if (!userDb) return;
+  const grid = document.getElementById('lp-docs-grid');
+  const emptyState = document.getElementById('lp-docs-empty');
+  const catTabs = document.querySelectorAll('.lp-docs-tab');
+  const yearSelect = document.getElementById('lp-docs-year');
+  if (!grid) return;
+
+  const docsRef = ref(userDb, 'lp_documents');
+
+  // Sync from Firebase
+  onValue(docsRef, (snapshot) => {
+    const data = snapshot.val();
+    if (!data) {
+      _lpAllDocuments = [];
+      renderLpDocuments();
+      return;
+    }
+
+    _lpAllDocuments = Object.entries(data).map(([id, val]) => ({ id, ...val }))
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    updateLpDocYears();
+    renderLpDocuments();
+  });
+
+  // Category Filtering
+  catTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      catTabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      _lpDocFilterCat = tab.getAttribute('data-cat') || '';
+      renderLpDocuments();
+    });
+  });
+
+  // Year Filtering
+  if (yearSelect) {
+    yearSelect.addEventListener('change', () => {
+      _lpDocFilterYear = yearSelect.value;
+      renderLpDocuments();
+    });
+  }
+
+  function updateLpDocYears() {
+    if (!yearSelect) return;
+    const years = [...new Set(_lpAllDocuments.map(d => new Date(d.date).getFullYear()))].sort((a, b) => b - a);
+    const current = yearSelect.value;
+    yearSelect.innerHTML = '<option value="">All Years</option>' + 
+      years.map(y => `<option value="${y}" ${y == current ? 'selected' : ''}>${y}</option>`).join('');
+  }
+
+  function renderLpDocuments() {
+    grid.innerHTML = '';
+    
+    const filtered = _lpAllDocuments.filter(doc => {
+      const matchCat = !_lpDocFilterCat || doc.category === _lpDocFilterCat;
+      const matchYear = !_lpDocFilterYear || new Date(doc.date).getFullYear().toString() === _lpDocFilterYear;
+      return matchCat && matchYear;
+    });
+
+    if (filtered.length === 0) {
+      if (emptyState) emptyState.classList.remove('hidden');
+      return;
+    }
+
+    if (emptyState) emptyState.classList.add('hidden');
+
+    filtered.forEach(doc => {
+      const card = document.createElement('div');
+      card.className = 'lp-doc-card';
+      card.setAttribute('data-cat', doc.category || 'Memo');
+      
+      const dateObj = new Date(doc.date);
+      const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+      card.innerHTML = `
+        <div class="lp-doc-card-top">
+          <div class="lp-doc-icon">
+            <i class='bx ${getDocIcon(doc.category)}'></i>
+          </div>
+          <div class="lp-doc-meta">
+            <span class="lp-doc-badge">${doc.category || 'Memo'}</span>
+            <h4 class="lp-doc-title">${escapeHtml(doc.title)}</h4>
+            <div class="lp-doc-date">
+              <i class='bx bx-calendar'></i> ${dateStr}
+            </div>
+          </div>
+        </div>
+        ${doc.description ? `<p class="lp-doc-desc">${escapeHtml(doc.description)}</p>` : '<div style="flex:1"></div>'}
+        <a href="${doc.url}" target="_blank" rel="noopener" class="lp-doc-view-btn">
+          <i class='bx bx-show-alt'></i> View Document
+        </a>
+      `;
+      grid.appendChild(card);
+    });
+  }
+
+  function getDocIcon(cat) {
+    switch(cat) {
+      case 'Memo': return 'bx-file';
+      case 'Advisory': return 'bx-info-circle';
+      case 'Form': return 'bx-edit-alt';
+      case 'Resolution': return 'bx-badge-check';
+      case 'Issuance': return 'bx-certification';
+      default: return 'bx-file';
+    }
+  }
+}
+
+// ---- ADMIN: Manage Documents ----
+function initLpDocumentsAdmin(userObj) {
+  if (!userDb || !userObj) return;
+  const role = userObj.role?.toLowerCase();
+  if (role !== 'admin' && role !== 'superadmin') return;
+
+  const manageBtn = document.getElementById('manage-lp-docs-btn');
+  const modal = document.getElementById('lp-docs-modal');
+  const closeBtn = document.getElementById('lp-docs-modal-close');
+  const currentList = document.getElementById('lp-docs-current-list');
+  const addForm = document.getElementById('lp-docs-add-form');
+  const submitBtn = document.getElementById('lp-docs-submit-btn');
+  const formError = document.getElementById('lp-docs-form-error');
+
+  if (!manageBtn || !modal) return;
+  manageBtn.classList.remove('hidden');
+
+  manageBtn.onclick = () => {
+    modal.classList.remove('hidden');
+    loadCurrentDocs();
+  };
+
+  closeBtn.onclick = () => modal.classList.add('hidden');
+  
+  // Close on Escape
+  const handleEsc = (e) => { if (e.key === 'Escape') modal.classList.add('hidden'); };
+  document.addEventListener('keydown', handleEsc);
+
+  function loadCurrentDocs() {
+    if (!currentList) return;
+    currentList.innerHTML = '<div class="lp-act-loading"><div class="spinner" style="width:24px;height:24px;"></div><span>Loading&hellip;</span></div>';
+
+    const docsRef = ref(userDb, 'lp_documents');
+    get(docsRef).then(snapshot => {
+      const data = snapshot.val();
+      currentList.innerHTML = '';
+      if (!data) {
+        currentList.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8;font-size:0.85rem;">No documents found.</div>';
+        return;
+      }
+
+      Object.entries(data).sort((a,b) => new Date(b[1].date) - new Date(a[1].date)).forEach(([id, doc]) => {
+        const row = document.createElement('div');
+        row.className = 'lp-doc-item';
+        row.innerHTML = `
+          <div class="lp-doc-item-badge">${doc.category || 'Memo'}</div>
+          <div class="lp-doc-item-info">
+            <div class="lp-doc-item-title">${escapeHtml(doc.title)}</div>
+            <div class="lp-doc-item-date">${doc.date}</div>
+          </div>
+          <button class="icon-btn delete-doc-btn" data-id="${id}" title="Delete Document" style="color:#ef4444; background:none; border:none; cursor:pointer; font-size:1.1rem;">
+            <i class='bx bx-trash'></i>
+          </button>
+        `;
+
+        row.querySelector('.delete-doc-btn').onclick = async function() {
+          const confirmed = await lpShowConfirm('Delete Document', 'Are you sure you want to delete this document? This cannot be undone.');
+          if (confirmed) {
+            await remove(ref(userDb, `lp_documents/${id}`));
+            showToast('Document deleted', 'info');
+            loadCurrentDocs();
+          }
+        };
+
+        currentList.appendChild(row);
+      });
+    });
+  }
+
+  addForm.onsubmit = async (e) => {
+    e.preventDefault();
+    if (formError) formError.classList.add('hidden');
+
+    const title = document.getElementById('lp-doc-title').value.trim();
+    const category = document.getElementById('lp-doc-category').value;
+    const date = document.getElementById('lp-doc-date').value;
+    const url = document.getElementById('lp-doc-url').value.trim();
+    const description = document.getElementById('lp-doc-desc').value.trim();
+
+    if (!title || !category || !date || !url) {
+      if (formError) { formError.textContent = 'All starred fields are required.'; formError.classList.remove('hidden'); }
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Adding Document...';
+
+    try {
+      const newDoc = {
+        title,
+        category,
+        date,
+        url,
+        description,
+        createdAt: serverTimestamp()
+      };
+
+      await push(ref(userDb, 'lp_documents'), newDoc);
+      showToast('Document added successfully!', 'success');
+      addForm.reset();
+      loadCurrentDocs();
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Add Document';
+    } catch(err) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Add Document';
+      if (formError) { formError.textContent = err.message; formError.classList.remove('hidden'); }
+    }
+  };
+
+  function lpShowConfirm(title, message) {
+    if (typeof showConfirm === 'function') return showConfirm(title, message, false, 'danger');
+    return Promise.resolve(window.confirm(message));
+  }
+}
