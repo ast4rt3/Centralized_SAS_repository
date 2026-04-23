@@ -28,6 +28,27 @@ const escapeHtml = (text) => {
   return div.innerHTML;
 };
 
+// Global Cloudinary Utility: Extract Public ID from URL
+function extractCloudinaryId(url) {
+  if (!url || typeof url !== 'string' || !url.includes('res.cloudinary.com')) return null;
+  const parts = url.split('/upload/');
+  if (parts.length < 2) return null;
+  
+  const segments = parts[1].split('/');
+  let startIndex = 0;
+  
+  // Skip transformation/version segments (they start with v or contain ,)
+  while (startIndex < segments.length) {
+    const seg = segments[startIndex];
+    if (seg.startsWith('v') && !isNaN(seg.substring(1))) { startIndex++; break; }
+    if (seg.includes(',')) { startIndex++; continue; }
+    break; 
+  }
+  
+  const idWithExt = segments.slice(startIndex).join('/');
+  return idWithExt.split('.')[0];
+}
+
 // Initialize Firebase Realtime Database for Admin Chat
 let db;
 let chatInitialized = false;
@@ -4927,38 +4948,6 @@ if (logoutBtn) {
       }
     }
 
-    function extractCloudinaryId(url) {
-      if (!url || typeof url !== 'string' || !url.includes('res.cloudinary.com')) return null;
-      const parts = url.split('/upload/');
-      if (parts.length < 2) return null;
-      
-      const segments = parts[1].split('/');
-      let startIndex = 0;
-      
-      // Skip transformation/version segments
-      while (startIndex < segments.length) {
-        const seg = segments[startIndex];
-        // Versions match v123456789
-        const isVersion = seg.startsWith('v') && /^\d+$/.test(seg.substring(1));
-        // Transformations usually have commas or specific short-codes like c_fill, w_100
-        const isTransformation = seg.includes(',') || (seg.length < 12 && (seg.includes('_') || seg.includes('=') || /^[acdegilmostwx]\d+/.test(seg)));
-        
-        if (isVersion || isTransformation) {
-          startIndex++;
-          continue;
-        }
-        break;
-      }
-      
-      let idWithExt = segments.slice(startIndex).join('/');
-      const dotIdx = idWithExt.lastIndexOf('.');
-      if (dotIdx > -1) {
-        const ext = idWithExt.substring(dotIdx + 1);
-        if (!ext.includes('/') && ext.length <= 5) idWithExt = idWithExt.substring(0, dotIdx);
-      }
-      return decodeURIComponent(idWithExt);
-    }
-
     window.dbDeleteMedia = async function(publicId, resourceType, targetCloud) {
       const selectedCloud = targetCloud || elements.mediaAccountSelect?.value || window.ENV?.CLOUDINARY_CLOUD_NAME;
       const confirmMsg = `CAUTION: This will delete the asset from Cloudinary (${selectedCloud}) AND remove any linked TV posts or Landing Page activities. Please enter your password to proceed.`;
@@ -6027,6 +6016,32 @@ function initLpActivitiesAdmin(userObj) {
         delBtn.disabled = true;
         delBtn.textContent = 'Deleting…';
         try {
+          // --- CASCADE DELETION TO CLOUDINARY ---
+          if (act.imageUrl) {
+            const publicId = extractCloudinaryId(act.imageUrl);
+            if (publicId) {
+               // Determine which account to delete from based on URL
+               const cloudName = act.imageUrl.includes('dbytj36mv') ? 'dbytj36mv' : 'dj8ugtlrl';
+               
+               // Get current session for auth
+               const sessionData = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
+               const userObj = sessionData ? JSON.parse(sessionData) : null;
+               
+               if (userObj) {
+                 await fetch(BACKEND_GAS_URL, {
+                   method: 'POST',
+                   body: JSON.stringify({
+                     action: 'deleteMultimedia',
+                     publicId: publicId,
+                     cloudName: cloudName,
+                     username: userObj.username,
+                     password: userObj.password
+                   })
+                 }).catch(e => console.error("Cloudinary cascade delete failed:", e));
+               }
+            }
+          }
+
           await remove(ref(userDb, `lp_activities/${key}`));
           delete lpActivitiesSnapshot[key];
           renderCurrentList();
