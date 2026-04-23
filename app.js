@@ -612,7 +612,9 @@ window.addEventListener('DOMContentLoaded', () => {
     initUserMessaging();
     initSharedMessaging(); // Initialize the universal listener
     setTimeout(initFullMessenger, 2000); // Give Firebase a moment to sync
+    initLpActivities(); // Load dynamic landing page activities (public)
 });
+
 
 
 
@@ -1714,6 +1716,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }, 4000);
   }
+  window.showToast = showToast;
 
   function showConfirm(title, message, showPassword = false, type = 'info') {
     return new Promise((resolve) => {
@@ -1844,7 +1847,9 @@ function showAppUI(userObj) {
     setupUserMenu(userObj);
     finishInit();
     initUserMessaging();
+    initLpActivitiesAdmin(userObj); // Admin LP activities management
 }
+
 
 
 
@@ -4906,3 +4911,338 @@ if (logoutBtn) {
     }
   })();
 });
+
+// =============================================================
+// LP ACTIVITIES SYSTEM
+// =============================================================
+
+// --- PUBLIC: load & render activities on landing page ---
+function initLpActivities() {
+  if (!userDb) return;
+  const grid = document.getElementById('lp-activities-grid');
+  if (!grid) return;
+
+  const lpRef = ref(userDb, 'lp_activities');
+  onValue(lpRef, (snapshot) => {
+    const data = snapshot.val();
+    const activities = data
+      ? Object.entries(data)
+          .map(([key, val]) => ({ id: key, ...val }))
+          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+      : [];
+    renderLpActivities(activities, grid);
+  });
+}
+
+function renderLpActivities(activities, grid) {
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  if (activities.length === 0) {
+    grid.innerHTML = `
+      <div class="lp-activities-empty">
+        <i class='bx bx-calendar-x'></i>
+        <p>No activities yet. Check back soon!</p>
+      </div>`;
+    return;
+  }
+
+  activities.forEach((act, idx) => {
+    const card = document.createElement('article');
+    card.className = 'lp-activity-card';
+    card.style.animationDelay = `${idx * 0.08}s`;
+
+    // Format date nicely
+    let dateStr = act.date || '';
+    if (dateStr) {
+      try {
+        const d = new Date(dateStr + 'T00:00:00');
+        dateStr = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      } catch(e) {}
+    }
+
+    const imgHtml = act.imageUrl
+      ? `<img class="lp-activity-img" src="${escapeHtml(act.imageUrl)}" alt="${escapeHtml(act.title)}" loading="lazy" onerror="this.parentNode.innerHTML='<div class=&quot;lp-activity-img-placeholder&quot;><i class=&quot;bx bx-image-alt&quot;></i></div>'">`
+      : `<div class="lp-activity-img-placeholder"><i class='bx bx-image-alt'></i></div>`;
+
+    card.innerHTML = `
+      ${imgHtml}
+      <div class="lp-activity-content">
+        <span class="lp-activity-date"><i class='bx bx-calendar'></i> ${escapeHtml(dateStr)}</span>
+        <h3 class="lp-activity-title">${escapeHtml(act.title)}</h3>
+        <p class="lp-activity-excerpt">${escapeHtml(act.excerpt || '')}</p>
+      </div>`;
+
+    grid.appendChild(card);
+  });
+}
+
+// --- ADMIN: modal for managing LP activities ---
+function initLpActivitiesAdmin(userObj) {
+  if (!userObj || !userDb) return;
+  const role = (userObj.role || '').toLowerCase();
+  if (role !== 'admin' && role !== 'superadmin') return;
+
+  // Show the admin button
+  const manageBtn = document.getElementById('manage-lp-activities-btn');
+  if (manageBtn) manageBtn.classList.remove('hidden');
+
+  // Grab modal elements
+  const modal        = document.getElementById('lp-activities-modal');
+  const closeBtn     = document.getElementById('lp-act-modal-close');
+  const currentList  = document.getElementById('lp-act-current-list');
+  const addForm      = document.getElementById('lp-act-add-form');
+  const titleInput   = document.getElementById('lp-act-title');
+  const excerptInput = document.getElementById('lp-act-excerpt');
+  const dateInput    = document.getElementById('lp-act-date');
+  const fileInput    = document.getElementById('lp-act-img-file');
+  const urlInput     = document.getElementById('lp-act-img-url');
+  const fileLabel    = document.getElementById('lp-act-file-label');
+  const fileLabelTxt = document.getElementById('lp-act-file-label-text');
+  const previewImg   = document.getElementById('lp-act-preview-img');
+  const previewWrap  = document.getElementById('lp-act-img-preview');
+  const urlPreviewImg  = document.getElementById('lp-act-url-preview-img');
+  const urlPreviewWrap = document.getElementById('lp-act-url-preview');
+  const submitBtn    = document.getElementById('lp-act-submit-btn');
+  const formError    = document.getElementById('lp-act-form-error');
+
+  if (!modal || !addForm) return;
+
+  // Track current active tab and activities snapshot
+  let activeLpTab = 'file';
+  let lpActivitiesSnapshot = {};
+
+  // ---- Open / Close ----
+  if (manageBtn) {
+    manageBtn.addEventListener('click', () => {
+      modal.classList.remove('hidden');
+      loadCurrentActivities();
+      resetLpForm();
+    });
+  }
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
+  }
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.classList.add('hidden');
+  });
+
+  // ---- Tab Switching ----
+  document.querySelectorAll('#lp-act-upload-tabs .upload-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#lp-act-upload-tabs .upload-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeLpTab = btn.dataset.lptab;
+
+      document.getElementById('lp-act-panel-file').classList.toggle('hidden', activeLpTab !== 'file');
+      document.getElementById('lp-act-panel-url').classList.toggle('hidden', activeLpTab !== 'url');
+    });
+  });
+
+  // ---- File input preview ----
+  if (fileInput && fileLabel) {
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+      if (fileLabelTxt) fileLabelTxt.textContent = '✅ ' + file.name;
+      if (fileLabel) fileLabel.classList.add('file-selected');
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (previewImg) previewImg.src = e.target.result;
+        if (previewWrap) previewWrap.classList.remove('hidden');
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Drag-and-drop
+    fileLabel.addEventListener('dragover', (e) => { e.preventDefault(); fileLabel.classList.add('drag-over'); });
+    fileLabel.addEventListener('dragleave', () => fileLabel.classList.remove('drag-over'));
+    fileLabel.addEventListener('drop', (e) => {
+      e.preventDefault();
+      fileLabel.classList.remove('drag-over');
+      if (e.dataTransfer.files[0]) {
+        fileInput.files = e.dataTransfer.files;
+        fileInput.dispatchEvent(new Event('change'));
+      }
+    });
+  }
+
+  // ---- URL input preview (debounced) ----
+  if (urlInput) {
+    let urlTimeout;
+    urlInput.addEventListener('input', () => {
+      clearTimeout(urlTimeout);
+      urlTimeout = setTimeout(() => {
+        const url = urlInput.value.trim();
+        if (url && urlPreviewImg && urlPreviewWrap) {
+          urlPreviewImg.src = url;
+          urlPreviewImg.onload  = () => urlPreviewWrap.classList.remove('hidden');
+          urlPreviewImg.onerror = () => urlPreviewWrap.classList.add('hidden');
+        } else if (urlPreviewWrap) {
+          urlPreviewWrap.classList.add('hidden');
+        }
+      }, 600);
+    });
+  }
+
+  // ---- Load current activities into list ----
+  function loadCurrentActivities() {
+    if (!currentList) return;
+    currentList.innerHTML = '<div class="lp-act-loading"><div class="spinner" style="width:24px;height:24px;"></div><span>Loading…</span></div>';
+
+    const lpRef = ref(userDb, 'lp_activities');
+    get(lpRef).then((snapshot) => {
+      lpActivitiesSnapshot = snapshot.val() || {};
+      renderCurrentList();
+    }).catch(() => {
+      currentList.innerHTML = '<div class="lp-act-empty-msg">Could not load activities.</div>';
+    });
+  }
+
+  function renderCurrentList() {
+    if (!currentList) return;
+    currentList.innerHTML = '';
+    const entries = Object.entries(lpActivitiesSnapshot)
+      .sort(([,a],[,b]) => (b.createdAt || 0) - (a.createdAt || 0));
+
+    if (entries.length === 0) {
+      currentList.innerHTML = '<div class="lp-act-empty-msg">No activities yet. Add one below!</div>';
+      return;
+    }
+
+    entries.forEach(([key, act]) => {
+      const row = document.createElement('div');
+      row.className = 'lp-act-item';
+
+      let dateStr = act.date || '';
+      if (dateStr) {
+        try {
+          const d = new Date(dateStr + 'T00:00:00');
+          dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        } catch(e) {}
+      }
+
+      const thumbHtml = act.imageUrl
+        ? `<div class="lp-act-item-thumb"><img src="${escapeHtml(act.imageUrl)}" alt="" onerror="this.parentNode.innerHTML='<i class=&quot;bx bx-image-alt&quot;></i>'"></div>`
+        : `<div class="lp-act-item-thumb"><i class='bx bx-image-alt'></i></div>`;
+
+      row.innerHTML = `
+        ${thumbHtml}
+        <div class="lp-act-item-info">
+          <div class="lp-act-item-title">${escapeHtml(act.title || '')}</div>
+          <div class="lp-act-item-date">${escapeHtml(dateStr)}</div>
+        </div>
+        <button type="button" class="lp-act-delete-btn" data-key="${escapeHtml(key)}" aria-label="Delete activity">Delete</button>`;
+
+      const delBtn = row.querySelector('.lp-act-delete-btn');
+      delBtn.addEventListener('click', async () => {
+        const confirmed = await lpShowConfirm(
+          'Delete Activity',
+          `Are you sure you want to remove "${act.title}"? This cannot be undone.`
+        );
+        if (!confirmed) return;
+        delBtn.disabled = true;
+        delBtn.textContent = 'Deleting…';
+        try {
+          await remove(ref(userDb, `lp_activities/${key}`));
+          delete lpActivitiesSnapshot[key];
+          renderCurrentList();
+          showToast('Activity deleted.', 'success');
+        } catch(err) {
+          delBtn.disabled = false;
+          delBtn.textContent = 'Delete';
+          showToast('Delete failed: ' + err.message, 'error');
+        }
+      });
+
+      currentList.appendChild(row);
+    });
+  }
+
+  // ---- Simple inline confirm (reuses the existing showConfirm if available) ----
+  function lpShowConfirm(title, message) {
+    if (typeof showConfirm === 'function') return showConfirm(title, message, false, 'danger');
+    return Promise.resolve(window.confirm(message));
+  }
+
+  // ---- Form Reset ----
+  function resetLpForm() {
+    if (addForm) addForm.reset();
+    if (fileLabelTxt) fileLabelTxt.textContent = 'Click or drag image here';
+    if (fileLabel) fileLabel.classList.remove('file-selected', 'drag-over');
+    if (previewWrap) previewWrap.classList.add('hidden');
+    if (urlPreviewWrap) urlPreviewWrap.classList.add('hidden');
+    if (formError) formError.classList.add('hidden');
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Add Activity'; }
+    // Reset to file tab
+    document.querySelectorAll('#lp-act-upload-tabs .upload-tab').forEach(b => b.classList.remove('active'));
+    const firstTab = document.querySelector('#lp-act-upload-tabs .upload-tab[data-lptab="file"]');
+    if (firstTab) firstTab.classList.add('active');
+    activeLpTab = 'file';
+    document.getElementById('lp-act-panel-file')?.classList.remove('hidden');
+    document.getElementById('lp-act-panel-url')?.classList.add('hidden');
+  }
+
+  // ---- Form Submit ----
+  addForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (formError) formError.classList.add('hidden');
+
+    const title   = (titleInput?.value || '').trim();
+    const excerpt = (excerptInput?.value || '').trim();
+    const date    = (dateInput?.value || '').trim();
+
+    if (!title || !excerpt || !date) {
+      if (formError) { formError.textContent = 'Title, description and date are required.'; formError.classList.remove('hidden'); }
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Uploading…';
+
+    try {
+      let imageUrl = '';
+
+      if (activeLpTab === 'url') {
+        imageUrl = (urlInput?.value || '').trim();
+      } else if (activeLpTab === 'file' && fileInput?.files[0]) {
+        const file = fileInput.files[0];
+        if (file.size > 10 * 1024 * 1024) throw new Error('File too large (max 10 MB).');
+
+        // Upload to Cloudinary
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+        fd.append('folder', 'sas_lp_activities');
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+          method: 'POST',
+          body: fd
+        });
+        const cloudData = await res.json();
+        if (!cloudData.secure_url) throw new Error(cloudData.error?.message || 'Cloudinary upload failed.');
+        imageUrl = cloudData.secure_url;
+      }
+
+      // Save to Firebase
+      const newActivity = {
+        title,
+        excerpt,
+        date,
+        imageUrl,
+        uploadedBy: userObj.username || 'admin',
+        createdAt: Date.now()
+      };
+
+      await push(ref(userDb, 'lp_activities'), newActivity);
+
+      showToast('Activity added to landing page!', 'success');
+      resetLpForm();
+      loadCurrentActivities(); // refresh list
+
+    } catch(err) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Add Activity';
+      if (formError) { formError.textContent = err.message; formError.classList.remove('hidden'); }
+    }
+  });
+}
