@@ -1189,23 +1189,39 @@ body.system-mode .content {
 .add-post-btn {
   background: var(--nbsc-gold);
   color: var(--nbsc-dark);
-  border: none;
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-weight: 800;
+  border: 1.5px solid transparent;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-weight: 700;
   font-family: var(--font-sans);
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   text-transform: uppercase;
+  letter-spacing: 0.03em;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 6px;
-  transition: transform 0.1s, filter 0.2s;
+  transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+
+.add-post-btn .plus-icon {
+  font-size: 1rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
 }
 
 .add-post-btn:hover {
-  filter: brightness(1.1);
+  filter: brightness(1.12);
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+
+.add-post-btn:active {
+  transform: translateY(0);
+  filter: brightness(0.95);
 }
 
 .add-post-btn.hidden {
@@ -5243,6 +5259,28 @@ body.lp-mode .main-wrapper {
   font-size: 0.75rem;
   color: #94a3b8;
   margin-top: 2px;
+}
+
+.lp-act-item-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.lp-act-edit-btn {
+  background: #e0f2fe;
+  color: #0284c7;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.lp-act-edit-btn:hover {
+  background: #bae6fd;
 }
 
 .lp-act-delete-btn {

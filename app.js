@@ -28,6 +28,27 @@ const escapeHtml = (text) => {
   return div.innerHTML;
 };
 
+// Global Cloudinary Utility: Extract Public ID from URL
+function extractCloudinaryId(url) {
+  if (!url || typeof url !== 'string' || !url.includes('res.cloudinary.com')) return null;
+  const parts = url.split('/upload/');
+  if (parts.length < 2) return null;
+  
+  const segments = parts[1].split('/');
+  let startIndex = 0;
+  
+  // Skip transformation/version segments (they start with v or contain ,)
+  while (startIndex < segments.length) {
+    const seg = segments[startIndex];
+    if (seg.startsWith('v') && !isNaN(seg.substring(1))) { startIndex++; break; }
+    if (seg.includes(',')) { startIndex++; continue; }
+    break; 
+  }
+  
+  const idWithExt = segments.slice(startIndex).join('/');
+  return idWithExt.split('.')[0];
+}
+
 // Initialize Firebase Realtime Database for Admin Chat
 let db;
 let chatInitialized = false;
@@ -3158,12 +3179,12 @@ if (logoutBtn) {
             let cloudData;
             // Simplified for brevity, reuse earlier logic
             if (file.size > 10 * 1024 * 1024) {
-               cloudData = await uploadFileChunked(file, CLOUDINARY_UPLOAD_PRESET, CLOUDINARY_CLOUD_NAME, zzProgress.update);
+               cloudData = await uploadFileChunked(file, window.ENV?.CLOUDINARY_UPLOAD_PRESET || 'sas_uploads', window.ENV?.CLOUDINARY_CLOUD_NAME || 'dbytj36mv', zzProgress.update);
             } else {
                const fd = new FormData();
                fd.append('file', file);
-               fd.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-               const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`, { method: 'POST', body: fd });
+               fd.append('upload_preset', window.ENV?.CLOUDINARY_UPLOAD_PRESET || 'sas_uploads');
+               const res = await fetch(`https://api.cloudinary.com/v1_1/${window.ENV?.CLOUDINARY_CLOUD_NAME || 'dbytj36mv'}/auto/upload`, { method: 'POST', body: fd });
                cloudData = await res.json();
             }
             if (cloudData && cloudData.secure_url) {
@@ -4441,6 +4462,7 @@ if (logoutBtn) {
       tabMultimedia: document.getElementById('db-tab-multimedia'),
       panelMultimedia: document.getElementById('db-panel-multimedia'),
       mediaSearch: document.getElementById('db-media-search'),
+      mediaAccountSelect: document.getElementById('db-media-account-select'),
       mediaRefreshBtn: document.getElementById('db-media-refresh-btn'),
       mediaFlushBtn: document.getElementById('db-media-flush-btn'),
       mediaGrid: document.getElementById('db-media-grid')
@@ -4776,10 +4798,15 @@ if (logoutBtn) {
       if (!elements.mediaGrid) return;
       elements.mediaGrid.innerHTML = '<div class="db-media-loading"><div class="spinner"></div><span>Fetching Cloudinary assets...</span></div>';
       
+      const selectedCloud = elements.mediaAccountSelect?.value || window.ENV?.CLOUDINARY_CLOUD_NAME;
+
       try {
         const res = await fetch(BACKEND_GAS_URL, {
           method: 'POST',
-          body: JSON.stringify({ action: 'listMultimedia' })
+          body: JSON.stringify({ 
+            action: 'listMultimedia',
+            cloudName: selectedCloud 
+          })
         });
         const payload = await res.json();
         
@@ -4815,7 +4842,7 @@ if (logoutBtn) {
               </div>
               <div class="db-media-actions">
                 <a href="${res.secure_url}" target="_blank" class="db-media-btn" title="Open Full Size">View</a>
-                <button class="db-media-btn delete" onclick="dbDeleteMedia('${res.public_id}', '${res.resource_type}')" title="Delete Everywhere">Delete</button>
+                <button class="db-media-btn delete" onclick="dbDeleteMedia('${res.public_id}', '${res.resource_type}', '${selectedCloud}')" title="Delete Everywhere">Delete</button>
               </div>
             </div>
           `;
@@ -4860,7 +4887,10 @@ if (logoutBtn) {
     }
 
     async function flushMultimediaDatabase() {
-      const confirmMsg = 'This will scan your system (TV Posts, User Profiles, and Landing Page) and delete ANY Cloudinary assets that are not currently being used. This cannot be undone. Please enter your password to confirm.';
+      const selectedCloud = elements.mediaAccountSelect?.value || window.ENV?.CLOUDINARY_CLOUD_NAME;
+      const accountLabel = selectedCloud === window.ENV?.CLOUDINARY_CLOUD_NAME ? 'Active Repository' : 'Legacy Repository';
+
+      const confirmMsg = `This will scan your system and delete ANY assets in the [${accountLabel}] that are not currently being used. Please enter your password to confirm.`;
       
       const raw = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data') || '{}';
       const userObj = JSON.parse(raw);
@@ -4880,12 +4910,9 @@ if (logoutBtn) {
 
       if (!confirmed) return;
 
-      showToast('Scanning for used assets...', 'info');
+      showToast(`Scanning for used assets in ${accountLabel}...`, 'info');
 
       try {
-        const raw = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data') || '{}';
-        const userObj = JSON.parse(raw);
-
         // 1. Get used IDs from Firebase (Landing Page)
         const lpRef = ref(userDb, 'lp_activities');
         const lpSnap = await get(lpRef);
@@ -4902,6 +4929,7 @@ if (logoutBtn) {
           method: 'POST',
           body: JSON.stringify({ 
             action: 'flushMultimedia',
+            cloudName: selectedCloud,
             firebaseUsedIds: usedIdsFromFirebase,
             username: userObj.username,
             password: userObj.password
@@ -4920,40 +4948,9 @@ if (logoutBtn) {
       }
     }
 
-    function extractCloudinaryId(url) {
-      if (!url || typeof url !== 'string' || !url.includes('res.cloudinary.com')) return null;
-      const parts = url.split('/upload/');
-      if (parts.length < 2) return null;
-      
-      const segments = parts[1].split('/');
-      let startIndex = 0;
-      
-      // Skip transformation/version segments
-      while (startIndex < segments.length) {
-        const seg = segments[startIndex];
-        // Versions match v123456789
-        const isVersion = seg.startsWith('v') && /^\d+$/.test(seg.substring(1));
-        // Transformations usually have commas or specific short-codes like c_fill, w_100
-        const isTransformation = seg.includes(',') || (seg.length < 12 && (seg.includes('_') || seg.includes('=') || /^[acdegilmostwx]\d+/.test(seg)));
-        
-        if (isVersion || isTransformation) {
-          startIndex++;
-          continue;
-        }
-        break;
-      }
-      
-      let idWithExt = segments.slice(startIndex).join('/');
-      const dotIdx = idWithExt.lastIndexOf('.');
-      if (dotIdx > -1) {
-        const ext = idWithExt.substring(dotIdx + 1);
-        if (!ext.includes('/') && ext.length <= 5) idWithExt = idWithExt.substring(0, dotIdx);
-      }
-      return decodeURIComponent(idWithExt);
-    }
-
-    window.dbDeleteMedia = async function(publicId, resourceType) {
-      const confirmMsg = `CAUTION: This will delete the asset from Cloudinary AND remove any linked TV posts or Landing Page activities. Please enter your password to proceed.`;
+    window.dbDeleteMedia = async function(publicId, resourceType, targetCloud) {
+      const selectedCloud = targetCloud || elements.mediaAccountSelect?.value || window.ENV?.CLOUDINARY_CLOUD_NAME;
+      const confirmMsg = `CAUTION: This will delete the asset from Cloudinary (${selectedCloud}) AND remove any linked TV posts or Landing Page activities. Please enter your password to proceed.`;
       
       const raw = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data') || '{}';
       const userObj = JSON.parse(raw);
@@ -4999,6 +4996,7 @@ if (logoutBtn) {
           body: JSON.stringify({ 
             action: 'deleteMultimedia', 
             publicId, 
+            cloudName: selectedCloud,
             resourceType,
             username: userObj.username,
             password: userObj.password
@@ -5232,6 +5230,9 @@ if (logoutBtn) {
     elements.tabMultimedia?.addEventListener('click', () => switchDbPanel('multimedia'));
     elements.mediaRefreshBtn?.addEventListener('click', () => loadMultimediaDatabase());
     elements.mediaFlushBtn?.addEventListener('click', () => flushMultimediaDatabase());
+    elements.mediaAccountSelect?.addEventListener('change', () => {
+      loadMultimediaDatabase();
+    });
 
     elements.exportBtn?.addEventListener('click', () => {
       const dataStr = JSON.stringify(filteredMessages, null, 2);
@@ -5875,6 +5876,7 @@ function initLpActivitiesAdmin(userObj) {
   const urlPreviewImg  = document.getElementById('lp-act-url-preview-img');
   const urlPreviewWrap = document.getElementById('lp-act-url-preview');
   const submitBtn    = document.getElementById('lp-act-submit-btn');
+  const cancelBtn    = document.getElementById('lp-act-cancel-btn');
   const formError    = document.getElementById('lp-act-form-error');
 
   if (!modal || !addForm) return;
@@ -5882,6 +5884,7 @@ function initLpActivitiesAdmin(userObj) {
   // Track current active tab and activities snapshot
   let activeLpTab = 'file';
   let lpActivitiesSnapshot = {};
+  let editingLpActKey = null; // Track if we are editing
 
   // ---- Open / Close ----
   if (manageBtn) {
@@ -6003,7 +6006,48 @@ function initLpActivitiesAdmin(userObj) {
           <div class="lp-act-item-title">${escapeHtml(act.title || '')}</div>
           <div class="lp-act-item-date">${escapeHtml(dateStr)}</div>
         </div>
-        <button type="button" class="lp-act-delete-btn" data-key="${escapeHtml(key)}" aria-label="Delete activity">Delete</button>`;
+        <div class="lp-act-item-actions">
+          <button type="button" class="lp-act-edit-btn" data-key="${escapeHtml(key)}" title="Edit activity">Edit</button>
+          <button type="button" class="lp-act-delete-btn" data-key="${escapeHtml(key)}" title="Delete activity">Delete</button>
+        </div>`;
+
+      const editBtn = row.querySelector('.lp-act-edit-btn');
+      editBtn.addEventListener('click', () => {
+        editingLpActKey = key;
+        
+        // Populate Form
+        if (titleInput) titleInput.value = act.title || '';
+        if (excerptInput) excerptInput.value = act.excerpt || '';
+        if (dateInput) dateInput.value = act.date || '';
+        
+        // Handle Image
+        if (act.imageUrl) {
+          if (urlInput) urlInput.value = act.imageUrl;
+          if (urlPreviewImg) urlPreviewImg.src = act.imageUrl;
+          if (urlPreviewWrap) urlPreviewWrap.classList.remove('hidden');
+          
+          // Switch to URL tab for editing
+          document.querySelectorAll('#lp-act-upload-tabs .upload-tab').forEach(b => b.classList.remove('active'));
+          const urlTab = document.querySelector('#lp-act-upload-tabs .upload-tab[data-lptab="url"]');
+          if (urlTab) urlTab.classList.add('active');
+          activeLpTab = 'url';
+          document.getElementById('lp-act-panel-file')?.classList.add('hidden');
+          document.getElementById('lp-act-panel-url')?.classList.remove('hidden');
+        } else {
+          resetLpForm(true); // partial reset but keep edit mode
+        }
+        
+        // Update UI for Edit Mode
+        const sectionLabel = addForm.previousElementSibling;
+        if (sectionLabel && sectionLabel.classList.contains('lp-act-section-label')) {
+          sectionLabel.textContent = 'Edit Activity';
+        }
+        if (submitBtn) submitBtn.textContent = 'Save Changes';
+        if (cancelBtn) cancelBtn.classList.remove('hidden');
+        
+        // Scroll to form
+        addForm.scrollIntoView({ behavior: 'smooth' });
+      });
 
       const delBtn = row.querySelector('.lp-act-delete-btn');
       delBtn.addEventListener('click', async () => {
@@ -6015,6 +6059,32 @@ function initLpActivitiesAdmin(userObj) {
         delBtn.disabled = true;
         delBtn.textContent = 'Deleting…';
         try {
+          // --- CASCADE DELETION TO CLOUDINARY ---
+          if (act.imageUrl) {
+            const publicId = extractCloudinaryId(act.imageUrl);
+            if (publicId) {
+               // Determine which account to delete from based on URL
+               const cloudName = act.imageUrl.includes('dbytj36mv') ? 'dbytj36mv' : 'dj8ugtlrl';
+               
+               // Get current session for auth
+               const sessionData = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
+               const userObj = sessionData ? JSON.parse(sessionData) : null;
+               
+               if (userObj) {
+                 await fetch(BACKEND_GAS_URL, {
+                   method: 'POST',
+                   body: JSON.stringify({
+                     action: 'deleteMultimedia',
+                     publicId: publicId,
+                     cloudName: cloudName,
+                     username: userObj.username,
+                     password: userObj.password
+                   })
+                 }).catch(e => console.error("Cloudinary cascade delete failed:", e));
+               }
+            }
+          }
+
           await remove(ref(userDb, `lp_activities/${key}`));
           delete lpActivitiesSnapshot[key];
           renderCurrentList();
@@ -6037,14 +6107,24 @@ function initLpActivitiesAdmin(userObj) {
   }
 
   // ---- Form Reset ----
-  function resetLpForm() {
+  function resetLpForm(keepEditMode = false) {
+    if (!keepEditMode) {
+      editingLpActKey = null;
+      if (submitBtn) submitBtn.textContent = 'Add Activity';
+      if (cancelBtn) cancelBtn.classList.add('hidden');
+      const sectionLabel = addForm.previousElementSibling;
+      if (sectionLabel && sectionLabel.classList.contains('lp-act-section-label')) {
+        sectionLabel.textContent = 'Add New Activity';
+      }
+    }
     if (addForm) addForm.reset();
     if (fileLabelTxt) fileLabelTxt.textContent = 'Click or drag image here';
     if (fileLabel) fileLabel.classList.remove('file-selected', 'drag-over');
     if (previewWrap) previewWrap.classList.add('hidden');
     if (urlPreviewWrap) urlPreviewWrap.classList.add('hidden');
     if (formError) formError.classList.add('hidden');
-    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Add Activity'; }
+    if (submitBtn) submitBtn.disabled = false;
+    
     // Reset to file tab
     document.querySelectorAll('#lp-act-upload-tabs .upload-tab').forEach(b => b.classList.remove('active'));
     const firstTab = document.querySelector('#lp-act-upload-tabs .upload-tab[data-lptab="file"]');
@@ -6052,6 +6132,10 @@ function initLpActivitiesAdmin(userObj) {
     activeLpTab = 'file';
     document.getElementById('lp-act-panel-file')?.classList.remove('hidden');
     document.getElementById('lp-act-panel-url')?.classList.add('hidden');
+  }
+
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', () => resetLpForm());
   }
 
   // ---- Form Submit ----
@@ -6072,7 +6156,7 @@ function initLpActivitiesAdmin(userObj) {
     submitBtn.textContent = 'Uploading…';
 
     try {
-      let imageUrl = '';
+      let imageUrl = editingLpActKey ? (lpActivitiesSnapshot[editingLpActKey]?.imageUrl || '') : '';
 
       if (activeLpTab === 'url') {
         imageUrl = (urlInput?.value || '').trim();
@@ -6085,7 +6169,7 @@ function initLpActivitiesAdmin(userObj) {
         fd.append('file', file);
         fd.append('upload_preset', window.ENV?.CLOUDINARY_UPLOAD_PRESET || 'sas_uploads');
         fd.append('folder', 'sas_lp_activities');
-        const res = await fetch(`https://api.cloudinary.com/v1_1/${window.ENV?.CLOUDINARY_CLOUD_NAME}/image/upload`, {
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${window.ENV?.CLOUDINARY_CLOUD_NAME || 'dbytj36mv'}/image/upload`, {
           method: 'POST',
           body: fd
         });
@@ -6094,26 +6178,32 @@ function initLpActivitiesAdmin(userObj) {
         imageUrl = cloudData.secure_url;
       }
 
-      // Save to Firebase
-      const newActivity = {
+      // Prepare payload
+      const activityData = {
         title,
         excerpt,
         date,
         imageUrl,
         uploadedBy: userObj.username || 'admin',
-        createdAt: Date.now()
+        updatedAt: Date.now()
       };
 
-      await push(ref(userDb, 'lp_activities'), newActivity);
+      if (editingLpActKey) {
+        await update(ref(userDb, `lp_activities/${editingLpActKey}`), activityData);
+        showToast('Activity updated successfully!', 'success');
+      } else {
+        activityData.createdAt = Date.now();
+        await push(ref(userDb, 'lp_activities'), activityData);
+        showToast('Activity added to landing page!', 'success');
+      }
 
-      showToast('Activity added to landing page!', 'success');
       resetLpForm();
       loadCurrentActivities(); // refresh list
       modal.classList.add('hidden');
 
     } catch(err) {
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Add Activity';
+      submitBtn.textContent = editingLpActKey ? 'Save Changes' : 'Add Activity';
       if (formError) { formError.textContent = err.message; formError.classList.remove('hidden'); }
     }
   });
