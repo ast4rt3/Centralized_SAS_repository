@@ -5261,6 +5261,28 @@ body.lp-mode .main-wrapper {
   margin-top: 2px;
 }
 
+.lp-act-item-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.lp-act-edit-btn {
+  background: #e0f2fe;
+  color: #0284c7;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.lp-act-edit-btn:hover {
+  background: #bae6fd;
+}
+
 .lp-act-delete-btn {
   background: #fee2e2;
   color: #dc2626;

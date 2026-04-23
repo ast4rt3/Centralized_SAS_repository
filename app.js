@@ -5876,6 +5876,7 @@ function initLpActivitiesAdmin(userObj) {
   const urlPreviewImg  = document.getElementById('lp-act-url-preview-img');
   const urlPreviewWrap = document.getElementById('lp-act-url-preview');
   const submitBtn    = document.getElementById('lp-act-submit-btn');
+  const cancelBtn    = document.getElementById('lp-act-cancel-btn');
   const formError    = document.getElementById('lp-act-form-error');
 
   if (!modal || !addForm) return;
@@ -5883,6 +5884,7 @@ function initLpActivitiesAdmin(userObj) {
   // Track current active tab and activities snapshot
   let activeLpTab = 'file';
   let lpActivitiesSnapshot = {};
+  let editingLpActKey = null; // Track if we are editing
 
   // ---- Open / Close ----
   if (manageBtn) {
@@ -6004,7 +6006,48 @@ function initLpActivitiesAdmin(userObj) {
           <div class="lp-act-item-title">${escapeHtml(act.title || '')}</div>
           <div class="lp-act-item-date">${escapeHtml(dateStr)}</div>
         </div>
-        <button type="button" class="lp-act-delete-btn" data-key="${escapeHtml(key)}" aria-label="Delete activity">Delete</button>`;
+        <div class="lp-act-item-actions">
+          <button type="button" class="lp-act-edit-btn" data-key="${escapeHtml(key)}" title="Edit activity">Edit</button>
+          <button type="button" class="lp-act-delete-btn" data-key="${escapeHtml(key)}" title="Delete activity">Delete</button>
+        </div>`;
+
+      const editBtn = row.querySelector('.lp-act-edit-btn');
+      editBtn.addEventListener('click', () => {
+        editingLpActKey = key;
+        
+        // Populate Form
+        if (titleInput) titleInput.value = act.title || '';
+        if (excerptInput) excerptInput.value = act.excerpt || '';
+        if (dateInput) dateInput.value = act.date || '';
+        
+        // Handle Image
+        if (act.imageUrl) {
+          if (urlInput) urlInput.value = act.imageUrl;
+          if (urlPreviewImg) urlPreviewImg.src = act.imageUrl;
+          if (urlPreviewWrap) urlPreviewWrap.classList.remove('hidden');
+          
+          // Switch to URL tab for editing
+          document.querySelectorAll('#lp-act-upload-tabs .upload-tab').forEach(b => b.classList.remove('active'));
+          const urlTab = document.querySelector('#lp-act-upload-tabs .upload-tab[data-lptab="url"]');
+          if (urlTab) urlTab.classList.add('active');
+          activeLpTab = 'url';
+          document.getElementById('lp-act-panel-file')?.classList.add('hidden');
+          document.getElementById('lp-act-panel-url')?.classList.remove('hidden');
+        } else {
+          resetLpForm(true); // partial reset but keep edit mode
+        }
+        
+        // Update UI for Edit Mode
+        const sectionLabel = addForm.previousElementSibling;
+        if (sectionLabel && sectionLabel.classList.contains('lp-act-section-label')) {
+          sectionLabel.textContent = 'Edit Activity';
+        }
+        if (submitBtn) submitBtn.textContent = 'Save Changes';
+        if (cancelBtn) cancelBtn.classList.remove('hidden');
+        
+        // Scroll to form
+        addForm.scrollIntoView({ behavior: 'smooth' });
+      });
 
       const delBtn = row.querySelector('.lp-act-delete-btn');
       delBtn.addEventListener('click', async () => {
@@ -6064,14 +6107,24 @@ function initLpActivitiesAdmin(userObj) {
   }
 
   // ---- Form Reset ----
-  function resetLpForm() {
+  function resetLpForm(keepEditMode = false) {
+    if (!keepEditMode) {
+      editingLpActKey = null;
+      if (submitBtn) submitBtn.textContent = 'Add Activity';
+      if (cancelBtn) cancelBtn.classList.add('hidden');
+      const sectionLabel = addForm.previousElementSibling;
+      if (sectionLabel && sectionLabel.classList.contains('lp-act-section-label')) {
+        sectionLabel.textContent = 'Add New Activity';
+      }
+    }
     if (addForm) addForm.reset();
     if (fileLabelTxt) fileLabelTxt.textContent = 'Click or drag image here';
     if (fileLabel) fileLabel.classList.remove('file-selected', 'drag-over');
     if (previewWrap) previewWrap.classList.add('hidden');
     if (urlPreviewWrap) urlPreviewWrap.classList.add('hidden');
     if (formError) formError.classList.add('hidden');
-    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Add Activity'; }
+    if (submitBtn) submitBtn.disabled = false;
+    
     // Reset to file tab
     document.querySelectorAll('#lp-act-upload-tabs .upload-tab').forEach(b => b.classList.remove('active'));
     const firstTab = document.querySelector('#lp-act-upload-tabs .upload-tab[data-lptab="file"]');
@@ -6079,6 +6132,10 @@ function initLpActivitiesAdmin(userObj) {
     activeLpTab = 'file';
     document.getElementById('lp-act-panel-file')?.classList.remove('hidden');
     document.getElementById('lp-act-panel-url')?.classList.add('hidden');
+  }
+
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', () => resetLpForm());
   }
 
   // ---- Form Submit ----
@@ -6099,7 +6156,7 @@ function initLpActivitiesAdmin(userObj) {
     submitBtn.textContent = 'Uploading…';
 
     try {
-      let imageUrl = '';
+      let imageUrl = editingLpActKey ? (lpActivitiesSnapshot[editingLpActKey]?.imageUrl || '') : '';
 
       if (activeLpTab === 'url') {
         imageUrl = (urlInput?.value || '').trim();
@@ -6121,26 +6178,32 @@ function initLpActivitiesAdmin(userObj) {
         imageUrl = cloudData.secure_url;
       }
 
-      // Save to Firebase
-      const newActivity = {
+      // Prepare payload
+      const activityData = {
         title,
         excerpt,
         date,
         imageUrl,
         uploadedBy: userObj.username || 'admin',
-        createdAt: Date.now()
+        updatedAt: Date.now()
       };
 
-      await push(ref(userDb, 'lp_activities'), newActivity);
+      if (editingLpActKey) {
+        await update(ref(userDb, `lp_activities/${editingLpActKey}`), activityData);
+        showToast('Activity updated successfully!', 'success');
+      } else {
+        activityData.createdAt = Date.now();
+        await push(ref(userDb, 'lp_activities'), activityData);
+        showToast('Activity added to landing page!', 'success');
+      }
 
-      showToast('Activity added to landing page!', 'success');
       resetLpForm();
       loadCurrentActivities(); // refresh list
       modal.classList.add('hidden');
 
     } catch(err) {
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Add Activity';
+      submitBtn.textContent = editingLpActKey ? 'Save Changes' : 'Add Activity';
       if (formError) { formError.textContent = err.message; formError.classList.remove('hidden'); }
     }
   });
