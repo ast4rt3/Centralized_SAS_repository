@@ -4421,10 +4421,11 @@ if (logoutBtn) {
     let perPage = 25;
     let uniqueUsers = new Set();
     let cloudinaryStorageInfo = { usedText: '--', ratio: 0 };
+    let cloudinaryOldStorageInfo = { usedText: '--', ratio: 0 };
     let supabaseStorageInfo = { usedText: '--', ratio: 0 };
-    const revealedTargets = { gas: false, fbMsg: false, fbStore: false, supabase: false, cloudinary: false };
+    const revealedTargets = { gas: false, fbMsg: false, fbStore: false, supabase: false, cloudinary: false, cloudinaryOld: false };
     let pendingRevealTarget = null;
-    let lastStatusSnapshot = { gasState: 'Checking...', fbMsgState: 'Checking...', fbStoreState: 'Checking...', supabaseState: 'Checking...', cloudinaryState: 'Checking...', storagePath: 'user_messages' };
+    let lastStatusSnapshot = { gasState: 'Checking...', fbMsgState: 'Checking...', fbStoreState: 'Checking...', supabaseState: 'Checking...', cloudinaryState: 'Checking...', cloudinaryOldState: 'Checking...', storagePath: 'user_messages' };
     let lastCloudinaryProbeAsset = null;
 
     const elements = {
@@ -4507,8 +4508,8 @@ if (logoutBtn) {
       }
     }
 
-    async function checkCloudinaryStatus() {
-      const cloudName = window.ENV?.CLOUDINARY_CLOUD_NAME;
+    async function checkCloudinaryStatus(targetCloud) {
+      const cloudName = targetCloud || window.ENV?.CLOUDINARY_CLOUD_NAME;
       if (!cloudName) return 'Not Configured';
       // Use a real asset if we've successfully fetched one before, otherwise fallback to sample
       const testUrl = lastCloudinaryProbeAsset || `https://res.cloudinary.com/${encodeURIComponent(cloudName)}/image/upload/sample`;
@@ -4597,16 +4598,17 @@ if (logoutBtn) {
       }
     }
 
-    async function loadCloudinaryUsageOverview() {
+    async function loadCloudinaryUsageOverview(targetCloud) {
+      const cloudName = targetCloud || window.ENV?.CLOUDINARY_CLOUD_NAME;
+      const isLegacy = cloudName === window.ENV?.OLD_CLOUDINARY_CLOUD_NAME;
+
       if (!BACKEND_GAS_URL || !BACKEND_GAS_URL.startsWith('https://')) {
         setCloudinaryUsageFallback('N/A');
         return;
       }
 
       const defaultLimitGb = Number(window.ENV?.CLOUDINARY_STORAGE_LIMIT_GB || 15);
-      const fallbackLimitBytes = Number.isFinite(defaultLimitGb) && defaultLimitGb > 0
-        ? defaultLimitGb * 1024 * 1024 * 1024
-        : 15 * 1024 * 1024 * 1024;
+      const fallbackLimitBytes = defaultLimitGb * 1024 * 1024 * 1024;
 
       const applyUsageToUi = (usage, periodLabel) => {
         const storageBytes = Number(usage.storage);
@@ -4619,82 +4621,45 @@ if (logoutBtn) {
           : 0;
         const usedLine = `${formatBytes(storageBytes)} / ${formatBytes(effectiveLimit)} used`;
 
-        if (elements.cloudinaryImpressions) elements.cloudinaryImpressions.textContent = usage.impressions ?? '--';
-        if (elements.cloudinaryAssets) elements.cloudinaryAssets.textContent = usage.assets ?? '--';
-        if (elements.cloudinaryTransformations) elements.cloudinaryTransformations.textContent = usage.transformations ?? '--';
-        if (elements.cloudinaryBandwidth) elements.cloudinaryBandwidth.textContent = usage.bandwidthFormatted || formatBytes(usage.bandwidth);
-        if (elements.cloudinaryStorage) elements.cloudinaryStorage.textContent = usage.storageFormatted || formatBytes(usage.storage);
-        if (elements.cloudinaryPeriodLabel && periodLabel) elements.cloudinaryPeriodLabel.textContent = periodLabel;
-        cloudinaryStorageInfo = { usedText: usedLine, ratio: Number(ratio.toFixed(1)) };
-      };
-
-      const estimateCloudinaryUsageFromPosts = async () => {
-        try {
-          const postsRes = await fetch(BACKEND_GAS_URL, { method: 'GET' });
-          if (!postsRes.ok) throw new Error('Posts fetch failed');
-          const postsPayload = await postsRes.json();
-          const posts = Array.isArray(postsPayload?.posts) ? postsPayload.posts : [];
-          const cloudName = window.ENV?.CLOUDINARY_CLOUD_NAME || '';
-          const urls = [...new Set(
-            posts
-              .map(p => (p?.imageUrl || '').trim())
-              .filter(url => url.includes('res.cloudinary.com') && (!cloudName || url.includes(`/res.cloudinary.com/${cloudName}/`) || url.includes(`res.cloudinary.com/${cloudName}/`)))
-          )];
-
-          let totalBytes = 0;
-          for (const url of urls.slice(0, 50)) {
-            try {
-              const headRes = await fetch(url, { method: 'HEAD', mode: 'cors' });
-              const len = Number(headRes.headers.get('content-length') || 0);
-              if (Number.isFinite(len) && len > 0) totalBytes += len;
-            } catch (e) {
-              // Ignore per-asset failures and continue estimating.
-            }
-          }
-
-          applyUsageToUi({
-            impressions: '--',
-            assets: urls.length,
-            transformations: '--',
-            bandwidth: null,
-            storage: totalBytes,
-            storageLimit: fallbackLimitBytes
-          }, 'Estimated from current posts');
-        } catch (e) {
-          setCloudinaryUsageFallback('N/A');
-          if (elements.cloudinaryPeriodLabel) elements.cloudinaryPeriodLabel.textContent = 'Usage unavailable';
+        if (!isLegacy) {
+          if (elements.cloudinaryImpressions) elements.cloudinaryImpressions.textContent = usage.impressions ?? '--';
+          if (elements.cloudinaryAssets) elements.cloudinaryAssets.textContent = usage.assets ?? '--';
+          if (elements.cloudinaryTransformations) elements.cloudinaryTransformations.textContent = usage.transformations ?? '--';
+          if (elements.cloudinaryBandwidth) elements.cloudinaryBandwidth.textContent = usage.bandwidthFormatted || formatBytes(usage.bandwidth);
+          if (elements.cloudinaryStorage) elements.cloudinaryStorage.textContent = usage.storageFormatted || formatBytes(usage.storage);
+          if (elements.cloudinaryPeriodLabel && periodLabel) elements.cloudinaryPeriodLabel.textContent = periodLabel;
+          cloudinaryStorageInfo = { usedText: usedLine, ratio: Number(ratio.toFixed(1)) };
+        } else {
+          cloudinaryOldStorageInfo = { usedText: usedLine, ratio: Number(ratio.toFixed(1)) };
         }
       };
 
       try {
         const res = await fetch(BACKEND_GAS_URL, {
           method: 'POST',
-          body: JSON.stringify({ action: 'cloudinaryUsageOverview' })
+          body: JSON.stringify({ action: 'cloudinaryUsageOverview', cloudName: cloudName })
         });
-        if (!res.ok) return estimateCloudinaryUsageFromPosts();
+        if (!res.ok) throw new Error('Usage fetch failed');
 
         const payload = await res.json();
-        if (payload?.success === false && /Unknown action/i.test(payload?.message || '')) {
-          return estimateCloudinaryUsageFromPosts();
-        }
-        const usage = payload?.usage || payload?.data || {};
-        if (!usage || typeof usage !== 'object') {
-          return estimateCloudinaryUsageFromPosts();
-        }
+        const usage = payload?.usage || {};
         applyUsageToUi(usage, 'Last 30 days');
       } catch (err) {
-        await estimateCloudinaryUsageFromPosts();
+        applyUsageToUi({ storage: 0, storageLimit: fallbackLimitBytes }, 'Error fetching usage');
       }
     }
 
-    function renderStorageStatusRows(gasState, fbMsgState, fbStoreState, supabaseState, cloudinaryState, storagePath) {
+
+
+    function renderStorageStatusRows(gasState, fbMsgState, fbStoreState, supabaseState, cloudinaryState, cloudinaryOldState, storagePath) {
       if (!elements.storageTbody) return;
       const targetValues = {
         gas: BACKEND_GAS_URL || 'Not Configured',
         fbMsg: window.ENV?.FIREBASE_CONFIG?.databaseURL || 'Not Configured',
         fbStore: window.ENV?.STORAGE_CHECK_FIREBASE_CONFIG?.databaseURL || (storageCheckDb && storageCheckDb === userDb ? (window.ENV?.FIREBASE_CONFIG?.databaseURL || 'Not Configured') : 'Not Configured'),
         supabase: window.ENV?.SUPABASE_URL || 'Not Configured',
-        cloudinary: window.ENV?.CLOUDINARY_CLOUD_NAME || 'Not Configured'
+        cloudinary: window.ENV?.CLOUDINARY_CLOUD_NAME || 'Not Configured',
+        cloudinaryOld: window.ENV?.OLD_CLOUDINARY_CLOUD_NAME || 'Not Configured'
       };
       const maskedText = '********';
       const targetCellHtml = (key) => {
@@ -4768,7 +4733,7 @@ if (logoutBtn) {
           <td>${getRec(supabaseStorageInfo.ratio)}</td>
         </tr>
         <tr>
-          <td>Cloudinary Media</td>
+          <td>Cloudinary Media (Active)</td>
           <td>${targetCellHtml('cloudinary')}</td>
           <td>${escapeHtml(cloudinaryState)}</td>
           <td class="db-table-storage-cell">
@@ -4778,6 +4743,18 @@ if (logoutBtn) {
             </div>
           </td>
           <td>${getRec(cloudinaryStorageInfo.ratio)}</td>
+        </tr>
+        <tr>
+          <td>Cloudinary Media (Legacy)</td>
+          <td>${targetCellHtml('cloudinaryOld')}</td>
+          <td>${escapeHtml(cloudinaryOldState)}</td>
+          <td class="db-table-storage-cell">
+            <div class="db-mini-storage-text">${escapeHtml(cloudinaryOldStorageInfo.usedText)} (15GB Limit)</div>
+            <div class="db-mini-storage-bar">
+              <div class="db-mini-storage-fill" style="width:${cloudinaryOldStorageInfo.ratio}%;"></div>
+            </div>
+          </td>
+          <td>${getRec(cloudinaryOldStorageInfo.ratio)}</td>
         </tr>
       `;
     }
@@ -4796,45 +4773,57 @@ if (logoutBtn) {
 
     async function loadMultimediaDatabase() {
       if (!elements.mediaGrid) return;
-      elements.mediaGrid.innerHTML = '<div class="db-media-loading"><div class="spinner"></div><span>Fetching Cloudinary assets...</span></div>';
+      elements.mediaGrid.innerHTML = '<div class="db-media-loading"><div class="spinner"></div><span>Scanning Cloudinary repositories...</span></div>';
       
-      const selectedCloud = elements.mediaAccountSelect?.value || window.ENV?.CLOUDINARY_CLOUD_NAME;
+      const selectedValue = elements.mediaAccountSelect?.value || 'all';
+      const activeCloud = window.ENV?.CLOUDINARY_CLOUD_NAME;
+      const legacyCloud = window.ENV?.OLD_CLOUDINARY_CLOUD_NAME;
 
       try {
-        const res = await fetch(BACKEND_GAS_URL, {
-          method: 'POST',
-          body: JSON.stringify({ 
-            action: 'listMultimedia',
-            cloudName: selectedCloud 
-          })
-        });
-        const payload = await res.json();
+        let activeRes = { success: true, resources: [] };
+        let legacyRes = { success: true, resources: [] };
+
+        if (selectedValue === 'all' || selectedValue === activeCloud) {
+          const res = await fetch(BACKEND_GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'listMultimedia', cloudName: activeCloud }) });
+          activeRes = await res.json();
+        }
         
-        if (!payload.success) {
-          elements.mediaGrid.innerHTML = `<div class="db-media-error">Error: ${escapeHtml(payload.message)}</div>`;
+        if (legacyCloud && (selectedValue === 'all' || selectedValue === legacyCloud)) {
+          const res = await fetch(BACKEND_GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'listMultimedia', cloudName: legacyCloud }) });
+          legacyRes = await res.json();
+        }
+
+        let allResources = [];
+        if (activeRes.success) {
+          allResources.push(...(activeRes.resources || []).map(r => ({ ...r, accountLabel: 'Active', cloudName: activeCloud })));
+        }
+        if (legacyRes.success) {
+          allResources.push(...(legacyRes.resources || []).map(r => ({ ...r, accountLabel: 'Legacy', cloudName: legacyCloud })));
+        }
+
+        if (allResources.length > 0 && allResources[0].secure_url) {
+          lastCloudinaryProbeAsset = allResources[0].secure_url;
+        }
+        
+        if (allResources.length === 0) {
+          elements.mediaGrid.innerHTML = '<div class="db-media-empty">No assets found in any Cloudinary account.</div>';
           return;
         }
+
+        // Sort by date newest first
+        allResources.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
         
-        const resources = payload.resources || [];
-        if (resources.length > 0 && resources[0].secure_url) {
-          lastCloudinaryProbeAsset = resources[0].secure_url;
-        }
-        
-        if (resources.length === 0) {
-          elements.mediaGrid.innerHTML = '<div class="db-media-empty">No assets found in Cloudinary.</div>';
-          return;
-        }
-        
-        elements.mediaGrid.innerHTML = resources.map(res => {
-          // Use thumbnail transform for preview
+        elements.mediaGrid.innerHTML = allResources.map(res => {
           const thumbUrl = res.secure_url.replace('/upload/', '/upload/w_200,h_200,c_fill/');
           const date = new Date(res.created_at).toLocaleDateString();
           const size = (res.bytes / 1024 / 1024).toFixed(2) + ' MB';
+          const badgeColor = res.accountLabel === 'Active' ? '#0d9488' : '#64748b';
           
           return `
             <div class="db-media-card" title="${escapeHtml(res.public_id)}">
               <div class="db-media-preview">
                 <img src="${thumbUrl}" alt="${escapeHtml(res.public_id)}" loading="lazy">
+                <div style="position:absolute; top:8px; right:8px; background:${badgeColor}; color:white; font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px; text-transform:uppercase;">${res.accountLabel}</div>
               </div>
               <div class="db-media-info">
                 <div class="db-media-id">${escapeHtml(res.public_id)}</div>
@@ -4842,7 +4831,7 @@ if (logoutBtn) {
               </div>
               <div class="db-media-actions">
                 <a href="${res.secure_url}" target="_blank" class="db-media-btn" title="Open Full Size">View</a>
-                <button class="db-media-btn delete" onclick="dbDeleteMedia('${res.public_id}', '${res.resource_type}', '${selectedCloud}')" title="Delete Everywhere">Delete</button>
+                <button class="db-media-btn delete" onclick="dbDeleteMedia('${res.public_id}', '${res.resource_type}', '${res.cloudName}')" title="Delete Everywhere">Delete</button>
               </div>
             </div>
           `;
@@ -4855,24 +4844,26 @@ if (logoutBtn) {
 
     async function updateDatabaseStatuses() {
       const storagePath = (elements.storagePath?.value || '').trim() || window.ENV?.STORAGE_CHECK_PATH || 'storage_check_health';
-      const [gasState, fbMsgState, fbStoreState, supabaseState, cloudinaryState] = await Promise.all([
+      const [gasState, fbMsgState, fbStoreState, supabaseState, cloudinaryState, cloudinaryOldState] = await Promise.all([
         checkGasStatus(),
         checkDatabaseStatus(userDb, 'user_messages'),
         checkDatabaseStatus(storageCheckDb, storagePath),
         checkSupabaseStatus(),
-        checkCloudinaryStatus()
+        checkCloudinaryStatus(window.ENV?.CLOUDINARY_CLOUD_NAME),
+        checkCloudinaryStatus(window.ENV?.OLD_CLOUDINARY_CLOUD_NAME)
       ]);
-      lastStatusSnapshot = { gasState, fbMsgState, fbStoreState, supabaseState, cloudinaryState, storagePath };
+      lastStatusSnapshot = { gasState, fbMsgState, fbStoreState, supabaseState, cloudinaryState, cloudinaryOldState, storagePath };
 
-      renderStorageStatusRows(gasState, fbMsgState, fbStoreState, supabaseState, cloudinaryState, storagePath);
+      renderStorageStatusRows(gasState, fbMsgState, fbStoreState, supabaseState, cloudinaryState, cloudinaryOldState, storagePath);
       
       await Promise.all([
-        loadCloudinaryUsageOverview(),
+        loadCloudinaryUsageOverview(window.ENV?.CLOUDINARY_CLOUD_NAME),
+        loadCloudinaryUsageOverview(window.ENV?.OLD_CLOUDINARY_CLOUD_NAME),
         loadSupabaseUsageOverview()
       ]);
       
       // Re-render table so "Storage Currently" reflects the latest usage fetch.
-      renderStorageStatusRows(gasState, fbMsgState, fbStoreState, supabaseState, cloudinaryState, storagePath);
+      renderStorageStatusRows(gasState, fbMsgState, fbStoreState, supabaseState, cloudinaryState, cloudinaryOldState, storagePath);
     }
 
     function rerenderStorageRows() {
@@ -4882,12 +4873,18 @@ if (logoutBtn) {
         lastStatusSnapshot.fbStoreState,
         lastStatusSnapshot.supabaseState,
         lastStatusSnapshot.cloudinaryState,
+        lastStatusSnapshot.cloudinaryOldState,
         lastStatusSnapshot.storagePath
       );
     }
 
     async function flushMultimediaDatabase() {
-      const selectedCloud = elements.mediaAccountSelect?.value || window.ENV?.CLOUDINARY_CLOUD_NAME;
+      const selectedValue = elements.mediaAccountSelect?.value || 'all';
+      if (selectedValue === 'all') {
+        showToast('Please select a specific repository (Active or Legacy) to flush unused assets.', 'warning');
+        return;
+      }
+      const selectedCloud = selectedValue;
       const accountLabel = selectedCloud === window.ENV?.CLOUDINARY_CLOUD_NAME ? 'Active Repository' : 'Legacy Repository';
 
       const confirmMsg = `This will scan your system and delete ANY assets in the [${accountLabel}] that are not currently being used. Please enter your password to confirm.`;
