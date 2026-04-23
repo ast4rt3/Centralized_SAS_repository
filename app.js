@@ -4404,6 +4404,7 @@ if (logoutBtn) {
     const revealedTargets = { gas: false, fbMsg: false, fbStore: false, supabase: false, cloudinary: false };
     let pendingRevealTarget = null;
     let lastStatusSnapshot = { gasState: 'Checking...', fbMsgState: 'Checking...', fbStoreState: 'Checking...', supabaseState: 'Checking...', cloudinaryState: 'Checking...', storagePath: 'user_messages' };
+    let lastCloudinaryProbeAsset = null;
 
     const elements = {
       refreshBtn: refreshBtn,
@@ -4486,11 +4487,12 @@ if (logoutBtn) {
     async function checkCloudinaryStatus() {
       const cloudName = window.ENV?.CLOUDINARY_CLOUD_NAME;
       if (!cloudName) return 'Not Configured';
-      const testUrl = `https://res.cloudinary.com/${encodeURIComponent(cloudName)}/image/upload/sample`;
+      // Use a real asset if we've successfully fetched one before, otherwise fallback to sample
+      const testUrl = lastCloudinaryProbeAsset || `https://res.cloudinary.com/${encodeURIComponent(cloudName)}/image/upload/sample`;
       try {
-        const res = await fetch(testUrl, { method: 'HEAD' });
-        // 404 still means the service is reachable and cloud name is likely correct
-        if (res.ok || res.status === 404) return 'Online';
+        const res = await fetch(testUrl, { method: 'HEAD', cache: 'no-cache' });
+        // Any response from Cloudinary (even 404/403) means the service is reachable for this cloud name
+        if (res.status < 500) return 'Online';
         return `Error (${res.status})`;
       } catch (err) {
         return 'Offline';
@@ -4786,6 +4788,10 @@ if (logoutBtn) {
         }
         
         const resources = payload.resources || [];
+        if (resources.length > 0 && resources[0].secure_url) {
+          lastCloudinaryProbeAsset = resources[0].secure_url;
+        }
+        
         if (resources.length === 0) {
           elements.mediaGrid.innerHTML = '<div class="db-media-empty">No assets found in Cloudinary.</div>';
           return;
@@ -4853,10 +4859,11 @@ if (logoutBtn) {
     }
 
     window.dbDeleteMedia = async function(publicId, resourceType) {
-      const confirmed = await lpShowConfirm(
-        'Cascading Deletion',
-        `CAUTION: This will delete the asset from Cloudinary AND remove any linked TV posts or Landing Page activities. This action is permanent.`
-      );
+      const confirmMsg = `CAUTION: This will delete the asset from Cloudinary AND remove any linked TV posts or Landing Page activities. This action is permanent.`;
+      const confirmed = (typeof showConfirm === 'function') 
+        ? await showConfirm('Cascading Deletion', confirmMsg, false, 'danger')
+        : window.confirm(confirmMsg);
+        
       if (!confirmed) return;
 
       showToast('Initiating cascading deletion...', 'info');
