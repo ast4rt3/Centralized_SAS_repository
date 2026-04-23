@@ -4916,6 +4916,9 @@ if (logoutBtn) {
 // LP ACTIVITIES SYSTEM
 // =============================================================
 
+// Cache all activities for the full-page view
+let _lpAllActivities = [];
+
 // --- PUBLIC: load & render activities on landing page ---
 function initLpActivities() {
   if (!userDb) return;
@@ -4930,8 +4933,25 @@ function initLpActivities() {
           .map(([key, val]) => ({ id: key, ...val }))
           .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
       : [];
-    renderLpActivities(activities, grid);
+
+    // Cache for full-page view
+    _lpAllActivities = activities;
+
+    // Teaser: show latest 6
+    renderLpActivities(activities.slice(0, 6), grid);
+
+    // Always show "See More" button
+    const viewAllWrap = document.getElementById('lp-view-all-wrap');
+    if (viewAllWrap) viewAllWrap.style.display = 'block';
+
+    // Keep full-page grid in sync if it's open
+    if (document.getElementById('lp-all-activities-page')?.classList.contains('lp-all-act-open')) {
+      renderLpAllActGrid(_lpAllActivities);
+    }
   });
+
+  // Wire up the full-page
+  initLpAllActivitiesPage();
 }
 
 function renderLpActivities(activities, grid) {
@@ -4952,7 +4972,6 @@ function renderLpActivities(activities, grid) {
     card.className = 'lp-activity-card';
     card.style.animationDelay = `${idx * 0.08}s`;
 
-    // Format date nicely
     let dateStr = act.date || '';
     if (dateStr) {
       try {
@@ -4971,6 +4990,137 @@ function renderLpActivities(activities, grid) {
         <span class="lp-activity-date"><i class='bx bx-calendar'></i> ${escapeHtml(dateStr)}</span>
         <h3 class="lp-activity-title">${escapeHtml(act.title)}</h3>
         <p class="lp-activity-excerpt">${escapeHtml(act.excerpt || '')}</p>
+      </div>`;
+
+    grid.appendChild(card);
+  });
+}
+
+// --- FULL-PAGE ACTIVITIES VIEW ---
+function initLpAllActivitiesPage() {
+  const page       = document.getElementById('lp-all-activities-page');
+  const viewAllBtn = document.getElementById('lp-view-all-btn');
+  const backBtn    = document.getElementById('lp-all-act-back');
+  const searchInput = document.getElementById('lp-all-act-search');
+  const yearSelect  = document.getElementById('lp-all-act-year');
+
+  if (!page || !viewAllBtn) return;
+
+  // Open
+  viewAllBtn.addEventListener('click', () => {
+    page.classList.add('lp-all-act-open');
+    page.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    // Reset search
+    if (searchInput) searchInput.value = '';
+    if (yearSelect)  yearSelect.value  = '';
+    buildYearFilter();
+    renderLpAllActGrid(_lpAllActivities);
+    if (searchInput) searchInput.focus();
+  });
+
+  // Close
+  if (backBtn) {
+    backBtn.addEventListener('click', closeLpAllPage);
+  }
+
+  // Escape key closes
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && page.classList.contains('lp-all-act-open')) closeLpAllPage();
+  });
+
+  function closeLpAllPage() {
+    page.classList.remove('lp-all-act-open');
+    page.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+
+  // Build year filter options from data
+  function buildYearFilter() {
+    if (!yearSelect) return;
+    const years = new Set();
+    _lpAllActivities.forEach(a => {
+      if (a.date) {
+        const y = a.date.slice(0, 4);
+        if (y) years.add(y);
+      }
+    });
+    // Keep "All Years" option, rebuild the rest
+    yearSelect.innerHTML = '<option value="">All Years</option>';
+    [...years].sort((a, b) => b - a).forEach(y => {
+      const opt = document.createElement('option');
+      opt.value = y;
+      opt.textContent = y;
+      yearSelect.appendChild(opt);
+    });
+  }
+
+  // Search + year filter
+  let searchTimeout;
+  function applyFilters() {
+    const q    = (searchInput?.value || '').trim().toLowerCase();
+    const year = yearSelect?.value || '';
+    const filtered = _lpAllActivities.filter(a => {
+      const matchesQ    = !q || (a.title || '').toLowerCase().includes(q) || (a.excerpt || '').toLowerCase().includes(q);
+      const matchesYear = !year || (a.date || '').startsWith(year);
+      return matchesQ && matchesYear;
+    });
+    renderLpAllActGrid(filtered);
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(applyFilters, 250);
+    });
+  }
+  if (yearSelect) {
+    yearSelect.addEventListener('change', applyFilters);
+  }
+}
+
+function renderLpAllActGrid(activities) {
+  const grid  = document.getElementById('lp-all-act-grid');
+  const empty = document.getElementById('lp-all-act-empty');
+  const total = document.getElementById('lp-all-act-total');
+  if (!grid) return;
+
+  if (total) total.textContent = `${activities.length} ${activities.length === 1 ? 'activity' : 'activities'}`;
+
+  if (activities.length === 0) {
+    grid.innerHTML = '';
+    if (empty) empty.classList.remove('hidden');
+    return;
+  }
+  if (empty) empty.classList.add('hidden');
+
+  grid.innerHTML = '';
+  activities.forEach((act, idx) => {
+    const card = document.createElement('article');
+    card.className = 'lp-all-act-card';
+    card.style.animationDelay = `${Math.min(idx, 12) * 0.05}s`;
+
+    let dateStr = act.date || '';
+    if (dateStr) {
+      try {
+        const d = new Date(dateStr + 'T00:00:00');
+        dateStr = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      } catch(e) {}
+    }
+
+    const imgHtml = act.imageUrl
+      ? `<img class="lp-all-act-card-img" src="${escapeHtml(act.imageUrl)}" alt="${escapeHtml(act.title)}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling?.style.setProperty('display','flex')">`
+      : '';
+    const placeholderHtml = !act.imageUrl
+      ? `<div class="lp-all-act-card-img-placeholder"><i class='bx bx-image-alt'></i></div>`
+      : `<div class="lp-all-act-card-img-placeholder" style="display:none"><i class='bx bx-image-alt'></i></div>`;
+
+    card.innerHTML = `
+      ${imgHtml}${placeholderHtml}
+      <div class="lp-all-act-card-body">
+        <div class="lp-all-act-card-date"><i class='bx bx-calendar'></i> ${escapeHtml(dateStr)}</div>
+        <h3 class="lp-all-act-card-title">${escapeHtml(act.title)}</h3>
+        <p class="lp-all-act-card-excerpt">${escapeHtml(act.excerpt || '')}</p>
       </div>`;
 
     grid.appendChild(card);

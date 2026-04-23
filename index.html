@@ -657,8 +657,17 @@
           <div class="lp-activity-skeleton"><div class="lp-skeleton-img"></div><div class="lp-skeleton-body"><div class="lp-skeleton-line short"></div><div class="lp-skeleton-line"></div><div class="lp-skeleton-line medium"></div></div></div>
           <div class="lp-activity-skeleton"><div class="lp-skeleton-img"></div><div class="lp-skeleton-body"><div class="lp-skeleton-line short"></div><div class="lp-skeleton-line"></div><div class="lp-skeleton-line medium"></div></div></div>
         </div>
+
+        <!-- See More button — always visible, opens full-page activities view -->
+        <div class="lp-view-all-wrap" id="lp-view-all-wrap" style="display:none;">
+          <button id="lp-view-all-btn" class="lp-view-all-btn">
+            See More Activities
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+          </button>
+        </div>
       </div>
     </section>
+
     <!-- Footer -->
     <footer class="lp-footer">
       <div class="lp-container">
@@ -667,6 +676,44 @@
     </footer>
 
   </section>
+
+  <!-- Full-Page Activities Overlay -->
+  <div id="lp-all-activities-page" class="lp-all-activities-page" aria-hidden="true">
+    <!-- Sticky Header -->
+    <header class="lp-all-act-header">
+      <button id="lp-all-act-back" class="lp-all-act-back" aria-label="Back to landing page">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        Back
+      </button>
+      <div class="lp-all-act-title">
+        <img src="assets/sas_logo.png" alt="NBSC" class="lp-all-act-logo">
+        <span>NBSC — All Activities</span>
+      </div>
+      <div class="lp-all-act-count" id="lp-all-act-total"></div>
+    </header>
+
+    <!-- Search & Filter Bar -->
+    <div class="lp-all-act-toolbar">
+      <div class="lp-all-act-search-wrap">
+        <i class='bx bx-search'></i>
+        <input type="text" id="lp-all-act-search" placeholder="Search activities..." autocomplete="off">
+      </div>
+      <select id="lp-all-act-year" class="lp-all-act-filter">
+        <option value="">All Years</option>
+      </select>
+    </div>
+
+    <!-- Grid -->
+    <div class="lp-all-act-grid-wrap">
+      <div class="lp-all-act-grid" id="lp-all-act-grid">
+        <!-- Populated by JS -->
+      </div>
+      <div id="lp-all-act-empty" class="lp-all-act-empty hidden">
+        <i class='bx bx-search-alt'></i>
+        <p>No activities match your search.</p>
+      </div>
+    </div>
+  </div>
 
   <!-- Global Login Overlay -->
   <!-- Recommit for redeployment -->
