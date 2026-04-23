@@ -127,6 +127,9 @@ if (window.ENV && window.ENV.STORAGE_CHECK_FIREBASE_CONFIG) {
   } catch (e) {
     console.error("Storage check firebase init failed:", e);
   }
+} else if (userDb) {
+  // Fallback to main messaging database for storage health probes if not specifically defined
+  storageCheckDb = userDb;
 }
 
 let contactsMap = {};
@@ -4433,7 +4436,12 @@ if (logoutBtn) {
       targetForm: document.getElementById('db-target-form'),
       targetPassword: document.getElementById('db-target-password'),
       targetCancel: document.getElementById('db-target-cancel'),
-      targetError: document.getElementById('db-target-error')
+      targetError: document.getElementById('db-target-error'),
+      tabMultimedia: document.getElementById('db-tab-multimedia'),
+      panelMultimedia: document.getElementById('db-panel-multimedia'),
+      mediaSearch: document.getElementById('db-media-search'),
+      mediaRefreshBtn: document.getElementById('db-media-refresh-btn'),
+      mediaGrid: document.getElementById('db-media-grid')
     };
 
     async function checkGasStatus() {
@@ -4446,12 +4454,12 @@ if (logoutBtn) {
     }
 
     async function checkDatabaseStatus(dbInstance, probePath) {
-      if (!dbInstance) return 'Not Configured';
+      if (!dbInstance) return 'Optional / Not Linked';
       try {
         const snap = await get(ref(dbInstance, probePath));
         return snap.exists() ? 'Online' : 'Online (Empty)';
       } catch (err) {
-        return `Offline (${err.message || 'error'})`;
+        return `Error (${err.code || 'Forbidden'})`;
       }
     }
 
@@ -4460,13 +4468,15 @@ if (logoutBtn) {
       const anonKey = window.ENV?.SUPABASE_ANON_KEY;
       if (!supabaseUrl || !anonKey) return 'Not Configured';
       try {
-        const res = await fetch(`${supabaseUrl}/rest/v1/`, {
+        // Probing a specific table instead of root to avoid 401 on protected schemas
+        const res = await fetch(`${supabaseUrl}/rest/v1/sas_attendance_logs?select=id&limit=1`, {
           method: 'GET',
           headers: {
             apikey: anonKey,
             Authorization: `Bearer ${anonKey}`
           }
         });
+        if (res.status === 200 || res.status === 204) return 'Online';
         return `Online (${res.status})`;
       } catch (err) {
         return 'Offline';
@@ -4478,8 +4488,10 @@ if (logoutBtn) {
       if (!cloudName) return 'Not Configured';
       const testUrl = `https://res.cloudinary.com/${encodeURIComponent(cloudName)}/image/upload/sample`;
       try {
-        const res = await fetch(testUrl, { method: 'GET', mode: 'cors' });
-        return `Online (${res.status})`;
+        const res = await fetch(testUrl, { method: 'HEAD' });
+        // 404 still means the service is reachable and cloud name is likely correct
+        if (res.ok || res.status === 404) return 'Online';
+        return `Error (${res.status})`;
       } catch (err) {
         return 'Offline';
       }
@@ -4520,7 +4532,7 @@ if (logoutBtn) {
         return;
       }
 
-      const tables = ['sas_attendance_logs', 'sas_schedules'];
+      const tables = ['sas_attendance_logs', 'sas_schedules', 'sas_events', 'NBSC_masterlist'];
       let totalRows = 0;
 
       try {
@@ -4655,14 +4667,18 @@ if (logoutBtn) {
       const targetValues = {
         gas: BACKEND_GAS_URL || 'Not Configured',
         fbMsg: window.ENV?.FIREBASE_CONFIG?.databaseURL || 'Not Configured',
-        fbStore: window.ENV?.STORAGE_CHECK_FIREBASE_CONFIG?.databaseURL || 'Not Configured',
+        fbStore: window.ENV?.STORAGE_CHECK_FIREBASE_CONFIG?.databaseURL || (storageCheckDb && storageCheckDb === userDb ? (window.ENV?.FIREBASE_CONFIG?.databaseURL || 'Not Configured') : 'Not Configured'),
         supabase: window.ENV?.SUPABASE_URL || 'Not Configured',
         cloudinary: window.ENV?.CLOUDINARY_CLOUD_NAME || 'Not Configured'
       };
       const maskedText = '********';
       const targetCellHtml = (key) => {
+        const val = targetValues[key];
+        if (!val || val === 'Not Configured') {
+          return '<span style="color:#64748b; font-style:italic; font-size:0.8rem;">None / Not Set</span>';
+        }
         const isRevealed = revealedTargets[key];
-        const shownValue = isRevealed ? targetValues[key] : maskedText;
+        const shownValue = isRevealed ? val : maskedText;
         const icon = isRevealed ? '&#128065;&#65039;' : '&#128584;';
         return `
           <div class="db-target-cell">
@@ -4671,6 +4687,12 @@ if (logoutBtn) {
           </div>
         `;
       };
+      const getRec = (ratio) => {
+        if (ratio >= 90) return `<span style="color:#ef4444; font-weight:700;">🚨 Upgrade Recommended</span>`;
+        if (ratio >= 70) return `<span style="color:#f59e0b; font-weight:700;">⚠️ Warning (Usage High)</span>`;
+        return `<span style="color:#22c55e; font-weight:700;">✅ Optimal (Healthy)</span>`;
+      };
+
       elements.storageTbody.innerHTML = `
         <tr>
           <td>Google Sheets (GAS Backend)</td>
@@ -4682,6 +4704,7 @@ if (logoutBtn) {
               <div class="db-mini-storage-fill" style="width:0.1%;"></div>
             </div>
           </td>
+          <td>${getRec(0.1)}</td>
         </tr>
         <tr>
           <td>Firebase Messaging</td>
@@ -4693,6 +4716,7 @@ if (logoutBtn) {
               <div class="db-mini-storage-fill" style="width:0.1%;"></div>
             </div>
           </td>
+          <td>${getRec(0.1)}</td>
         </tr>
         <tr>
           <td>Firebase Storage DB</td>
@@ -4704,6 +4728,7 @@ if (logoutBtn) {
               <div class="db-mini-storage-fill" style="width:0.1%;"></div>
             </div>
           </td>
+          <td>${(fbStoreState === 'Optional / Not Linked' && !storageCheckDb) ? 'N/A' : getRec(0.1)}</td>
         </tr>
         <tr>
           <td>Supabase Database</td>
@@ -4715,6 +4740,7 @@ if (logoutBtn) {
               <div class="db-mini-storage-fill" style="width:${supabaseStorageInfo.ratio}%;"></div>
             </div>
           </td>
+          <td>${getRec(supabaseStorageInfo.ratio)}</td>
         </tr>
         <tr>
           <td>Cloudinary Media</td>
@@ -4726,16 +4752,71 @@ if (logoutBtn) {
               <div class="db-mini-storage-fill" style="width:${cloudinaryStorageInfo.ratio}%;"></div>
             </div>
           </td>
+          <td>${getRec(cloudinaryStorageInfo.ratio)}</td>
         </tr>
       `;
     }
 
     function switchDbPanel(view) {
-      const showMessaging = view !== 'storage';
-      if (elements.panelMessaging) elements.panelMessaging.classList.toggle('hidden', !showMessaging);
-      if (elements.panelStorage) elements.panelStorage.classList.toggle('hidden', showMessaging);
-      if (elements.tabMessaging) elements.tabMessaging.classList.toggle('active', showMessaging);
-      if (elements.tabStorage) elements.tabStorage.classList.toggle('active', !showMessaging);
+      if (elements.panelMessaging) elements.panelMessaging.classList.toggle('hidden', view !== 'messaging');
+      if (elements.panelStorage) elements.panelStorage.classList.toggle('hidden', view !== 'storage');
+      if (elements.panelMultimedia) elements.panelMultimedia.classList.toggle('hidden', view !== 'multimedia');
+      
+      if (elements.tabMessaging) elements.tabMessaging.classList.toggle('active', view === 'messaging');
+      if (elements.tabStorage) elements.tabStorage.classList.toggle('active', view === 'storage');
+      if (elements.tabMultimedia) elements.tabMultimedia.classList.toggle('active', view === 'multimedia');
+      
+      if (view === 'multimedia') loadMultimediaDatabase();
+    }
+
+    async function loadMultimediaDatabase() {
+      if (!elements.mediaGrid) return;
+      elements.mediaGrid.innerHTML = '<div class="db-media-loading"><div class="spinner"></div><span>Fetching Cloudinary assets...</span></div>';
+      
+      try {
+        const res = await fetch(BACKEND_GAS_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'listMultimedia' })
+        });
+        const payload = await res.json();
+        
+        if (!payload.success) {
+          elements.mediaGrid.innerHTML = `<div class="db-media-error">Error: ${escapeHtml(payload.message)}</div>`;
+          return;
+        }
+        
+        const resources = payload.resources || [];
+        if (resources.length === 0) {
+          elements.mediaGrid.innerHTML = '<div class="db-media-empty">No assets found in Cloudinary.</div>';
+          return;
+        }
+        
+        elements.mediaGrid.innerHTML = resources.map(res => {
+          // Use thumbnail transform for preview
+          const thumbUrl = res.secure_url.replace('/upload/', '/upload/w_200,h_200,c_fill/');
+          const date = new Date(res.created_at).toLocaleDateString();
+          const size = (res.bytes / 1024 / 1024).toFixed(2) + ' MB';
+          
+          return `
+            <div class="db-media-card" title="${escapeHtml(res.public_id)}">
+              <div class="db-media-preview">
+                <img src="${thumbUrl}" alt="${escapeHtml(res.public_id)}" loading="lazy">
+              </div>
+              <div class="db-media-info">
+                <div class="db-media-id">${escapeHtml(res.public_id)}</div>
+                <div class="db-media-meta">${res.format.toUpperCase()} &bull; ${size} &bull; ${date}</div>
+              </div>
+              <div class="db-media-actions">
+                <a href="${res.secure_url}" target="_blank" class="db-media-btn" title="Open Full Size">View</a>
+                <button class="db-media-btn delete" onclick="dbDeleteMedia('${res.public_id}', '${res.resource_type}')" title="Delete Everywhere">Delete</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+        
+      } catch (err) {
+        elements.mediaGrid.innerHTML = `<div class="db-media-error">Network error while fetching assets.</div>`;
+      }
     }
 
     async function updateDatabaseStatuses() {
@@ -4770,6 +4851,59 @@ if (logoutBtn) {
         lastStatusSnapshot.storagePath
       );
     }
+
+    window.dbDeleteMedia = async function(publicId, resourceType) {
+      const confirmed = await lpShowConfirm(
+        'Cascading Deletion',
+        `CAUTION: This will delete the asset from Cloudinary AND remove any linked TV posts or Landing Page activities. This action is permanent.`
+      );
+      if (!confirmed) return;
+
+      showToast('Initiating cascading deletion...', 'info');
+
+      try {
+        const raw = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data') || '{}';
+        const userObj = JSON.parse(raw);
+
+        // 1. Cascading delete from Firebase Landing Page Activities
+        const lpRef = ref(userDb, 'lp_activities');
+        const lpSnap = await get(lpRef);
+        const lpData = lpSnap.val() || {};
+        let deletedLpCount = 0;
+
+        for (const [key, act] of Object.entries(lpData)) {
+          // Check if the activity uses this Cloudinary asset
+          if (act.imageUrl && act.imageUrl.includes(publicId)) {
+            await remove(ref(userDb, `lp_activities/${key}`));
+            deletedLpCount++;
+          }
+        }
+
+        // 2. Call GAS to delete from Cloudinary and Spreadsheet Posts
+        const res = await fetch(BACKEND_GAS_URL, {
+          method: 'POST',
+          body: JSON.stringify({ 
+            action: 'deleteMultimedia', 
+            publicId, 
+            resourceType,
+            username: userObj.username,
+            password: userObj.password
+          })
+        });
+        const payload = await res.json();
+
+        if (payload.success) {
+          let msg = payload.message;
+          if (deletedLpCount > 0) msg += ` (and ${deletedLpCount} Landing Page activity removed)`;
+          showToast(msg, 'success');
+          loadMultimediaDatabase(); // Refresh grid
+        } else {
+          showToast('Error: ' + payload.message, 'error');
+        }
+      } catch (err) {
+        showToast('Cascading deletion failed: ' + err.message, 'error');
+      }
+    };
 
     function closeTargetModal() {
       pendingRevealTarget = null;
@@ -4981,6 +5115,8 @@ if (logoutBtn) {
     elements.storageRefreshBtn?.addEventListener('click', updateDatabaseStatuses);
     elements.tabMessaging?.addEventListener('click', () => switchDbPanel('messaging'));
     elements.tabStorage?.addEventListener('click', () => switchDbPanel('storage'));
+    elements.tabMultimedia?.addEventListener('click', () => switchDbPanel('multimedia'));
+    elements.mediaRefreshBtn?.addEventListener('click', () => loadMultimediaDatabase());
 
     elements.exportBtn?.addEventListener('click', () => {
       const dataStr = JSON.stringify(filteredMessages, null, 2);

@@ -1052,6 +1052,7 @@
         <div class="db-tab-nav">
           <button id="db-tab-messaging" class="db-tab-btn active" type="button">Messaging Database</button>
           <button id="db-tab-storage" class="db-tab-btn" type="button">Storage Database</button>
+          <button id="db-tab-multimedia" class="db-tab-btn" type="button">Multimedia Database</button>
         </div>
 
         <div id="db-panel-messaging" class="db-tab-panel">
@@ -1151,10 +1152,25 @@
                   <th>Target</th>
                   <th>Status</th>
                   <th>Storage Currently</th>
+                  <th>Recommendation</th>
                 </tr>
               </thead>
               <tbody id="db-storage-tbody"></tbody>
             </table>
+          </div>
+        </div>
+
+        <div id="db-panel-multimedia" class="db-tab-panel hidden">
+          <div class="db-controls">
+            <div class="db-search">
+              <input id="db-media-search" type="text" placeholder="Search by public ID or format...">
+            </div>
+            <div class="db-actions">
+              <button id="db-media-refresh-btn" class="btn btn-primary">Refresh Assets</button>
+            </div>
+          </div>
+          <div id="db-media-grid" class="db-media-grid">
+            <div class="db-media-loading">Loading Cloudinary assets...</div>
           </div>
         </div>
 

@@ -4456,6 +4456,124 @@ body.dark-theme .db-table .type-badge.admin {
   color: #fbbf24;
 }
 
+/* Multimedia Database Grid */
+.db-media-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+  padding-bottom: 40px;
+}
+
+.db-media-card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+}
+
+.db-media-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+  border-color: #f0ad4e;
+}
+
+.db-media-preview {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #0f172a;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.db-media-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s;
+}
+
+.db-media-card:hover .db-media-preview img {
+  transform: scale(1.05);
+}
+
+.db-media-info {
+  padding: 12px;
+  flex-grow: 1;
+}
+
+.db-media-id {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
+}
+
+.db-media-meta {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.db-media-actions {
+  padding: 10px 12px;
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid #334155;
+}
+
+.db-media-btn {
+  padding: 4px 12px;
+  background: #334155;
+  color: #f1f5f9;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+
+.db-media-btn:hover {
+  background: #475569;
+}
+
+.db-media-btn.delete {
+  background: #7f1d1d;
+  color: #fecaca;
+}
+
+.db-media-btn.delete:hover {
+  background: #991b1b;
+}
+
+.db-media-loading,
+.db-media-empty,
+.db-media-error {
+  grid-column: 1 / -1;
+  padding: 60px;
+  text-align: center;
+  color: #94a3b8;
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 12px;
+  border: 1px dashed #334155;
+}
+
+.db-media-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
 /* ==========================================================================
    LANDING PAGE DESIGN SYSTEM
    Modular, prefixed with lp- to avoid conflicts with main portal styles.
