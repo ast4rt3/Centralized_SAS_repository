@@ -3,5 +3,8 @@
     "acorn": "^8.16.0",
     "jsdom": "^29.0.2",
     "puppeteer": "^24.40.0"
+  },
+  "devDependencies": {
+    "gitnexus": "^1.6.2"
   }
 }
