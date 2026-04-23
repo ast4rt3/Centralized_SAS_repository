@@ -3158,12 +3158,12 @@ if (logoutBtn) {
             let cloudData;
             // Simplified for brevity, reuse earlier logic
             if (file.size > 10 * 1024 * 1024) {
-               cloudData = await uploadFileChunked(file, CLOUDINARY_UPLOAD_PRESET, CLOUDINARY_CLOUD_NAME, zzProgress.update);
+               cloudData = await uploadFileChunked(file, window.ENV?.CLOUDINARY_UPLOAD_PRESET || 'sas_uploads', window.ENV?.CLOUDINARY_CLOUD_NAME || 'dbytj36mv', zzProgress.update);
             } else {
                const fd = new FormData();
                fd.append('file', file);
-               fd.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-               const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`, { method: 'POST', body: fd });
+               fd.append('upload_preset', window.ENV?.CLOUDINARY_UPLOAD_PRESET || 'sas_uploads');
+               const res = await fetch(`https://api.cloudinary.com/v1_1/${window.ENV?.CLOUDINARY_CLOUD_NAME || 'dbytj36mv'}/auto/upload`, { method: 'POST', body: fd });
                cloudData = await res.json();
             }
             if (cloudData && cloudData.secure_url) {
@@ -4441,6 +4441,7 @@ if (logoutBtn) {
       tabMultimedia: document.getElementById('db-tab-multimedia'),
       panelMultimedia: document.getElementById('db-panel-multimedia'),
       mediaSearch: document.getElementById('db-media-search'),
+      mediaAccountSelect: document.getElementById('db-media-account-select'),
       mediaRefreshBtn: document.getElementById('db-media-refresh-btn'),
       mediaFlushBtn: document.getElementById('db-media-flush-btn'),
       mediaGrid: document.getElementById('db-media-grid')
@@ -4776,10 +4777,15 @@ if (logoutBtn) {
       if (!elements.mediaGrid) return;
       elements.mediaGrid.innerHTML = '<div class="db-media-loading"><div class="spinner"></div><span>Fetching Cloudinary assets...</span></div>';
       
+      const selectedCloud = elements.mediaAccountSelect?.value || window.ENV?.CLOUDINARY_CLOUD_NAME;
+
       try {
         const res = await fetch(BACKEND_GAS_URL, {
           method: 'POST',
-          body: JSON.stringify({ action: 'listMultimedia' })
+          body: JSON.stringify({ 
+            action: 'listMultimedia',
+            cloudName: selectedCloud 
+          })
         });
         const payload = await res.json();
         
@@ -4815,7 +4821,7 @@ if (logoutBtn) {
               </div>
               <div class="db-media-actions">
                 <a href="${res.secure_url}" target="_blank" class="db-media-btn" title="Open Full Size">View</a>
-                <button class="db-media-btn delete" onclick="dbDeleteMedia('${res.public_id}', '${res.resource_type}')" title="Delete Everywhere">Delete</button>
+                <button class="db-media-btn delete" onclick="dbDeleteMedia('${res.public_id}', '${res.resource_type}', '${selectedCloud}')" title="Delete Everywhere">Delete</button>
               </div>
             </div>
           `;
@@ -4860,7 +4866,10 @@ if (logoutBtn) {
     }
 
     async function flushMultimediaDatabase() {
-      const confirmMsg = 'This will scan your system (TV Posts, User Profiles, and Landing Page) and delete ANY Cloudinary assets that are not currently being used. This cannot be undone. Please enter your password to confirm.';
+      const selectedCloud = elements.mediaAccountSelect?.value || window.ENV?.CLOUDINARY_CLOUD_NAME;
+      const accountLabel = selectedCloud === window.ENV?.CLOUDINARY_CLOUD_NAME ? 'Active Repository' : 'Legacy Repository';
+
+      const confirmMsg = `This will scan your system and delete ANY assets in the [${accountLabel}] that are not currently being used. Please enter your password to confirm.`;
       
       const raw = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data') || '{}';
       const userObj = JSON.parse(raw);
@@ -4880,12 +4889,9 @@ if (logoutBtn) {
 
       if (!confirmed) return;
 
-      showToast('Scanning for used assets...', 'info');
+      showToast(`Scanning for used assets in ${accountLabel}...`, 'info');
 
       try {
-        const raw = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data') || '{}';
-        const userObj = JSON.parse(raw);
-
         // 1. Get used IDs from Firebase (Landing Page)
         const lpRef = ref(userDb, 'lp_activities');
         const lpSnap = await get(lpRef);
@@ -4902,6 +4908,7 @@ if (logoutBtn) {
           method: 'POST',
           body: JSON.stringify({ 
             action: 'flushMultimedia',
+            cloudName: selectedCloud,
             firebaseUsedIds: usedIdsFromFirebase,
             username: userObj.username,
             password: userObj.password
@@ -4952,8 +4959,9 @@ if (logoutBtn) {
       return decodeURIComponent(idWithExt);
     }
 
-    window.dbDeleteMedia = async function(publicId, resourceType) {
-      const confirmMsg = `CAUTION: This will delete the asset from Cloudinary AND remove any linked TV posts or Landing Page activities. Please enter your password to proceed.`;
+    window.dbDeleteMedia = async function(publicId, resourceType, targetCloud) {
+      const selectedCloud = targetCloud || elements.mediaAccountSelect?.value || window.ENV?.CLOUDINARY_CLOUD_NAME;
+      const confirmMsg = `CAUTION: This will delete the asset from Cloudinary (${selectedCloud}) AND remove any linked TV posts or Landing Page activities. Please enter your password to proceed.`;
       
       const raw = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data') || '{}';
       const userObj = JSON.parse(raw);
@@ -4999,6 +5007,7 @@ if (logoutBtn) {
           body: JSON.stringify({ 
             action: 'deleteMultimedia', 
             publicId, 
+            cloudName: selectedCloud,
             resourceType,
             username: userObj.username,
             password: userObj.password
@@ -5232,6 +5241,9 @@ if (logoutBtn) {
     elements.tabMultimedia?.addEventListener('click', () => switchDbPanel('multimedia'));
     elements.mediaRefreshBtn?.addEventListener('click', () => loadMultimediaDatabase());
     elements.mediaFlushBtn?.addEventListener('click', () => flushMultimediaDatabase());
+    elements.mediaAccountSelect?.addEventListener('change', () => {
+      loadMultimediaDatabase();
+    });
 
     elements.exportBtn?.addEventListener('click', () => {
       const dataStr = JSON.stringify(filteredMessages, null, 2);
@@ -6085,7 +6097,7 @@ function initLpActivitiesAdmin(userObj) {
         fd.append('file', file);
         fd.append('upload_preset', window.ENV?.CLOUDINARY_UPLOAD_PRESET || 'sas_uploads');
         fd.append('folder', 'sas_lp_activities');
-        const res = await fetch(`https://api.cloudinary.com/v1_1/${window.ENV?.CLOUDINARY_CLOUD_NAME}/image/upload`, {
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${window.ENV?.CLOUDINARY_CLOUD_NAME || 'dbytj36mv'}/image/upload`, {
           method: 'POST',
           body: fd
         });
