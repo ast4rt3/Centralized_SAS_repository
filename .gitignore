@@ -10,7 +10,7 @@ systems/config.json
 Backend.gs
 scanner.gs
 Code.gs
-
+prodlinks.txt
 # --- Design & Assets ---
 *.pen
 /images/
