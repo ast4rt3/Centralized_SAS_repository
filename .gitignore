@@ -1,6 +1,6 @@
 # --- Dependencies ---
 node_modules/
-package-lock.json
+
 
 # --- Environment & Sensitive (DO NOT UPLOAD) ---
 # NOTE: Ensure you manually upload env.js to your hosting if not using Git to deploy
