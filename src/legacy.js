@@ -3840,7 +3840,7 @@ if (logoutBtn) {
               deleteBtn.textContent = "Deleting...";
               deleteBtn.disabled = true;
               try {
-                const payload = { action: "deletePost", username: userObj.username, password: userObj.password, timestamp: post.timestamp };
+                const payload = { action: "deletePost", username: userObj.username, password: userObj.password, timestamp: post.timestamp, imageUrl: post.imageUrl };
                 const r = await fetch(BACKEND_GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
                 const res = await r.json();
                 if (res.success) { showToast(res.message, 'success'); fetchPosts(); }

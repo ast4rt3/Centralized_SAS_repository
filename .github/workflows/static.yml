@@ -22,8 +22,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
       - name: Install Dependencies
-        run: npm install
+        run: npm ci
       
       - name: Generate env.js from Secrets
         env:
@@ -50,8 +56,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
       - name: Install Dependencies
-        run: npm install
+        run: npm ci
       - name: Run System Diagnostic
         run: node scripts/system-diagnostic.js
 
@@ -64,8 +76,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
       - name: Install Dependencies
-        run: npm install
+        run: npm ci
       - name: Syntax Check
         run: node scripts/ci-syntax-check.js
       - name: Run Trivy Security Scan
