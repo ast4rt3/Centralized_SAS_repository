@@ -1757,6 +1757,24 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   window.showToast = showToast;
 
+  function showLoading(message = "Processing...") {
+    const modal = document.getElementById('loading-modal');
+    const messageEl = document.getElementById('loading-modal-message');
+    if (modal && messageEl) {
+      messageEl.textContent = message;
+      modal.classList.remove('hidden');
+    }
+  }
+  window.showLoading = showLoading;
+
+  function hideLoading() {
+    const modal = document.getElementById('loading-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+    }
+  }
+  window.hideLoading = hideLoading;
+
   function showConfirm(title, message, showPassword = false, type = 'info') {
     return new Promise((resolve) => {
       const modal = document.getElementById('confirm-modal');
@@ -3837,8 +3855,8 @@ if (logoutBtn) {
               const sessionData = localStorage.getItem('sas_user_data');
               if (!sessionData) return;
               const userObj = JSON.parse(sessionData);
-              deleteBtn.textContent = "Deleting...";
-              deleteBtn.disabled = true;
+
+              showLoading("Deleting post...");
               try {
                 const payload = { action: "deletePost", username: userObj.username, password: userObj.password, timestamp: post.timestamp, imageUrl: post.imageUrl };
                 const r = await fetch(BACKEND_GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
@@ -3846,7 +3864,7 @@ if (logoutBtn) {
                 if (res.success) { showToast(res.message, 'success'); fetchPosts(); }
                 else { showToast(res.message || "Failed to delete.", 'error'); }
               } catch (e) { showToast("Network error.", 'error'); } 
-              finally { deleteBtn.textContent = "Delete"; deleteBtn.disabled = false; }
+              finally { hideLoading(); }
             };
             actionArea.appendChild(deleteBtn);
           }
