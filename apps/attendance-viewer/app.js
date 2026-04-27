@@ -75,8 +75,8 @@ async function fetchEvents() {
     if (error) throw error;
     
     let html = `
-      <option value="legacy" style="color: black;">Foundation Day 2026 (Legacy)</option>
-      <option value="it-fest" style="color: black;">IT Fest 2026 (Legacy)</option>
+      <option value="legacy" style="color: black;">Foundation Day 2026</option>
+      <option value="it-fest" style="color: black;">IT Fest 2026</option>
     `;
     
     if (data && data.length > 0) {
