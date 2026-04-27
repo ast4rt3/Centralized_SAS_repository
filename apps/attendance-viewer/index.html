@@ -270,11 +270,16 @@ tbody tr:last-child td { border-bottom: none; }
             <div class="header-brand">
                 <img src="../../assets/sas_logo_real.png" class="header-logo" alt="NBSC Logo">
                 <div class="header-text">
-                    <h1>Attendance</h1>
-                    <p>Live Masterlist Tracker</p>
+                    <h1>Attendance Tracker</h1>
+                    <p id="subHeaderText">Masterlist Viewer</p>
                 </div>
             </div>
             <div class="header-actions">
+                <div class="filter-box" style="margin-right: 10px;">
+                    <select id="eventSelector" style="padding: 10px; border-radius: 8px; border: 1px solid var(--nbsc-gold); background: rgba(255,255,255,0.1); color: white; font-family: var(--font-sans); font-size: 0.9rem; font-weight: 800;">
+                        <option value="loading" style="color: black;">Loading Events...</option>
+                    </select>
+                </div>
                 <div class="filter-box" style="margin-right: 10px;">
                     <select id="columnFilter" style="padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: white; font-family: var(--font-sans); font-size: 0.9rem;">
                         <option value="all" style="color: black;">All Columns</option>
