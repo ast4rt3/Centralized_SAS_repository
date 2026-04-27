@@ -1,350 +1,426 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script>
-        // Trailing Slash Fix: Ensures relative paths work correctly
-        if (!window.location.pathname.endsWith('/') && !window.location.pathname.endsWith('.html')) {
-            window.location.replace(window.location.href + '/');
-        }
-    </script>
-    <title>Foundation Day 2026 Attendance</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
-    <style>
-:root {
-  --nbsc-blue: #004a99;
-  --nbsc-dark: #001a33;
-  --nbsc-mid: #003366;
-  --nbsc-gold: #f0ad4e;
-  --bg-main: #f0f2f5;
-  --bg-card: #ffffff;
-  --border: rgba(0, 26, 51, 0.12);
-  --text: #0b1220;
-  --text-muted: rgba(0, 26, 51, 0.7);
-  --shadow-soft: 0 4px 15px rgba(0, 0, 0, 0.08);
-  --font-sans: 'Montserrat', system-ui, -apple-system, sans-serif;
-}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>
+    // Trailing Slash Fix: Ensures relative paths work correctly
+    if (!window.location.pathname.endsWith('/') && !window.location.pathname.endsWith('.html')) {
+      window.location.replace(window.location.href + '/');
+    }
+  </script>
+  <title>Foundation Day Attendance</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --nbsc-blue: #004a99;
+      --nbsc-dark: #001a33;
+      --nbsc-mid: #003366;
+      --nbsc-gold: #f0ad4e;
+      --bg-main: #f0f2f5;
+      --bg-card: #ffffff;
+      --border: rgba(0, 26, 51, 0.12);
+      --text: #0b1220;
+      --text-muted: rgba(0, 26, 51, 0.7);
+      --shadow-soft: 0 4px 15px rgba(0, 0, 0, 0.08);
+      --font-sans: 'Montserrat', system-ui, -apple-system, sans-serif;
+    }
 
-* { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
-body {
-  margin: 0;
-  font-family: var(--font-sans);
-  background: var(--bg-main);
-  color: var(--text);
-  height: 100vh;
-  overflow: hidden;
-}
+    body {
+      margin: 0;
+      font-family: var(--font-sans);
+      background: var(--bg-main);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+    }
 
-.app-container {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-}
+    .app-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
 
-.app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 24px;
-  background: linear-gradient(135deg, var(--nbsc-mid) 0%, var(--nbsc-dark) 100%);
-  color: #ffffff;
-  box-shadow: var(--shadow-soft);
-  flex-wrap: wrap;
-  gap: 16px;
-  z-index: 10;
-}
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 24px;
+      background: linear-gradient(135deg, var(--nbsc-mid) 0%, var(--nbsc-dark) 100%);
+      color: #ffffff;
+      box-shadow: var(--shadow-soft);
+      flex-wrap: wrap;
+      gap: 16px;
+      z-index: 10;
+    }
 
-.header-brand {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
 
-.header-logo {
-  width: 48px;
-  height: auto;
-  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));
-}
+    .header-logo {
+      width: 48px;
+      height: auto;
+      filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));
+    }
 
-.header-text h1 {
-  margin: 0;
-  font-size: 1.2rem;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-}
+    .header-text h1 {
+      margin: 0;
+      font-size: 1.2rem;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
 
-.header-text p {
-  margin: 2px 0 0;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--nbsc-gold);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
+    .header-text p {
+      margin: 2px 0 0;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--nbsc-gold);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
 
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex: 1;
-  justify-content: flex-end;
-}
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex: 1;
+      justify-content: flex-end;
+    }
 
-.search-box {
-  position: relative;
-  display: flex;
-  align-items: center;
-  max-width: 300px;
-  width: 100%;
-}
+    .search-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+      max-width: 300px;
+      width: 100%;
+    }
 
-.search-icon {
-  position: absolute;
-  left: 12px;
-  font-size: 1rem;
-  opacity: 0.7;
-}
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      font-size: 1rem;
+      opacity: 0.7;
+    }
 
-#searchInput {
-  width: 100%;
-  padding: 10px 14px 10px 36px;
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
-  font-family: var(--font-sans);
-  font-size: 0.9rem;
-  transition: background 0.2s;
-}
+    #searchInput {
+      width: 100%;
+      padding: 10px 14px 10px 36px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+      font-family: var(--font-sans);
+      font-size: 0.9rem;
+      transition: background 0.2s;
+    }
 
-#searchInput::placeholder { color: rgba(255,255,255,0.6); }
-#searchInput:focus {
-  background: rgba(255, 255, 255, 0.15);
-  outline: 1px solid var(--nbsc-gold);
-}
+    #searchInput::placeholder {
+      color: rgba(255, 255, 255, 0.6);
+    }
 
-.primary-btn {
-  background: var(--nbsc-gold);
-  color: var(--nbsc-dark);
-  border: none;
-  padding: 10px 16px;
-  border-radius: 8px;
-  font-weight: 800;
-  font-family: var(--font-sans);
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: transform 0.1s, filter 0.2s;
-}
-.primary-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    #searchInput:focus {
+      background: rgba(255, 255, 255, 0.15);
+      outline: 1px solid var(--nbsc-gold);
+    }
 
-.app-content {
-  flex: 1;
-  padding: 24px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
+    .primary-btn {
+      background: var(--nbsc-gold);
+      color: var(--nbsc-dark);
+      border: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-weight: 800;
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: transform 0.1s, filter 0.2s;
+    }
 
-.state-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  text-align: center;
-  color: var(--text-muted);
-}
+    .primary-btn:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+    }
 
-.hidden { display: none !important; }
+    .app-content {
+      flex: 1;
+      padding: 24px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
 
-.spinner {
-  width: 48px;
-  height: 48px;
-  border: 4px solid var(--border);
-  border-top-color: var(--nbsc-blue);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 16px;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
+    .state-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      text-align: center;
+      color: var(--text-muted);
+    }
 
-.error-icon { font-size: 3rem; margin-bottom: 16px; }
+    .hidden {
+      display: none !important;
+    }
 
-.table-container {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: var(--shadow-soft);
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  overflow: hidden;
-}
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid var(--border);
+      border-top-color: var(--nbsc-blue);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 16px;
+    }
 
-.table-scroll-wrapper {
-  overflow: auto;
-  flex: 1;
-}
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  white-space: nowrap;
-}
+    .error-icon {
+      font-size: 3rem;
+      margin-bottom: 16px;
+    }
 
-thead {
-  position: sticky;
-  top: 0;
-  background: var(--bg-main);
-  z-index: 2;
-  box-shadow: 0 1px 0 var(--border);
-}
+    .table-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: var(--shadow-soft);
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      overflow: hidden;
+    }
 
-th, td {
-  padding: 12px 16px;
-  text-align: left;
-  border-bottom: 1px solid var(--border);
-  font-size: 0.85rem;
-}
+    .table-scroll-wrapper {
+      overflow: auto;
+      flex: 1;
+    }
 
-th {
-  font-weight: 800;
-  color: var(--nbsc-dark);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-size: 0.75rem;
-}
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      white-space: nowrap;
+    }
 
-tbody tr:hover {
-  background: rgba(0, 74, 153, 0.04);
-}
+    thead {
+      position: sticky;
+      top: 0;
+      background: var(--bg-main);
+      z-index: 2;
+      box-shadow: 0 1px 0 var(--border);
+    }
 
-tbody tr:last-child td { border-bottom: none; }
+    th,
+    td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.85rem;
+    }
 
-.status-badge {
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.7rem;
-  font-weight: 800;
-  background: var(--bg-main);
-  color: var(--text-muted);
-}
-.status-badge.present { background: rgba(46, 204, 113, 0.15); color: #27ae60; }
-.status-badge.late { background: rgba(243, 156, 18, 0.15); color: #d35400; }
-.status-badge.flagged { background: rgba(231, 76, 60, 0.15); color: #c0392b; }
+    th {
+      font-weight: 800;
+      color: var(--nbsc-dark);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 0.75rem;
+    }
 
-/* Year Level Badges */
-.status-badge.year-1 { background: rgba(52, 152, 219, 0.15); color: #2980b9; } /* Blueish */
-.status-badge.year-2 { background: rgba(155, 89, 182, 0.15); color: #8e44ad; } /* Purpleish */
-.status-badge.year-3 { background: rgba(241, 196, 15, 0.15); color: #f39c12; } /* Yellowish/Gold */
-.status-badge.year-4 { background: rgba(230, 126, 34, 0.15); color: #d35400; } /* Orangeish */
-.status-badge.year-default { background: rgba(149, 165, 166, 0.15); color: #7f8c8d; } /* Greyish */
+    tbody tr:hover {
+      background: rgba(0, 74, 153, 0.04);
+    }
 
-.table-footer {
-  padding: 12px 16px;
-  background: var(--bg-main);
-  border-top: 1px solid var(--border);
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  font-weight: 600;
-}
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
 
-@media (max-width: 600px) {
-  .app-content { padding: 12px; }
-  .header-actions { width: 100%; justify-content: space-between; flex-wrap: wrap; }
-  .search-box { max-width: none; }
-}
-    </style>
+    .status-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      font-weight: 800;
+      background: var(--bg-main);
+      color: var(--text-muted);
+    }
+
+    .status-badge.present {
+      background: rgba(46, 204, 113, 0.15);
+      color: #27ae60;
+    }
+
+    .status-badge.late {
+      background: rgba(243, 156, 18, 0.15);
+      color: #d35400;
+    }
+
+    .status-badge.flagged {
+      background: rgba(231, 76, 60, 0.15);
+      color: #c0392b;
+    }
+
+    /* Year Level Badges */
+    .status-badge.year-1 {
+      background: rgba(52, 152, 219, 0.15);
+      color: #2980b9;
+    }
+
+    /* Blueish */
+    .status-badge.year-2 {
+      background: rgba(155, 89, 182, 0.15);
+      color: #8e44ad;
+    }
+
+    /* Purpleish */
+    .status-badge.year-3 {
+      background: rgba(241, 196, 15, 0.15);
+      color: #f39c12;
+    }
+
+    /* Yellowish/Gold */
+    .status-badge.year-4 {
+      background: rgba(230, 126, 34, 0.15);
+      color: #d35400;
+    }
+
+    /* Orangeish */
+    .status-badge.year-default {
+      background: rgba(149, 165, 166, 0.15);
+      color: #7f8c8d;
+    }
+
+    /* Greyish */
+
+    .table-footer {
+      padding: 12px 16px;
+      background: var(--bg-main);
+      border-top: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    @media (max-width: 600px) {
+      .app-content {
+        padding: 12px;
+      }
+
+      .header-actions {
+        width: 100%;
+        justify-content: space-between;
+        flex-wrap: wrap;
+      }
+
+      .search-box {
+        max-width: none;
+      }
+    }
+  </style>
 </head>
+
 <body>
-    <div class="app-container">
-        <header class="app-header">
-            <div class="header-brand">
-                <img src="../../assets/sas_logo_real.png" class="header-logo" alt="NBSC Logo">
-                <div class="header-text">
-                    <h1>Attendance Tracker</h1>
-                    <p id="subHeaderText">Masterlist Viewer</p>
-                </div>
-            </div>
-            <div class="header-actions">
-                <div class="filter-box" style="margin-right: 10px;">
-                    <select id="eventSelector" style="padding: 10px; border-radius: 8px; border: 1px solid var(--nbsc-gold); background: rgba(255,255,255,0.1); color: white; font-family: var(--font-sans); font-size: 0.9rem; font-weight: 800;">
-                        <option value="loading" style="color: black;">Loading Events...</option>
-                    </select>
-                </div>
-                <div class="filter-box" style="margin-right: 10px;">
-                    <select id="columnFilter" style="padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: white; font-family: var(--font-sans); font-size: 0.9rem;">
-                        <option value="all" style="color: black;">All Columns</option>
-                    </select>
-                </div>
-                <div class="search-box">
-                    <span class="search-icon">🔍</span>
-                    <input type="text" id="searchInput" placeholder="Search by name or ID..." aria-label="Search students">
-                </div>
-                <button id="refreshBtn" class="primary-btn" title="Refresh Data">
-                    <span class="btn-icon">🔄</span> Refresh
-                </button>
-            </div>
-        </header>
+  <div class="app-container">
+    <header class="app-header">
+      <div class="header-brand">
+        <img src="../../assets/sas_logo_real.png" class="header-logo" alt="NBSC Logo">
+        <div class="header-text">
+          <h1>Attendance Tracker</h1>
+          <p id="subHeaderText">Masterlist Viewer</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="filter-box" style="margin-right: 10px;">
+          <select id="eventSelector"
+            style="padding: 10px; border-radius: 8px; border: 1px solid var(--nbsc-gold); background: rgba(255,255,255,0.1); color: white; font-family: var(--font-sans); font-size: 0.9rem; font-weight: 800;">
+            <option value="loading" style="color: black;">Loading Events...</option>
+          </select>
+        </div>
+        <div class="filter-box" style="margin-right: 10px;">
+          <select id="columnFilter"
+            style="padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: white; font-family: var(--font-sans); font-size: 0.9rem;">
+            <option value="all" style="color: black;">All Columns</option>
+          </select>
+        </div>
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="searchInput" placeholder="Search by name or ID..." aria-label="Search students">
+        </div>
+        <button id="refreshBtn" class="primary-btn" title="Refresh Data">
+          <span class="btn-icon">🔄</span> Refresh
+        </button>
+      </div>
+    </header>
 
-        <main class="app-content">
-            <div id="loading" class="state-container">
-                <div class="spinner"></div>
-                <p>Loading attendance data...</p>
-            </div>
+    <main class="app-content">
+      <div id="loading" class="state-container">
+        <div class="spinner"></div>
+        <p>Loading Masterlist from Supabase...</p>
+      </div>
 
-            <div id="error" class="state-container hidden">
-                <div class="error-icon">⚠️</div>
-                <p id="error-message">Failed to load data.</p>
-                <button id="retryBtn" class="secondary-btn">Try Again</button>
-            </div>
+      <div id="error" class="state-container hidden">
+        <div class="error-icon">⚠️</div>
+        <p id="error-message">Failed to load data.</p>
+        <button id="retryBtn" class="secondary-btn">Try Again</button>
+      </div>
 
-            <div class="table-container hidden" id="tableContainer">
-                <div class="table-scroll-wrapper">
-                    <table id="attendanceTable">
-                        <thead>
-                            <tr id="tableHeaderRow">
-                                <!-- Headers injected via JS -->
-                            </tr>
-                        </thead>
-                        <tbody id="tableBody">
-                            <!-- Rows injected via JS -->
-                        </tbody>
-                    </table>
-                </div>
-                <div class="table-footer">
-                    <span id="recordCount">0</span> records found
-                </div>
-            </div>
-        </main>
-    </div>
+      <div class="table-container hidden" id="tableContainer">
+        <div class="table-scroll-wrapper">
+          <table id="attendanceTable">
+            <thead>
+              <tr id="tableHeaderRow">
+                <!-- Headers injected via JS -->
+              </tr>
+            </thead>
+            <tbody id="tableBody">
+              <!-- Rows injected via JS -->
+            </tbody>
+          </table>
+        </div>
+        <div class="table-footer">
+          <span id="recordCount">0</span> records found
+        </div>
+      </div>
+    </main>
+  </div>
 
-    <script>
-        console.log("🔍 EMERGENCY DEBUG LOG:");
-        console.log(" - Window URL:", window.location.href);
-        
-        // FORCED BYPASS: Kill any stuck Service Workers
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(registrations => {
-                for(let registration of registrations) {
-                    registration.unregister();
-                    console.log(" 🔴 Unregistered a Service Worker");
-                }
-            });
+  <script>
+    console.log("🔍 EMERGENCY DEBUG LOG:");
+    console.log(" - Window URL:", window.location.href);
+
+    // FORCED BYPASS: Kill any stuck Service Workers
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        for (let registration of registrations) {
+          registration.unregister();
+          console.log(" 🔴 Unregistered a Service Worker");
         }
-    </script>
+      });
+    }
+  </script>
 
-    <script src="../../env.js" onload="console.log(' ✅ env.js loaded')" onerror="console.error(' ❌ env.js failed')"></script>
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    <script src="app.js" defer onload="console.log(' ✅ app.js loaded')" onerror="console.error(' ❌ app.js failed')"></script>
+  <script src="../../env.js" onload="console.log(' ✅ env.js loaded')"
+    onerror="console.error(' ❌ env.js failed')"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="app.js" defer onload="console.log(' ✅ app.js loaded')"
+    onerror="console.error(' ❌ app.js failed')"></script>
 </body>
 </body>
+
 </html>

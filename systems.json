@@ -6,7 +6,10 @@
     "url": "apps/attendance-scanner/index.html",
     "external": false,
     "section": "Attendance",
-    "roles": ["admin", "scanner"]
+    "roles": [
+      "admin",
+      "scanner"
+    ]
   },
   {
     "id": "schedule-manager",
@@ -15,16 +18,20 @@
     "url": "apps/schedule-manager/index.html",
     "external": false,
     "section": "Attendance",
-    "roles": ["admin"]
+    "roles": [
+      "admin"
+    ]
   },
   {
     "id": "foundation-day-attendance",
-    "name": "Foundation Day Attendance",
+    "name": "Attendance Tracker",
     "description": "Live masterlist viewer connected to Google Sheets.",
     "url": "apps/attendance-viewer/index.html",
     "external": false,
     "section": "Attendance",
-    "roles": ["admin"]
+    "roles": [
+      "admin"
+    ]
   },
   {
     "id": "nbsc-mailer",
@@ -33,7 +40,9 @@
     "url": "apps/mailer/index.html",
     "external": false,
     "section": "Communications",
-    "roles": ["admin"]
+    "roles": [
+      "admin"
+    ]
   },
   {
     "id": "lost-and-found",
@@ -42,7 +51,9 @@
     "url": "https://lost-and-found-liart-seven.vercel.app/",
     "external": false,
     "section": "General Services",
-    "roles": ["admin"]
+    "roles": [
+      "admin"
+    ]
   },
   {
     "id": "borrowers-log",
@@ -51,6 +62,8 @@
     "url": "https://borrowers-log.vercel.app/login",
     "external": false,
     "section": "General Services",
-    "roles": ["admin"]
+    "roles": [
+      "admin"
+    ]
   }
 ]

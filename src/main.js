@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function fetchSystems() {
   try {
-    const res = await fetch('systems.json');
+    const res = await fetch('systems.json?v=' + Date.now());
     return await res.json();
   } catch (e) {
     console.error("Failed to load systems:", e);

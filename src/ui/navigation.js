@@ -63,10 +63,23 @@ export function syncFromHash(systems) {
     document.body.classList.remove('system-mode');
     setActiveNav(pageId);
     
-    // Prevent being stuck on loading
-    const finalPageId = pageId === 'loading' ? 'home' : pageId;
-    showPage(finalPageId);
-    ensureAppVisible();
+    // Only show app UI if authenticated
+    const session = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
+    const isLoginPage = window.location.hash === '#login';
+    
+    if (!session && !isLoginPage) {
+      const lp = document.getElementById('landing-page');
+      if (lp) {
+        lp.classList.remove('hidden');
+        document.body.classList.add('lp-mode');
+      }
+      return;
+    }
+
+    if (session) {
+      showPage(pageId === 'loading' ? 'home' : pageId);
+      ensureAppVisible();
+    }
 
     const systemFrame = document.getElementById('system-frame');
     if (systemFrame) systemFrame.src = 'about:blank';
