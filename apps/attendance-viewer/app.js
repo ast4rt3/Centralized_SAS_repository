@@ -72,7 +72,11 @@ async function fetchEvents() {
     
     if (error) throw error;
     
-    let html = '<option value="legacy" style="color: black;">Foundation Day 2024 (Legacy)</option>';
+    let html = `
+      <option value="legacy" style="color: black;">Foundation Day 2026 (Legacy)</option>
+      <option value="it-fest" style="color: black;">IT Fest 2024 (Legacy)</option>
+    `;
+    
     if (data && data.length > 0) {
       data.forEach(ev => {
         html += `<option value="${ev.id}" style="color: black;">${ev.name}</option>`;
@@ -81,17 +85,27 @@ async function fetchEvents() {
     
     els.eventSelector.innerHTML = html;
     
-    // Check if we have a saved event in URL or session
+    // Default Selection Logic
     const urlParams = new URLSearchParams(window.location.search);
-    const eventId = urlParams.get('eventId');
-    if (eventId && [...els.eventSelector.options].some(opt => opt.value === eventId)) {
-      els.eventSelector.value = eventId;
+    const eventIdFromUrl = urlParams.get('eventId');
+    
+    if (eventIdFromUrl && [...els.eventSelector.options].some(opt => opt.value === eventIdFromUrl)) {
+      els.eventSelector.value = eventIdFromUrl;
+    } else if (data && data.length > 0) {
+      // Default to the most recent dynamic event (first in sorted list)
+      els.eventSelector.value = data[0].id;
+    } else {
+      // Fallback to IT Fest or Foundation Day
+      els.eventSelector.value = 'it-fest';
     }
     
     loadInitialData(); // Load data after events are ready
   } catch (err) {
     console.error("Failed to fetch events:", err);
-    els.eventSelector.innerHTML = '<option value="legacy" style="color: black;">Foundation Day 2024 (Legacy)</option>';
+    els.eventSelector.innerHTML = `
+      <option value="legacy" style="color: black;">Foundation Day 2026 (Legacy)</option>
+      <option value="it-fest" style="color: black;">IT Fest 2024 (Legacy)</option>
+    `;
     loadInitialData();
   }
 }
@@ -198,9 +212,16 @@ function renderTable(filter = '', selectedColumnIndex = 'all') {
   let html = '';
 
   masterData.forEach(row => {
-    // Search across ID, Name, and Course
+    // 1. Search Filter (ID, Name, Course)
     const searchable = row.slice(0, 3).map(c => (c || '').toString().toLowerCase()).join(' ');
     if (term && !searchable.includes(term)) return;
+
+    // 2. "Present Only" Filter: Check if student has at least one check-in
+    // Attendance columns now start at index 3 (ID=0, Name=1, Course=2)
+    const attendanceValues = row.slice(3);
+    const isPresent = attendanceValues.some(v => v && v !== 'Not Checked In' && v !== 'Empty');
+    
+    if (!isPresent) return;
 
     count++;
     html += '<tr>';
@@ -209,15 +230,13 @@ function renderTable(filter = '', selectedColumnIndex = 'all') {
       // Column filter logic
       if (selectedColumnIndex !== 'all') {
         const targetIdx = parseInt(selectedColumnIndex);
-        if (i > 3 && i !== targetIdx) return; // Keep ID, Name, Course, Year
+        if (i > 2 && i !== targetIdx) return; // Keep ID, Name, Course
       }
 
       let content = '';
       let style = '';
       
-      if (i === 3) {
-        content = processYearValue(cell);
-      } else if (i > 3) {
+      if (i > 2) {
         content = processTimeValue(cell);
       } else {
         content = cell || '';
@@ -249,6 +268,8 @@ async function fetchData(forceRefresh = false) {
   try {
     if (selectedEvent === 'legacy') {
       await fetchLegacyData();
+    } else if (selectedEvent === 'it-fest') {
+      await fetchITFestData();
     } else {
       await fetchGenericData(selectedEvent);
     }
@@ -268,7 +289,7 @@ async function fetchLegacyData() {
     const { data, error } = await supabaseClient
       .from('NBSC_masterlist')
       .select(`
-        ID, Name, Course, yearLevel,
+        ID, Name, Course,
         attendance: NBSC_attendance (*)
       `)
       .order('Name', { ascending: true })
@@ -292,12 +313,59 @@ async function fetchLegacyData() {
     'Day3_Scan_3', 'Day4_Scan_1', 'Day4_Scan_2', 'Day4_Scan_3'
   ];
 
-  const headers = ['ID', 'Name', 'Course', 'Year Level', ...attendanceCols.map(c => c.replace(/_/g, ' '))];
+  const headers = ['ID', 'Name', 'Course', ...attendanceCols.map(c => c.replace(/_/g, ' '))];
   
   const rows = allData.map(m => {
     const att = m.attendance && m.attendance.length > 0 ? m.attendance[0] : {};
     return [
-      m.ID, m.Name, m.Course, m.yearLevel,
+      m.ID, m.Name, m.Course,
+      ...attendanceCols.map(c => att[c] || 'Not Checked In')
+    ];
+  });
+
+  masterData = rows;
+  buildHeaders(headers);
+  setState('loaded');
+  renderTable();
+}
+
+async function fetchITFestData() {
+  let allData = [];
+  let from = 0;
+  let step = 1000;
+  let keepFetching = true;
+
+  while (keepFetching) {
+    const { data, error } = await supabaseClient
+      .from('NBSC_masterlist')
+      .select(`
+        ID, Name, Course,
+        attendance: NBSC_it_fest_attendance (*)
+      `)
+      .order('Name', { ascending: true })
+      .range(from, from + step - 1);
+
+    if (error) throw error;
+
+    if (data && data.length > 0) {
+      allData = allData.concat(data);
+      from += step;
+      if (data.length < step) keepFetching = false;
+    } else {
+      keepFetching = false;
+    }
+  }
+
+  const attendanceCols = [
+    'Morning_Day2_IN', 'Afternoon_Day2_IN', 'Afternoon_Day2_OUT'
+  ];
+
+  const headers = ['ID', 'Name', 'Course', ...attendanceCols.map(c => c.replace(/_/g, ' '))];
+  
+  const rows = allData.map(m => {
+    const att = m.attendance && m.attendance.length > 0 ? m.attendance[0] : {};
+    return [
+      m.ID, m.Name, m.Course,
       ...attendanceCols.map(c => att[c] || 'Not Checked In')
     ];
   });
@@ -333,7 +401,7 @@ async function fetchGenericData(eventId) {
   while (keepFetching) {
     const { data, error } = await supabaseClient
       .from('NBSC_masterlist')
-      .select('ID, Name, Course, yearLevel')
+      .select('ID, Name, Course')
       .order('Name', { ascending: true })
       .range(from, from + step - 1);
 
@@ -350,7 +418,7 @@ async function fetchGenericData(eventId) {
   // 3. Fetch Logs for these schedules
   const { data: logs, error: logErr } = await supabaseClient
     .from('sas_attendance_logs')
-    .select('student_id, schedule_id, created_at, status, scanner_user, flag_reason')
+    .select('student_id, schedule_id, scanned_at, status, scanner_user, flag_reason')
     .in('schedule_id', scheduleIds);
 
   if (logErr) throw logErr;
@@ -363,17 +431,17 @@ async function fetchGenericData(eventId) {
     logMap[l.student_id][l.schedule_id] = l;
   });
 
-  const headers = ['ID', 'Name', 'Course', 'Year Level', ...schedules.map(s => s.label)];
+  const headers = ['ID', 'Name', 'Course', ...schedules.map(s => s.label)];
   
   const rows = masterlist.map(s => {
     const studentLogs = logMap[s.ID] || {};
     return [
-      s.ID, s.Name, s.Course, s.yearLevel,
+      s.ID, s.Name, s.Course,
       ...schedules.map(sch => {
         const entry = studentLogs[sch.id];
         if (!entry) return 'Not Checked In';
         
-        const time = new Date(entry.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const time = new Date(entry.scanned_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         if (entry.status === 'flagged') {
           return `Flagged: ${entry.flag_reason || 'Unknown'} (${time}) [${entry.scanner_user}]`;
         }
