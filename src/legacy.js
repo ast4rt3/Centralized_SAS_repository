@@ -1331,8 +1331,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (lp) {
       lp.classList.add('hidden');
       document.body.classList.remove('lp-mode');
-      if (sb && !document.body.classList.contains('tv-mode')) sb.classList.remove('hidden');
+      if (sb && !document.body.classList.contains('tv-mode')) {
+        sb.classList.remove('hidden');
+      }
       if (ct) ct.classList.remove('hidden');
+      if (navToggle) {
+        navToggle.classList.remove('hidden');
+        navToggle.hidden = false;
+      }
+
     }
   }
 
@@ -1897,8 +1904,12 @@ function showAppUI(userObj) {
       if (userMenuBtn) userMenuBtn.hidden = false;
       if (window.location.hash !== '#messages') window.location.hash = 'messages';
     } else {
-      if (navToggle) navToggle.classList.remove('hidden');
+      if (navToggle) {
+        navToggle.classList.remove('hidden');
+        navToggle.hidden = false;
+      }
       if (userMenuBtn) userMenuBtn.hidden = false;
+
       if (window.location.hash === '#attendance-scanner') {
         window.location.hash = 'home';
       }
@@ -2180,6 +2191,8 @@ function showAppUI(userObj) {
     setViewMode(savedViewMode);
 
     // Register listener ONCE globally inside DOMContentLoaded
+    // DISABLED: Let modular main.js handle hash changes to avoid duplication
+    /*
     if (!window._sas_hash_bound) {
       window.addEventListener('hashchange', syncFromHash);
       window._sas_hash_bound = true;
@@ -2187,6 +2200,8 @@ function showAppUI(userObj) {
     
     // Trigger initial check if needed (though it might handle internally by promise)
     syncFromHash();
+    */
+
   }
 
   function setupUserMenu(userObj) {

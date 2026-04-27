@@ -14,7 +14,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Initialize UI State
   const systems = await fetchSystems();
   syncFromHash(systems);
+  
+  const sessionData = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
+  if (sessionData) {
+    import("./ui/navigation.js").then(m => m.ensureAppVisible());
+  }
+  
   window.addEventListener('hashchange', () => syncFromHash(systems));
+
   
   // Initialize Messaging
   const myUsername = getMyUsername();
