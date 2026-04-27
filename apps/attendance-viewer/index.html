@@ -12,6 +12,7 @@
   </script>
   <title>Foundation Day Attendance</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+  <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
   <style>
     :root {
       --nbsc-blue: #004a99;
@@ -359,11 +360,14 @@
           </select>
         </div>
         <div class="search-box">
-          <span class="search-icon">🔍</span>
+          <i class='bx bx-search search-icon' style="color: white; opacity: 0.8;"></i>
           <input type="text" id="searchInput" placeholder="Search by name or ID..." aria-label="Search students">
         </div>
         <button id="refreshBtn" class="primary-btn" title="Refresh Data">
-          <span class="btn-icon">🔄</span> Refresh
+          <i class='bx bx-refresh' style="font-size: 1.2rem;"></i> Refresh
+        </button>
+        <button id="exportPdfBtn" class="primary-btn" style="background: #e74c3c; color: white;" title="Export to PDF">
+          <i class='bx bx-file' style="font-size: 1.1rem;"></i> Export PDF
         </button>
       </div>
     </header>
@@ -375,7 +379,7 @@
       </div>
 
       <div id="error" class="state-container hidden">
-        <div class="error-icon">⚠️</div>
+        <i class='bx bx-error-circle error-icon' style="color: #e74c3c;"></i>
         <p id="error-message">Failed to load data.</p>
         <button id="retryBtn" class="secondary-btn">Try Again</button>
       </div>
@@ -418,6 +422,8 @@
   <script src="../../env.js" onload="console.log(' ✅ env.js loaded')"
     onerror="console.error(' ❌ env.js failed')"></script>
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
   <script src="app.js" defer onload="console.log(' ✅ app.js loaded')"
     onerror="console.error(' ❌ app.js failed')"></script>
 </body>

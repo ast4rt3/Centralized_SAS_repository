@@ -28,6 +28,7 @@ const els = {
   searchInput: document.getElementById('searchInput'),
   columnFilter: document.getElementById('columnFilter'),
   refreshBtn: document.getElementById('refreshBtn'),
+  exportPdfBtn: document.getElementById('exportPdfBtn'),
   retryBtn: document.getElementById('retryBtn'),
   eventSelector: document.getElementById('eventSelector'),
   subHeader: document.getElementById('subHeaderText')
@@ -46,6 +47,7 @@ function init() {
   
   els.refreshBtn.addEventListener('click', () => fetchData(true));
   els.retryBtn.addEventListener('click', () => fetchData(true));
+  els.exportPdfBtn.addEventListener('click', exportToPDF);
   
   // Debounce the search input to prevent lag on every keystroke
   els.searchInput.addEventListener('input', () => {
@@ -454,6 +456,118 @@ async function fetchGenericData(eventId) {
   buildHeaders(headers);
   setState('loaded');
   renderTable();
+}
+
+async function exportToPDF() {
+  if (!masterData || masterData.length === 0) {
+    alert("No data available to export.");
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('l', 'mm', 'a4'); // Landscape A4
+  
+  const eventName = els.eventSelector.options[els.eventSelector.selectedIndex]?.text || 'Attendance';
+  const timestamp = new Date().toLocaleString();
+
+  // 1. Prepare Data (Follow the same filtering as renderTable)
+  const term = els.searchInput.value.toLowerCase().trim();
+  const selectedColumnIndex = els.columnFilter.value;
+  
+  const headers = [];
+  const headerEls = els.thead.querySelectorAll('th');
+  headerEls.forEach((th, i) => {
+    // Apply column filter to headers
+    if (selectedColumnIndex !== 'all') {
+      const targetIdx = parseInt(selectedColumnIndex);
+      if (i > 2 && i !== targetIdx) return;
+    }
+    headers.push(th.textContent);
+  });
+
+  const body = [];
+  masterData.forEach(row => {
+    // Apply Search Filter
+    const searchable = row.slice(0, 3).map(c => (c || '').toString().toLowerCase()).join(' ');
+    if (term && !searchable.includes(term)) return;
+
+    // Apply Present Only Filter
+    const attendanceValues = row.slice(3);
+    const isPresent = attendanceValues.some(v => v && v !== 'Not Checked In' && v !== 'Empty');
+    if (!isPresent) return;
+
+    const filteredRow = [];
+    row.forEach((cell, i) => {
+      // Apply column filter to cells
+      if (selectedColumnIndex !== 'all') {
+        const targetIdx = parseInt(selectedColumnIndex);
+        if (i > 2 && i !== targetIdx) return;
+      }
+      
+      // Clean up cell content for PDF (strip staff names/extra info)
+      if (i > 2) {
+        if (!cell || cell === 'Not Checked In' || cell === 'Empty') {
+          filteredRow.push('ABSENT');
+        } else {
+          // Extract time only, strip [StaffName]
+          const timeOnly = cell.toString().split('[')[0].trim();
+          filteredRow.push(timeOnly);
+        }
+      } else {
+        filteredRow.push(cell || '');
+      }
+    });
+    body.push(filteredRow);
+  });
+
+  if (body.length === 0) {
+    alert("No records match the current filters.");
+    return;
+  }
+
+  // 2. Generate PDF Content
+  doc.setFontSize(18);
+  doc.setTextColor(0, 74, 153); // NBSC Blue
+  doc.text("Attendance Report", 14, 15);
+  
+  doc.setFontSize(12);
+  doc.setTextColor(100);
+  doc.text(`Event: ${eventName}`, 14, 22);
+  doc.text(`Generated: ${timestamp}`, 14, 28);
+  doc.text(`Total Records: ${body.length}`, 14, 34);
+
+  doc.autoTable({
+    head: [headers],
+    body: body,
+    startY: 40,
+    theme: 'grid',
+    styles: {
+      fontSize: 8,
+      cellPadding: 2,
+      font: 'helvetica'
+    },
+    headStyles: {
+      fillColor: [0, 51, 102], // NBSC Dark Mid
+      textColor: [255, 255, 255],
+      fontStyle: 'bold'
+    },
+    alternateRowStyles: {
+      fillColor: [245, 245, 245]
+    },
+    margin: { top: 40 },
+    didDrawPage: function(data) {
+      // Footer
+      const str = "Page " + doc.internal.getNumberOfPages();
+      doc.setFontSize(8);
+      const pageSize = doc.internal.pageSize;
+      const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight();
+      doc.text(str, data.settings.margin.left, pageHeight - 10);
+      doc.text("NBSC SAS Portal - Attendance Tracker", pageSize.width - 60, pageHeight - 10);
+    }
+  });
+
+  const fileName = `Attendance_${eventName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+  doc.save(fileName);
 }
 
 document.addEventListener('DOMContentLoaded', init);
