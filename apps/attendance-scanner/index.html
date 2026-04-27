@@ -304,6 +304,7 @@
             position: sticky;
             top: 0;
             z-index: 99;
+            padding-left: 60px;
         }
 
         .banner-img {
@@ -896,7 +897,7 @@
             display: none;
             align-items: center;
             gap: 12px;
-            padding: 10px 20px;
+            padding: 10px 20px 10px 60px;
             background: var(--nbsc-mid);
             border-bottom: 2px solid rgba(240, 173, 78, 0.35);
         }
@@ -1145,7 +1146,7 @@
                 <button onclick="logoutScanner()"
                     style="margin-left:auto; background:#fee2e2; color:#dc2626; border:none; padding:6px 10px; border-radius:6px; font-size:0.6rem; font-weight:800; cursor:pointer;">LOGOUT</button>
             </div>
-            <div style="background: var(--nbsc-dark); color: var(--nbsc-gold); text-align: center; padding: 6px; font-size: 0.75rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.1);">
+            <div style="background: var(--nbsc-dark); color: var(--nbsc-gold); text-align: center; padding: 6px 6px 6px 60px; font-size: 0.75rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.1);">
                 EVENT: <span id="activeScannerEventName">NO EVENT SELECTED</span>
             </div>
             <div id="windowStatus" class="status-loading">
