@@ -3212,11 +3212,10 @@ if (logoutBtn) {
           let cloudinaryUrl = imgUrl;
           let cloudinaryPublicId = "";
 
-          // 2. Upload File if needed
+          // 2. Media Handling
           if (activeUploadTab === 'upload' && file) {
             zzProgress.update(10);
             let cloudData;
-            // Simplified for brevity, reuse earlier logic
             if (file.size > 10 * 1024 * 1024) {
                cloudData = await uploadFileChunked(file, window.ENV?.CLOUDINARY_UPLOAD_PRESET || 'sas_uploads', window.ENV?.CLOUDINARY_CLOUD_NAME || 'dbytj36mv', zzProgress.update);
             } else {
@@ -3230,12 +3229,12 @@ if (logoutBtn) {
                cloudinaryUrl = cloudData.secure_url;
                cloudinaryPublicId = cloudData.public_id;
             }
-          } else if (isEdit && activeUploadTab === 'upload' && !file) {
-            // CRITICAL FIX: Preserve existing image data if no new file is uploaded during an edit!
+          } else if (isEdit && ((activeUploadTab === 'upload' && !file) || (activeUploadTab !== 'upload' && !imgUrl))) {
+            // GLOBAL PRESERVATION: If no new file/URL provided during edit, keep existing
             cloudinaryUrl = form.getAttribute('data-existing-image-url') || "";
             cloudinaryPublicId = form.getAttribute('data-existing-public-id') || "";
             
-            // Re-apply existing position/size as well to prevent zoom reset
+            // Re-apply existing position/size
             if (!imgPos || imgPos === "0 0") imgPos = form.getAttribute('data-existing-pos') || "0 0";
             if (!imgSize || imgSize === "1") imgSize = form.getAttribute('data-existing-size') || "1";
           }
@@ -3835,13 +3834,13 @@ if (logoutBtn) {
             editBtn.className = 'secondary-btn edit-btn';
             editBtn.textContent = 'Edit';
             editBtn.onclick = () => {
-                // ... Existing Edit Functionality ...
+                window.resetAddPostForm();
                 const form = document.getElementById('add-post-form');
                 const modal = document.getElementById('add-post-modal');
                 document.querySelector('.modal-title').textContent = "Edit Update";
                 document.getElementById('submit-post-btn').textContent = "Save Changes";
-                document.getElementById('post-title').value = post.title;
-                document.getElementById('post-desc').value = post.description;
+                document.getElementById('post-title').value = post.title || "";
+                document.getElementById('post-desc').value = post.description || "";
                 if (document.getElementById('post-start-date')) document.getElementById('post-start-date').value = (post.startDate || '').replace(' ', 'T');
                 if (document.getElementById('post-end-date')) document.getElementById('post-end-date').value = (post.endDate || '').replace(' ', 'T');
                 const dSlider = document.getElementById('post-display-duration');
@@ -3852,8 +3851,62 @@ if (logoutBtn) {
                 form.setAttribute('data-existing-public-id', post.cloudinaryPublicId || '');
                 form.setAttribute('data-existing-pos', post.imagePosition || '');
                 form.setAttribute('data-existing-size', post.imageSize || '');
-                
                 form.setAttribute('data-edit-timestamp', post.timestamp);
+
+                // --- TAB & PREVIEW RESTORATION ---
+                let targetTab = 'url';
+                if (post.cloudinaryPublicId) {
+                  targetTab = 'upload';
+                } else if (post.isLive) {
+                  targetTab = 'live';
+                }
+
+                // Switch Tab (simulates the click to trigger all tab logic)
+                const tabBtn = document.querySelector(`.upload-tab[data-tab="${targetTab}"]`);
+                if (tabBtn) tabBtn.click();
+
+                // Populate and Trigger Preview
+                if (targetTab === 'upload') {
+                  const els = getScopedElements('upload');
+                  if (els.previewImg && post.imageUrl) {
+                    els.previewImg.src = post.imageUrl;
+                    els.previewGroup.style.display = 'block';
+                    els.previewGroup.classList.remove('hidden');
+                    
+                    // Restore Zoom/Pan if it's the new numeric format
+                    if (post.imageSize && !isNaN(parseFloat(post.imageSize))) {
+                       const scale = parseFloat(post.imageSize);
+                       let tx = 0, ty = 0;
+                       if (post.imagePosition) {
+                         const parts = post.imagePosition.split(' ');
+                         tx = parseFloat(parts[0]) || 0;
+                         ty = parseFloat(parts[1]) || 0;
+                       }
+                       if (window.setPreviewTransformState) window.setPreviewTransformState(scale, tx, ty, 'upload');
+                    }
+                  }
+                } else {
+                  const inputId = (targetTab === 'url') ? 'post-img' : 'post-live-url';
+                  const inputEl = document.getElementById(inputId);
+                  if (inputEl) {
+                    inputEl.value = post.imageUrl || '';
+                    // Trigger 'input' event so the preview logic runs automatically
+                    inputEl.dispatchEvent(new CustomEvent('input', { detail: { keepValues: true } }));
+                    
+                    // Restore Zoom/Pan for URL tab if applicable
+                    if (targetTab === 'url' && post.imageSize && !isNaN(parseFloat(post.imageSize))) {
+                       const scale = parseFloat(post.imageSize);
+                       let tx = 0, ty = 0;
+                       if (post.imagePosition) {
+                         const parts = post.imagePosition.split(' ');
+                         tx = parseFloat(parts[0]) || 0;
+                         ty = parseFloat(parts[1]) || 0;
+                       }
+                       if (window.setPreviewTransformState) window.setPreviewTransformState(scale, tx, ty, 'url');
+                    }
+                  }
+                }
+                
                 modal.classList.remove('hidden');
             };
             actionArea.appendChild(editBtn);

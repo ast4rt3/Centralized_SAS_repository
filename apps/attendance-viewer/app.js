@@ -64,7 +64,7 @@ function init() {
 async function fetchEvents() {
   if (!checkDependencies()) return;
   
-  try {
+    try {
     const { data, error } = await supabaseClient
       .from('sas_events')
       .select('id, name')
@@ -74,7 +74,7 @@ async function fetchEvents() {
     
     let html = `
       <option value="legacy" style="color: black;">Foundation Day 2026 (Legacy)</option>
-      <option value="it-fest" style="color: black;">IT Fest 2024 (Legacy)</option>
+      <option value="it-fest" style="color: black;">IT Fest 2026 (Legacy)</option>
     `;
     
     if (data && data.length > 0) {
@@ -104,7 +104,7 @@ async function fetchEvents() {
     console.error("Failed to fetch events:", err);
     els.eventSelector.innerHTML = `
       <option value="legacy" style="color: black;">Foundation Day 2026 (Legacy)</option>
-      <option value="it-fest" style="color: black;">IT Fest 2024 (Legacy)</option>
+      <option value="it-fest" style="color: black;">IT Fest 2026 (Legacy)</option>
     `;
     loadInitialData();
   }
