@@ -46,3 +46,7 @@ CLAUDE.md
 /supabase
 meta_env
 n8n/facebook-to-sas-sync.json
+test_data/Week_1.pdf
+test_data/Week_2.pdf
+test_data/Week_3.pdf
+/test_data
