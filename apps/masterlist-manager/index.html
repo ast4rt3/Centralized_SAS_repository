@@ -11,8 +11,18 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- PapaParse for parsing CSV files natively in the browser -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <!-- PDF.js for parsing PDF masterlists -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    // Initialize PDF.js worker
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  </script>
   
   <style>
+    :root {
+      --error: #ef4444;
+    }
+
     body {
       background: var(--bg-main);
       padding: 24px;
@@ -183,12 +193,12 @@
     }
 
     .action-btn {
-      background: var(--nbsc-blue);
+      background: var(--nbsc-blue, #004a99);
       color: white;
       border: none;
       padding: 10px 20px;
       border-radius: 8px;
-      font-family: var(--font-sans);
+      font-family: var(--font-sans, sans-serif);
       font-weight: 800;
       font-size: 0.85rem;
       cursor: pointer;
@@ -257,6 +267,32 @@
     .log-success { color: #4ade80; }
     .log-error { color: #f87171; }
     .log-info { color: #94a3b8; }
+
+    @media (max-width: 640px) {
+      body { padding: 12px; }
+      .header-card {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+      }
+      .toggle-container {
+        width: 100%;
+        box-sizing: border-box;
+        justify-content: space-between;
+      }
+      .preview-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+      }
+      .action-btn {
+        width: 100%;
+        justify-content: center;
+      }
+      .upload-card {
+        padding: 24px 16px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -283,7 +319,7 @@
       <i class='bx bx-cloud-upload upload-icon'></i>
       <div class="upload-text">Drag & Drop your CSV or JSON file here</div>
       <div class="upload-subtext">or click to browse from your computer</div>
-      <input type="file" id="fileInput" accept=".csv,.json">
+      <input type="file" id="fileInput" accept=".csv,.json,.pdf">
     </div>
 
     <div class="preview-card" id="previewCard">
@@ -292,8 +328,8 @@
           <i class='bx bx-file'></i> <span id="fileName">data.csv</span> 
           (<span id="rowCount">0</span> records found)
         </div>
-        <button class="action-btn" id="uploadBtn">
-          <i class='bx bx-cloud-upload'></i> Start Upload
+        <button class="action-btn" id="uploadBtn" disabled>
+          <i class='bx bx-cloud-upload'></i> Start Upload (TEST)
         </button>
       </div>
 

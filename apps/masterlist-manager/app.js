@@ -35,19 +35,22 @@ try {
     let fileHeaders = [];
 
     // --- TOGGLE LOGIC ---
-    dbToggle.addEventListener('change', (e) => {
-        if (e.target.checked) {
+    const updateModeUI = () => {
+        if (dbToggle.checked) {
             modeBadge.textContent = "TEST MODE";
             modeBadge.className = "mode-badge badge-test";
             uploadBtn.style.background = "var(--nbsc-blue)";
-            uploadBtn.innerHTML = "<i class='bx bx-cloud-upload'></i> Start Upload";
+            uploadBtn.innerHTML = "<i class='bx bx-cloud-upload'></i> Start Upload (TEST)";
         } else {
             modeBadge.textContent = "PRODUCTION MODE";
             modeBadge.className = "mode-badge badge-prod";
             uploadBtn.style.background = "var(--error)";
-            uploadBtn.innerHTML = "<i class='bx bx-error'></i> Update Production";
+            uploadBtn.innerHTML = "<i class='bx bx-error'></i> Start Upload (PRODUCTION)";
         }
-    });
+    };
+
+    dbToggle.addEventListener('change', updateModeUI);
+    updateModeUI(); // Sync on load
 
     // --- DRAG AND DROP LOGIC ---
     dropZone.addEventListener('click', (e) => {
@@ -117,27 +120,104 @@ try {
                 }
             };
             reader.readAsText(file);
+        } else if (ext === 'pdf') {
+            handlePdf(file);
         } else {
-            alert("Unsupported file type. Please upload a CSV or JSON file.");
+            alert("Unsupported file type. Please upload a CSV, JSON, or PDF file.");
         }
     }
 
-    function processParsedData(data, fields) {
-        if (!data || data.length === 0) {
-            alert("No valid data found in file.");
-            return;
-        }
+    async function handlePdf(file) {
+        log("Opening PDF for processing...", "info");
+        const reader = new FileReader();
+        reader.onload = async function() {
+            try {
+                const typedarray = new Uint8Array(this.result);
+                const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                let extractedRows = [];
+                
+                log(`Processing ${pdf.numPages} pages...`, "info");
 
-        parsedData = data;
-        fileHeaders = fields;
-        
-        // Ensure ID column exists for upsert
-        const hasId = fields.some(f => f.toLowerCase() === 'id');
-        if (!hasId) {
-            alert("WARNING: Your dataset does not have an 'ID' column. An ID column is highly recommended as the primary key to prevent duplicate rows.");
-        }
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    
+                    // Group text items by their Y coordinate (lines)
+                    const linesMap = {};
+                    textContent.items.forEach(item => {
+                        const y = Math.round(item.transform[5]);
+                        if (!linesMap[y]) linesMap[y] = [];
+                        linesMap[y].push(item);
+                    });
 
-        rowCountEl.textContent = data.length;
+                    // Sort lines from top to bottom
+                    const sortedY = Object.keys(linesMap).sort((a, b) => b - a);
+                    
+                    sortedY.forEach(y => {
+                        // Sort items in the same line from left to right
+                        const lineItems = linesMap[y].sort((a, b) => a.transform[4] - b.transform[4]);
+                        const lineText = lineItems.map(item => item.str).join(" ").trim();
+                        
+                        // Regex to find ID and Name. 
+                        // Typical format: 2021-0001 First Middle Last or 20210001 First Middle Last
+                        const match = lineText.match(/(\d{4}[-]\d{4,5}|\d{7,10})\s+([A-Za-z\s,.]+)/);
+                        if (match) {
+                            extractedRows.push({
+                                ID: match[1],
+                                Name: match[2].trim()
+                            });
+                        }
+                    });
+                }
+                
+                if (extractedRows.length === 0) {
+                    log("Warning: No records were automatically extracted. The PDF might be scanned/image-based or using an unusual format.", "error");
+                    alert("No student records found in PDF. Make sure the PDF is text-selectable and follows a standard format (ID followed by Name).");
+                } else {
+                    log(`Successfully extracted ${extractedRows.length} records from PDF.`, "success");
+                    processParsedData(extractedRows, ["ID", "Name"]);
+                }
+            } catch (err) {
+                console.error(err);
+                log("Critical PDF Error: " + err.message, "error");
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+        function processParsedData(data, fields) {
+            if (!data || data.length === 0) {
+                alert("No valid data found in file.");
+                return;
+            }
+
+            parsedData = data;
+            fileHeaders = fields;
+            
+            // --- AUTOMATIC SORTING ---
+            parsedData.sort((a, b) => {
+                const getName = (row) => {
+                    const nk = Object.keys(row).find(k => k.toLowerCase().trim() === 'name');
+                    if (nk && row[nk]) return row[nk].toString().toLowerCase();
+                    
+                    const f = Object.keys(row).find(k => k.toLowerCase().replace(/[^a-z]/g, '') === 'firstname' || k.toLowerCase().replace(/[^a-z]/g, '') === 'first');
+                    const l = Object.keys(row).find(k => k.toLowerCase().replace(/[^a-z]/g, '') === 'lastname' || k.toLowerCase().replace(/[^a-z]/g, '') === 'last');
+                    if (f || l) return `${row[l] || ''}, ${row[f] || ''}`.toLowerCase().trim();
+                    return '';
+                };
+                return getName(a).localeCompare(getName(b));
+            });
+
+            // Ensure ID column exists for upsert
+            const hasId = fields.some(f => {
+                const l = f.toLowerCase().trim();
+                return l === 'id' || l === 'student id';
+            });
+            if (!hasId) {
+                alert("WARNING: Your dataset does not have an 'ID' or 'Student ID' column. An ID column is highly recommended as the primary key to prevent duplicate rows.");
+            }
+
+            rowCountEl.textContent = data.length;
         renderPreviewTable();
         previewCard.style.display = 'block';
         uploadBtn.disabled = false;
