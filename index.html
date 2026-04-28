@@ -1286,13 +1286,14 @@
                   </div>
                   <div class="upload-text-content">
                     <span id="file-label-text">Click or drag image/video here</span>
+                    <span id="file-count-badge" class="hidden" style="margin-top: 4px; padding: 2px 8px; background: var(--nbsc-gold); color: var(--nbsc-dark); border-radius: 99px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase;">0 Files Selected</span>
                     <span class="upload-hint">JPG, PNG, GIF, MP4 (Max 100MB)</span>
                   </div>
                   <div class="upload-button-wrapper">
                     <span class="upload-btn-styled">Select File</span>
                   </div>
                 </label>
-                <input type="file" id="post-file" accept="image/*,video/mp4,video/webm" style="display:none;">
+                <input type="file" id="post-file" accept="image/*,video/mp4,video/webm" style="display:none;" multiple>
 
                 <!-- Tab-Specific Preview -->
                 <div class="input-group hidden" id="upload-img-preview-group">
@@ -1302,14 +1303,16 @@
                       <img id="upload-preview-img" src="" alt="Preview" draggable="false" style="width: 100%; height: 100%; object-fit: contain; object-position: center; pointer-events: none;">
                     </div>
                   </div>
-                  <div style="display: flex; align-items: center; gap: 10px; margin-top: 12px;">
-                    <label style="font-size: 0.85rem; font-weight: 600; white-space: nowrap; margin-bottom: 0;">Zoom:</label>
-                    <input type="range" id="upload-img-zoom" min="0.1" max="5" step="0.05" value="1" style="flex-grow: 1; cursor: pointer;">
-                    <span id="upload-preview-zoom-val" style="font-size: 0.85rem; font-weight: 600; min-width: 40px; text-align: right;">1.0x</span>
-                  </div>
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
-                    <button type="button" id="upload-preview-reset-btn" class="secondary-btn" style="padding: 4px 8px; font-size: 0.75rem;">Reset View</button>
-                    <div style="font-size: 0.8rem; color: var(--text-muted); text-align: right;">Position: <span id="upload-preview-coords">0px, 0px</span></div>
+                  <div id="upload-img-controls" style="display: block;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-top: 12px;">
+                      <label style="font-size: 0.85rem; font-weight: 600; white-space: nowrap; margin-bottom: 0;">Zoom:</label>
+                      <input type="range" id="upload-img-zoom" min="0.1" max="5" step="0.05" value="1" style="flex-grow: 1; cursor: pointer;">
+                      <span id="upload-preview-zoom-val" style="font-size: 0.85rem; font-weight: 600; min-width: 40px; text-align: right;">1.0x</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                      <button type="button" id="upload-preview-reset-btn" class="secondary-btn" style="padding: 4px 8px; font-size: 0.75rem;">Reset View</button>
+                      <div style="font-size: 0.8rem; color: var(--text-muted); text-align: right;">Position: <span id="upload-preview-coords">0px, 0px</span></div>
+                    </div>
                   </div>
                   <input type="hidden" id="upload-img-pos" value="0 0">
                   <input type="hidden" id="upload-img-size-val" value="1">
@@ -1354,14 +1357,16 @@
                       <img id="url-preview-img" src="" alt="Preview" draggable="false" style="width: 100%; height: 100%; object-fit: contain; object-position: center; pointer-events: none;">
                     </div>
                   </div>
-                  <div style="display: flex; align-items: center; gap: 10px; margin-top: 12px;">
-                    <label style="font-size: 0.85rem; font-weight: 600; white-space: nowrap; margin-bottom: 0;">Zoom:</label>
-                    <input type="range" id="url-img-zoom" min="0.1" max="5" step="0.05" value="1" style="flex-grow: 1; cursor: pointer;">
-                    <span id="url-preview-zoom-val" style="font-size: 0.85rem; font-weight: 600; min-width: 40px; text-align: right;">1.0x</span>
-                  </div>
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
-                    <button type="button" id="url-preview-reset-btn" class="secondary-btn" style="padding: 4px 8px; font-size: 0.75rem;">Reset View</button>
-                    <div style="font-size: 0.8rem; color: var(--text-muted); text-align: right;">Position: <span id="url-preview-coords">0px, 0px</span></div>
+                  <div id="url-img-controls" style="display: block;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-top: 12px;">
+                      <label style="font-size: 0.85rem; font-weight: 600; white-space: nowrap; margin-bottom: 0;">Zoom:</label>
+                      <input type="range" id="url-img-zoom" min="0.1" max="5" step="0.05" value="1" style="flex-grow: 1; cursor: pointer;">
+                      <span id="url-preview-zoom-val" style="font-size: 0.85rem; font-weight: 600; min-width: 40px; text-align: right;">1.0x</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                      <button type="button" id="url-preview-reset-btn" class="secondary-btn" style="padding: 4px 8px; font-size: 0.75rem;">Reset View</button>
+                      <div style="font-size: 0.8rem; color: var(--text-muted); text-align: right;">Position: <span id="url-preview-coords">0px, 0px</span></div>
+                    </div>
                   </div>
                   <input type="hidden" id="url-img-pos" value="0 0">
                   <input type="hidden" id="url-img-size-val" value="1">

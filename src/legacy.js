@@ -2794,10 +2794,15 @@ if (logoutBtn) {
     const fileUploadLabel = document.getElementById('file-upload-label');
     const fileLabelText = document.getElementById('file-label-text');
 
-    function handleFileSelection(file) {
+    function handleFileSelection(files) {
       const els = getScopedElements('upload');
+      const fileCountBadge = document.getElementById('file-count-badge');
+      const controls = document.getElementById('upload-img-controls');
+      const file = (files && files.length > 0) ? files[0] : null;
+
       if (!file) {
         if (fileLabelText) fileLabelText.textContent = 'Choose a file or drag it here';
+        if (fileCountBadge) fileCountBadge.classList.add('hidden');
         if (fileUploadLabel) fileUploadLabel.classList.remove('file-selected');
         const iconWrapper = fileUploadLabel ? fileUploadLabel.querySelector('.upload-icon-wrapper') : null;
         if (iconWrapper) iconWrapper.style.color = '';
@@ -2806,7 +2811,19 @@ if (logoutBtn) {
         return;
       }
 
-      if (fileLabelText) fileLabelText.textContent = '✅ ' + file.name;
+      // Update badge
+      if (fileCountBadge) {
+        if (files.length > 1) {
+          fileCountBadge.textContent = files.length + ' Files Selected';
+          fileCountBadge.classList.remove('hidden');
+          if (controls) controls.style.display = 'none';
+        } else {
+          fileCountBadge.classList.add('hidden');
+          if (controls) controls.style.display = 'block';
+        }
+      }
+
+      if (fileLabelText) fileLabelText.textContent = '📄 ' + file.name + (files.length > 1 ? ' + ' + (files.length - 1) + ' more' : '');
       if (fileUploadLabel) fileUploadLabel.classList.add('file-selected');
       const iconWrapper = fileUploadLabel ? fileUploadLabel.querySelector('.upload-icon-wrapper') : null;
       if (iconWrapper) iconWrapper.style.color = '#16a34a';
@@ -2847,8 +2864,8 @@ if (logoutBtn) {
 
     if (fileInput && fileUploadLabel) {
       fileInput.addEventListener('change', () => {
-        if (fileInput.files && fileInput.files[0]) {
-          handleFileSelection(fileInput.files[0]);
+        if (fileInput.files && fileInput.files.length > 0) {
+          handleFileSelection(fileInput.files);
         } else {
           handleFileSelection(null); // Clear preview if no file selected
         }
@@ -2863,9 +2880,9 @@ if (logoutBtn) {
       fileUploadLabel.addEventListener('drop', (ev) => {
         ev.preventDefault();
         fileUploadLabel.classList.remove('drag-over');
-        if (ev.dataTransfer.files && ev.dataTransfer.files[0]) {
+        if (ev.dataTransfer.files && ev.dataTransfer.files.length > 0) {
           fileInput.files = ev.dataTransfer.files;
-          handleFileSelection(ev.dataTransfer.files[0]);
+          handleFileSelection(ev.dataTransfer.files);
         }
       });
     }
@@ -3071,6 +3088,11 @@ if (logoutBtn) {
       const iconWrapper = fileUploadLabel ? fileUploadLabel.querySelector('.upload-icon-wrapper') : null;
       if (iconWrapper) iconWrapper.style.color = '';
 
+      const fileCountBadge = document.getElementById('file-count-badge');
+      if (fileCountBadge) fileCountBadge.classList.add('hidden');
+      const controls = document.getElementById('upload-img-controls');
+      if (controls) controls.style.display = 'block';
+
       // Reset Tabs
       const uploadTabBtns = document.querySelectorAll('.upload-tab');
       uploadTabBtns.forEach(b => b.classList.remove('active'));
@@ -3148,7 +3170,7 @@ if (logoutBtn) {
         let imgSize = "1";
         
         const postFileIn = document.getElementById('post-file');
-        const file = (activeUploadTab === 'upload' && postFileIn) ? postFileIn.files[0] : null;
+        const files = (activeUploadTab === 'upload' && postFileIn) ? Array.from(postFileIn.files) : [];
 
         if (activeUploadTab === 'url') {
            imgUrl = imgInput.value.trim();
@@ -3213,23 +3235,38 @@ if (logoutBtn) {
           let cloudinaryPublicId = "";
 
           // 2. Media Handling
-          if (activeUploadTab === 'upload' && file) {
+          if (activeUploadTab === 'upload' && files.length > 0) {
             zzProgress.update(10);
-            let cloudData;
-            if (file.size > 10 * 1024 * 1024) {
-               cloudData = await uploadFileChunked(file, window.ENV?.CLOUDINARY_UPLOAD_PRESET || 'sas_uploads', window.ENV?.CLOUDINARY_CLOUD_NAME || 'dbytj36mv', zzProgress.update);
+            
+            const uploadPromises = files.map(async (file, index) => {
+              let cloudData;
+              if (file.size > 10 * 1024 * 1024) {
+                cloudData = await uploadFileChunked(file, window.ENV?.CLOUDINARY_UPLOAD_PRESET || 'sas_uploads', window.ENV?.CLOUDINARY_CLOUD_NAME || 'dbytj36mv', (pct) => {
+                  // Approximate global progress
+                  const globalPct = 10 + (pct * 0.8 / files.length) + (index * 80 / files.length);
+                  zzProgress.update(globalPct);
+                });
+              } else {
+                const fd = new FormData();
+                fd.append('file', file);
+                fd.append('upload_preset', window.ENV?.CLOUDINARY_UPLOAD_PRESET || 'sas_uploads');
+                const res = await fetch(`https://api.cloudinary.com/v1_1/${window.ENV?.CLOUDINARY_CLOUD_NAME || 'dbytj36mv'}/auto/upload`, { method: 'POST', body: fd });
+                cloudData = await res.json();
+                zzProgress.update(10 + ((index + 1) * 80 / files.length));
+              }
+              return cloudData;
+            });
+
+            const results = await Promise.all(uploadPromises);
+            const validResults = results.filter(r => r && r.secure_url);
+            
+            if (validResults.length > 0) {
+              cloudinaryUrl = validResults.map(r => r.secure_url).join('|');
+              cloudinaryPublicId = validResults.map(r => r.public_id).join('|');
             } else {
-               const fd = new FormData();
-               fd.append('file', file);
-               fd.append('upload_preset', window.ENV?.CLOUDINARY_UPLOAD_PRESET || 'sas_uploads');
-               const res = await fetch(`https://api.cloudinary.com/v1_1/${window.ENV?.CLOUDINARY_CLOUD_NAME || 'dbytj36mv'}/auto/upload`, { method: 'POST', body: fd });
-               cloudData = await res.json();
+              throw new Error("Failed to upload any files to Cloudinary.");
             }
-            if (cloudData && cloudData.secure_url) {
-               cloudinaryUrl = cloudData.secure_url;
-               cloudinaryPublicId = cloudData.public_id;
-            }
-          } else if (isEdit && ((activeUploadTab === 'upload' && !file) || (activeUploadTab !== 'upload' && !imgUrl))) {
+          } else if (isEdit && ((activeUploadTab === 'upload' && files.length === 0) || (activeUploadTab !== 'upload' && !imgUrl))) {
             // GLOBAL PRESERVATION: If no new file/URL provided during edit, keep existing
             cloudinaryUrl = form.getAttribute('data-existing-image-url') || "";
             cloudinaryPublicId = form.getAttribute('data-existing-public-id') || "";
@@ -3466,6 +3503,25 @@ if (logoutBtn) {
         
         return true;
       });
+
+      // --- MULTI-IMAGE SPLITTING FOR TV ---
+      let flattenedTvPosts = [];
+      tvPosts.forEach(p => {
+        if (p.imageUrl && p.imageUrl.includes('|')) {
+          const urls = p.imageUrl.split('|');
+          const pIds = (p.publicId || '').split('|');
+          urls.forEach((url, i) => {
+            flattenedTvPosts.push({
+              ...p,
+              imageUrl: url,
+              publicId: pIds[i] || ""
+            });
+          });
+        } else {
+          flattenedTvPosts.push(p);
+        }
+      });
+      tvPosts = flattenedTvPosts;
 
 
       if (tvPosts.length === 0) {
@@ -3704,10 +3760,16 @@ if (logoutBtn) {
         card.className = 'post-card';
         card.style.position = 'relative';
 
-        const urlLower = (post.imageUrl || '').toLowerCase();
+        // DASHBOARD: Only show the first image if multiple exist
+        let displayImageUrl = post.imageUrl || '';
+        if (displayImageUrl.includes('|')) {
+          displayImageUrl = displayImageUrl.split('|')[0];
+        }
+
+        const urlLower = displayImageUrl.toLowerCase();
 
         let imgHtml = '';
-        if (post.imageUrl && post.imageUrl.trim() !== '') {
+        if (displayImageUrl && displayImageUrl.trim() !== '') {
           // Parse saved values. Check if it's a legacy value (cover/contain) or the new zoom format (scale number)
           let parsedPos = post.imagePosition || '50% 50%'; // Legacy default
           let isLegacySize = (post.imageSize === 'cover' || post.imageSize === 'contain' || !post.imageSize);
@@ -3741,8 +3803,8 @@ if (logoutBtn) {
              endVal = parts[2] || '';
           }
 
-          const ytId = getYouTubeVideoId(post.imageUrl);
-          const fbEmbedUrl = getFacebookVideoUrl(post.imageUrl);
+          const ytId = getYouTubeVideoId(displayImageUrl);
+          const fbEmbedUrl = getFacebookVideoUrl(displayImageUrl);
 
           if (post.type === 'website') {
             imgHtml = `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #0f172a; color: #facc15; border: 2px solid #facc15; border-radius: 8px;">
@@ -3762,19 +3824,19 @@ if (logoutBtn) {
             </div>`;
           } else if (urlLower && (urlLower.includes('res.cloudinary.com') || urlLower.includes('cloudinary.com'))) {
             const isVideo = /\.(mp4|webm|mov|mkv|avi)$/i.test(urlLower) || urlLower.includes('/video/upload/');
-            const thumbUrl = isVideo ? post.imageUrl.replace(/\.[^.]+$/, '.jpg') : post.imageUrl;
+            const thumbUrl = isVideo ? displayImageUrl.replace(/\.[^.]+$/, '.jpg') : displayImageUrl;
             imgHtml = `<img src="${thumbUrl}" alt="${escapeHtml(post.title)}" class="post-image" style="${styleStr}" loading="lazy">`;
           } else if (urlLower.includes('docs.google.com/uc?') || urlLower.includes('drive.google.com/uc?id=') || urlLower.endsWith('.mp4') || urlLower.endsWith('.webm')) {
             let mediaHash = '';
             if (startVal && endVal) mediaHash = `#t=${startVal},${endVal}`;
             else if (startVal) mediaHash = `#t=${startVal}`;
             else if (endVal) mediaHash = `#t=0,${endVal}`;
-            imgHtml = `<video src="${post.imageUrl}${mediaHash}" class="post-image" style="${styleStr}" preload="metadata" muted playsinline></video>`;
+            imgHtml = `<video src="${displayImageUrl}${mediaHash}" class="post-image" style="${styleStr}" preload="metadata" muted playsinline></video>`;
           } else if (urlLower.includes('drive.google.com/file/d/') && urlLower.includes('/preview')) {
-            imgHtml = `<iframe src="${post.imageUrl}" class="post-image" style="border: none; ${styleStr}"></iframe>`;
+            imgHtml = `<iframe src="${displayImageUrl}" class="post-image" style="border: none; ${styleStr}"></iframe>`;
           } else {
             const fallbackSquare = 'assets/sas_logo_real.png';
-            imgHtml = `<img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="post-image" style="${styleStr}" loading="lazy" onerror="this.onerror=null; this.src='${fallbackSquare}'; this.style.objectFit='contain'; this.style.opacity='0.2';">`;
+            imgHtml = `<img src="${displayImageUrl}" alt="${escapeHtml(post.title)}" class="post-image" style="${styleStr}" loading="lazy" onerror="this.onerror=null; this.src='${fallbackSquare}'; this.style.objectFit='contain'; this.style.opacity='0.2';">`;
           }
           
           if (post.isLive) {
@@ -3869,9 +3931,23 @@ if (logoutBtn) {
                 if (targetTab === 'upload') {
                   const els = getScopedElements('upload');
                   if (els.previewImg && post.imageUrl) {
-                    els.previewImg.src = post.imageUrl;
+                    els.previewImg.src = post.imageUrl.split('|')[0];
                     els.previewGroup.style.display = 'block';
                     els.previewGroup.classList.remove('hidden');
+
+                    const fileCountBadge = document.getElementById('file-count-badge');
+                    const controls = document.getElementById('upload-img-controls');
+                    if (fileCountBadge) {
+                      const urls = post.imageUrl.split('|');
+                      if (urls.length > 1) {
+                        fileCountBadge.textContent = urls.length + ' Files Selected';
+                        fileCountBadge.classList.remove('hidden');
+                        if (controls) controls.style.display = 'none';
+                      } else {
+                        fileCountBadge.classList.add('hidden');
+                        if (controls) controls.style.display = 'block';
+                      }
+                    }
                     
                     // Restore Zoom/Pan if it's the new numeric format
                     if (post.imageSize && !isNaN(parseFloat(post.imageSize))) {
