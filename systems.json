@@ -65,5 +65,16 @@
     "roles": [
       "admin"
     ]
+  },
+  {
+    "id": "masterlist-manager",
+    "name": "Masterlist Data Manager",
+    "description": "Bulk import CSV/JSON student data directly into the masterlist.",
+    "url": "apps/masterlist-manager/index.html",
+    "external": false,
+    "section": "Data Management",
+    "roles": [
+      "admin"
+    ]
   }
 ]
