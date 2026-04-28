@@ -112,6 +112,12 @@ body {
   display: none !important;
 }
 
+body.lp-mode .nav-toggle,
+body.lp-mode .sidebar,
+body.lp-mode .nav-overlay {
+  display: none !important;
+}
+
 .nav-overlay {
   position: fixed;
   inset: 0;
@@ -5070,8 +5076,36 @@ body.lp-mode .main-wrapper {
 @media (max-width: 991px) {
   .lp-nav-links, .lp-nav-actions {
     display: none;
+    position: absolute;
+    left: 0;
+    width: 100%;
+    background: #001a33;
+    flex-direction: column;
+    text-align: center;
+    padding: 15px 0;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+    z-index: 999;
   }
   
+  .lp-nav-links {
+    top: 70px;
+  }
+  
+  .lp-nav-actions {
+    top: 310px; /* Positions right below the links */
+    padding-bottom: 25px;
+    align-items: center;
+  }
+
+  .lp-nav-links.active, 
+  .lp-nav-links.active ~ .lp-nav-actions {
+    display: flex;
+  }
+
+  .lp-nav-links li {
+    margin: 12px 0;
+  }
+
   .lp-mobile-toggle {
     display: block;
   }
