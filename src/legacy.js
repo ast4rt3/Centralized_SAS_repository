@@ -2777,8 +2777,8 @@ if (logoutBtn) {
            }
         } else if (activeUploadTab === 'upload') {
            const fileInput = document.getElementById('post-file');
-           if (fileInput && fileInput.files && fileInput.files[0]) {
-              handleFileSelection(fileInput.files[0]);
+           if (fileInput && fileInput.files && fileInput.files.length > 0) {
+              handleFileSelection(fileInput.files);
            }
         } else if (activeUploadTab === 'live') {
            const lInput = document.getElementById('post-live-url');
@@ -2800,6 +2800,12 @@ if (logoutBtn) {
       const controls = document.getElementById('upload-img-controls');
       const file = (files && files.length > 0) ? files[0] : null;
 
+      // Reset transform when selecting a new file
+      if (transformStates['upload']) {
+        transformStates['upload'] = { zoom: 1, x: 0, y: 0 };
+        updateTransform('upload');
+      }
+
       if (!file) {
         if (fileLabelText) fileLabelText.textContent = 'Choose a file or drag it here';
         if (fileCountBadge) fileCountBadge.classList.add('hidden');
@@ -2811,12 +2817,40 @@ if (logoutBtn) {
         return;
       }
 
-      // Update badge
+      // Update badge and Thumbnails
+      const thumbContainer = document.getElementById('upload-thumbnails-container');
+      if (thumbContainer) {
+        thumbContainer.innerHTML = '';
+        thumbContainer.classList.add('hidden');
+      }
+
       if (fileCountBadge) {
         if (files.length > 1) {
           fileCountBadge.textContent = files.length + ' Files Selected';
           fileCountBadge.classList.remove('hidden');
           if (controls) controls.style.display = 'none';
+
+          if (thumbContainer) {
+            thumbContainer.classList.remove('hidden');
+            Array.from(files).forEach((f, idx) => {
+               if (f.type.startsWith('image/')) {
+                  const tReader = new FileReader();
+                  tReader.onload = (ev) => {
+                     const tImg = document.createElement('img');
+                     tImg.src = ev.target.result;
+                     tImg.style.cssText = 'width: 60px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s;';
+                     if (idx === 0) tImg.style.borderColor = 'var(--nbsc-gold)';
+                     tImg.onclick = () => {
+                        if (els.previewImg) els.previewImg.src = ev.target.result;
+                        thumbContainer.querySelectorAll('img').forEach(im => im.style.borderColor = 'transparent');
+                        tImg.style.borderColor = 'var(--nbsc-gold)';
+                     };
+                     thumbContainer.appendChild(tImg);
+                  };
+                  tReader.readAsDataURL(f);
+               }
+            });
+          }
         } else {
           fileCountBadge.classList.add('hidden');
           if (controls) controls.style.display = 'block';
@@ -2894,26 +2928,56 @@ if (logoutBtn) {
         const runInput = () => {
           const url = imgInput.value.trim();
           if (url) {
-            const urlLower = url.toLowerCase();
-            const ytId = getYouTubeVideoId(url);
-            const fbUrl = getFacebookVideoUrl(url);
+            const previewUrl = url.split('|')[0];
+            const urlLower = previewUrl.toLowerCase();
+            const ytId = getYouTubeVideoId(previewUrl);
+            const fbUrl = getFacebookVideoUrl(previewUrl);
             const isDirectVideo = /\.(mp4|webm|mov|mkv|avi)$/i.test(urlLower) || urlLower.includes('/video/upload/');
             const isVideo = ytId || fbUrl || isDirectVideo || urlLower.includes('drive.google.com') && (urlLower.includes('video') || !urlLower.includes('image'));
             
+            const thumbContainer = document.getElementById('url-thumbnails-container');
+            if (thumbContainer) {
+              thumbContainer.innerHTML = '';
+              thumbContainer.classList.add('hidden');
+            }
+
+            const controls = document.getElementById('url-img-controls');
+            if (url.includes('|')) {
+              if (controls) controls.style.display = 'none';
+              if (thumbContainer) {
+                thumbContainer.classList.remove('hidden');
+                const urls = url.split('|');
+                urls.forEach((u, idx) => {
+                  const tImg = document.createElement('img');
+                  tImg.src = u.trim();
+                  tImg.style.cssText = 'width: 60px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s;';
+                  if (idx === 0) tImg.style.borderColor = 'var(--nbsc-gold)';
+                  tImg.onclick = () => {
+                    if (els.previewImg) els.previewImg.src = u.trim();
+                    thumbContainer.querySelectorAll('img').forEach(im => im.style.borderColor = 'transparent');
+                    tImg.style.borderColor = 'var(--nbsc-gold)';
+                  };
+                  thumbContainer.appendChild(tImg);
+                });
+              }
+            } else {
+              if (controls) controls.style.display = 'block';
+            }
+
             if (isVideo) {
               if (els.previewGroup) els.previewGroup.style.display = 'none';
               if (els.videoGroup) els.videoGroup.style.display = 'block';
               if (window.loadPreviewVideo) {
                  const keep = e.detail && e.detail.keepValues;
-                 window.loadPreviewVideo(url, false, !keep, 'url');
+                 window.loadPreviewVideo(previewUrl, false, !keep, 'url');
                  if (els.videoGroup) els.videoGroup.scrollIntoView({ behavior: 'smooth', block: 'center' });
               }
             } else {
               if (els.videoGroup) els.videoGroup.style.display = 'none';
               if (els.previewImg) {
-                 els.previewImg.src = url;
-                 const dId = window.getDriveId ? getDriveId(url) : null;
-                 if (dId && !url.includes('uc?id=')) {
+                 els.previewImg.src = previewUrl;
+                 const dId = window.getDriveId ? getDriveId(previewUrl) : null;
+                 if (dId && !previewUrl.includes('uc?id=')) {
                     els.previewImg.src = `https://drive.google.com/uc?id=${dId}`;
                  }
               }
@@ -3092,6 +3156,15 @@ if (logoutBtn) {
       if (fileCountBadge) fileCountBadge.classList.add('hidden');
       const controls = document.getElementById('upload-img-controls');
       if (controls) controls.style.display = 'block';
+
+      // Clear Thumbnails
+      ['upload', 'url'].forEach(scope => {
+        const tc = document.getElementById(`${scope}-thumbnails-container`);
+        if (tc) {
+          tc.innerHTML = '';
+          tc.classList.add('hidden');
+        }
+      });
 
       // Reset Tabs
       const uploadTabBtns = document.querySelectorAll('.upload-tab');
@@ -3510,11 +3583,17 @@ if (logoutBtn) {
         if (p.imageUrl && p.imageUrl.includes('|')) {
           const urls = p.imageUrl.split('|');
           const pIds = (p.publicId || '').split('|');
+          
+          const totalDur = parseInt(p.displayDuration) || 25;
+          let perImgDur = Math.floor(totalDur / urls.length);
+          if (perImgDur < 3) perImgDur = 3;
+
           urls.forEach((url, i) => {
             flattenedTvPosts.push({
               ...p,
               imageUrl: url,
-              publicId: pIds[i] || ""
+              publicId: pIds[i] || "",
+              displayDuration: perImgDur
             });
           });
         } else {
@@ -3943,6 +4022,24 @@ if (logoutBtn) {
                         fileCountBadge.textContent = urls.length + ' Files Selected';
                         fileCountBadge.classList.remove('hidden');
                         if (controls) controls.style.display = 'none';
+
+                        const thumbContainer = document.getElementById('upload-thumbnails-container');
+                        if (thumbContainer) {
+                          thumbContainer.innerHTML = '';
+                          thumbContainer.classList.remove('hidden');
+                          urls.forEach((u, idx) => {
+                            const tImg = document.createElement('img');
+                            tImg.src = u.trim();
+                            tImg.style.cssText = 'width: 60px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s;';
+                            if (idx === 0) tImg.style.borderColor = 'var(--nbsc-gold)';
+                            tImg.onclick = () => {
+                              if (els.previewImg) els.previewImg.src = u.trim();
+                              thumbContainer.querySelectorAll('img').forEach(im => im.style.borderColor = 'transparent');
+                              tImg.style.borderColor = 'var(--nbsc-gold)';
+                            };
+                            thumbContainer.appendChild(tImg);
+                          });
+                        }
                       } else {
                         fileCountBadge.classList.add('hidden');
                         if (controls) controls.style.display = 'block';
@@ -3970,7 +4067,36 @@ if (logoutBtn) {
                     inputEl.dispatchEvent(new CustomEvent('input', { detail: { keepValues: true } }));
                     
                     // Restore Zoom/Pan for URL tab if applicable
-                    if (targetTab === 'url' && post.imageSize && !isNaN(parseFloat(post.imageSize))) {
+                    const urlControls = document.getElementById('url-img-controls');
+                    const isMulti = post.imageUrl && post.imageUrl.includes('|');
+                    
+                    if (urlControls) {
+                      urlControls.style.display = isMulti ? 'none' : 'block';
+                    }
+
+                    if (isMulti) {
+                      const thumbContainer = document.getElementById('url-thumbnails-container');
+                      if (thumbContainer) {
+                        thumbContainer.innerHTML = '';
+                        thumbContainer.classList.remove('hidden');
+                        const urls = post.imageUrl.split('|');
+                        urls.forEach((u, idx) => {
+                          const tImg = document.createElement('img');
+                          tImg.src = u.trim();
+                          tImg.style.cssText = 'width: 60px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s;';
+                          if (idx === 0) tImg.style.borderColor = 'var(--nbsc-gold)';
+                          tImg.onclick = () => {
+                            const urlEls = getScopedElements('url');
+                            if (urlEls.previewImg) urlEls.previewImg.src = u.trim();
+                            thumbContainer.querySelectorAll('img').forEach(im => im.style.borderColor = 'transparent');
+                            tImg.style.borderColor = 'var(--nbsc-gold)';
+                          };
+                          thumbContainer.appendChild(tImg);
+                        });
+                      }
+                    }
+
+                    if (!isMulti && targetTab === 'url' && post.imageSize && !isNaN(parseFloat(post.imageSize))) {
                        const scale = parseFloat(post.imageSize);
                        let tx = 0, ty = 0;
                        if (post.imagePosition) {
