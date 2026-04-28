@@ -4,7 +4,7 @@
 // No buttons required — runs invisibly in the background
 // ================================================================
 
-const CACHE_VERSION = 'sas-tv-v85';
+const CACHE_VERSION = 'sas-tv-v86';
 const CACHE_POST_DATA = 'sas-posts-v2';
 const CACHE_MEDIA = 'sas-media-v2';
 
@@ -13,8 +13,7 @@ const APP_SHELL = [
   './',
   './index.html',
   './manifest.json',
-  './styles.css',
-  './app.js'
+  './styles.css'
 ];
 
 // ----------------------------------------------------------------

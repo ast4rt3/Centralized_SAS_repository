@@ -1,11 +1,10 @@
 {
-  "name": "NBSC SAS Entrance Scanner",
-  "short_name": "NBSC SAS",
-  "start_url": "./",
-  "scope": "./",
+  "name": "NBSC SAS Scanner",
+  "short_name": "SAS Scanner",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0f172a",
-  "theme_color": "#0f172a",
+  "theme_color": "#004a99",
   "icons": [
     {
       "src": "../../assets/sas_logo_real.png",

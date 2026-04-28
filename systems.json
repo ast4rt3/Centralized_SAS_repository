@@ -23,7 +23,7 @@
     ]
   },
   {
-    "id": "foundation-day-attendance",
+    "id": "attendance-viewer",
     "name": "Attendance Tracker",
     "description": "Live masterlist viewer connected to Google Sheets.",
     "url": "apps/attendance-viewer/index.html",
