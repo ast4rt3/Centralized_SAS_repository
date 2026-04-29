@@ -5905,6 +5905,7 @@ if (logoutBtn) {
     const base64 = await fileToBase64(file);
     
     try {
+      showGlobalLoading("Uploading your new profile picture...");
       const formData = new URLSearchParams();
       formData.append('action', 'uploadProfilePicture');
       formData.append('username', sessionData.username);
@@ -5948,8 +5949,22 @@ if (logoutBtn) {
       }
     } catch (err) {
       showToast('Upload error: ' + err.message, 'error');
+    } finally {
+      hideGlobalLoading();
     }
   });
+
+  function showGlobalLoading(text = "Please wait a moment") {
+    const modal = document.getElementById('global-loading-modal');
+    const label = document.getElementById('global-loading-text');
+    if (label) label.textContent = text;
+    if (modal) modal.classList.remove('hidden');
+  }
+
+  function hideGlobalLoading() {
+    const modal = document.getElementById('global-loading-modal');
+    if (modal) modal.classList.add('hidden');
+  }
 
   function fileToBase64(file) {
     return new Promise((resolve, reject) => {
@@ -5971,6 +5986,7 @@ if (logoutBtn) {
     const sessionData = JSON.parse(localStorage.getItem('sas_user_data'));
     
     try {
+      showGlobalLoading("Saving your profile...");
       const formData = new URLSearchParams();
       formData.append('action', 'updateUserSettings');
       formData.append('username', sessionData.username);
@@ -5996,6 +6012,8 @@ if (logoutBtn) {
       }
     } catch (err) {
       showSettingsError('Error: ' + err.message);
+    } finally {
+      hideGlobalLoading();
     }
   });
 
@@ -6023,6 +6041,7 @@ if (logoutBtn) {
     const sessionData = JSON.parse(localStorage.getItem('sas_user_data'));
     
     try {
+      showGlobalLoading("Updating password...");
       const formData = new URLSearchParams();
       formData.append('action', 'updateUserSettings');
       formData.append('username', sessionData.username);
@@ -6046,6 +6065,8 @@ if (logoutBtn) {
       }
     } catch (err) {
       showSettingsError('Error: ' + err.message);
+    } finally {
+      hideGlobalLoading();
     }
   });
 
@@ -6069,6 +6090,7 @@ if (logoutBtn) {
       const sessionData = JSON.parse(localStorage.getItem('sas_user_data'));
       
       try {
+        showGlobalLoading("Applying theme...");
         const formData = new URLSearchParams();
         formData.append('action', 'updateUserSettings');
         formData.append('username', sessionData.username);
@@ -6085,6 +6107,8 @@ if (logoutBtn) {
         }
       } catch (err) {
         console.error('Theme save error:', err);
+      } finally {
+        hideGlobalLoading();
       }
     });
   });
