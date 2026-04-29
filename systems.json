@@ -76,5 +76,16 @@
     "roles": [
       "admin"
     ]
+  },
+  {
+    "id": "account-manager",
+    "name": "Account Approvals",
+    "description": "Manage and approve new user registrations.",
+    "url": "apps/account-manager/index.html",
+    "external": false,
+    "section": "Data Management",
+    "roles": [
+      "admin"
+    ]
   }
 ]

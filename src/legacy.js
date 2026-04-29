@@ -1309,6 +1309,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const userDropdownName = document.getElementById('user-dropdown-name');
   const logoutBtn = document.getElementById('logout-btn');
 
+  // Registration UI elements
+  const registerOverlay = document.getElementById('register-overlay');
+  const registerForm = document.getElementById('register-form');
+  const showRegisterBtn = document.getElementById('show-register-btn');
+  const backToLoginBtn = document.getElementById('back-to-login-btn');
+  const registerError = document.getElementById('register-error');
+  const registerSuccess = document.getElementById('register-success');
+
   const btnSidebarToggle = document.getElementById('sidebar-toggle');
   const btnAdminExitTv = document.getElementById('admin-exit-tv');
 
@@ -2069,6 +2077,84 @@ function showAppUI(userObj) {
       } else {
         loginError.textContent = "Please fill in all fields.";
         loginError.classList.remove('hidden');
+      }
+    });
+  }
+
+  // Handle Registration Logic
+  if (showRegisterBtn) {
+    showRegisterBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (loginOverlay) loginOverlay.classList.add('hidden');
+      if (registerOverlay) registerOverlay.classList.remove('hidden');
+      if (registerError) registerError.classList.add('hidden');
+      if (registerSuccess) registerSuccess.classList.add('hidden');
+    });
+  }
+
+  if (backToLoginBtn) {
+    backToLoginBtn.addEventListener('click', () => {
+      if (registerOverlay) registerOverlay.classList.add('hidden');
+      if (loginOverlay) loginOverlay.classList.remove('hidden');
+    });
+  }
+
+  if (registerForm) {
+    registerForm.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const user = document.getElementById('register-username').value.trim();
+      const pass = document.getElementById('register-password').value.trim();
+      const role = document.getElementById('register-role').value;
+      const btn = registerForm.querySelector('.login-btn');
+      const origBtnText = btn.textContent;
+
+      if (user && pass && role) {
+        btn.textContent = 'Registering...';
+        btn.disabled = true;
+        if (registerError) registerError.classList.add('hidden');
+        if (registerSuccess) registerSuccess.classList.add('hidden');
+
+        try {
+          const formData = new URLSearchParams();
+          formData.append('action', 'register');
+          formData.append('username', user);
+          formData.append('password', pass);
+          formData.append('role', role);
+
+          const r = await fetch(BACKEND_GAS_URL, {
+            method: 'POST',
+            body: formData
+          });
+
+          const responseData = await r.json();
+
+          if (responseData.success) {
+            if (registerSuccess) {
+              registerSuccess.textContent = "Registration successful! Your account is now pending approval.";
+              registerSuccess.classList.remove('hidden');
+            }
+            registerForm.reset();
+            // Automatically switch back to login after 3 seconds
+            setTimeout(() => {
+              if (registerOverlay) registerOverlay.classList.add('hidden');
+              if (loginOverlay) loginOverlay.classList.remove('hidden');
+            }, 3000);
+          } else {
+            if (registerError) {
+              registerError.textContent = responseData.message || "Registration failed.";
+              registerError.classList.remove('hidden');
+            }
+          }
+        } catch (err) {
+          if (registerError) {
+            registerError.textContent = "Check network. Could not connect to servers.";
+            registerError.classList.remove('hidden');
+          }
+          console.error(err);
+        } finally {
+          btn.textContent = origBtnText;
+          btn.disabled = false;
+        }
       }
     });
   }
@@ -5905,6 +5991,7 @@ if (logoutBtn) {
     const base64 = await fileToBase64(file);
     
     try {
+      showGlobalLoading("Uploading your new profile picture...");
       const formData = new URLSearchParams();
       formData.append('action', 'uploadProfilePicture');
       formData.append('username', sessionData.username);
@@ -5948,8 +6035,22 @@ if (logoutBtn) {
       }
     } catch (err) {
       showToast('Upload error: ' + err.message, 'error');
+    } finally {
+      hideGlobalLoading();
     }
   });
+
+  function showGlobalLoading(text = "Please wait a moment") {
+    const modal = document.getElementById('global-loading-modal');
+    const label = document.getElementById('global-loading-text');
+    if (label) label.textContent = text;
+    if (modal) modal.classList.remove('hidden');
+  }
+
+  function hideGlobalLoading() {
+    const modal = document.getElementById('global-loading-modal');
+    if (modal) modal.classList.add('hidden');
+  }
 
   function fileToBase64(file) {
     return new Promise((resolve, reject) => {
@@ -5971,6 +6072,7 @@ if (logoutBtn) {
     const sessionData = JSON.parse(localStorage.getItem('sas_user_data'));
     
     try {
+      showGlobalLoading("Saving your profile...");
       const formData = new URLSearchParams();
       formData.append('action', 'updateUserSettings');
       formData.append('username', sessionData.username);
@@ -5996,6 +6098,8 @@ if (logoutBtn) {
       }
     } catch (err) {
       showSettingsError('Error: ' + err.message);
+    } finally {
+      hideGlobalLoading();
     }
   });
 
@@ -6023,6 +6127,7 @@ if (logoutBtn) {
     const sessionData = JSON.parse(localStorage.getItem('sas_user_data'));
     
     try {
+      showGlobalLoading("Updating password...");
       const formData = new URLSearchParams();
       formData.append('action', 'updateUserSettings');
       formData.append('username', sessionData.username);
@@ -6046,6 +6151,8 @@ if (logoutBtn) {
       }
     } catch (err) {
       showSettingsError('Error: ' + err.message);
+    } finally {
+      hideGlobalLoading();
     }
   });
 
@@ -6069,6 +6176,7 @@ if (logoutBtn) {
       const sessionData = JSON.parse(localStorage.getItem('sas_user_data'));
       
       try {
+        showGlobalLoading("Applying theme...");
         const formData = new URLSearchParams();
         formData.append('action', 'updateUserSettings');
         formData.append('username', sessionData.username);
@@ -6085,6 +6193,8 @@ if (logoutBtn) {
         }
       } catch (err) {
         console.error('Theme save error:', err);
+      } finally {
+        hideGlobalLoading();
       }
     });
   });
