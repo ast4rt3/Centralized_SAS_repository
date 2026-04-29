@@ -1369,8 +1369,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (navbar && document.body.classList.contains('lp-mode')) {
       if (scrollPos > 40) {
         navbar.classList.add('scrolled');
+        document.body.classList.add('scrolled');
       } else {
         navbar.classList.remove('scrolled');
+        document.body.classList.remove('scrolled');
       }
     }
   }, { passive: true });
