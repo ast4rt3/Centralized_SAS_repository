@@ -1308,6 +1308,35 @@
                     </div>
                   </div>
                   <div id="upload-thumbnails-container" class="hidden" style="display: flex; gap: 8px; overflow-x: auto; padding: 8px 0; margin-top: 8px; border-top: 1px solid #e2e8f0; scrollbar-width: thin;"></div>
+                  
+                  <div id="multi-add-container" class="hidden" style="margin-top: 10px; margin-bottom: 15px; text-align: center;">
+                    <button type="button" id="multi-add-btn" class="secondary-btn" style="padding: 6px 16px; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; margin: 0 auto; border: 2px solid var(--nbsc-gold); background: transparent; color: var(--nbsc-dark); font-weight: 700; border-radius: 6px; transition: all 0.2s;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        Add Another Image
+                    </button>
+                  </div>
+
+                  <!-- Batch Settings -->
+                  <div id="multi-settings-group" class="hidden" style="margin-top: 15px; border-top: 2px dashed #e2e8f0; padding-top: 15px;">
+                      <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                          <div style="display: flex; align-items: center; justify-content: space-between;">
+                              <div style="display: flex; align-items: center; gap: 10px;">
+                                  <div style="background: var(--nbsc-gold); color: var(--nbsc-dark); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                  </div>
+                                  <div>
+                                      <label style="margin: 0; font-size: 0.9rem; font-weight: 700; color: var(--nbsc-dark);">Transition Speed</label>
+                                      <p style="margin: 0; font-size: 0.75rem; color: var(--text-muted);">Seconds per image</p>
+                                  </div>
+                              </div>
+                              <div style="display: flex; align-items: center; gap: 8px;">
+                                  <input type="number" id="multi-interval" value="5" min="2" max="30" style="width: 60px; padding: 6px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 700; text-align: center; color: var(--nbsc-dark);">
+                                  <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">SEC</span>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+
                   <div id="upload-img-controls" style="display: block;">
                     <div style="display: flex; align-items: center; gap: 10px; margin-top: 12px;">
                       <label style="font-size: 0.85rem; font-weight: 600; white-space: nowrap; margin-bottom: 0;">Zoom:</label>

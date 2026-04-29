@@ -2445,6 +2445,8 @@ if (logoutBtn) {
     let videoDuration = 0;
     let previewYtPlayer = null;
     let previewFbPlayer = null;
+    let currentFiles = [];
+    let isAppending = false;
 
     function formatTimeObj(seconds) {
       if (!seconds || isNaN(seconds)) return "00:00";
@@ -2765,9 +2767,38 @@ if (logoutBtn) {
         const effectivePanelId = (activeUploadTab === 'multi') ? 'upload' : activeUploadTab;
         if (uploadPanels[effectivePanelId]) uploadPanels[effectivePanelId].classList.remove('hidden');
 
+        // Reset tracked files when switching between DIFFERENT upload types
+        if (activeUploadTab === 'upload' || activeUploadTab === 'multi') {
+           currentFiles = [];
+           const fileInput = document.getElementById('post-file');
+           if (fileInput) {
+              if (activeUploadTab === 'multi') {
+                 fileInput.setAttribute('multiple', 'multiple');
+              } else {
+                 fileInput.removeAttribute('multiple');
+              }
+              fileInput.value = '';
+           }
+           handleFileSelection(null); // Clear preview
+        }
+
+        // Toggle "Add More" and "Batch Settings" containers
+        const multiAddContainer = document.getElementById('multi-add-container');
+        const multiSettingsGroup = document.getElementById('multi-settings-group');
+        if (multiAddContainer) {
+           multiAddContainer.classList.add('hidden');
+        }
+        if (multiSettingsGroup) {
+           if (activeUploadTab === 'multi') {
+              multiSettingsGroup.classList.remove('hidden');
+           } else {
+              multiSettingsGroup.classList.add('hidden');
+           }
+        }
+
         // Update guidance text for the upload panel
         const fileLabelText = document.getElementById('file-label-text');
-        if (fileLabelText && !document.getElementById('file-upload-label').classList.contains('file-selected')) {
+        if (fileLabelText) {
            if (activeUploadTab === 'multi') {
               fileLabelText.textContent = 'Drop MULTIPLE images here';
            } else {
@@ -2808,14 +2839,22 @@ if (logoutBtn) {
     const fileUploadLabel = document.getElementById('file-upload-label');
     const fileLabelText = document.getElementById('file-label-text');
 
-    function handleFileSelection(files) {
+    function handleFileSelection(files, isAppend = false) {
       const els = getScopedElements('upload');
       const fileCountBadge = document.getElementById('file-count-badge');
       const controls = document.getElementById('upload-img-controls');
-      const file = (files && files.length > 0) ? files[0] : null;
+      const multiAddContainer = document.getElementById('multi-add-container');
+      
+      if (!isAppend) {
+        currentFiles = files ? Array.from(files) : [];
+      } else if (files) {
+        currentFiles = [...currentFiles, ...Array.from(files)];
+      }
 
-      // Reset transform when selecting a new file
-      if (transformStates['upload']) {
+      const file = (currentFiles.length > 0) ? currentFiles[0] : null;
+
+      // Reset transform when selecting a new file (if not appending)
+      if (!isAppend && transformStates['upload']) {
         transformStates['upload'] = { zoom: 1, x: 0, y: 0 };
         updateTransform('upload');
       }
@@ -2824,6 +2863,7 @@ if (logoutBtn) {
         if (fileLabelText) fileLabelText.textContent = 'Choose a file or drag it here';
         if (fileCountBadge) fileCountBadge.classList.add('hidden');
         if (fileUploadLabel) fileUploadLabel.classList.remove('file-selected');
+        if (multiAddContainer) multiAddContainer.classList.add('hidden');
         const iconWrapper = fileUploadLabel ? fileUploadLabel.querySelector('.upload-icon-wrapper') : null;
         if (iconWrapper) iconWrapper.style.color = '';
         if (els.previewGroup) els.previewGroup.style.display = 'none';
@@ -2839,27 +2879,45 @@ if (logoutBtn) {
       }
 
       if (fileCountBadge) {
-        if (files.length > 1) {
-          fileCountBadge.textContent = files.length + ' Files Selected';
+        if (currentFiles.length > 1) {
+          fileCountBadge.textContent = currentFiles.length + ' Files Selected';
           fileCountBadge.classList.remove('hidden');
           if (controls) controls.style.display = 'none';
 
           if (thumbContainer) {
             thumbContainer.classList.remove('hidden');
-            Array.from(files).forEach((f, idx) => {
+            currentFiles.forEach((f, idx) => {
                if (f.type.startsWith('image/')) {
                   const tReader = new FileReader();
                   tReader.onload = (ev) => {
+                     const wrapper = document.createElement('div');
+                     wrapper.style.cssText = 'position: relative; flex-shrink: 0; margin: 4px;';
+
                      const tImg = document.createElement('img');
                      tImg.src = ev.target.result;
-                     tImg.style.cssText = 'width: 60px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s;';
+                     tImg.style.cssText = 'width: 60px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; display: block;';
                      if (idx === 0) tImg.style.borderColor = 'var(--nbsc-gold)';
+                     
                      tImg.onclick = () => {
                         if (els.previewImg) els.previewImg.src = ev.target.result;
                         thumbContainer.querySelectorAll('img').forEach(im => im.style.borderColor = 'transparent');
                         tImg.style.borderColor = 'var(--nbsc-gold)';
                      };
-                     thumbContainer.appendChild(tImg);
+
+                     const delBtn = document.createElement('button');
+                     delBtn.type = 'button';
+                     delBtn.innerHTML = '&times;';
+                     delBtn.style.cssText = 'position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; background: #ef4444; color: white; border-radius: 50%; border: 1px solid white; font-size: 14px; line-height: 1; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.3); font-weight: bold;';
+                     delBtn.title = "Remove image";
+                     delBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        currentFiles.splice(idx, 1);
+                        handleFileSelection(currentFiles, false);
+                     };
+
+                     wrapper.appendChild(tImg);
+                     wrapper.appendChild(delBtn);
+                     thumbContainer.appendChild(wrapper);
                   };
                   tReader.readAsDataURL(f);
                }
@@ -2871,13 +2929,20 @@ if (logoutBtn) {
         }
       }
 
-      if (fileLabelText) fileLabelText.textContent = '📄 ' + file.name + (files.length > 1 ? ' + ' + (files.length - 1) + ' more' : '');
+      if (fileLabelText) fileLabelText.textContent = '📄 ' + file.name + (currentFiles.length > 1 ? ' + ' + (currentFiles.length - 1) + ' more' : '');
       if (fileUploadLabel) fileUploadLabel.classList.add('file-selected');
+      
+      // Show "Add More" and "Batch Settings" if in multi mode
+      if (activeUploadTab === 'multi') {
+        if (multiAddContainer) multiAddContainer.classList.remove('hidden');
+        const multiSettingsGroup = document.getElementById('multi-settings-group');
+        if (multiSettingsGroup) multiSettingsGroup.classList.remove('hidden');
+      }
+
       const iconWrapper = fileUploadLabel ? fileUploadLabel.querySelector('.upload-icon-wrapper') : null;
       if (iconWrapper) iconWrapper.style.color = '#16a34a';
 
       if (file.type.startsWith('image/')) {
-        console.log("FILE PREVIEW: Image detected:", file.name);
         if (els.videoGroup) els.videoGroup.style.display = 'none';
         if (els.previewGroup) {
           els.previewGroup.classList.remove('hidden');
@@ -2885,7 +2950,6 @@ if (logoutBtn) {
         }
 
         const reader = new FileReader();
-        reader.onerror = (e) => console.error("FILE PREVIEW: Reader error:", e);
         reader.onload = (e) => {
           if (els.previewImg) {
             els.previewImg.src = e.target.result;
@@ -2894,31 +2958,32 @@ if (logoutBtn) {
         };
         reader.readAsDataURL(file);
       } else if (file.type.startsWith('video/')) {
-        console.log("FILE PREVIEW: Video detected:", file.name);
         if (els.previewGroup) els.previewGroup.style.setProperty('display', 'none', 'important');
         if (els.videoGroup) els.videoGroup.style.setProperty('display', 'block', 'important');
         
         const fileURL = URL.createObjectURL(file);
-        // We need to tell loadPreviewVideo which scope's elements to use
         if (window.loadPreviewVideo) window.loadPreviewVideo(fileURL, true, true, 'upload');
-        if (els.videoGroup && els.videoGroup.scrollIntoView) {
-          els.videoGroup.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      } else {
-        if (els.previewGroup) els.previewGroup.style.display = 'none';
-        if (els.videoGroup) els.videoGroup.style.display = 'none';
       }
     }
 
     if (fileInput && fileUploadLabel) {
       fileInput.addEventListener('change', () => {
         if (fileInput.files && fileInput.files.length > 0) {
-          handleFileSelection(fileInput.files);
-        } else {
-          handleFileSelection(null); // Clear preview if no file selected
+          handleFileSelection(fileInput.files, isAppending);
+        } else if (!isAppending) {
+          handleFileSelection(null);
         }
+        isAppending = false;
       });
 
+      const multiAddBtn = document.getElementById('multi-add-btn');
+      if (multiAddBtn) {
+        multiAddBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          isAppending = true;
+          fileInput.click();
+        });
+      }
 
       fileUploadLabel.addEventListener('dragover', (ev) => {
         ev.preventDefault();
@@ -2929,8 +2994,7 @@ if (logoutBtn) {
         ev.preventDefault();
         fileUploadLabel.classList.remove('drag-over');
         if (ev.dataTransfer.files && ev.dataTransfer.files.length > 0) {
-          fileInput.files = ev.dataTransfer.files;
-          handleFileSelection(ev.dataTransfer.files);
+          handleFileSelection(ev.dataTransfer.files, false);
         }
       });
     }
@@ -3133,7 +3197,19 @@ if (logoutBtn) {
       
       // Clear Files
       const fileInput = document.getElementById('post-file');
-      if (fileInput) fileInput.value = '';
+      if (fileInput) {
+         fileInput.value = '';
+         fileInput.removeAttribute('multiple');
+      }
+      currentFiles = [];
+      isAppending = false;
+
+      const multiAddContainer = document.getElementById('multi-add-container');
+      if (multiAddContainer) multiAddContainer.classList.add('hidden');
+      const multiSettingsGroup = document.getElementById('multi-settings-group');
+      if (multiSettingsGroup) multiSettingsGroup.classList.add('hidden');
+      const multiInterval = document.getElementById('multi-interval');
+      if (multiInterval) multiInterval.value = '5';
 
       const scopes = ['upload', 'multi', 'url', 'live'];
       scopes.forEach(scope => {
@@ -3257,7 +3333,7 @@ if (logoutBtn) {
         let imgSize = "1";
         
         const postFileIn = document.getElementById('post-file');
-        const files = (activeUploadTab === 'upload' && postFileIn) ? Array.from(postFileIn.files) : [];
+        const files = (activeUploadTab === 'upload' || activeUploadTab === 'multi') ? currentFiles : [];
 
         if (activeUploadTab === 'url') {
            imgUrl = imgInput.value.trim();
@@ -3270,8 +3346,10 @@ if (logoutBtn) {
 
         const startVal = activeEls.vStartHidden ? activeEls.vStartHidden.value : '';
         const endVal = activeEls.vEndHidden ? activeEls.vEndHidden.value : '';
-        if (startVal || endVal) {
-          imgPos = `${imgPos}|${startVal}|${endVal}`;
+        const intervalVal = (activeUploadTab === 'multi') ? (document.getElementById('multi-interval').value || '5') : '';
+
+        if (startVal || endVal || intervalVal) {
+          imgPos = `${imgPos}|${startVal}|${endVal}|${intervalVal}`;
         }
 
         const submitBtn = document.getElementById('submit-post-btn');
@@ -3620,6 +3698,8 @@ if (logoutBtn) {
            const parts = post.imagePosition.split('|');
            startVal = parts[1] || '';
            endVal = parts[2] || '';
+           const intervalVal = parts[3] || '5';
+           slide.setAttribute('data-interval', intervalVal);
         }
 
         const slide = document.createElement('article');
@@ -3885,9 +3965,11 @@ if (logoutBtn) {
           let startVal = '';
           let endVal = '';
           if (post.imagePosition && post.imagePosition.includes('|')) {
-             const parts = post.imagePosition.split('|');
-             startVal = parts[1] || '';
-             endVal = parts[2] || '';
+            const parts = post.imagePosition.split('|');
+            startVal = parts[1] || '';
+            endVal = parts[2] || '';
+            const intervalVal = parts[3] || '5';
+            card.setAttribute('data-interval', intervalVal);
           }
 
           const ytId = getYouTubeVideoId(displayImageUrl);
@@ -4005,7 +4087,7 @@ if (logoutBtn) {
                 // --- TAB & PREVIEW RESTORATION ---
                 let targetTab = 'url';
                 if (post.cloudinaryPublicId) {
-                  targetTab = 'upload';
+                  targetTab = (post.imageUrl && post.imageUrl.includes('|')) ? 'multi' : 'upload';
                 } else if (post.isLive) {
                   targetTab = 'live';
                 }
@@ -4064,6 +4146,13 @@ if (logoutBtn) {
                          ty = parseFloat(parts[1]) || 0;
                        }
                        if (window.setPreviewTransformState) window.setPreviewTransformState(scale, tx, ty, 'upload');
+                       
+                       if (post.imagePosition && post.imagePosition.includes('|')) {
+                          const parts = post.imagePosition.split('|');
+                          const interval = parts[3] || '5';
+                          const intervalInput = document.getElementById('multi-interval');
+                          if (intervalInput) intervalInput.value = interval;
+                       }
                     }
                   }
                 } else {
@@ -4371,11 +4460,12 @@ if (logoutBtn) {
         const items = multiContainer.querySelectorAll('.multi-image-item');
         if (items.length > 1) {
           let currentItem = 0;
+          const cycleTime = parseInt(activeSlide.getAttribute('data-interval') || 5) * 1000;
           activeSlide._multiImageInterval = setInterval(() => {
             items[currentItem].style.opacity = 0;
             currentItem = (currentItem + 1) % items.length;
             items[currentItem].style.opacity = 1;
-          }, 5000);
+          }, cycleTime);
         }
       }
 
