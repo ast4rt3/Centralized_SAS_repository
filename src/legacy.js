@@ -3577,30 +3577,10 @@ if (logoutBtn) {
         return true;
       });
 
-      // --- MULTI-IMAGE SPLITTING FOR TV ---
-      let flattenedTvPosts = [];
-      tvPosts.forEach(p => {
-        if (p.imageUrl && p.imageUrl.includes('|')) {
-          const urls = p.imageUrl.split('|');
-          const pIds = (p.publicId || '').split('|');
-          
-          const totalDur = parseInt(p.displayDuration) || 25;
-          let perImgDur = Math.floor(totalDur / urls.length);
-          if (perImgDur < 3) perImgDur = 3;
-
-          urls.forEach((url, i) => {
-            flattenedTvPosts.push({
-              ...p,
-              imageUrl: url,
-              publicId: pIds[i] || "",
-              displayDuration: perImgDur
-            });
-          });
-        } else {
-          flattenedTvPosts.push(p);
-        }
-      });
-      tvPosts = flattenedTvPosts;
+      // --- TV POST SELECTION ---
+      // For TV, we use original posts to avoid "dot clutter"
+      // Image cycling will be handled internally by renderPosts and initCarousel
+      let tvPostsFinal = tvPosts;
 
 
       if (tvPosts.length === 0) {
@@ -3770,12 +3750,26 @@ if (logoutBtn) {
             `;
           } else {
             const fbPlaceholder = 'assets/sas_logo_real.png';
-            imgHtml = `
-              <div style="position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden;">
-                 ${bgHtml}
-                 <img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="home-news-image" style="width: 100%; height: 100%; position: relative; z-index: 2; ${styleStr}" loading="lazy" onerror="this.onerror=null; this.src='${fbPlaceholder}'; this.style.objectFit='contain'; this.style.opacity='0.2';">
-              </div>
-            `;
+            if (post.imageUrl && post.imageUrl.includes('|')) {
+              const urls = post.imageUrl.split('|');
+              const imgs = urls.map((u, i) => `
+                <img src="${u.trim()}" class="home-news-image multi-image-item ${i === 0 ? 'active' : ''}" style="width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: ${2 + i}; ${styleStr} opacity: ${i === 0 ? 1 : 0}; transition: opacity 0.8s ease-in-out;" onerror="this.onerror=null; this.src='${fbPlaceholder}';">
+              `).join('');
+              
+              imgHtml = `
+                <div class="multi-image-container" data-count="${urls.length}" style="position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden;">
+                  ${bgHtml}
+                  ${imgs}
+                </div>
+              `;
+            } else {
+              imgHtml = `
+                <div style="position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden;">
+                   ${bgHtml}
+                   <img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="home-news-image" style="width: 100%; height: 100%; position: relative; z-index: 2; ${styleStr}" loading="lazy" onerror="this.onerror=null; this.src='${fbPlaceholder}'; this.style.objectFit='contain'; this.style.opacity='0.2';">
+                </div>
+              `;
+            }
           }
         } else {
           imgHtml = `<div class="home-news-image" style="background:var(--nbsc-dark); display:flex; flex-direction:column; align-items:center; justify-content:center; color:white; padding: 20px; text-align: center;"><img src="assets/sas_logo_real.png" style="height:60px; margin-bottom:10px; opacity:0.3"></div>`;
@@ -4331,6 +4325,11 @@ if (logoutBtn) {
             oldVideo.pause();
             oldVideo.muted = true;
           }
+          // Clear multi-image interval for inactive slide
+          if (s._multiImageInterval) {
+            clearInterval(s._multiImageInterval);
+            s._multiImageInterval = null;
+          }
         }
       });
       dots.forEach(function (d, i) {
@@ -4351,6 +4350,20 @@ if (logoutBtn) {
       const fbIframeEl = activeSlide.querySelector('.fb-video-wrapper');
       const driveIframeEl = activeSlide.querySelector('iframe.drive-video-frame');
       const websiteIframeEl = activeSlide.querySelector('iframe.website-slide-frame');
+      const multiContainer = activeSlide.querySelector('.multi-image-container');
+      
+      // Start internal cycling for multi-image posts
+      if (multiContainer) {
+        const items = multiContainer.querySelectorAll('.multi-image-item');
+        if (items.length > 1) {
+          let currentItem = 0;
+          activeSlide._multiImageInterval = setInterval(() => {
+            items[currentItem].style.opacity = 0;
+            currentItem = (currentItem + 1) % items.length;
+            items[currentItem].style.opacity = 1;
+          }, 5000);
+        }
+      }
 
       const curStart = parseFloat(activeSlide.dataset.start) || 0;
       const curEnd = parseFloat(activeSlide.dataset.end) || 0;
