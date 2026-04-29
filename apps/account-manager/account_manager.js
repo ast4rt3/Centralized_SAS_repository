@@ -13,10 +13,18 @@
     async function fetchPendingUsers() {
         if (!BACKEND_GAS_URL) return;
         
+        const userData = JSON.parse(localStorage.getItem('sas_user_data') || '{}');
+        if (!userData.username || !userData.password) {
+            showToast("Session expired. Please log in again.", "error");
+            return;
+        }
+
         loadingIndicator.classList.remove('hidden');
         try {
             const formData = new URLSearchParams();
             formData.append('action', 'getPendingUsers');
+            formData.append('username', userData.username);
+            formData.append('password', userData.password);
             formData.append('portalUser', portalUser);
 
             const r = await fetch(BACKEND_GAS_URL, {
@@ -46,8 +54,16 @@
         const rows = pendingList.querySelectorAll('.user-row');
         rows.forEach(r => r.remove());
 
+        if (!Array.isArray(users)) {
+            console.error("[AccountManager] Expected array for users, got:", users);
+            emptyState.classList.remove('hidden');
+            emptyState.querySelector('p').textContent = "Error: Invalid data received from server.";
+            return;
+        }
+
         if (users.length === 0) {
             emptyState.classList.remove('hidden');
+            emptyState.querySelector('p').textContent = "No pending registration requests.";
             return;
         }
 
@@ -98,8 +114,11 @@
 
         loadingIndicator.classList.remove('hidden');
         try {
+            const userData = JSON.parse(localStorage.getItem('sas_user_data') || '{}');
             const formData = new URLSearchParams();
             formData.append('action', action === 'approve' ? 'approveUser' : 'rejectUser');
+            formData.append('username', userData.username);
+            formData.append('password', userData.password);
             formData.append('targetUsername', username);
             formData.append('portalUser', portalUser);
 

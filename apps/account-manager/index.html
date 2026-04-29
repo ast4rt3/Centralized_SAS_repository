@@ -3,6 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>
+    // Trailing Slash Fix: Ensures relative paths work correctly
+    if (!window.location.pathname.endsWith('/') && !window.location.pathname.endsWith('.html')) {
+      window.location.replace(window.location.href + '/');
+    }
+  </script>
   <title>Account Approval Manager</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
   <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
@@ -346,6 +352,6 @@
   <div id="toast-container"></div>
 
   <script src="../../env.js"></script>
-  <script src="app.js"></script>
+  <script src="account_manager.js"></script>
 </body>
 </html>
