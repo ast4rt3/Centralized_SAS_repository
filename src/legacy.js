@@ -2447,6 +2447,70 @@ if (logoutBtn) {
     let previewFbPlayer = null;
     let currentFiles = [];
     let isAppending = false;
+    let previewCyclingTimer = null;
+
+    function scrollToModalBottom() {
+      const modalBody = document.querySelector('#add-post-modal .modal-body');
+      if (modalBody) {
+        setTimeout(() => {
+          modalBody.scrollTo({ top: modalBody.scrollHeight, behavior: 'smooth' });
+        }, 100);
+      }
+    }
+
+    function stopPreviewCycling() {
+      if (previewCyclingTimer) {
+        clearTimeout(previewCyclingTimer);
+        previewCyclingTimer = null;
+      }
+    }
+
+    function startPreviewCycling(items, type = 'file') {
+      stopPreviewCycling();
+      if (!items || items.length <= 1) return;
+      
+      let currentIdx = 0;
+      const els = getScopedElements('upload');
+      const thumbContainer = document.getElementById('upload-thumbnails-container');
+      const intervalInput = document.getElementById('multi-interval');
+      
+      const runCycle = () => {
+        const cycleTime = Math.max(parseInt(intervalInput?.value || 5), 2) * 1000;
+        previewCyclingTimer = setTimeout(() => {
+          if (!document.getElementById('add-post-modal') || document.getElementById('add-post-modal').classList.contains('hidden')) {
+            stopPreviewCycling();
+            return;
+          }
+          
+          currentIdx = (currentIdx + 1) % items.length;
+          const item = items[currentIdx];
+          
+          if (type === 'file') {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              if (els.previewImg) els.previewImg.src = e.target.result;
+              updateThumbBorders(currentIdx);
+              runCycle();
+            };
+            reader.readAsDataURL(item);
+          } else {
+            if (els.previewImg) els.previewImg.src = item;
+            updateThumbBorders(currentIdx);
+            runCycle();
+          }
+        }, cycleTime);
+      };
+      
+      function updateThumbBorders(idx) {
+        if (thumbContainer) {
+          thumbContainer.querySelectorAll('img').forEach((im, i) => {
+            im.style.borderColor = (i === idx) ? 'var(--nbsc-gold)' : 'transparent';
+          });
+        }
+      }
+      
+      runCycle();
+    }
 
     function formatTimeObj(seconds) {
       if (!seconds || isNaN(seconds)) return "00:00";
@@ -2780,6 +2844,7 @@ if (logoutBtn) {
               fileInput.value = '';
            }
            handleFileSelection(null); // Clear preview
+           stopPreviewCycling();
         }
 
         // Toggle "Add More" and "Batch Settings" containers
@@ -2947,6 +3012,7 @@ if (logoutBtn) {
         if (els.previewGroup) {
           els.previewGroup.classList.remove('hidden');
           els.previewGroup.style.setProperty('display', 'block', 'important');
+          scrollToModalBottom();
         }
 
         const reader = new FileReader();
@@ -2963,6 +3029,13 @@ if (logoutBtn) {
         
         const fileURL = URL.createObjectURL(file);
         if (window.loadPreviewVideo) window.loadPreviewVideo(fileURL, true, true, 'upload');
+        scrollToModalBottom();
+      }
+
+      if (activeUploadTab === 'multi' && currentFiles.length > 1) {
+        startPreviewCycling(currentFiles, 'file');
+      } else {
+        stopPreviewCycling();
       }
     }
 
@@ -3048,7 +3121,7 @@ if (logoutBtn) {
               if (window.loadPreviewVideo) {
                  const keep = e.detail && e.detail.keepValues;
                  window.loadPreviewVideo(previewUrl, false, !keep, 'url');
-                 if (els.videoGroup) els.videoGroup.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                 scrollToModalBottom();
               }
             } else {
               if (els.videoGroup) els.videoGroup.style.display = 'none';
@@ -3062,9 +3135,7 @@ if (logoutBtn) {
               if (els.previewGroup) {
                 els.previewGroup.style.setProperty('display', 'block', 'important');
                 els.previewGroup.classList.remove('hidden');
-                if (els.previewGroup.scrollIntoView) {
-                  els.previewGroup.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
+                scrollToModalBottom();
               }
             }
           } else {
@@ -3203,6 +3274,7 @@ if (logoutBtn) {
       }
       currentFiles = [];
       isAppending = false;
+      stopPreviewCycling();
 
       const multiAddContainer = document.getElementById('multi-add-container');
       if (multiAddContainer) multiAddContainer.classList.add('hidden');
@@ -4097,8 +4169,9 @@ if (logoutBtn) {
                 if (tabBtn) tabBtn.click();
 
                 // Populate and Trigger Preview
-                if (targetTab === 'upload') {
+                if (targetTab === 'upload' || targetTab === 'multi') {
                   const els = getScopedElements('upload');
+                  scrollToModalBottom();
                   if (els.previewImg && post.imageUrl) {
                     els.previewImg.src = post.imageUrl.split('|')[0];
                     els.previewGroup.style.display = 'block';
@@ -4118,17 +4191,62 @@ if (logoutBtn) {
                           thumbContainer.innerHTML = '';
                           thumbContainer.classList.remove('hidden');
                           urls.forEach((u, idx) => {
+                            const wrapper = document.createElement('div');
+                            wrapper.style.cssText = 'position: relative; flex-shrink: 0; margin: 4px;';
+
                             const tImg = document.createElement('img');
                             tImg.src = u.trim();
-                            tImg.style.cssText = 'width: 60px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s;';
+                            tImg.style.cssText = 'width: 60px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; display: block;';
                             if (idx === 0) tImg.style.borderColor = 'var(--nbsc-gold)';
+                            
                             tImg.onclick = () => {
                               if (els.previewImg) els.previewImg.src = u.trim();
                               thumbContainer.querySelectorAll('img').forEach(im => im.style.borderColor = 'transparent');
                               tImg.style.borderColor = 'var(--nbsc-gold)';
                             };
-                            thumbContainer.appendChild(tImg);
+
+                            const delBtn = document.createElement('button');
+                            delBtn.type = 'button';
+                            delBtn.innerHTML = '&times;';
+                            delBtn.style.cssText = 'position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; background: #ef4444; color: white; border-radius: 50%; border: 1px solid white; font-size: 14px; line-height: 1; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.3); font-weight: bold;';
+                            delBtn.title = "Remove image";
+                            delBtn.onclick = (e) => {
+                              e.stopPropagation();
+                              const currentUrls = form.getAttribute('data-existing-image-url').split('|');
+                              const currentIds = form.getAttribute('data-existing-public-id').split('|');
+                              currentUrls.splice(idx, 1);
+                              currentIds.splice(idx, 1);
+                              
+                              form.setAttribute('data-existing-image-url', currentUrls.join('|'));
+                              form.setAttribute('data-existing-public-id', currentIds.join('|'));
+                              
+                              wrapper.remove();
+                              if (currentUrls.length <= 1) {
+                                if (fileCountBadge) fileCountBadge.classList.add('hidden');
+                                if (controls) controls.style.display = 'block';
+                                if (currentUrls.length === 0) {
+                                  thumbContainer.classList.add('hidden');
+                                  els.previewGroup.style.display = 'none';
+                                }
+                              } else {
+                                if (fileCountBadge) fileCountBadge.textContent = currentUrls.length + ' Files Selected';
+                              }
+                              
+                              if (els.previewImg.src === u.trim() && currentUrls.length > 0) {
+                                els.previewImg.src = currentUrls[0];
+                                const firstThumb = thumbContainer.querySelector('img');
+                                if (firstThumb) firstThumb.style.borderColor = 'var(--nbsc-gold)';
+                              }
+                            };
+
+                            wrapper.appendChild(tImg);
+                            wrapper.appendChild(delBtn);
+                            thumbContainer.appendChild(wrapper);
                           });
+
+                          if (urls.length > 1) {
+                            startPreviewCycling(urls, 'url');
+                          }
                         }
                       } else {
                         fileCountBadge.classList.add('hidden');
