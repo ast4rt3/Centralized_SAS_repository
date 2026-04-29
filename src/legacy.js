@@ -1013,32 +1013,34 @@ document.addEventListener('DOMContentLoaded', () => {
   window.fbPlayers = {};
   // --- GLOBAL HELPERS FOR MEDIA SCOPES ---
   function getScopedElements(scope) {
+    const prefix = (scope === 'multi') ? 'upload' : scope;
     return {
-      previewGroup: document.getElementById(`${scope}-img-preview-group`),
-      previewImg: document.getElementById(`${scope}-preview-img`),
-      previewContainer: document.getElementById(`${scope}-preview-container`),
-      previewWrapper: document.getElementById(`${scope}-preview-transform-wrapper`),
-      videoGroup: document.getElementById(`${scope}-video-settings-group`),
-      videoPlayer: document.getElementById(`${scope}-video-preview-player`),
-      videoIframe: document.getElementById(`${scope}-video-preview-iframe-wrapper`),
-      zoomSlider: document.getElementById(`${scope}-img-zoom`),
-      zoomVal: document.getElementById(`${scope}-preview-zoom-val`),
-      resetBtn: document.getElementById(`${scope}-preview-reset-btn`),
-      posInput: document.getElementById(`${scope}-img-pos`),
-      sizeInput: document.getElementById(`${scope}-img-size-val`),
-      coordsDisplay: document.getElementById(`${scope}-preview-coords`),
+      previewGroup: document.getElementById(`${prefix}-img-preview-group`),
+      previewImg: document.getElementById(`${prefix}-preview-img`),
+      previewContainer: document.getElementById(`${prefix}-preview-container`),
+      previewWrapper: document.getElementById(`${prefix}-preview-transform-wrapper`),
+      videoGroup: document.getElementById(`${prefix}-video-settings-group`),
+      videoPlayer: document.getElementById(`${prefix}-video-preview-player`),
+      videoIframe: document.getElementById(`${prefix}-video-preview-iframe-wrapper`),
+      zoomSlider: document.getElementById(`${prefix}-img-zoom`),
+      zoomVal: document.getElementById(`${prefix}-preview-zoom-val`),
+      resetBtn: document.getElementById(`${prefix}-preview-reset-btn`),
+      posInput: document.getElementById(`${prefix}-img-pos`),
+      sizeInput: document.getElementById(`${prefix}-img-size-val`),
+      coordsDisplay: document.getElementById(`${prefix}-preview-coords`),
       // Video range elements
-      vStartDisplay: document.getElementById(`${scope}-video-start-display`),
-      vEndDisplay: document.getElementById(`${scope}-video-duration-display`),
-      vSliderStart: document.getElementById(`${scope}-video-slider-start`),
-      vSliderEnd: document.getElementById(`${scope}-video-slider-end`),
-      vStartHidden: document.getElementById(`${scope}-video-start`),
-      vEndHidden: document.getElementById(`${scope}-video-end`)
+      vStartDisplay: document.getElementById(`${prefix}-video-start-display`),
+      vEndDisplay: document.getElementById(`${prefix}-video-duration-display`),
+      vSliderStart: document.getElementById(`${prefix}-video-slider-start`),
+      vSliderEnd: document.getElementById(`${prefix}-video-slider-end`),
+      vStartHidden: document.getElementById(`${prefix}-video-start`),
+      vEndHidden: document.getElementById(`${prefix}-video-end`)
     };
   }
 
   const transformStates = {
     upload: { zoom: 1, x: 0, y: 0 },
+    multi: { zoom: 1, x: 0, y: 0 },
     url: { zoom: 1, x: 0, y: 0 }
   };
 
@@ -2759,7 +2761,19 @@ if (logoutBtn) {
         btn.classList.add('active');
         activeUploadTab = btn.dataset.tab;
         Object.values(uploadPanels).forEach(p => p && p.classList.add('hidden'));
-        if (uploadPanels[activeUploadTab]) uploadPanels[activeUploadTab].classList.remove('hidden');
+        
+        const effectivePanelId = (activeUploadTab === 'multi') ? 'upload' : activeUploadTab;
+        if (uploadPanels[effectivePanelId]) uploadPanels[effectivePanelId].classList.remove('hidden');
+
+        // Update guidance text for the upload panel
+        const fileLabelText = document.getElementById('file-label-text');
+        if (fileLabelText && !document.getElementById('file-upload-label').classList.contains('file-selected')) {
+           if (activeUploadTab === 'multi') {
+              fileLabelText.textContent = 'Drop MULTIPLE images here';
+           } else {
+              fileLabelText.textContent = 'Click or drag image/video here';
+           }
+        }
         
         const scheduleSection = document.getElementById('post-scheduling-section');
 
@@ -2775,7 +2789,7 @@ if (logoutBtn) {
            if (urlInput && urlInput.value.trim()) {
               urlInput.dispatchEvent(new CustomEvent('input', { detail: { keepValues: true } }));
            }
-        } else if (activeUploadTab === 'upload') {
+        } else if (activeUploadTab === 'upload' || activeUploadTab === 'multi') {
            const fileInput = document.getElementById('post-file');
            if (fileInput && fileInput.files && fileInput.files.length > 0) {
               handleFileSelection(fileInput.files);
@@ -3121,7 +3135,7 @@ if (logoutBtn) {
       const fileInput = document.getElementById('post-file');
       if (fileInput) fileInput.value = '';
 
-      const scopes = ['upload', 'url', 'live'];
+      const scopes = ['upload', 'multi', 'url', 'live'];
       scopes.forEach(scope => {
         const els = getScopedElements(scope);
         if (els.previewGroup) {
@@ -3308,7 +3322,7 @@ if (logoutBtn) {
           let cloudinaryPublicId = "";
 
           // 2. Media Handling
-          if (activeUploadTab === 'upload' && files.length > 0) {
+          if ((activeUploadTab === 'upload' || activeUploadTab === 'multi') && files.length > 0) {
             zzProgress.update(10);
             
             const uploadPromises = files.map(async (file, index) => {
@@ -3339,7 +3353,7 @@ if (logoutBtn) {
             } else {
               throw new Error("Failed to upload any files to Cloudinary.");
             }
-          } else if (isEdit && ((activeUploadTab === 'upload' && files.length === 0) || (activeUploadTab !== 'upload' && !imgUrl))) {
+          } else if (isEdit && (((activeUploadTab === 'upload' || activeUploadTab === 'multi') && files.length === 0) || (activeUploadTab !== 'upload' && activeUploadTab !== 'multi' && !imgUrl))) {
             // GLOBAL PRESERVATION: If no new file/URL provided during edit, keep existing
             cloudinaryUrl = form.getAttribute('data-existing-image-url') || "";
             cloudinaryPublicId = form.getAttribute('data-existing-public-id') || "";
