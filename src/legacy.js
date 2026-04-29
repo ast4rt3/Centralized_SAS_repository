@@ -3157,6 +3157,7 @@ if (logoutBtn) {
           });
           els.previewImg.addEventListener('load', () => {
             els.previewGroup.style.display = 'block';
+            scrollToModalBottom();
           });
         }
       });
@@ -3175,6 +3176,7 @@ if (logoutBtn) {
                 if (window.loadPreviewVideo) {
                    const keep = e.detail && e.detail.keepValues;
                    window.loadPreviewVideo(url, false, !keep, 'live');
+                   scrollToModalBottom();
                 }
               } else {
                  if (els.videoGroup) els.videoGroup.style.display = 'none';
@@ -3838,12 +3840,15 @@ if (logoutBtn) {
           }
 
           let bgThumb = '';
+          const firstBgUrl = (post.imageUrl || '').split('|')[0].trim();
+          const firstBgUrlLower = firstBgUrl.toLowerCase();
+
           if (ytId) {
             bgThumb = `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`;
-          } else if (urlLower.includes('res.cloudinary.com') || urlLower.includes('cloudinary.com')) {
-            bgThumb = post.imageUrl.replace(/\.(mp4|webm|mov|mkv|avi)$/i, '.jpg');
-          } else if (post.imageUrl && post.imageUrl.trim() !== '') {
-            bgThumb = post.imageUrl;
+          } else if (firstBgUrlLower.includes('res.cloudinary.com') || firstBgUrlLower.includes('cloudinary.com')) {
+            bgThumb = firstBgUrl.replace(/\.(mp4|webm|mov|mkv|avi)$/i, '.jpg');
+          } else if (firstBgUrl !== '') {
+            bgThumb = firstBgUrl;
           }
 
           const bgHtml = bgThumb ? `<div class="home-news-image-bg" style="background-image: url('${bgThumb}')"></div>` : '';
@@ -4443,7 +4448,7 @@ if (logoutBtn) {
         if (blurredBg) {
           const firstPostWithImg = posts.find(p => p.imageUrl && p.imageUrl.trim() !== '');
           if (firstPostWithImg) {
-             let bgSource = firstPostWithImg.imageUrl;
+             let bgSource = firstPostWithImg.imageUrl.split('|')[0].trim();
              const ytId = getYouTubeVideoId(bgSource);
              if (ytId) bgSource = `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`;
              else if (bgSource.includes('cloudinary.com')) bgSource = bgSource.replace(/\.(mp4|webm|mov|mkv|avi)$/i, '.jpg');
