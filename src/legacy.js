@@ -1665,6 +1665,7 @@ document.addEventListener('DOMContentLoaded', () => {
       'nbsc-mailer': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2-2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>`,
       'lost-and-found': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`,
       'borrowers-log': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>`,
+      'file-hub': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`,
       'default': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>`
     };
 
@@ -6863,18 +6864,44 @@ function initLpDocuments() {
   // Sync from Firebase
   onValue(docsRef, (snapshot) => {
     const data = snapshot.val();
-    if (!data) {
-      _lpAllDocuments = [];
-      renderLpDocuments();
-      return;
-    }
-
-    _lpAllDocuments = Object.entries(data).map(([id, val]) => ({ id, ...val }))
-      .sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    updateLpDocYears();
-    renderLpDocuments();
+    const fbDocs = data ? Object.entries(data).map(([id, val]) => ({ id, ...val })) : [];
+    
+    _lpAllDocuments = fbDocs;
+    fetchPublicHubFiles(); // Merge with Supabase files
   });
+
+  async function fetchPublicHubFiles() {
+    try {
+      const response = await fetch(window.ENV.BACKEND_GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'getPublicFiles' })
+      });
+      const result = await response.json();
+      if (result.success && result.files) {
+        const hubDocs = result.files.map(f => ({
+          id: f.id,
+          title: f.file_name,
+          category: f.category,
+          date: f.created_at,
+          url: f.file_url,
+          description: `Uploaded by ${f.username}`
+        }));
+        
+        // Merge and deduplicate by URL
+        const combined = [..._lpAllDocuments, ...hubDocs];
+        _lpAllDocuments = combined
+          .filter((v, i, a) => a.findIndex(t => (t.url === v.url)) === i)
+          .sort((a, b) => new Date(b.date) - new Date(a.date));
+      }
+      
+      updateLpDocYears();
+      renderLpDocuments();
+    } catch (e) {
+      console.warn("Hub Docs Sync Error:", e);
+      updateLpDocYears();
+      renderLpDocuments();
+    }
+  }
 
   // Category Filtering
   catTabs.forEach(tab => {
