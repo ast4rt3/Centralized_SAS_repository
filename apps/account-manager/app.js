@@ -24,11 +24,13 @@
                 body: formData
             });
             const data = await r.json();
+            console.log("[AccountManager] Pending Users Data:", data);
 
             if (data.success) {
                 renderUsers(data.users || []);
                 countPending.textContent = (data.users || []).length;
             } else {
+                console.error("[AccountManager] Fetch failed:", data.message);
                 showToast(data.message || "Failed to fetch users", "error");
             }
         } catch (e) {
