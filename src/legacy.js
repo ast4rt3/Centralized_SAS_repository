@@ -3764,6 +3764,7 @@ if (logoutBtn) {
       dotsContainer.setAttribute('role', 'tablist');
 
       tvPosts.forEach((post, index) => {
+        const slide = document.createElement('article');
         let startVal = '';
         let endVal = '';
         if (post.imagePosition && post.imagePosition.includes('|')) {
@@ -3773,8 +3774,6 @@ if (logoutBtn) {
            const intervalVal = parts[3] || '5';
            slide.setAttribute('data-interval', intervalVal);
         }
-
-        const slide = document.createElement('article');
         slide.className = 'home-news-slide' + (index === 0 ? ' is-active' : '');
         slide.setAttribute('data-index', index);
         slide.setAttribute('data-title', escapeHtml(post.title || ''));
