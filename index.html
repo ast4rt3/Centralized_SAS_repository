@@ -42,245 +42,227 @@
 
 
 <style>
-/* --- FINAL REFINED MESSENGER UI --- */
-#messages.page { padding: 0 !important; background: #f1f5f9 !important; }
-#messages .messenger-container {
-  display: flex !important;
-  width: 98% !important;
-  max-width: 1400px !important;
-  height: calc(100vh - 100px) !important;
-  background: white !important;
-  border-radius: 12px !important;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.15) !important;
-  margin: 10px auto !important;
-  overflow: hidden !important;
-  border: 1px solid #e2e8f0 !important;
-  color: #1e293b !important;
+#messages.page { 
+    padding: 0 !important; 
+    background: radial-gradient(circle at 50% -20%, #1e3a8a 0%, #0f172a 80%) !important; 
+    min-height: calc(100vh - 70px) !important;
+    display: flex !important;
+    flex-direction: column !important;
 }
 
-/* Sidebar Styling */
+#messages .messenger-container {
+    display: flex !important;
+    width: 98% !important;
+    max-width: 1400px !important;
+    flex: 1 !important;
+    height: auto !important;
+    min-height: 600px !important;
+    background: rgba(15, 23, 42, 0.3) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-radius: 28px !important;
+    margin: 20px auto !important;
+    overflow: hidden !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 40px 100px rgba(0,0,0,0.5) !important;
+}
+
+
+/* Sidebar Styling (Frosted Glass) */
 #messages .messenger-sidebar {
-  width: 300px !important;
-  min-width: 300px !important;
-  border-right: 1px solid #f1f5f9 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  background: #f8fafc !important;
+    width: 320px !important;
+    min-width: 320px !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    background: rgba(30, 41, 59, 0.4) !important;
 }
 
 #messages .messenger-sidebar-header {
-  padding: 20px !important;
-  background: white !important;
-  border-bottom: 1px solid #f1f5f9 !important;
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
+    padding: 25px !important;
+    background: transparent !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
 }
 
 #messages .messenger-sidebar-header h3 {
-  font-size: 1.5rem !important;
-  font-weight: 800 !important;
-  color: #003366 !important;
-  margin: 0 !important;
+    font-size: 1.4rem !important;
+    font-weight: 800 !important;
+    color: white !important;
+    margin: 0 !important;
+    font-family: 'Outfit', sans-serif;
 }
 
-/* Contact List */
 #messages .messenger-contacts {
-  flex: 1 !important;
-  overflow-y: auto !important;
-  padding: 10px 0 !important;
+    flex: 1 !important;
+    overflow-y: auto !important;
+    padding: 15px 10px !important;
 }
 
 #messages .contact-card {
-  display: flex !important;
-  align-items: center !important;
-  gap: 15px !important;
-  padding: 12px 20px !important;
-  cursor: pointer;
-  transition: background 0.2s;
-  border-left: 4px solid transparent;
+    display: flex !important;
+    align-items: center !important;
+    gap: 15px !important;
+    padding: 15px 20px !important;
+    margin-bottom: 5px !important;
+    border-radius: 18px !important;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid transparent;
 }
 
-#messages .contact-card:hover { background: #f1f5f9 !important; }
+#messages .contact-card:hover { 
+    background: rgba(255, 255, 255, 0.05) !important; 
+    transform: translateX(5px);
+}
+
 #messages .contact-card.active { 
-  background: #e0f2fe !important; 
-  border-left-color: #003366 !important; 
+    background: rgba(255, 215, 0, 0.1) !important; 
+    border-color: rgba(255, 215, 0, 0.3) !important;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
 }
 
 #messages .contact-avatar {
-  width: 54px;
-  height: 54px;
-  background: #003366;
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 1.25rem;
-  position: relative;
-  flex-shrink: 0;
-}
-
-#messages .contact-status-dot {
-  position: absolute;
-  bottom: 2px;
-  right: 2px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 3px solid white;
-  background: #94a3b8;
-}
-#messages .contact-status-dot.online { background: #10b981 !important; }
-
-#messages .contact-info {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 2px !important;
-  flex: 1 !important;
-  min-width: 0 !important;
+    width: 52px; height: 52px;
+    background: linear-gradient(135deg, #1e40af, #1e3a8a);
+    color: white; border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 1.2rem;
+    position: relative; flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
 #messages .contact-name {
-  font-weight: 700 !important;
-  font-size: 1rem !important;
-  color: #1e293b !important;
+    font-weight: 700 !important;
+    font-size: 0.95rem !important;
+    color: white !important;
 }
 
 #messages .contact-preview {
-  font-size: 0.8rem !important;
-  color: #64748b !important;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+    font-size: 0.8rem !important;
+    color: rgba(255,255,255,0.4) !important;
 }
 
-/* Main Chat Window */
-
+/* Main Chat Area Overhaul */
 #messages .messenger-main {
-  flex: 1 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  background: white !important;
-  height: 100% !important;
-  overflow: hidden !important;
-}
-
-
-#messages .messenger-chat-view {
-  display: flex !important;
-  flex-direction: column !important;
-  height: 100% !important;
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    background: transparent !important;
+    height: 100% !important;
 }
 
 #messages .messenger-chat-header {
-  height: 72px !important;
-  padding: 0 25px !important;
-  background: white !important;
-  border-bottom: 1px solid #f1f5f9 !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 15px !important;
+    height: 80px !important;
+    padding: 0 30px !important;
+    background: rgba(15, 23, 42, 0.2) !important;
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 15px !important;
 }
 
 #messages .active-user-avatar {
-  width: 44px;
-  height: 44px;
-  background: #003366;
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 1.1rem;
+    width: 46px; height: 46px;
+    background: #ffd700; color: #003366;
+    border-radius: 14px; display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 1.1rem;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
 }
-
-#messages .active-user-info h4 { margin: 0 !important; font-size: 1rem !important; font-weight: 800 !important; }
-#messages .active-user-info span { font-size: 0.75rem !important; font-weight: 600 !important; }
-#messages .status-online { color: #10b981 !important; }
-#messages .status-offline { color: #94a3b8 !important; }
 
 #messages .messenger-messages {
-  flex: 1 !important;
-  overflow-y: auto !important;
-  padding: 25px !important;
-  background: #f8fafc !important;
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 12px !important;
+    flex: 1 !important;
+    overflow-y: auto !important;
+    padding: 30px !important;
+    background: transparent !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 15px !important;
 }
 
+/* Premium Chat Bubbles */
 #messages .msg-bubble {
-  max-width: 70% !important;
-  padding: 12px 18px !important;
-  border-radius: 20px !important;
-  font-size: 0.95rem !important;
-  line-height: 1.5 !important;
-  position: relative !important;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.05) !important;
+    max-width: 65% !important;
+    padding: 14px 20px !important;
+    border-radius: 22px !important;
+    font-size: 0.95rem !important;
+    line-height: 1.5 !important;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2) !important;
 }
 
 #messages .msg-bubble-me {
-  background: #003366 !important;
-  color: white !important;
-  align-self: flex-end !important;
-  border-bottom-right-radius: 4px !important;
+    background: #ffd700 !important;
+    color: #003366 !important;
+    align-self: flex-end !important;
+    border-bottom-right-radius: 4px !important;
+    font-weight: 600;
 }
 
 #messages .msg-bubble-other {
-  background: #e2e8f0 !important;
-  color: #1e293b !important;
-  align-self: flex-start !important;
-  border-bottom-left-radius: 4px !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: white !important;
+    align-self: flex-start !important;
+    border-bottom-left-radius: 4px !important;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 #messages .msg-time {
-  font-size: 0.65rem !important;
-  margin-top: 6px !important;
-  opacity: 0.7 !important;
-  display: block !important;
-  text-align: right !important;
+    font-size: 0.65rem !important;
+    margin-top: 8px !important;
+    opacity: 0.5 !important;
+    display: block !important;
+    text-align: right !important;
 }
 
+/* Floating Glass Input bar */
 #messages .messenger-form {
-  flex-shrink: 0 !important;
-  padding: 20px 25px !important;
-  border-top: 1px solid #f1f5f9 !important;
-  display: flex !important;
-  gap: 15px !important;
-  background: white !important;
-  position: relative !important;
-  z-index: 10 !important;
+    padding: 25px 30px !important;
+    background: transparent !important;
+    display: flex !important;
+    gap: 15px !important;
 }
-
 
 #messages .messenger-form input {
-  flex: 1 !important;
-  background: #f1f5f9 !important;
-  border: none !important;
-  padding: 14px 22px !important;
-  border-radius: 30px !important;
-  outline: none !important;
-  font-size: 1rem !important;
+    flex: 1 !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    padding: 16px 25px !important;
+    border-radius: 20px !important;
+    outline: none !important;
+    font-size: 1rem !important;
+    color: white !important;
+    transition: all 0.3s;
+}
+
+#messages .messenger-form input:focus {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: #ffd700 !important;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.1);
 }
 
 #messages .send-btn {
-  width: 50px !important;
-  height: 50px !important;
-  border-radius: 50% !important;
-  background: #003366 !important;
-  color: white !important;
-  border: none !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  cursor: pointer !important;
-  transition: transform 0.2s !important;
+    width: 54px; height: 54px;
+    border-radius: 18px !important;
+    background: #ffd700 !important;
+    color: #003366 !important;
+    border: none !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    box-shadow: 0 10px 20px rgba(255, 215, 0, 0.2);
 }
 
-#messages .send-btn:hover { transform: scale(1.08) !important; }
+#messages .send-btn:hover { 
+    transform: scale(1.1) rotate(5deg) !important; 
+    filter: brightness(1.1);
+}
+
 
 /* --- SETTINGS MODAL STYLES --- */
 .settings-modal-card {
@@ -1044,12 +1026,13 @@
             <header class="messenger-sidebar-header">
               <h3>Messenger</h3>
               <div style="display:flex; align-items:center; gap:8px;">
-                <button onclick="openNewMessageModal()" class="icon-btn" title="New Message" style="width:32px; height:32px; background:#f1f5f9; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#003366; cursor:pointer;">
+                <button onclick="openNewMessageModal()" class="icon-btn" title="New Message" style="width:32px; height:32px; background:#ffd700; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#003366; cursor:pointer; border:none;">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                 </button>
-                <button onclick="fetchSpreadsheetUsers();" class="icon-btn" title="Refresh" style="width:32px; height:32px; color:#64748b; display:flex; align-items:center; justify-content:center;">
+                <button onclick="fetchSpreadsheetUsers();" class="icon-btn" title="Refresh" style="width:32px; height:32px; color:rgba(255,255,255,0.7); display:flex; align-items:center; justify-content:center; background:transparent; border:none; cursor:pointer;">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
                 </button>
+
                 <button onclick="if(confirm('Logout from SAS?')) window.appLogout();" class="icon-btn" title="Logout" style="width:32px; height:32px; color:#ef4444; display:flex; align-items:center; justify-content:center; margin-left:5px;">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                 </button>

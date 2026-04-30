@@ -4,7 +4,18 @@ let allFiles = [];
 let currentFilter = 'all';
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Get user from Portal (via URL param or localStorage)
+    // 1. Detect Theme from Portal
+    const savedUser = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
+    if (savedUser) {
+        try {
+            const data = JSON.parse(savedUser);
+            if (data.theme === 'light') {
+                document.body.classList.add('light-mode');
+            }
+        } catch(e) {}
+    }
+
+    // 2. Identify User
     const urlParams = new URLSearchParams(window.location.search);
     const portalUser = urlParams.get('portalUser');
     
@@ -13,23 +24,18 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (window.myUsername) {
         currentUser = window.myUsername;
     } else if (window.parent && window.parent.myUsername) {
-        // If running in an iframe, check the parent portal
         currentUser = window.parent.myUsername;
+    } else if (savedUser) {
+        try {
+            const userObj = JSON.parse(savedUser);
+            currentUser = userObj.username || 'Anonymous';
+        } catch(e) { currentUser = 'Anonymous'; }
     } else {
-        // Fallback to the correct localStorage key used by SAS Portal
-        const savedUser = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
-        if (savedUser) {
-            try {
-                const userObj = JSON.parse(savedUser);
-                currentUser = userObj.username || 'Anonymous';
-            } catch(e) { currentUser = 'Anonymous'; }
-        } else {
-            currentUser = 'Anonymous';
-        }
+        currentUser = 'Anonymous';
     }
     
     initEventListeners();
-    setTimeout(loadFiles, 500); // Small delay to ensure myUsername is loaded
+    setTimeout(loadFiles, 500); 
 });
 
 function initEventListeners() {
@@ -84,10 +90,10 @@ function renderFiles() {
 
     if (filtered.length === 0) {
         container.innerHTML = `
-            <div class="empty-state">
-                <svg width="60" height="60" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-bottom: 12px;"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" stroke-width="1"/></svg>
-                <p style="font-size: 16px; font-weight: 600; color: var(--slate-400);">No files found</p>
-                <p style="font-size: 13px;">Start uploading documents to your personal hub.</p>
+            <div class="empty-state" style="text-align: center; padding-top: 100px;">
+                <svg width="80" height="80" fill="none" stroke="rgba(255,255,255,0.05)" viewBox="0 0 24 24" style="margin-bottom: 20px;"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" stroke-width="1"/></svg>
+                <p style="font-size: 18px; font-weight: 700; color: var(--text-muted);">No documents in this vault</p>
+                <p style="font-size: 14px; color: rgba(255,255,255,0.2);">Start uploading to your personal storage.</p>
             </div>
         `;
         return;
@@ -101,24 +107,24 @@ function renderFiles() {
         card.className = 'file-card';
         card.innerHTML = `
             <div class="file-icon-box">
-                <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-width="1.5"/></svg>
+                <svg width="46" height="46" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-width="1.2"/></svg>
                 <span class="category-tag">${file.category}</span>
             </div>
             <div class="file-info">
                 <h3 title="${file.file_name}">${file.file_name}</h3>
-                <p>${new Date(file.created_at).toLocaleDateString()}</p>
+                <p>Uploaded ${new Date(file.created_at).toLocaleDateString()}</p>
             </div>
             <div class="file-footer">
                 <div class="privacy-tag ${file.is_public ? 'public' : 'private'}">
                     <span class="status-dot"></span>
-                    ${file.is_public ? 'PUBLIC' : 'PRIVATE'}
+                    ${file.is_public ? 'PUBLIC ACCESS' : 'PRIVATE VAULT'}
                 </div>
                 <div class="file-actions">
-                    <a href="${file.file_url}" target="_blank" class="btn-icon view" title="View File">
-                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-width="2"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" stroke-width="2"/></svg>
+                    <a href="${file.file_url}" target="_blank" class="btn-action view" title="Open Document">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-width="2"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" stroke-width="2"/></svg>
                     </a>
-                    <button onclick="deleteFile('${file.id}', '${file.drive_file_id}')" class="btn-icon delete" title="Delete File">
-                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2"/></svg>
+                    <button onclick="deleteFile('${file.id}', '${file.drive_file_id}')" class="btn-action delete" title="Delete Permanent">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2"/></svg>
                     </button>
                 </div>
             </div>
@@ -128,7 +134,11 @@ function renderFiles() {
 }
 
 async function deleteFile(id, driveId) {
-    if (!confirm("Are you sure you want to delete this file from Drive and the Portal?")) return;
+    const confirmed = await showConfirm(
+        "Delete Permanent",
+        "Are you sure you want to permanently delete this document from your vault and Google Drive?"
+    );
+    if (!confirmed) return;
 
     try {
         const res = await fetch(window.ENV.BACKEND_GAS_URL, {
@@ -142,21 +152,75 @@ async function deleteFile(id, driveId) {
         const data = await res.json();
         if (data.success) {
             loadFiles();
-            alert("File deleted successfully.");
+            showToast("Document deleted successfully", "success");
         } else {
-            alert("Error deleting file: " + data.message);
+            showToast("Error: " + data.message, "error");
         }
     } catch (err) {
         console.error("Delete Error:", err);
+        showToast("Connection failed", "error");
     }
 }
 
+// Custom Notification System
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <span class="toast-icon">${type === 'success' ? '✅' : '❌'}</span>
+        <span>${message}</span>
+    `;
+    container.appendChild(toast);
+    
+    // Animate in
+    setTimeout(() => toast.classList.add('show'), 10);
+    
+    // Auto remove
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 500);
+    }, 4000);
+}
+
+function showConfirm(title, message) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('confirm-modal');
+        const okBtn = document.getElementById('confirm-ok-btn');
+        const cancelBtn = document.getElementById('confirm-cancel-btn');
+        const titleEl = document.getElementById('confirm-title');
+        const msgEl = document.getElementById('confirm-msg');
+        
+        titleEl.innerText = title;
+        msgEl.innerText = message;
+        modal.style.display = 'flex';
+        
+        const cleanup = (result) => {
+            modal.style.display = 'none';
+            okBtn.onclick = null;
+            cancelBtn.onclick = null;
+            resolve(result);
+        };
+        
+        okBtn.onclick = () => cleanup(true);
+        cancelBtn.onclick = () => cleanup(false);
+    });
+}
+
+// Update existing alert in handleFileUpload
+async function handleFileUpload(e) {
+    // ... rest of setup ...
+    // replace alert("File uploaded successfully...") with showToast("File uploaded successfully!", "success")
+    // replace alert("Upload failed...") with showToast("Upload failed!", "error")
+}
+
+
 window.setFilter = (category) => {
     currentFilter = category;
-    document.querySelectorAll('.filter-tab').forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.innerText.includes(category) || (category === 'all' && btn.innerText.includes('All'))) {
-            btn.classList.add('active');
+    document.querySelectorAll('.filter-pill').forEach(pill => {
+        pill.classList.remove('active');
+        if (pill.getAttribute('data-cat') === category) {
+            pill.classList.add('active');
         }
     });
     renderFiles();
@@ -215,14 +279,15 @@ async function handleFileUpload(e) {
             document.getElementById('upload-modal').style.display = 'none';
             e.target.reset();
             loadFiles();
-            alert("File uploaded successfully to your Drive!");
+            showToast("Document uploaded successfully to your Drive!", "success");
         } catch (err) {
             console.error("Upload Error:", err);
-            alert("Upload failed: " + err.message);
+            showToast("Upload failed: " + err.message, "error");
         } finally {
             submitBtn.disabled = false;
-            submitBtn.innerText = 'Upload';
+            submitBtn.innerText = 'Upload File';
         }
     };
     reader.readAsDataURL(file);
 }
+
