@@ -21,16 +21,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-      
+
       - name: Install Dependencies
         run: npm ci --omit=dev
-      
+
       - name: Generate env.js from Secrets
         env:
           FIREBASE_CONFIG: "${{ secrets['FIREBASE_CONFIG'] }}"
@@ -61,7 +61,6 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-
       - name: Install Dependencies
         run: npm ci --omit=dev
       - name: Run System Diagnostic
@@ -81,7 +80,6 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-
       - name: Install Dependencies
         run: npm ci --omit=dev
       - name: Syntax Check
@@ -95,6 +93,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
 
   # 4. ARTIFACT REPOSITORY
+  # Packages only the files needed for deployment (no node_modules, git, etc.)
   artifact-repository:
     needs: security-analysis
     runs-on: ubuntu-latest
@@ -121,7 +120,6 @@ jobs:
             package.json
             package-lock.json
 
-
   # 5. DEPLOYMENT TO STAGING
   deployment-to-staging:
     needs: artifact-repository
@@ -133,6 +131,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: sas-production-build
+          path: .
       - name: Run Staging Connection Audit
         env:
           BACKEND_GAS_URL: ${{ secrets.BACKEND_GAS_URL }}
@@ -140,6 +139,7 @@ jobs:
         run: node scripts/ci-connection-check.js
 
   # 6. DEPLOYMENT TO PRODUCTION
+  # Downloads artifact to current dir, injects env.js, then deploys to GitHub Pages
   deployment-to-production:
     needs: deployment-to-staging
     environment:
@@ -151,7 +151,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: sas-production-build
-      # env.js is gitignored — regenerate it here with real secrets
+          path: .
+      # env.js is gitignored — must be regenerated here with real secrets
       - name: Finalize env.js
         env:
           FIREBASE_CONFIG: "${{ secrets['FIREBASE_CONFIG'] }}"
