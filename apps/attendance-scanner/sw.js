@@ -22,6 +22,9 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // Fix: Only GET requests can be cached.
+  if (event.request.method !== 'GET') return;
+  
   const url = new URL(event.request.url);
   
   // Never cache Google Apps Script API calls
