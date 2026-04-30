@@ -1,6 +1,13 @@
 // File Hub Logic - Centralized GDrive (via GAS Proxy)
 let currentUser = null;
+
+
 let allFiles = [];
+let currentCategory = 'all';
+let currentFiles = [];
+let currentViewMode = localStorage.getItem('filehub_view_mode') || 'medium'; // Persistence
+
+
 let currentFilter = 'all';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -33,6 +40,74 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         currentUser = 'Anonymous';
     }
+
+    // --- VIEW MODE HANDLING ---
+    const viewMenuBtn = document.getElementById('view-menu-btn');
+    const viewMenuDropdown = document.getElementById('view-menu-dropdown');
+    const viewOptions = document.querySelectorAll('.view-option');
+    const fileGrid = document.getElementById('file-grid');
+
+    // Apply initial view mode
+    if (fileGrid) {
+        applyViewMode(currentViewMode);
+        updateViewActiveState(currentViewMode);
+    }
+
+
+
+    if (viewMenuBtn) {
+        viewMenuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            viewMenuDropdown.classList.toggle('show');
+        });
+    }
+
+    document.addEventListener('click', () => {
+        if (viewMenuDropdown) viewMenuDropdown.classList.remove('show');
+    });
+
+    viewOptions.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const mode = btn.dataset.view;
+            currentViewMode = mode;
+            localStorage.setItem('filehub_view_mode', mode);
+            
+            // Re-render to apply the new view mode class and structure
+            renderFiles();
+            
+            updateViewActiveState(mode);
+            updateViewLabel(mode);
+            if (viewMenuDropdown) viewMenuDropdown.classList.remove('show');
+        });
+    });
+
+    function applyViewMode(mode) {
+        if (!fileGrid) return;
+        // Remove all view classes first
+        fileGrid.classList.remove('list-view', 'small-grid', 'medium-grid', 'large-grid', 'xl-grid');
+        
+        if (mode === 'list') {
+            fileGrid.classList.add('list-view');
+        } else {
+            fileGrid.classList.add(`${mode}-grid`);
+        }
+        updateViewLabel(mode);
+    }
+
+    function updateViewLabel(mode) {
+        const label = document.getElementById('current-view-label');
+        if (!label) return;
+        const names = { 'xl': 'Extra Large', 'large': 'Large', 'medium': 'Medium', 'small': 'Small', 'list': 'List' };
+        label.innerText = names[mode] || 'Medium';
+    }
+
+
+
+    function updateViewActiveState(mode) {
+        viewOptions.forEach(opt => {
+            opt.classList.toggle('active', opt.dataset.view === mode);
+        });
+    }
     
     initEventListeners();
     setTimeout(loadFiles, 500); 
@@ -63,28 +138,40 @@ function initEventListeners() {
 }
 
 async function loadFiles() {
-    console.log("Loading files for user:", currentUser);
+    if (!window.ENV || !window.ENV.BACKEND_GAS_URL) {
+        setTimeout(loadFiles, 1000);
+        return;
+    }
+    
     try {
-        // We use a simple request to avoid CORS preflight issues
         const res = await fetch(window.ENV.BACKEND_GAS_URL, {
             method: 'POST',
-            mode: 'cors', // Ensure CORS is handled
+            mode: 'cors',
             body: JSON.stringify({ action: 'getFiles', username: currentUser })
         });
         const data = await res.json();
-        console.log("Files loaded:", data);
         if (data.success) {
-            allFiles = data.files;
+            allFiles = data.files || [];
             renderFiles();
         }
     } catch (e) {
-        console.error("Load Error:", e);
+        console.error("Fetch Exception:", e);
+        const container = document.getElementById('file-grid');
+        if (container) {
+            container.innerHTML = `<div class="empty-state"><p>Connection Failed. Check your network.</p></div>`;
+        }
     }
 }
 
+
+
+
 function renderFiles() {
-    const container = document.getElementById('file-container');
+    const container = document.getElementById('file-grid');
     if (!container) return;
+
+
+
     
     const filtered = allFiles.filter(f => currentFilter === 'all' || f.category === currentFilter);
 
@@ -99,8 +186,17 @@ function renderFiles() {
         return;
     }
 
-    container.innerHTML = `<div class="file-grid"></div>`;
-    const grid = container.querySelector('.file-grid');
+    // Apply the current view mode class to the container itself
+    container.classList.remove('list-view', 'small-grid', 'medium-grid', 'large-grid', 'xl-grid');
+    if (currentViewMode === 'list') {
+        container.classList.add('list-view');
+    } else {
+        container.classList.add(`${currentViewMode}-grid`);
+    }
+
+    container.innerHTML = "";
+
+    const grid = container;
 
     filtered.forEach(file => {
         const card = document.createElement('div');

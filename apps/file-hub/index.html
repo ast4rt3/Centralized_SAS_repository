@@ -136,9 +136,123 @@
 
         .file-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* Default: Medium */
             gap: 30px;
+            transition: all 0.3s;
         }
+
+        /* Grid Scales */
+        .file-grid.small-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
+        .file-grid.medium-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 30px; }
+        .file-grid.large-grid { grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 35px; }
+        .file-grid.xl-grid { grid-template-columns: repeat(auto-fill, minmax(550px, 1fr)); gap: 40px; }
+
+        /* Small Grid Adjustments */
+        .file-grid.small-grid .file-card { padding: 15px; border-radius: 16px; }
+        .file-grid.small-grid .file-icon-box { height: 80px; margin-bottom: 12px; }
+        .file-grid.small-grid .file-info h3 { font-size: 13px; }
+        .file-grid.small-grid .file-footer { padding-top: 12px; }
+        .file-grid.small-grid .btn-action { width: 30px; height: 30px; }
+
+
+        /* List View Layout Overhaul */
+        .file-grid.list-view {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .file-grid.list-view .file-card {
+            display: flex;
+            align-items: center;
+            padding: 12px 24px;
+            border-radius: 12px;
+            gap: 15px;
+        }
+
+        .file-grid.list-view .file-icon-box {
+            width: 40px; height: 40px;
+            min-width: 40px;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+        }
+        .file-grid.list-view .file-icon-box svg { width: 20px; height: 20px; }
+        .file-grid.list-view .category-tag { display: none; }
+
+        .file-grid.list-view .file-info {
+            flex: 1; display: flex; align-items: center; gap: 20px;
+        }
+        .file-grid.list-view .file-info h3 {
+            font-size: 14px; font-weight: 600; color: white;
+            margin: 0; flex: 1;
+        }
+        .file-grid.list-view .file-info p {
+            font-size: 12px; color: var(--text-muted); margin: 0;
+            width: 120px;
+        }
+
+        .file-grid.list-view .file-footer {
+            margin: 0; padding: 0; background: none; border: none;
+            display: flex; align-items: center; gap: 20px;
+        }
+        .file-grid.list-view .privacy-tag { padding: 4px 10px; font-size: 10px; margin: 0; }
+        .file-grid.list-view .file-actions { margin: 0; gap: 8px; }
+
+
+        /* View Menu Dropdown Styles */
+        .view-menu { position: relative; }
+        .view-menu-btn {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            border: 1px solid var(--glass-border);
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .view-menu-btn:hover { background: rgba(255, 255, 255, 0.1); }
+        .view-menu-dropdown {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 8px;
+            min-width: 180px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            display: none;
+            z-index: 200;
+        }
+        .view-menu-dropdown.show { display: block; animation: slideDown 0.2s ease-out; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .view-option {
+            width: 100%;
+            padding: 12px 16px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 600;
+            font-size: 13px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+        }
+        .view-option:hover { background: rgba(255, 255, 255, 0.05); color: white; }
+        .view-option.active { color: var(--accent); background: rgba(255, 215, 0, 0.05); }
+
 
         /* Glass Card Overhaul */
         .file-card {
@@ -257,10 +371,44 @@
             </h1>
             <p>Your Personal Secure Cloud Storage</p>
         </div>
-        <button class="btn-upload" id="open-upload-btn">
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-width="3" stroke-linecap="round"/></svg>
-            Upload File
-        </button>
+        <div class="header-actions" style="display: flex; gap: 12px;">
+            <div class="view-menu" id="view-menu">
+                <button class="view-menu-btn" id="view-menu-btn">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    <span>View: <span id="current-view-label">Medium</span></span>
+                </button>
+                <div class="view-menu-dropdown" id="view-menu-dropdown">
+                    <button class="view-option" data-view="xl">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                        Extra large icons
+                    </button>
+                    <button class="view-option" data-view="large">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                        Large icons
+                    </button>
+                    <button class="view-option active" data-view="medium">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                        Medium icons
+                    </button>
+                    <button class="view-option" data-view="small">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                        Small icons
+                    </button>
+                    <div style="height: 1px; background: var(--glass-border); margin: 4px 8px;"></div>
+                    <button class="view-option" data-view="list">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                        List View
+                    </button>
+                </div>
+            </div>
+
+
+            <button class="btn-upload" onclick="document.getElementById('file-input').click()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                Upload File
+            </button>
+        </div>
+
     </header>
 
     <div class="filter-bar">
@@ -270,12 +418,13 @@
     </div>
 
     <main class="content-area">
-        <div id="file-container">
-            <div class="empty-state" style="text-align: center; padding-top: 100px; color: var(--text-muted);">
+        <div id="file-grid" class="file-grid">
+            <div class="establishing-connection" style="text-align: center; padding-top: 100px; color: var(--text-muted);">
                 <p>Establishing connection to Drive...</p>
             </div>
         </div>
     </main>
+
 
     <div class="modal-overlay" id="upload-modal">
         <div class="modal">
@@ -328,5 +477,7 @@
 
     <script src="/env.js"></script>
     <script src="/apps/file-hub/filehub_gdrive.js"></script>
+
+
 </body>
 </html>
