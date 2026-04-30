@@ -6,6 +6,8 @@ let allFiles = [];
 let currentCategory = 'all';
 let currentFiles = [];
 let currentViewMode = localStorage.getItem('filehub_view_mode') || 'medium'; // Persistence
+let currentSelectedFile = null;
+
 
 
 let currentFilter = 'all';
@@ -200,7 +202,25 @@ function renderFiles() {
 
     filtered.forEach(file => {
         const card = document.createElement('div');
-        card.className = 'file-card';
+        card.className = `file-card ${currentSelectedFile && currentSelectedFile.id === file.id ? 'selected' : ''}`;
+        card.style.cursor = 'pointer';
+        
+        // Single Click: Show Details
+        card.onclick = (e) => {
+            if (e.target.closest('.btn-action')) return;
+            showFileDetails(file);
+            
+            // Highlight selected card
+            document.querySelectorAll('.file-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+        };
+
+        // Double Click: Full Preview
+        card.ondblclick = (e) => {
+            if (e.target.closest('.btn-action')) return;
+            previewFile(file.file_url, file.file_name, new Date(file.created_at).toLocaleDateString());
+        };
+        
         card.innerHTML = `
             <div class="file-icon-box">
                 <svg width="46" height="46" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-width="1.2"/></svg>
@@ -216,10 +236,10 @@ function renderFiles() {
                     ${file.is_public ? 'PUBLIC ACCESS' : 'PRIVATE VAULT'}
                 </div>
                 <div class="file-actions">
-                    <a href="${file.file_url}" target="_blank" class="btn-action view" title="Open Document">
+                    <a href="${file.file_url}" target="_blank" class="btn-action view" title="Open Document" onclick="event.stopPropagation()">
                         <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-width="2"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" stroke-width="2"/></svg>
                     </a>
-                    <button onclick="deleteFile('${file.id}', '${file.drive_file_id}')" class="btn-action delete" title="Delete Permanent">
+                    <button onclick="event.stopPropagation(); deleteFile('${file.id}', '${file.drive_file_id}')" class="btn-action delete" title="Delete Permanent">
                         <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2"/></svg>
                     </button>
                 </div>
@@ -228,6 +248,36 @@ function renderFiles() {
         grid.appendChild(card);
     });
 }
+
+
+function previewFile(url, name, date) {
+    const modal = document.getElementById('preview-modal');
+    const frame = document.getElementById('preview-frame');
+    const title = document.getElementById('preview-title');
+    const meta = document.getElementById('preview-meta');
+
+    title.innerText = name;
+    meta.innerText = `Uploaded on ${date}`;
+    
+    // Ensure the Drive URL is in 'preview' or 'view' mode for embedding
+    let embedUrl = url;
+    if (url.includes('drive.google.com')) {
+        // Transform standard view URL to a clean preview URL for iframe
+        embedUrl = url.replace('/view', '/preview');
+    }
+
+    frame.src = embedUrl;
+    modal.style.display = 'flex';
+}
+
+function closePreview() {
+    const modal = document.getElementById('preview-modal');
+    const frame = document.getElementById('preview-frame');
+    
+    modal.style.display = 'none';
+    frame.src = 'about:blank';
+}
+
 
 async function deleteFile(id, driveId) {
     const confirmed = await showConfirm(
@@ -386,4 +436,54 @@ async function handleFileUpload(e) {
     };
     reader.readAsDataURL(file);
 }
+
+function showFileDetails(file) {
+    window.currentSelectedFile = file;
+    const panel = document.getElementById('details-panel');
+    const table = document.getElementById('details-table');
+    const title = document.getElementById('details-title');
+    const previewContainer = document.getElementById('details-preview-container');
+    const openBtn = document.getElementById('details-open-btn');
+
+    title.innerText = file.file_name;
+    
+    // Set up Open Externally button
+    openBtn.onclick = () => window.open(file.file_url, '_blank');
+
+    // Create Mini Preview Iframe
+    let embedUrl = file.file_url;
+    if (file.file_url.includes('drive.google.com')) {
+        embedUrl = file.file_url.replace('/view', '/preview');
+    }
+    
+    previewContainer.innerHTML = `<iframe class="details-preview-frame" src="${embedUrl}"></iframe>`;
+
+    const details = [
+        { label: "Type", value: file.category || "Document" },
+        { label: "Size", value: file.size ? formatBytes(file.size) : "Unknown" },
+        { label: "Location", value: "SAS Secure Cloud" },
+        { label: "Modified", value: new Date(file.created_at).toLocaleString() },
+        { label: "Status", value: file.is_public ? "Publicly Shared" : "Private Vault" }
+    ];
+
+    table.innerHTML = details.map(d => `
+        <div class="details-row">
+            <span class="details-label">${d.label}</span>
+            <span class="details-value">${d.value}</span>
+        </div>
+    `).join('');
+
+    panel.style.display = 'flex';
+}
+
+
+function formatBytes(bytes, decimals = 2) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+
 
