@@ -11,6 +11,9 @@ let currentSelectedFile = null;
 
 
 let currentFilter = 'all';
+let allUsers = [];
+let selectedShareUser = null;
+
 
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Detect Theme from Portal
@@ -21,13 +24,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.theme === 'light') {
                 document.body.classList.add('light-mode');
             }
-        } catch(e) {}
+        } catch (e) { }
     }
 
     // 2. Identify User
     const urlParams = new URLSearchParams(window.location.search);
     const portalUser = urlParams.get('portalUser');
-    
+
     if (portalUser) {
         currentUser = portalUser;
     } else if (window.myUsername) {
@@ -38,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const userObj = JSON.parse(savedUser);
             currentUser = userObj.username || 'Anonymous';
-        } catch(e) { currentUser = 'Anonymous'; }
+        } catch (e) { currentUser = 'Anonymous'; }
     } else {
         currentUser = 'Anonymous';
     }
@@ -73,10 +76,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const mode = btn.dataset.view;
             currentViewMode = mode;
             localStorage.setItem('filehub_view_mode', mode);
-            
+
             // Re-render to apply the new view mode class and structure
             renderFiles();
-            
+
             updateViewActiveState(mode);
             updateViewLabel(mode);
             if (viewMenuDropdown) viewMenuDropdown.classList.remove('show');
@@ -87,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!fileGrid) return;
         // Remove all view classes first
         fileGrid.classList.remove('list-view', 'small-grid', 'medium-grid', 'large-grid', 'xl-grid');
-        
+
         if (mode === 'list') {
             fileGrid.classList.add('list-view');
         } else {
@@ -110,9 +113,9 @@ document.addEventListener('DOMContentLoaded', () => {
             opt.classList.toggle('active', opt.dataset.view === mode);
         });
     }
-    
+
     initEventListeners();
-    setTimeout(loadFiles, 500); 
+    setTimeout(loadFiles, 500);
 });
 
 function initEventListeners() {
@@ -137,14 +140,32 @@ function initEventListeners() {
     if (form) {
         form.addEventListener('submit', handleFileUpload);
     }
+
+    // Share Search
+    const shareInput = document.getElementById('share-username');
+    if (shareInput) {
+        shareInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase().trim();
+            if (!query) {
+                document.getElementById('share-user-results').classList.remove('show');
+                return;
+            }
+            const filtered = allUsers.filter(u => 
+                u.username.toLowerCase().includes(query) || 
+                u.displayName.toLowerCase().includes(query)
+            );
+            renderUserSearch(filtered);
+        });
+    }
 }
+
 
 async function loadFiles() {
     if (!window.ENV || !window.ENV.BACKEND_GAS_URL) {
         setTimeout(loadFiles, 1000);
         return;
     }
-    
+
     try {
         const res = await fetch(window.ENV.BACKEND_GAS_URL, {
             method: 'POST',
@@ -155,8 +176,15 @@ async function loadFiles() {
         if (data.success) {
             allFiles = data.files || [];
             renderFiles();
+        } else {
+            console.error("Backend Error:", data.message);
+            const container = document.getElementById('file-grid');
+            if (container) {
+                container.innerHTML = `<div class="empty-state"><p style="color: #ff4d4d;">Database Connection Error</p><p style="font-size: 13px;">${data.message}</p></div>`;
+            }
         }
     } catch (e) {
+
         console.error("Fetch Exception:", e);
         const container = document.getElementById('file-grid');
         if (container) {
@@ -174,7 +202,7 @@ function renderFiles() {
 
 
 
-    
+
     const filtered = allFiles.filter(f => currentFilter === 'all' || f.category === currentFilter);
 
     if (filtered.length === 0) {
@@ -204,12 +232,12 @@ function renderFiles() {
         const card = document.createElement('div');
         card.className = `file-card ${currentSelectedFile && currentSelectedFile.id === file.id ? 'selected' : ''}`;
         card.style.cursor = 'pointer';
-        
+
         // Single Click: Show Details
         card.onclick = (e) => {
             if (e.target.closest('.btn-action')) return;
             showFileDetails(file);
-            
+
             // Highlight selected card
             document.querySelectorAll('.file-card').forEach(c => c.classList.remove('selected'));
             card.classList.add('selected');
@@ -220,7 +248,7 @@ function renderFiles() {
             if (e.target.closest('.btn-action')) return;
             previewFile(file.file_url, file.file_name, new Date(file.created_at).toLocaleDateString());
         };
-        
+
         card.innerHTML = `
             <div class="file-icon-box">
                 <svg width="46" height="46" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-width="1.2"/></svg>
@@ -258,7 +286,7 @@ function previewFile(url, name, date) {
 
     title.innerText = name;
     meta.innerText = `Uploaded on ${date}`;
-    
+
     // Ensure the Drive URL is in 'preview' or 'view' mode for embedding
     let embedUrl = url;
     if (url.includes('drive.google.com')) {
@@ -273,7 +301,7 @@ function previewFile(url, name, date) {
 function closePreview() {
     const modal = document.getElementById('preview-modal');
     const frame = document.getElementById('preview-frame');
-    
+
     modal.style.display = 'none';
     frame.src = 'about:blank';
 }
@@ -289,10 +317,10 @@ async function deleteFile(id, driveId) {
     try {
         const res = await fetch(window.ENV.BACKEND_GAS_URL, {
             method: 'POST',
-            body: JSON.stringify({ 
-                action: 'deleteFileFromDrive', 
-                id: id, 
-                driveFileId: driveId 
+            body: JSON.stringify({
+                action: 'deleteFileFromDrive',
+                id: id,
+                driveFileId: driveId
             })
         });
         const data = await res.json();
@@ -318,10 +346,10 @@ function showToast(message, type = 'success') {
         <span>${message}</span>
     `;
     container.appendChild(toast);
-    
+
     // Animate in
     setTimeout(() => toast.classList.add('show'), 10);
-    
+
     // Auto remove
     setTimeout(() => {
         toast.classList.remove('show');
@@ -336,18 +364,18 @@ function showConfirm(title, message) {
         const cancelBtn = document.getElementById('confirm-cancel-btn');
         const titleEl = document.getElementById('confirm-title');
         const msgEl = document.getElementById('confirm-msg');
-        
+
         titleEl.innerText = title;
         msgEl.innerText = message;
         modal.style.display = 'flex';
-        
+
         const cleanup = (result) => {
             modal.style.display = 'none';
             okBtn.onclick = null;
             cancelBtn.onclick = null;
             resolve(result);
         };
-        
+
         okBtn.onclick = () => cleanup(true);
         cancelBtn.onclick = () => cleanup(false);
     });
@@ -394,16 +422,16 @@ async function handleFileUpload(e) {
             // 2. Upload to Drive via GAS
             const uploadRes = await fetch(window.ENV.BACKEND_GAS_URL, {
                 method: 'POST',
-                body: JSON.stringify({ 
-                    action: 'uploadFileToDrive', 
-                    fileData: base64Data, 
+                body: JSON.stringify({
+                    action: 'uploadFileToDrive',
+                    fileData: base64Data,
                     fileName: file.name,
                     username: currentUser,
                     category: category
                 })
             });
             const uploadResult = await uploadRes.json();
-            
+
             if (!uploadResult.success) throw new Error(uploadResult.message);
 
             // 3. Save Metadata to Supabase via GAS
@@ -421,7 +449,7 @@ async function handleFileUpload(e) {
                 method: 'POST',
                 body: JSON.stringify(gasPayload)
             });
-            
+
             document.getElementById('upload-modal').style.display = 'none';
             e.target.reset();
             loadFiles();
@@ -444,10 +472,22 @@ function showFileDetails(file) {
     const title = document.getElementById('details-title');
     const previewContainer = document.getElementById('details-preview-container');
     const openBtn = document.getElementById('details-open-btn');
+    const shareBtn = document.getElementById('details-share-btn');
 
     title.innerText = file.file_name;
-    
+
+    // Only owner can share
+    console.log("Checking Share Permissions:", { fileOwner: file.username, currentUser: currentUser });
+    if (file.username === currentUser) {
+        shareBtn.style.display = 'flex';
+    } else {
+        shareBtn.style.display = 'none';
+    }
+
+
+
     // Set up Open Externally button
+
     openBtn.onclick = () => window.open(file.file_url, '_blank');
 
     // Create Mini Preview Iframe
@@ -455,7 +495,7 @@ function showFileDetails(file) {
     if (file.file_url.includes('drive.google.com')) {
         embedUrl = file.file_url.replace('/view', '/preview');
     }
-    
+
     previewContainer.innerHTML = `<iframe class="details-preview-frame" src="${embedUrl}"></iframe>`;
 
     const details = [
@@ -475,6 +515,100 @@ function showFileDetails(file) {
 
     panel.style.display = 'flex';
 }
+
+function openShareModal() {
+    if (!window.currentSelectedFile) return;
+    document.getElementById('share-modal').style.display = 'flex';
+    document.getElementById('share-username').value = '';
+    document.getElementById('share-user-results').classList.remove('show');
+    selectedShareUser = null;
+    document.getElementById('share-username').focus();
+    if (allUsers.length === 0) fetchUsers();
+}
+
+function closeShareModal() {
+    document.getElementById('share-modal').style.display = 'none';
+}
+
+async function fetchUsers() {
+
+    try {
+        const res = await fetch(window.ENV.BACKEND_GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'getUsers' })
+        });
+        const data = await res.json();
+        if (data.success) {
+            allUsers = data.users || [];
+        }
+    } catch (err) {
+        console.error("Fetch Users Error:", err);
+    }
+}
+
+function renderUserSearch(users) {
+    const box = document.getElementById('share-user-results');
+    if (users.length === 0) {
+        box.innerHTML = '<div style="padding: 15px; text-align: center; color: var(--text-muted); font-size: 13px;">No users found</div>';
+    } else {
+        box.innerHTML = users.map(u => `
+            <div class="user-search-item" onclick="selectUser('${u.username}')">
+                <img src="${u.profilePic || '../../assets/sas_logo_real.png'}" onerror="this.src='../../assets/sas_logo_real.png'">
+                <div style="display: flex; flex-direction: column;">
+                    <span class="name">${u.displayName}</span>
+                    <span class="uname">@${u.username}</span>
+                </div>
+            </div>
+        `).join('');
+    }
+    box.classList.add('show');
+}
+
+function selectUser(username) {
+    selectedShareUser = username;
+    const input = document.getElementById('share-username');
+    input.value = username;
+    document.getElementById('share-user-results').classList.remove('show');
+}
+
+async function confirmShare() {
+    const targetUser = selectedShareUser || document.getElementById('share-username').value.trim();
+
+    if (!targetUser) {
+        showToast("Please enter a username.", "error");
+        return;
+    }
+
+    const file = window.currentSelectedFile;
+    const currentUser = localStorage.getItem('sas_username');
+
+    try {
+        const payload = {
+            action: 'shareFile',
+            id: file.id,
+            targetUser: targetUser,
+            username: currentUser,
+            password: localStorage.getItem('sas_password')
+        };
+
+        const res = await fetch(window.ENV.BACKEND_GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+
+        if (result.success) {
+            showToast(result.message, "success");
+            closeShareModal();
+        } else {
+            showToast(result.message, "error");
+        }
+    } catch (err) {
+        console.error("Share Error:", err);
+        showToast("Failed to share file.", "error");
+    }
+}
+
 
 
 function formatBytes(bytes, decimals = 2) {
