@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // Initialize UI State
   const systems = await fetchSystems();
+  if (window.ENV) window.ENV.systems = systems; // Sync back to global ENV for legacy.js compatibility
   syncFromHash(systems);
   
   const sessionData = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
@@ -42,7 +43,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function fetchSystems() {
   try {
     const res = await fetch('systems.json?v=' + Date.now());
-    return await res.json();
+    const data = await res.json();
+    if (window.ENV) window.ENV.systems = data;
+    return data;
   } catch (e) {
     console.error("Failed to load systems:", e);
     return [];

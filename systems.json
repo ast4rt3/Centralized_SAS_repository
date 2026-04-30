@@ -87,5 +87,19 @@
     "roles": [
       "admin"
     ]
+  },
+  {
+    "id": "file-hub",
+    "name": "File Hub",
+    "description": "Personal document hub with Google Drive integration and public sharing.",
+    "url": "apps/file-hub/index.html",
+    "external": false,
+    "section": "Personal",
+    "roles": [
+      "admin",
+      "user",
+      "scanner",
+      "uploader"
+    ]
   }
 ]
