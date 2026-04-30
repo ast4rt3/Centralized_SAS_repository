@@ -106,10 +106,21 @@ jobs:
         with:
           name: sas-production-build
           path: |
-            .
-            !node_modules
-            !.git
-            !.github
+            apps/
+            assets/
+            src/
+            scripts/
+            index.html
+            styles.css
+            manifest.json
+            serviceWorker.js
+            systems.json
+            version.json
+            vercel.json
+            env.example.js
+            package.json
+            package-lock.json
+
 
   # 5. DEPLOYMENT TO STAGING
   deployment-to-staging:
