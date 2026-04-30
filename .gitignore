@@ -50,3 +50,4 @@ test_data/Week_1.pdf
 test_data/Week_2.pdf
 test_data/Week_3.pdf
 /test_data
+env.example.js
