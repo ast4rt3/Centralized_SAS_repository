@@ -131,7 +131,6 @@ jobs:
       - name: Finalize env.js
         env:
           FIREBASE_CONFIG: "${{ secrets['FIREBASE_CONFIG'] }}"
-          FILE_HUB_FIREBASE_CONFIG: "${{ secrets['FILE_HUB_FIREBASE_CONFIG'] }}"
         run: |
           cat <<EOF > env.js
           window.ENV = {
@@ -142,11 +141,7 @@ jobs:
             CLOUDINARY_UPLOAD_PRESET: "${{ secrets.CLOUDINARY_UPLOAD_PRESET }}",
             SUPABASE_URL: "${{ secrets.SUPABASE_URL }}",
             SUPABASE_ANON_KEY: "${{ secrets.SUPABASE_ANON_KEY }}",
-            SUPABASE_SERVICE_ROLE_KEY: "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}",
-            GOOGLE_CLIENT_ID: "${{ secrets.GOOGLE_CLIENT_ID }}",
-            GOOGLE_CLIENT_SECRET: "${{ secrets.GOOGLE_CLIENT_SECRET }}",
             FIREBASE_CONFIG: $FIREBASE_CONFIG,
-            FILE_HUB_FIREBASE_CONFIG: $FILE_HUB_FIREBASE_CONFIG,
             systems: $(cat systems.json)
           };
           EOF
