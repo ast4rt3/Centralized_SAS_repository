@@ -314,23 +314,23 @@
 
         /* Grid Scales */
         .file-grid.small-grid {
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 12px;
         }
 
         .file-grid.medium-grid {
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 30px;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
         }
 
         .file-grid.large-grid {
-            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-            gap: 35px;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
         }
 
         .file-grid.xl-grid {
-            grid-template-columns: repeat(auto-fill, minmax(550px, 1fr));
-            gap: 40px;
+            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            gap: 28px;
         }
 
         /* Small Grid Adjustments */
@@ -340,21 +340,39 @@
         }
 
         .file-grid.small-grid .file-icon-box {
-            height: 80px;
-            margin-bottom: 12px;
+            height: 70px;
+            margin-bottom: 10px;
         }
 
         .file-grid.small-grid .file-info h3 {
-            font-size: 13px;
+            font-size: 12px;
         }
 
         .file-grid.small-grid .file-footer {
-            padding-top: 12px;
+            padding-top: 10px;
         }
 
         .file-grid.small-grid .btn-action {
-            width: 30px;
-            height: 30px;
+            width: 28px;
+            height: 28px;
+        }
+
+        /* Medium — tighter icon */
+        .file-grid.medium-grid .file-icon-box {
+            height: 90px;
+            margin-bottom: 14px;
+        }
+
+        /* Large — prevent icon box from stretching */
+        .file-grid.large-grid .file-icon-box {
+            height: 100px;
+            margin-bottom: 16px;
+        }
+
+        /* XL — cap icon height */
+        .file-grid.xl-grid .file-icon-box {
+            height: 110px;
+            margin-bottom: 18px;
         }
 
 
@@ -1054,7 +1072,7 @@
 
 
     <script src="../../env.js"></script>
-    <script src="filehub_gdrive.js"></script>
+    <script src="/apps/file-hub/filehub_gdrive.js"></script>
 
 
 
