@@ -57,12 +57,11 @@ self.addEventListener('fetch', event => {
    // Used for: Configuration files (always get latest)
    const configFiles = ['env.js', 'manifest.json', 'version.json'];
    
-   // EXCLUDE: App files — always fetch fresh
-   // Use .includes() for better compatibility with sub-folder deployments (e.g. GitHub Pages)
-   if (url.pathname.includes('/apps/')) {
-     event.respondWith(fetch(req));
-     return;
-   }
+    // EXCLUDE: Sub-apps — let their own Service Workers handle them.
+    // We return nothing here so the browser continues to the next listener or the network.
+    if (url.pathname.includes('/apps/')) {
+      return;
+    }
 
    if (configFiles.some(f => url.pathname.endsWith(f))) {
      event.respondWith(

@@ -1707,51 +1707,61 @@
 
         // --- WINDOW STATUS ---
         async function checkWindowStatus() {
+            // Load from cache first for instant offline access
+            const cached = localStorage.getItem('cachedWindowStatus');
+            if (cached) {
+                try {
+                    const parsed = JSON.parse(cached);
+                    updateWindowUI(parsed);
+                } catch(e) {}
+            }
+
             try {
                 const res = await callBackend("getWindowStatus", {});
-                currentWindowInfo = res;
-
-                const bar = document.getElementById('windowStatus');
-                const dot = document.getElementById('statusDot');
-                const text = document.getElementById('statusText');
-
-                if (!res) {
-                    if (bar) bar.className = 'status-closed';
-                    if (dot) dot.className = 'status-dot closed';
-                    if (text) text.innerText = 'Connection Error';
-                    return;
-                }
-
-                const format12h = (t) => {
-                    if (!t) return '';
-                    let [h, m] = t.split(':').map(Number);
-                    const mod = h >= 12 ? 'PM' : 'AM';
-                    h = h % 12 || 12;
-                    return `${h}:${String(m).padStart(2, '0')} ${mod}`;
-                };
-
-                if (res.isOpen) {
-                    bar.className = 'status-open';
-                    dot.className = 'status-dot open';
-                    text.innerText = 'OPEN — ' + res.type
-                        + ' · ' + format12h(res.start) + ' – ' + format12h(res.end);
-                } else {
-                    bar.className = 'status-closed';
-                    dot.className = 'status-dot closed';
-
-                    if (res.nextType) {
-                        text.innerText = 'UPCOMING: ' + res.nextType + ' · ' + format12h(res.nextStart) + ' – ' + format12h(res.nextEnd);
-                    } else {
-                        text.innerText = 'CLOSED — No more windows today';
-                    }
+                if (res) {
+                    currentWindowInfo = res;
+                    localStorage.setItem('cachedWindowStatus', JSON.stringify(res));
+                    updateWindowUI(res);
                 }
             } catch (e) {
-                const bar = document.getElementById('windowStatus');
-                const dot = document.getElementById('statusDot');
-                const text = document.getElementById('statusText');
-                if (bar) bar.className = 'status-closed';
-                if (dot) dot.className = 'status-dot closed';
-                if (text) text.innerText = 'Connection Error';
+                console.warn("Window status sync failed, using cache.");
+                // If we have no cache and network fails, show error
+                if (!localStorage.getItem('cachedWindowStatus')) {
+                    const text = document.getElementById('statusText');
+                    if (text) text.innerText = 'Offline: Check Connection';
+                }
+            }
+        }
+
+        function updateWindowUI(res) {
+            const bar = document.getElementById('windowStatus');
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+
+            if (!res || !bar || !dot || !text) return;
+
+            const format12h = (t) => {
+                if (!t) return '';
+                let [h, m] = t.split(':').map(Number);
+                const mod = h >= 12 ? 'PM' : 'AM';
+                h = h % 12 || 12;
+                return `${h}:${String(m).padStart(2, '0')} ${mod}`;
+            };
+
+            if (res.isOpen) {
+                bar.className = 'status-open';
+                dot.className = 'status-dot open';
+                text.innerText = 'OPEN — ' + res.type
+                    + ' · ' + format12h(res.start) + ' – ' + format12h(res.end);
+            } else {
+                bar.className = 'status-closed';
+                dot.className = 'status-dot closed';
+
+                if (res.nextType) {
+                    text.innerText = 'UPCOMING: ' + res.nextType + ' · ' + format12h(res.nextStart) + ' – ' + format12h(res.nextEnd);
+                } else {
+                    text.innerText = 'CLOSED — No more windows today';
+                }
             }
         }
         // --- SCANNER ---
@@ -2138,7 +2148,9 @@
                     scannedID: item.code,
                     timestamp: item.timestamp,
                     isFlagged: item.isFlagged || false,
-                    reason: item.reason || ""
+                    reason: item.reason || "",
+                    offlineName: item.name,
+                    needsValidation: item.name === "UNKNOWN STUDENT"
                 }));
                 chunk.forEach(item => log("↑ " + item.name + (item.isFlagged ? " 🚩 [FLAG]" : "")));
 
@@ -2481,32 +2493,49 @@
             const hiddenInput = document.getElementById('eventSelector');
             if (!list) return;
 
+            // Load from cache first
+            const cached = localStorage.getItem('cachedScannerEvents');
+            if (cached) {
+                try {
+                    const events = JSON.parse(cached);
+                    renderEventOptions(events, list, label, hiddenInput);
+                } catch(e) {}
+            }
+
             try {
                 const events = await callBackend("getAvailableEvents", {});
-                
-                if (events.length === 0) {
-                    list.innerHTML = '<div class="custom-option">No upcoming events</div>';
-                    return;
-                }
-
-                list.innerHTML = events.map(e => `
-                    <div class="custom-option" data-id="${e.id}" data-name="${e.name}" onclick="selectEventOption('${e.id}', '${e.name.replace(/'/g, "\\'")}')">
-                        ${e.name} <br> <small style="opacity: 0.6; font-size: 0.65rem;">${e.event_date}</small>
-                    </div>
-                `).join('');
-
-                const savedId = localStorage.getItem('scannerEventId');
-                const savedName = localStorage.getItem('scannerEventName');
-
-                if (savedId && events.some(e => e.id === savedId)) {
-                    hiddenInput.value = savedId;
-                    label.innerText = savedName;
-                    const option = list.querySelector(`[data-id="${savedId}"]`);
-                    if (option) option.classList.add('is-selected');
+                if (events && events.length > 0) {
+                    localStorage.setItem('cachedScannerEvents', JSON.stringify(events));
+                    renderEventOptions(events, list, label, hiddenInput);
                 }
             } catch (err) {
-                console.error(err);
-                list.innerHTML = '<div class="custom-option">Error loading events</div>';
+                console.warn("Event list sync failed, using cache.");
+                if (!localStorage.getItem('cachedScannerEvents')) {
+                    list.innerHTML = '<div class="custom-option">Offline: No cached events</div>';
+                }
+            }
+        }
+
+        function renderEventOptions(events, list, label, hiddenInput) {
+            if (!events || events.length === 0) {
+                list.innerHTML = '<div class="custom-option">No upcoming events</div>';
+                return;
+            }
+
+            list.innerHTML = events.map(e => `
+                <div class="custom-option" data-id="${e.id}" data-name="${e.name}" onclick="selectEventOption('${e.id}', '${e.name.replace(/'/g, "\\'")}')">
+                    ${e.name} <br> <small style="opacity: 0.6; font-size: 0.65rem;">${e.event_date}</small>
+                </div>
+            `).join('');
+
+            const savedId = localStorage.getItem('scannerEventId');
+            const savedName = localStorage.getItem('scannerEventName');
+
+            if (savedId && events.some(e => e.id === savedId)) {
+                hiddenInput.value = savedId;
+                label.innerText = savedName;
+                const option = list.querySelector(`[data-id="${savedId}"]`);
+                if (option) option.classList.add('is-selected');
             }
         }
 
