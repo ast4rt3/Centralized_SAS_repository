@@ -170,6 +170,20 @@ jobs:
             systems: $(cat systems.json)
           };
           EOF
+      - name: Debug — Verify deployment files
+        run: |
+          echo "=== Root files ==="
+          ls -la
+          echo ""
+          echo "=== apps/file-hub/ ==="
+          ls -la apps/file-hub/
+          echo ""
+          echo "=== env.js exists? ==="
+          test -f env.js && echo "YES — env.js is present" || echo "NO — env.js is MISSING"
+          echo ""
+          echo "=== filehub_gdrive.js exists? ==="
+          test -f apps/file-hub/filehub_gdrive.js && echo "YES — filehub_gdrive.js is present" || echo "NO — filehub_gdrive.js is MISSING"
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
       - name: Upload Pages Artifact
