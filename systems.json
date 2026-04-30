@@ -3,7 +3,7 @@
     "id": "attendance-scanner",
     "name": "Attendance Scanner",
     "description": "Progressive web app with HTML, CSS, and Google Apps Script backend.",
-    "url": "apps/attendance-scanner/index.html",
+    "url": "apps/attendance-scanner/",
     "external": false,
     "section": "Attendance",
     "roles": [
@@ -15,7 +15,7 @@
     "id": "schedule-manager",
     "name": "Schedule Manager",
     "description": "SAS schedule manager with Supabase backend.",
-    "url": "apps/schedule-manager/index.html",
+    "url": "apps/schedule-manager/",
     "external": false,
     "section": "Attendance",
     "roles": [
@@ -26,7 +26,7 @@
     "id": "attendance-viewer",
     "name": "Attendance Tracker",
     "description": "Live masterlist viewer connected to Google Sheets.",
-    "url": "apps/attendance-viewer/index.html",
+    "url": "apps/attendance-viewer/",
     "external": false,
     "section": "Attendance",
     "roles": [
@@ -37,7 +37,7 @@
     "id": "nbsc-mailer",
     "name": "NBSC Mailer",
     "description": "Official communications portal for single and batch emails.",
-    "url": "apps/mailer/index.html",
+    "url": "apps/mailer/",
     "external": false,
     "section": "Communications",
     "roles": [
@@ -70,7 +70,7 @@
     "id": "masterlist-manager",
     "name": "Masterlist Data Manager",
     "description": "Bulk import CSV/JSON student data directly into the masterlist.",
-    "url": "apps/masterlist-manager/index.html",
+    "url": "apps/masterlist-manager/",
     "external": false,
     "section": "Data Management",
     "roles": [
@@ -81,7 +81,7 @@
     "id": "account-manager",
     "name": "Account Approvals",
     "description": "Manage and approve new user registrations.",
-    "url": "apps/account-manager/index.html",
+    "url": "apps/account-manager/",
     "external": false,
     "section": "Data Management",
     "roles": [
@@ -92,7 +92,7 @@
     "id": "file-hub",
     "name": "File Hub",
     "description": "Personal document hub with Google Drive integration and public sharing.",
-    "url": "apps/file-hub/index.html",
+    "url": "apps/file-hub/",
     "external": false,
     "section": "Personal",
     "roles": [

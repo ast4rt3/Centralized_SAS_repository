@@ -130,7 +130,20 @@ export function syncFromHash(systems) {
   if (systemFrame) {
     const glue = sys.url.includes('?') ? '&' : '?';
     const currentUser = JSON.parse(localStorage.getItem('sas_user_data') || '{}').username || 'Unknown';
-    systemFrame.src = sys.url + glue + 'portalUser=' + encodeURIComponent(currentUser);
+    
+    // Ensure URL is relative to the current portal path
+    let targetUrl = sys.url;
+    
+    // Add trailing slash if it's a directory (doesn't contain a dot in the last segment)
+    if (!targetUrl.includes('?') && !targetUrl.includes('#')) {
+      const segments = targetUrl.split('/');
+      const lastSegment = segments[segments.length - 1];
+      if (!lastSegment.includes('.') && lastSegment.length > 0) {
+        targetUrl += '/';
+      }
+    }
+    
+    systemFrame.src = targetUrl + glue + 'portalUser=' + encodeURIComponent(currentUser);
   }
 }
 
