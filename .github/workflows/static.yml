@@ -31,28 +31,7 @@ jobs:
       - name: Install Dependencies
         run: npm ci --omit=dev
       
-      - name: Generate env.js from Secrets
-        env:
-          FIREBASE_CONFIG: "${{ secrets['FIREBASE_CONFIG'] }}"
-          FILE_HUB_FIREBASE_CONFIG: "${{ secrets['FILE_HUB_FIREBASE_CONFIG'] }}"
-        run: |
-          cat <<EOF > env.js
-          window.ENV = {
-            BACKEND_GAS_URL: "${{ secrets.BACKEND_GAS_URL }}",
-            SCANNER_GAS_URL: "${{ secrets.SCANNER_GAS_URL }}",
-            YOUTUBE_PROXY_URL: "${{ secrets.YOUTUBE_PROXY_URL }}",
-            CLOUDINARY_CLOUD_NAME: "${{ secrets.CLOUDINARY_CLOUD_NAME }}",
-            CLOUDINARY_UPLOAD_PRESET: "${{ secrets.CLOUDINARY_UPLOAD_PRESET }}",
-            SUPABASE_URL: "${{ secrets.SUPABASE_URL }}",
-            SUPABASE_ANON_KEY: "${{ secrets.SUPABASE_ANON_KEY }}",
-            SUPABASE_SERVICE_ROLE_KEY: "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}",
-            GOOGLE_CLIENT_ID: "${{ secrets.GOOGLE_CLIENT_ID }}",
-            GOOGLE_CLIENT_SECRET: "${{ secrets.GOOGLE_CLIENT_SECRET }}",
-            FIREBASE_CONFIG: $FIREBASE_CONFIG,
-            FILE_HUB_FIREBASE_CONFIG: $FILE_HUB_FIREBASE_CONFIG,
-            systems: $(cat systems.json)
-          };
-          EOF
+
 
 
   # 2. AUTOMATED TESTS
@@ -107,6 +86,29 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Generate env.js from Secrets
+        env:
+          FIREBASE_CONFIG: "${{ secrets['FIREBASE_CONFIG'] }}"
+          FILE_HUB_FIREBASE_CONFIG: "${{ secrets['FILE_HUB_FIREBASE_CONFIG'] }}"
+        run: |
+          cat <<EOF > env.js
+          window.ENV = {
+            BACKEND_GAS_URL: "${{ secrets.BACKEND_GAS_URL }}",
+            SCANNER_GAS_URL: "${{ secrets.SCANNER_GAS_URL }}",
+            YOUTUBE_PROXY_URL: "${{ secrets.YOUTUBE_PROXY_URL }}",
+            CLOUDINARY_CLOUD_NAME: "${{ secrets.CLOUDINARY_CLOUD_NAME }}",
+            CLOUDINARY_UPLOAD_PRESET: "${{ secrets.CLOUDINARY_UPLOAD_PRESET }}",
+            SUPABASE_URL: "${{ secrets.SUPABASE_URL }}",
+            SUPABASE_ANON_KEY: "${{ secrets.SUPABASE_ANON_KEY }}",
+            SUPABASE_SERVICE_ROLE_KEY: "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}",
+            GOOGLE_CLIENT_ID: "${{ secrets.GOOGLE_CLIENT_ID }}",
+            GOOGLE_CLIENT_SECRET: "${{ secrets.GOOGLE_CLIENT_SECRET }}",
+            FIREBASE_CONFIG: $FIREBASE_CONFIG,
+            FILE_HUB_FIREBASE_CONFIG: $FILE_HUB_FIREBASE_CONFIG,
+            systems: $(cat systems.json)
+          };
+          EOF
+
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
