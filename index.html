@@ -42,6 +42,33 @@
 
 
 <style>
+  #offline-banner {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10000;
+    background: #0f172a;
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-align: center;
+    padding: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-bottom: 3px solid #f59e0b;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  #offline-banner i {
+    font-size: 1.1rem;
+    color: #f59e0b;
+  }
+
 #messages.page { 
     padding: 0 !important; 
     background: radial-gradient(circle at 50% -20%, #1e3a8a 0%, #0f172a 80%) !important; 
@@ -572,9 +599,9 @@ body:has(#messages.active),
 
 <body>
   <!-- Offline indicator (auto-shown/hidden by JS) -->
-  <div id="offline-banner"
-    style="display:none; position:fixed; top:0; left:0; right:0; z-index:9999; background:#b91c1c; color:#fff; font-size:0.8rem; font-weight:700; text-align:center; padding:6px; letter-spacing:0.5px;">
-    📡 No internet connection — showing cached content
+  <div id="offline-banner">
+    <i class='bx bx-wifi-off'></i>
+    <span>Connectivity Lost — Using Offline Cache</span>
   </div>
 
   <!-- Landing Page Section (Public View) -->

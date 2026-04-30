@@ -940,7 +940,7 @@ let tvTheaterEnabled = localStorage.getItem('sas_tv_theater_enabled') === 'true'
 (function () {
   const banner = document.getElementById('offline-banner');
   function updateBanner() {
-    if (banner) banner.style.display = navigator.onLine ? 'none' : 'block';
+    if (banner) banner.style.display = navigator.onLine ? 'none' : 'flex';
   }
   window.addEventListener('online', updateBanner);
   window.addEventListener('offline', updateBanner);

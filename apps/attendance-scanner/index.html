@@ -367,30 +367,38 @@
             background: #94a3b8;
         }
 
-        /* Offline notice */
+        /* Offline notice - Premium Glassmorphism */
         #offline-status {
             display: none;
-            background: #fff8e6;
-            border-bottom: 3px solid var(--nbsc-gold);
-            padding: 14px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 10000;
+            background: rgba(220, 38, 38, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 12px 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            animation: slideDown 0.3s ease-out;
         }
 
         .offline-inner {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            gap: 12px;
+            justify-content: center;
+            gap: 10px;
             max-width: 560px;
             margin: 0 auto;
+            color: white;
         }
 
         .offline-label {
-            font-size: 0.82rem;
-            font-weight: 800;
-            color: #7a4f00;
-            flex: 1;
-            text-transform: uppercase;
+            font-size: 0.75rem;
+            font-weight: 700;
             letter-spacing: 0.5px;
+            text-transform: uppercase;
         }
 
         .offline-actions {
@@ -1078,9 +1086,16 @@
 </head>
 
 <body>
+    <div id="offline-status">
+        <div class="offline-inner">
+            <i class='bx bx-wifi-off' style="font-size: 1.1rem;"></i>
+            <span class="offline-label">No Internet Connection — Offline Mode Active</span>
+        </div>
+    </div>
+
     <div id="syncModal">
         <div class="modal-content">
-            <span id="modal-icon">✅</span>
+            <span id="modal-icon"></span>
             <h3 id="modal-title">Success!</h3>
             <p id="modal-text">Action completed.</p>
 
@@ -1276,7 +1291,6 @@
 
         const resultDiv = document.getElementById('result');
         const manualEntryDiv = document.getElementById('scanner-inputs');
-        let html5QrcodeScanner;
         let windowStatusInterval;
         let currentWindowInfo = null;
 
@@ -1293,229 +1307,49 @@
             return null;
         }
 
-        // ── Backend helper — Now using Supabase ──
+        // ── Backend helper — Now Redirecting to GAS for Logic ──
         async function callBackend(action, params) {
-            const supabase = await initSupabase();
-            if (!supabase) throw new Error("Supabase not initialized");
-
-            if (action === "getAvailableEvents") {
-                const now = new Date();
-                // Use local date for event filtering
-                const todayStr = now.toLocaleDateString('en-CA');
-                const { data: events, error } = await supabase
-                    .from('sas_events')
-                    .select('*')
-                    .gte('event_date', todayStr)
-                    .order('event_date', { ascending: true });
-                if (error) throw error;
-                return events;
+            const gasUrl = window.ENV?.BACKEND_GAS_URL;
+            if (!gasUrl) {
+                console.error("BACKEND_GAS_URL missing in env.js");
+                throw new Error("Backend Configuration Missing");
             }
 
-            if (action === "getWindowStatus") {
-                const now = new Date();
-                // Use local date (YYYY-MM-DD) instead of UTC
-                const todayStr = now.toLocaleDateString('en-CA');
-                const nowTime = now.toTimeString().split(' ')[0]; // HH:mm:ss
-
-                const eventId = localStorage.getItem('scannerEventId');
-                if (!eventId) {
-                    return { status: "error", message: "No Event Selected" };
-                }
-
-                // Helper: HH:mm[:ss] -> minutes since midnight
-                const toMin = (t) => {
-                    const [h, m] = t.split(':').map(Number);
-                    return (h * 60) + m;
-                };
-
-                const { data: schedules, error } = await supabase
-                    .from('sas_schedules')
-                    .select('*')
-                    .eq('date', todayStr)
-                    .eq('event_id', eventId)
-                    .eq('is_active', true);
-
-                if (error) {
-                    console.error("getWindowStatus error:", error);
-                    if (error.code === '42P01') {
-                        return { status: "error", message: "Database not ready: sas_schedules table missing." };
-                    }
-                    throw error;
-                }
-
-                const nowM = toMin(nowTime);
-
-                // Find active window with midnight wrap support
-                const active = schedules.find(s => {
-                    const startM = toMin(s.start_time);
-                    const endM = toMin(s.end_time);
-                    return (startM <= endM) 
-                        ? (nowM >= startM && nowM <= endM) 
-                        : (nowM >= startM || nowM <= endM);
+            try {
+                const response = await fetch(gasUrl, {
+                    method: 'POST',
+                    mode: 'no-cors', // Use no-cors for GAS redirects
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({ action, ...params })
                 });
 
-                if (active) {
-                    return {
-                        isOpen: true,
-                        type: active.label,
-                        id: active.id,
-                        start: active.start_time,
-                        end: active.end_time
+                // Since 'no-cors' prevents reading the response body directly,
+                // we use a JSONP-like workaround or standard fetch if CORS is handled.
+                // However, the best way for SAS is a simple fetch with the action.
+                
+                // FALLBACK for GAS fetching (Modern SAS Pattern)
+                const finalRes = await new Promise((resolve, reject) => {
+                    const callbackName = 'gas_callback_' + Math.floor(Math.random() * 1000000);
+                    window[callbackName] = (res) => {
+                        delete window[callbackName];
+                        resolve(res);
                     };
-                }
 
-                // Find next window
-                const future = schedules
-                    .filter(s => toMin(s.start_time) > nowM)
-                    .sort((a,b) => toMin(a.start_time) - toMin(b.start_time));
-                
-                const next = future[0];
-                return {
-                    isOpen: false,
-                    nextType: next ? next.label : null,
-                    nextStart: next ? next.start_time : null,
-                    nextEnd: next ? next.end_time : null,
-                    message: next ? "UPCOMING" : "CLOSED"
-                };
-            }
-
-            if (action === "checkTicket") {
-                const { scannedID, scannerUser, scanMode } = params;
-                const windowInfo = await callBackend("getWindowStatus");
-                if (!windowInfo.isOpen) return { status: "error", message: "🕒 WINDOW CLOSED" };
-
-                // 1. Resolve Student (ID or QR Token)
-                const matchCol = scanMode === 'qr' ? 'qr_token' : 'ID';
-                const { data: student, error: sErr } = await supabase
-                    .from('NBSC_masterlist')
-                    .select('ID, Name')
-                    .eq(matchCol, scannedID)
-                    .maybeSingle();
-
-                if (sErr) {
-                    console.error("checkTicket student lookup error:", sErr);
-                    if (sErr.code === '42P01') {
-                        return { status: "error", message: "Database error: NBSC_masterlist table missing." };
-                    }
-                    if (sErr.code === '42703') {
-                        return { status: "error", message: "Column '" + matchCol + "' does not exist on NBSC_masterlist." };
-                    }
-                    throw sErr;
-                }
-                if (!student) return { status: "error", message: `🚫 ${scanMode.toUpperCase()} UNKNOWN<br><small>${scannedID}</small>` };
-
-                // 2. Check for existing record
-                const { data: existing, error: lErr } = await supabase
-                    .from('sas_attendance_logs')
-                    .select('*')
-                    .eq('student_id', student.ID)
-                    .eq('schedule_id', windowInfo.id)
-                    .maybeSingle();
-
-                if (lErr) throw lErr;
-                if (existing) return { status: "error", message: `❌ ALREADY RECORDED<br>${student.Name.toUpperCase()}`, studentName: student.Name };
-
-                // 3. Insert Log
-                const { error: iErr } = await supabase
-                    .from('sas_attendance_logs')
-                    .insert([{
-                        student_id: student.ID,
-                        schedule_id: windowInfo.id,
-                        scanner_user: scannerUser,
-                        status: 'present'
-                    }]);
-
-                if (iErr) throw iErr;
-                return {
-                    status: "success",
-                    message: `✅ ${windowInfo.type} RECORDED<br><b>${student.Name.toUpperCase()}</b>`,
-                    studentName: student.Name,
-                    windowType: windowInfo.type
-                };
-            }
-
-            if (action === "flagStudent") {
-                const { scannedToken, reason, scannerUser } = params;
-                const windowInfo = await callBackend("getWindowStatus");
-                if (!windowInfo.isOpen) throw new Error("Window Closed");
-
-                const { data: student, error: sErr } = await supabase
-                    .from('NBSC_masterlist')
-                    .select('ID')
-                    .or(`ID.eq.${scannedToken},qr_token.eq.${scannedToken}`)
-                    .maybeSingle();
-                
-                if (sErr) {
-                    console.error("flagStudent lookup error:", sErr);
-                    if (sErr.code === '42P01') return { status: "error", message: "Database missing." };
-                    throw sErr;
-                }
-                if (!student) throw new Error("Student not found");
-
-                const { error } = await supabase
-                    .from('sas_attendance_logs')
-                    .upsert({
-                        student_id: student.ID,
-                        schedule_id: windowInfo.id,
-                        scanner_user: scannerUser,
-                        status: 'flagged',
-                        flag_reason: reason
-                    }, { onConflict: 'student_id,schedule_id' });
-
-                if (error) throw error;
-                return { status: "success" };
-            }
-
-            if (action === "syncOfflineScans") {
-                const { scansArray, scannerUser } = params;
-                for (const scan of scansArray) {
-                    await callBackend("checkTicket", { scannedID: scan.scannedID, scannerUser, scanMode: 'barcode' });
-                }
-                return { status: "success" };
-            }
-
-            if (action === "getOfflineMasterlist") {
-                let allData = [];
-                let page = 0;
-                const pageSize = 1000;
-                let hasMore = true;
-
-                while (hasMore) {
-                    const { data, error } = await supabase
-                        .from('NBSC_masterlist')
-                        .select('ID, Name, qr_token')
-                        .range(page * pageSize, (page + 1) * pageSize - 1);
-
-                    if (error) {
-                        console.error("getOfflineMasterlist error:", error);
-                        if (error.code === '42P01') {
-                            throw new Error("NBSC_masterlist table missing. Run migration.");
-                        }
-                        throw error;
-                    }
-
-                    if (data && data.length > 0) {
-                        allData = allData.concat(data);
-                        if (data.length < pageSize) {
-                            hasMore = false;
-                        } else {
-                            page++;
-                        }
-                    } else {
-                        hasMore = false;
-                    }
-                }
-
-                const master = {};
-                allData.forEach(s => {
-                    if (s.ID) master[s.ID.toLowerCase()] = { name: s.Name, id: s.ID };
-                    if (s.qr_token) master[s.qr_token.toLowerCase()] = { name: s.Name, id: s.ID };
+                    const script = document.createElement('script');
+                    const queryParams = new URLSearchParams({
+                        action: action,
+                        callback: callbackName,
+                        payload: JSON.stringify(params || {})
+                    });
+                    script.src = gasUrl + (gasUrl.includes('?') ? '&' : '?') + queryParams.toString();
+                    script.onerror = () => reject(new Error("GAS Connection Failed"));
+                    document.body.appendChild(script);
                 });
-                return master;
-            }
 
-            if (action === "ping") {
-                return { status: "success", message: "pong" };
+                return finalRes;
+            } catch (err) {
+                console.error("Backend Call Failed:", err);
+                throw err;
             }
         }
 
@@ -1570,7 +1404,7 @@
                 if (screenId === 'queueScreen') renderQueue();
 
                 // Re-init scanner if needed
-                if (screenId === 'scannerScreen' && !html5QrcodeScanner) {
+                if (screenId === 'scannerScreen' && !html5QrCode) {
                     initScanner();
                 }
             } catch (e) { console.error("Navigation Error:", e); }
@@ -1951,8 +1785,8 @@
         }
 
         async function resetScanner() {
-            // Delay enabling scans slightly
-            setTimeout(() => { isProcessing = false; }, 500);
+            // Delay enabling scans slightly (1s cooldown)
+            setTimeout(() => { isProcessing = false; }, 1000);
             resultDiv.style.display = 'none';
             manualEntryDiv.style.display = 'block';
             
@@ -1964,15 +1798,21 @@
 
         async function processToken(rawToken) {
             if (isProcessing) return;
+            isProcessing = true; // Lock immediately to prevent concurrent calls
+            
             const token = extractID(rawToken);
-            if (!token) return;
-
-            isProcessing = true;
+            if (!token) {
+                isProcessing = false;
+                return;
+            }
             const scannerUser = getCurrentUser();
             const scanMode = currentScanMode; // Capture current mode
 
             // Stop the scanner explicitly to avoid background processing
-            if (html5QrcodeScanner) { html5QrcodeScanner.clear().catch(e => { }); }
+            if (html5QrCode && isScannerStarted) { 
+                html5QrCode.stop().catch(e => { }); 
+                isScannerStarted = false;
+            }
             
             manualEntryDiv.style.display = 'none';
             resultDiv.style.display = 'block';
@@ -1993,7 +1833,7 @@
                 const cardIcon = isConsented ? "bx-cloud-upload" : "bx-cloud-off";
                 resultDiv.innerHTML =
                     `<i class='bx ${cardIcon} result-icon'></i>` +
-                    "<h3>Offline Sync</h3>" +
+                    "<h3>OFFLINE SYNC</h3>" +
                     `<div class="student-name">${name.toUpperCase()}</div>` +
                     `<p>${isConsented ? "RECORDED INTERNALLY" : "SAVED TO QUEUE"}</p>` +
                     "<button class=\"scan-btn-next\" onclick=\"resetScanner()\">NEXT SCAN</button>" +
@@ -2018,12 +1858,17 @@
             resultDiv.className = "processing";
             resultDiv.innerHTML = "<div class=\"spinner\"></div><h3>Verifying...</h3>";
 
+            const requestId = Math.random().toString(36).substr(2, 5);
+            console.log(`[SCAN] Request ${requestId} starting for token: ${token}`);
+
             try {
                 const response = await callBackend("checkTicket", {
                     scannedID: token,
                     scannerUser: scannerUser,
-                    scanMode: scanMode
+                    scanMode: scanMode,
+                    requestId: requestId // Pass to backend for logging
                 });
+                console.log(`[SCAN] Request ${requestId} finished. Status: ${response.status}`);
 
                 let colorClass = response.status === "success" ? "success" : response.status === "warning" ? "warning" : "error";
                 let icon = response.status === "success" ? "bx-check-double" : response.status === "warning" ? "bx-info-circle" : "bx-x-circle";
@@ -2110,9 +1955,9 @@
         }
 
         async function syncOfflineData() {
-            if (!navigator.onLine) return showCustomModal("📶", "Offline", "No internet connection.");
+            if (!navigator.onLine) return showCustomModal("bx-wifi-off", "Offline", "No internet connection.");
             let queue = JSON.parse(localStorage.getItem('nbsc_offline_scans') || "[]");
-            if (queue.length === 0) return showCustomModal("✅", "Nothing to Sync", "Queue is empty.");
+            if (queue.length === 0) return showCustomModal("bx-check-circle", "Nothing to Sync", "Queue is empty.");
 
             const total = queue.length;
             const CHUNK_SIZE = 10;
@@ -2139,7 +1984,7 @@
             document.getElementById('syncModal').style.display = 'flex';
 
             function log(msg) { logBox.innerHTML += msg + "<br>"; logBox.scrollTop = logBox.scrollHeight; }
-            log("▶ Starting upload of " + total + " record(s)...");
+            log("Connecting to server...");
 
             const remaining = [...queue];
             while (remaining.length > 0) {
@@ -2152,18 +1997,19 @@
                     offlineName: item.name,
                     needsValidation: item.name === "UNKNOWN STUDENT"
                 }));
-                chunk.forEach(item => log("↑ " + item.name + (item.isFlagged ? " 🚩 [FLAG]" : "")));
+                chunk.forEach(item => log("Uploading: " + item.name + (item.isFlagged ? " [FLAG]" : "")));
 
                 try {
-                    const res = await callBackend("syncOfflineScans", { scansArray: formatted, scannerUser });
+                    const eventId = localStorage.getItem('scannerEventId');
+                    const res = await callBackend("syncOfflineScans", { scansArray: formatted, scannerUser, eventId });
                     if (res.status !== "success") throw new Error(res.message || "Server error");
                     uploaded += chunk.length;
                     const pct = Math.round((uploaded / total) * 100);
                     document.getElementById('syncProgressBar').style.width = pct + "%";
                     document.getElementById('progressText').innerText = pct + "% — " + uploaded + " / " + total;
-                    log("✔ Chunk done (" + uploaded + "/" + total + ")");
+                    log("Chunk complete (" + uploaded + "/" + total + ")");
                 } catch (err) {
-                    log("✖ Error: " + err);
+                    log("Error: " + err);
                     document.getElementById('modalCloseBtn').style.display = 'block';
                     document.getElementById('modal-title').innerText = "Sync Paused";
                     return;
@@ -2173,9 +2019,10 @@
             localStorage.removeItem('nbsc_offline_scans');
             updateQueueUI();
             renderQueue();
-            log("✅ All " + total + " records uploaded successfully.");
+            log("All " + total + " records uploaded successfully.");
             document.getElementById('progressText').innerText = "100% — Complete";
             document.getElementById('modal-title').innerText = "Done";
+            document.getElementById('modal-icon').innerHTML = "<i class='bx bx-check-circle'></i>";
             document.getElementById('modalCloseBtn').style.display = 'block';
             document.getElementById('modalCloseBtn').onclick = function () {
                 document.getElementById('syncModal').style.display = 'none';
@@ -2197,7 +2044,7 @@
             saveToOfflineQueue(token, name, true, reason);
             resultDiv.className = "error";
             resultDiv.innerHTML =
-                "<span class=\"result-icon\">🚩</span>" +
+                "<i class='bx bxs-flag-alt result-icon'></i>" +
                 "<h3>FLAGGED (Offline)</h3>" +
                 "<p><b>" + name.toUpperCase() + "</b><br><small>Reason: " + reason + " — syncs when online.</small></p>" +
                 "<button class=\"scan-btn-next\" onclick=\"resetScanner()\">NEXT SCAN</button>";
@@ -2207,7 +2054,7 @@
             if (!confirm("Delete all " + JSON.parse(localStorage.getItem('nbsc_offline_scans') || '[]').length + " pending scans? This cannot be undone.")) return;
             localStorage.removeItem('nbsc_offline_scans');
             updateQueueUI();
-            showCustomModal("🗑️", "Cleared", "Offline queue has been cleared.");
+            showCustomModal("bx-trash", "Cleared", "Offline queue has been cleared.");
         }
 
         async function confirmOnlineFlag(token) {
@@ -2218,7 +2065,7 @@
                 await callBackend("flagStudent", { scannedToken: token, reason, scannerUser });
                 resultDiv.className = "error";
                 resultDiv.innerHTML =
-                    "<span class=\"result-icon\">🚩</span>" +
+                    "<i class='bx bxs-flag-alt result-icon'></i>" +
                     "<h3>STUDENT FLAGGED</h3>" +
                     "<p>Reason: " + reason + "</p>" +
                     "<button class=\"scan-btn-next\" onclick=\"resetScanner()\">NEXT SCAN</button>";
@@ -2235,9 +2082,9 @@
 
         // --- DOWNLOAD MASTERLIST ---
         async function downloadMasterlist() {
-            if (!navigator.onLine) return showCustomModal("📶", "Offline", "You need internet to update offline data.");
+            if (!navigator.onLine) return showCustomModal("bx-wifi-off", "Offline", "You need internet to update offline data.");
 
-            document.getElementById('modal-icon').innerText = "⬇️";
+            document.getElementById('modal-icon').innerHTML = "<i class='bx bx-download'></i>";
             document.getElementById('modal-title').innerText = "Updating";
             document.getElementById('modal-text').innerText = "";
             document.getElementById('progressBarContainer').style.display = 'block';
@@ -2273,9 +2120,9 @@
                 document.getElementById('progressText').innerText = "100% — Complete";
 
                 const uniqueNames = new Set(Object.values(data).map(v => v.name || v)).size;
-                log("✅ Saved " + uniqueNames + " students (" + entries + " tokens) to offline storage.");
-                log("✔ Offline data is up to date.");
-                document.getElementById('modal-icon').innerText = "✅";
+                log("Saved " + uniqueNames + " students (" + entries + " tokens) to offline storage.");
+                log("Offline data is up to date.");
+                document.getElementById('modal-icon').innerHTML = "<i class='bx bx-check-circle'></i>";
                 document.getElementById('modal-title').innerText = "Done";
                 document.getElementById('modalCloseBtn').style.display = 'block';
                 document.getElementById('modalCloseBtn').onclick = function () {
@@ -2286,15 +2133,15 @@
                     document.getElementById('modalCloseBtn').onclick = closeModal;
                 };
             } catch (err) {
-                log("✖ Error: " + err.toString());
-                document.getElementById('modal-icon').innerText = "❌";
+                log("Error: " + err.toString());
+                document.getElementById('modal-icon').innerHTML = "<i class='bx bx-x-circle'></i>";
                 document.getElementById('modal-title').innerText = "Failed";
                 document.getElementById('modalCloseBtn').style.display = 'block';
             }
         }
 
         async function runDiagnostics() {
-            showCustomModal("🔍", "Running Diagnostics", "Verifying system components...");
+            showCustomModal("bx-search-alt", "Running Diagnostics", "Verifying system components...");
             let logBox = document.getElementById('syncLogBox');
             if(!logBox) {
                 logBox = document.createElement('div');
@@ -2307,7 +2154,7 @@
             document.getElementById('modalCloseBtn').style.display = 'none';
 
             function log(m, success=true) { 
-                logBox.innerHTML += (success ? "✅ " : "❌ ") + m + "<br>"; 
+                logBox.innerHTML += (success ? "PASS: " : "FAIL: ") + m + "<br>"; 
                 logBox.scrollTop = logBox.scrollHeight;
             }
 
@@ -2363,25 +2210,25 @@
         function showDevDashboard() {
             const dashboardHTML = `
                 <div style="display:flex; flex-direction:column; gap:10px; margin-top:15px; width:100%;">
-                    <button class="flag-btn" style="background:#004a99; border:none;" onclick="runDiagnostics()">🔍 START SYSTEM DIAGNOSTICS</button>
-                    <button class="flag-btn" style="background:#ea580c; border:none;" onclick="triggerStressTest()">🔋 START SYSTEM STRESS TEST</button>
+                    <button class="flag-btn" style="background:#004a99; border:none;" onclick="runDiagnostics()">START SYSTEM DIAGNOSTICS</button>
+                    <button class="flag-btn" style="background:#ea580c; border:none;" onclick="triggerStressTest()">START SYSTEM STRESS TEST</button>
                     <button class="flag-btn" style="background:#64748b; border:none;" onclick="closeModal()">CANCEL</button>
                 </div>
             `;
-            showCustomModal("🛠️", "Developer Tools", "Select a diagnostic function below:");
+            showCustomModal("bx-wrench", "Developer Tools", "Select a diagnostic function below:");
             document.getElementById('modal-text').innerHTML += dashboardHTML;
             document.getElementById('modalCloseBtn').style.display = 'none';
         }
 
         async function triggerStressTest() {
             if (!confirm("This will simulate 50 rapid scans to test UI responsiveness and history caching. Proceed?")) return;
-            console.log("🚀 Stress test started...");
+            console.log("Stress test started...");
             for (let i = 1; i <= 50; i++) {
                 const mockID = "STRESS_" + Math.random().toString(36).substr(2, 5);
                 processToken(mockID);
                 await new Promise(r => setTimeout(r, 150));
             }
-            showCustomModal("🔋", "Stress Test Done", "50 scans simulated. Check History to verify data integrity.");
+            showCustomModal("bx-bolt-circle", "Stress Test Done", "50 scans simulated. Check History to verify data integrity.");
         }
 
         // --- RECENT SCANS ---
@@ -2442,6 +2289,8 @@
         function showCustomModal(icon, title, text) {
             if (icon === "🔄") {
                 document.getElementById('modal-icon').innerHTML = '<div class="spinner"></div>';
+            } else if (icon.startsWith('bx-')) {
+                document.getElementById('modal-icon').innerHTML = `<i class='bx ${icon}'></i>`;
             } else {
                 document.getElementById('modal-icon').innerHTML = icon;
             }
@@ -2504,7 +2353,7 @@
 
             try {
                 const events = await callBackend("getAvailableEvents", {});
-                if (events && events.length > 0) {
+                if (events) {
                     localStorage.setItem('cachedScannerEvents', JSON.stringify(events));
                     renderEventOptions(events, list, label, hiddenInput);
                 }
@@ -2562,6 +2411,23 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             initEventDropdown();
+            
+            // Initial network check
+            const offlineBar = document.getElementById('offline-status');
+            if (offlineBar) {
+                offlineBar.style.display = navigator.onLine ? 'none' : 'block';
+            }
+        });
+
+        // Connectivity Listeners
+        window.addEventListener('online', () => {
+            const bar = document.getElementById('offline-status');
+            if (bar) bar.style.display = 'none';
+        });
+
+        window.addEventListener('offline', () => {
+            const bar = document.getElementById('offline-status');
+            if (bar) bar.style.display = 'block';
         });
 
         // PWA: register service worker for install & offline
