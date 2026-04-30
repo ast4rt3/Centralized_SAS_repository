@@ -381,12 +381,6 @@ function showConfirm(title, message) {
     });
 }
 
-// Update existing alert in handleFileUpload
-async function handleFileUpload(e) {
-    // ... rest of setup ...
-    // replace alert("File uploaded successfully...") with showToast("File uploaded successfully!", "success")
-    // replace alert("Upload failed...") with showToast("Upload failed!", "error")
-}
 
 
 window.setFilter = (category) => {
