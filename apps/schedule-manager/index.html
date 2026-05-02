@@ -228,7 +228,7 @@
     </div>
 
     <!-- Dependencies -->
-    <script src="../../env.js"></script>
+    <script type="module" src="../../src/utils/app-bridge.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
@@ -489,7 +489,7 @@
             return div.innerHTML;
         }
 
-        init();
+        document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>

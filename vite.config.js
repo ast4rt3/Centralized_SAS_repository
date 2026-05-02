@@ -27,6 +27,7 @@ export default defineConfig({
         { src: 'version.json', dest: '.' },
         { src: 'manifest.json', dest: '.' },
         { src: 'serviceWorker.js', dest: '.' },
+        { src: 'env.js', dest: '.' },
         { src: 'assets/*', dest: 'assets' }
       ]
     }),
