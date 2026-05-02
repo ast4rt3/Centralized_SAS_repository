@@ -1,5 +1,5 @@
 /**
- * SAS Application Bridge v2
+ * SAS Application Bridge v2.1
  * Standardizes configuration sharing and path resolution between the Portal and Sub-apps.
  */
 (function() {
@@ -23,7 +23,18 @@
     if (window.ENV) {
         console.log("✅ Configuration Inherited from Portal");
     } else {
-        console.warn("⚠️ No configuration found. Sub-app may be running standalone.");
+        console.warn("⚠️ No configuration found. Sub-app may be running standalone. Attempting to load env.js...");
+        
+        // Attempt to load env.js from domain root or repo root
+        const isGitHubPages = window.location.hostname.includes('github.io');
+        const repoName = 'Centralized_SAS_repository';
+        const rootPath = isGitHubPages ? `/${repoName}/env.js` : '/env.js';
+        
+        const script = document.createElement('script');
+        script.src = rootPath;
+        script.onload = () => console.log("✅ env.js loaded successfully from root.");
+        script.onerror = () => console.error("❌ Failed to load env.js from " + rootPath);
+        document.head.appendChild(script);
     }
 
     // 2. Dynamic Path Resolution (Robust Version)
@@ -31,14 +42,10 @@
     const parts = currentPath.split('/');
     const lastPart = parts[parts.length - 1];
     
-    // If the last segment is empty (ends in /) or contains a dot (is a file), 
-    // the directory is everything up to the last slash.
-    // Otherwise, the whole path is the directory.
     let subAppDir = (lastPart === "" || lastPart.includes('.'))
         ? parts.slice(0, -1).join('/') + '/'
         : currentPath + '/';
 
-    // Ensure double slashes are cleaned up
     subAppDir = subAppDir.replace(/\/+/g, '/');
 
     const base = document.createElement('base');
@@ -46,14 +53,12 @@
     document.head.prepend(base);
     
     console.log(`📍 Base Path Set: ${base.href}`);
-    console.log(`🔍 Script resolution test: ${new URL('filehub_gdrive.js', base.href).href}`);
 
-    // 3. Helper to load scripts properly (optional but safer)
+    // 3. Global SAS Helpers
     window.SAS = {
-        version: "2.0.0",
+        version: "2.1.0",
         resolvePath: function(path) {
-            // If path starts with /, it's relative to the domain root.
-            // On GH Pages, we need to prepend the repo name if it's missing.
+            const isGitHubPages = window.location.hostname.includes('github.io');
             if (path.startsWith('/') && isGitHubPages && !path.startsWith('/Centralized_SAS_repository')) {
                 return '/Centralized_SAS_repository' + path;
             }
