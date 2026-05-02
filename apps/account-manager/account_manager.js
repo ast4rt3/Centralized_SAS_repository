@@ -14,7 +14,7 @@
         if (!BACKEND_GAS_URL) return;
         
         const userData = JSON.parse(localStorage.getItem('sas_user_data') || '{}');
-        if (!userData.username || !userData.password) {
+        if (!userData.username || !userData.token) {
             showToast("Session expired. Please log in again.", "error");
             return;
         }
@@ -24,7 +24,7 @@
             const formData = new URLSearchParams();
             formData.append('action', 'getPendingUsers');
             formData.append('username', userData.username);
-            formData.append('password', userData.password);
+            formData.append('token', userData.token);
             formData.append('portalUser', portalUser);
 
             const r = await fetch(BACKEND_GAS_URL, {
@@ -118,7 +118,7 @@
             const formData = new URLSearchParams();
             formData.append('action', action === 'approve' ? 'approveUser' : 'rejectUser');
             formData.append('username', userData.username);
-            formData.append('password', userData.password);
+            formData.append('token', userData.token);
             formData.append('targetUsername', username);
             formData.append('portalUser', portalUser);
 
