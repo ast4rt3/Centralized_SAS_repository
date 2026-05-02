@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
+import obfuscator from 'vite-plugin-javascript-obfuscator';
 
 export default defineConfig({
   base: '/Centralized_SAS_repository/',
@@ -28,6 +29,21 @@ export default defineConfig({
         { src: 'serviceWorker.js', dest: '.' },
         { src: 'assets/*', dest: 'assets' }
       ]
+    }),
+    obfuscator({
+      include: ['**/env*.js'], // Only target the generated env.js chunk
+      exclude: [/node_modules/],
+      apply: 'build',
+      options: {
+        compact: true,
+        controlFlowFlattening: true,
+        controlFlowFlatteningThreshold: 1,
+        numbersToExpressions: true,
+        simplify: true,
+        stringArray: true,
+        stringArrayEncoding: ['base64'],
+        stringArrayThreshold: 1
+      }
     })
   ]
 });
