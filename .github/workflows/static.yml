@@ -180,16 +180,25 @@ jobs:
           echo ""
           echo "=== env.js exists? ==="
           test -f env.js && echo "YES — env.js is present" || echo "NO — env.js is MISSING"
-          echo ""
-          echo "=== filehub_gdrive.js exists? ==="
-          test -f apps/file-hub/filehub_gdrive.js && echo "YES — filehub_gdrive.js is present" || echo "NO — filehub_gdrive.js is MISSING"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install and Build (Obfuscation)
+        run: |
+          npm ci
+          npm run build
+
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: './dist'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
