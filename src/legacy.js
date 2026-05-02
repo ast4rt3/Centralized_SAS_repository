@@ -2052,12 +2052,11 @@ function showAppUI(userObj) {
           const responseData = await r.json();
 
           if (responseData.success) {
-            // Note: Storing password in localStorage is necessary here to re-authenticate 
-            // the 'updateTvSettings' payload against Google Apps Script without a JWT token.
+            // Store the JWT token to authenticate subsequent requests
             const sessionObj = { 
               username: responseData.username, 
               role: responseData.role, 
-              password: pass,
+              token: responseData.token,
               displayName: responseData.displayName || responseData.username,
               profilePic: responseData.profilePic || "",
               theme: responseData.theme || "light"
@@ -3556,8 +3555,8 @@ if (logoutBtn) {
           if (!confirmed) return;
           zzProgress.start();
 
-          // Use stored credentials from session
-          const userPassword = userObj.password;
+          // Use stored token from session
+          const token = userObj.token;
 
           let cloudinaryUrl = imgUrl;
           let cloudinaryPublicId = "";
@@ -3608,7 +3607,7 @@ if (logoutBtn) {
           const payload = {
             action: isEdit ? "editPost" : "addPost",
             username: userObj.username,
-            password: userPassword,
+            token: token,
             title, description: desc,
             imageUrl: cloudinaryUrl,
             cloudinaryPublicId,
@@ -3753,7 +3752,7 @@ if (logoutBtn) {
       const payload = {
         action: "expirePost",
         username: userObj.username,
-        password: userObj.password || "",
+        token: userObj.token || "",
         timestamp: timestamp
       };
 
@@ -4436,7 +4435,7 @@ if (logoutBtn) {
 
               showLoading("Deleting post...");
               try {
-                const payload = { action: "deletePost", username: userObj.username, password: userObj.password, timestamp: post.timestamp, imageUrl: post.imageUrl };
+                const payload = { action: "deletePost", username: userObj.username, token: userObj.token, timestamp: post.timestamp, imageUrl: post.imageUrl };
                 const r = await fetch(BACKEND_GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
                 const res = await r.json();
                 if (res.success) { showToast(res.message, 'success'); fetchPosts(); }
@@ -4501,7 +4500,7 @@ if (logoutBtn) {
               const payload = {
                 action: "toggleTvVisible",
                 username: userObj.username,
-                password: userObj.password,
+                token: userObj.token,
                 timestamp: post.timestamp
               };
 
@@ -5502,20 +5501,14 @@ if (logoutBtn) {
       const selectedCloud = selectedValue;
       const accountLabel = selectedCloud === window.ENV?.CLOUDINARY_CLOUD_NAME ? 'Active Repository' : 'Legacy Repository';
 
-      const confirmMsg = `This will scan your system and delete ANY assets in the [${accountLabel}] that are not currently being used. Please enter your password to confirm.`;
+      const confirmMsg = `This will scan your system and delete ANY assets in the [${accountLabel}] that are not currently being used. Please confirm.`;
       
       const raw = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data') || '{}';
       const userObj = JSON.parse(raw);
 
       let confirmed = false;
       if (typeof showConfirm === 'function') {
-        const inputPass = await showConfirm('Flush Unused Assets', confirmMsg, true, 'danger');
-        if (inputPass === userObj.password) {
-          confirmed = true;
-        } else if (inputPass !== null) {
-          showToast('Incorrect password.', 'error');
-          return;
-        }
+        confirmed = await showConfirm('Flush Unused Assets', confirmMsg, false, 'danger');
       } else {
         confirmed = window.confirm(confirmMsg);
       }
@@ -5544,7 +5537,7 @@ if (logoutBtn) {
             cloudName: selectedCloud,
             firebaseUsedIds: usedIdsFromFirebase,
             username: userObj.username,
-            password: userObj.password
+            token: userObj.token
           })
         });
         const payload = await res.json();
@@ -5562,20 +5555,14 @@ if (logoutBtn) {
 
     window.dbDeleteMedia = async function(publicId, resourceType, targetCloud) {
       const selectedCloud = targetCloud || elements.mediaAccountSelect?.value || window.ENV?.CLOUDINARY_CLOUD_NAME;
-      const confirmMsg = `CAUTION: This will delete the asset from Cloudinary (${selectedCloud}) AND remove any linked TV posts or Landing Page activities. Please enter your password to proceed.`;
+      const confirmMsg = `CAUTION: This will delete the asset from Cloudinary (${selectedCloud}) AND remove any linked TV posts or Landing Page activities. Please proceed with caution.`;
       
       const raw = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data') || '{}';
       const userObj = JSON.parse(raw);
 
       let confirmed = false;
       if (typeof showConfirm === 'function') {
-        const inputPass = await showConfirm('Confirm Deletion', confirmMsg, true, 'danger');
-        if (inputPass === userObj.password) {
-          confirmed = true;
-        } else if (inputPass !== null) {
-          showToast('Incorrect password.', 'error');
-          return;
-        }
+        confirmed = await showConfirm('Confirm Deletion', confirmMsg, false, 'danger');
       } else {
         confirmed = window.confirm(confirmMsg);
       }
@@ -5611,7 +5598,7 @@ if (logoutBtn) {
             cloudName: selectedCloud,
             resourceType,
             username: userObj.username,
-            password: userObj.password
+            token: userObj.token
           })
         });
         const payload = await res.json();
@@ -5651,21 +5638,17 @@ if (logoutBtn) {
     elements.targetForm?.addEventListener('submit', (e) => {
       e.preventDefault();
       if (!pendingRevealTarget) return;
-      const enteredPassword = (elements.targetPassword?.value || '').trim();
-      let sessionPassword = '';
+      let sessionToken = '';
       try {
         const raw = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data') || '{}';
-        sessionPassword = JSON.parse(raw).password || '';
+        sessionToken = JSON.parse(raw).token || '';
       } catch (err) {}
 
-      if (!sessionPassword) {
-        if (elements.targetError) elements.targetError.textContent = 'Session password is unavailable. Please sign in again.';
+      if (!sessionToken) {
+        if (elements.targetError) elements.targetError.textContent = 'Session token is unavailable. Please sign in again.';
         return;
       }
-      if (enteredPassword !== sessionPassword) {
-        if (elements.targetError) elements.targetError.textContent = 'Invalid password.';
-        return;
-      }
+      // Password check removed for token auth. Reveal automatically based on token presence.
       revealedTargets[pendingRevealTarget] = true;
       closeTargetModal();
       rerenderStorageRows();
@@ -5998,7 +5981,7 @@ if (logoutBtn) {
       const formData = new URLSearchParams();
       formData.append('action', 'uploadProfilePicture');
       formData.append('username', sessionData.username);
-      formData.append('password', sessionData.password);
+      formData.append('token', sessionData.token);
       formData.append('fileData', base64);
       formData.append('fileName', file.name);
       
@@ -6079,7 +6062,7 @@ if (logoutBtn) {
       const formData = new URLSearchParams();
       formData.append('action', 'updateUserSettings');
       formData.append('username', sessionData.username);
-      formData.append('password', sessionData.password);
+      formData.append('token', sessionData.token);
       formData.append('displayName', displayName);
       
       const res = await fetch(BACKEND_GAS_URL, { method: 'POST', body: formData });
@@ -6135,6 +6118,7 @@ if (logoutBtn) {
       formData.append('action', 'updateUserSettings');
       formData.append('username', sessionData.username);
       formData.append('password', currentPass);
+      formData.append('token', sessionData.token);
       formData.append('newPassword', newPass);
       
       const res = await fetch(BACKEND_GAS_URL, { method: 'POST', body: formData });
@@ -6183,7 +6167,7 @@ if (logoutBtn) {
         const formData = new URLSearchParams();
         formData.append('action', 'updateUserSettings');
         formData.append('username', sessionData.username);
-        formData.append('password', sessionData.password);
+        formData.append('token', sessionData.token);
         formData.append('theme', theme);
         
         const res = await fetch(BACKEND_GAS_URL, { method: 'POST', body: formData });

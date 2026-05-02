@@ -574,15 +574,22 @@ async function confirmShare() {
     }
 
     const file = window.currentSelectedFile;
-    const currentUser = localStorage.getItem('sas_username');
+    const rawData = localStorage.getItem('sas_user_data') || '{}';
+    let sessionUser = currentUser;
+    let sessionToken = '';
+    try {
+        const u = JSON.parse(rawData);
+        if (u.username) sessionUser = u.username;
+        if (u.token) sessionToken = u.token;
+    } catch(e){}
 
     try {
         const payload = {
             action: 'shareFile',
             id: file.id,
             targetUser: targetUser,
-            username: currentUser,
-            password: localStorage.getItem('sas_password')
+            username: sessionUser,
+            token: sessionToken
         };
 
         const res = await fetch(window.ENV.BACKEND_GAS_URL, {
