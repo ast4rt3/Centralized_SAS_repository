@@ -1,0 +1,20 @@
+import"./modulepreload-polyfill-iJ-6Fn-a.js";import"./app-bridge-ld-b1CA9.js";(function(){let e=window.ENV?.BACKEND_GAS_URL,t=document.getElementById(`pending-list`),n=document.getElementById(`empty-state`),r=document.getElementById(`loading-indicator`),i=document.getElementById(`count-pending`),a=document.getElementById(`refresh-all-btn`),o=new URLSearchParams(window.location.search).get(`portalUser`);async function s(){if(!e)return;let t=JSON.parse(localStorage.getItem(`sas_user_data`)||`{}`);if(!t.username||!t.token){u(`Session expired. Please log in again.`,`error`);return}r.classList.remove(`hidden`);try{let n=new URLSearchParams;n.append(`action`,`getPendingUsers`),n.append(`username`,t.username),n.append(`token`,t.token),n.append(`portalUser`,o);let r=await(await fetch(e,{method:`POST`,body:n})).json();console.log(`[AccountManager] Pending Users Data:`,r),r.success?(c(r.users||[]),i.textContent=(r.users||[]).length):(console.error(`[AccountManager] Fetch failed:`,r.message),u(r.message||`Failed to fetch users`,`error`))}catch(e){console.error(e),u(`Network error. Check connection.`,`error`)}finally{r.classList.add(`hidden`)}}function c(e){if(t.querySelectorAll(`.user-row`).forEach(e=>e.remove()),!Array.isArray(e)){console.error(`[AccountManager] Expected array for users, got:`,e),n.classList.remove(`hidden`),n.querySelector(`p`).textContent=`Error: Invalid data received from server.`;return}if(e.length===0){n.classList.remove(`hidden`),n.querySelector(`p`).textContent=`No pending registration requests.`;return}n.classList.add(`hidden`),e.forEach(e=>{let n=document.createElement(`div`);n.className=`user-row`;let r=(e.username||`?`).charAt(0).toUpperCase(),i=`role-${(e.role||`user`).toLowerCase()}`;n.innerHTML=`
+                <div class="user-avatar">${r}</div>
+                <div class="user-info">
+                    <span class="name">${e.username}</span>
+                    <span class="sub">Requested on ${new Date(e.created_at).toLocaleDateString()}</span>
+                </div>
+                <div>
+                    <span class="role-badge ${i}">${e.role}</span>
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">
+                    ID: ${e.id.substring(0,8)}...
+                </div>
+                <div class="action-group">
+                    <button class="btn-action btn-reject" data-id="${e.id}">Decline</button>
+                    <button class="btn-action btn-approve" data-id="${e.id}">Approve</button>
+                </div>
+            `;let a=n.querySelector(`.btn-approve`),o=n.querySelector(`.btn-reject`);a.onclick=()=>l(`approve`,e.id,e.username),o.onclick=()=>l(`reject`,e.id,e.username),t.appendChild(n)})}async function l(t,n,i){let a=t===`approve`?`Are you sure you want to approve ${i}?`:`Are you sure you want to decline ${i}? This will remove the request.`;if(confirm(a)){r.classList.remove(`hidden`);try{let n=JSON.parse(localStorage.getItem(`sas_user_data`)||`{}`),r=new URLSearchParams;r.append(`action`,t===`approve`?`approveUser`:`rejectUser`),r.append(`username`,n.username),r.append(`token`,n.token),r.append(`targetUsername`,i),r.append(`portalUser`,o);let a=await(await fetch(e,{method:`POST`,body:r})).json();a.success?(u(`${i} ${t===`approve`?`approved`:`declined`} successfully`,`success`),s()):u(a.message||`Failed to ${t} user`,`error`)}catch(e){console.error(e),u(`Network error`,`error`)}finally{r.classList.add(`hidden`)}}}function u(e,t=`info`){let n=document.getElementById(`toast-container`),r=document.createElement(`div`);r.className=`toast toast-${t}`,r.innerHTML=`
+            <i class='bx ${t===`success`?`bx-check-circle`:`bx-error-circle`}'></i>
+            <span>${e}</span>
+        `,n.appendChild(r),setTimeout(()=>{r.style.opacity=`0`,setTimeout(()=>r.remove(),300)},3e3)}a.onclick=s,s()})();
