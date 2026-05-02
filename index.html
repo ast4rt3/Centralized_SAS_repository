@@ -6,6 +6,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#003366">
   <title>SAS Portal</title>
+  
+  <!-- Security Headers -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https: wss:;">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+
   <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -32,6 +38,61 @@
     //       .catch(err => console.warn('SW registration failed:', err));
     //   });
     // }
+  </script>
+
+  <!-- FAILSAFE (KILL SWITCH) INTERCEPTOR -->
+  <script>
+    (function() {
+      const originalFetch = window.fetch;
+      window.fetch = async function(...args) {
+        try {
+          const response = await originalFetch.apply(this, args);
+          const clone = response.clone();
+          clone.json().then(data => {
+            if (data && data.lockdown === true) {
+              triggerEmergencyLockdown();
+            }
+          }).catch(e => { /* Ignore parsing errors */ });
+          return response;
+        } catch (err) {
+          throw err;
+        }
+      };
+
+      window.triggerEmergencyLockdown = function() {
+        console.error("SYSTEM COMPROMISED - INITIATING LOCKDOWN");
+        localStorage.clear();
+        sessionStorage.clear();
+        
+        let screen = document.getElementById('lockdown-screen');
+        if (!screen) {
+          screen = document.createElement('div');
+          screen.id = 'lockdown-screen';
+          screen.innerHTML = `
+            <div style="text-align: center; color: white; padding: 40px; border-radius: 20px; background: rgba(15, 23, 42, 0.9); border: 2px solid #ef4444;">
+              <h1 style="color: #ef4444; font-size: 3rem; margin-bottom: 20px;"><i class='bx bx-shield-x'></i> SYSTEM LOCKDOWN</h1>
+              <p style="font-size: 1.2rem; max-width: 600px;">The system has been placed in an emergency offline mode by an administrator.</p>
+              <p style="font-size: 1rem; color: #94a3b8; margin-top: 20px;">All sessions have been terminated. Please contact IT support.</p>
+            </div>
+          `;
+          Object.assign(screen.style, {
+            position: 'fixed', top: '0', left: '0', width: '100vw', height: '100vh',
+            backgroundColor: '#020617', display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center', zIndex: '999999'
+          });
+          document.body.appendChild(screen);
+        }
+        
+        // Hide main app elements
+        const app = document.getElementById('app-container');
+        if (app) app.style.display = 'none';
+        const landing = document.getElementById('landing-page');
+        if (landing) landing.style.display = 'none';
+        
+        // Push state to prevent back navigation (optional)
+        history.pushState(null, null, location.href);
+      };
+    })();
   </script>
 
 
@@ -1938,6 +1999,6 @@ body:has(#messages.active),
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
   </style>
 
-  <script src="env.js?v=13.1"></script>
+  <script src="env.js" type="module"></script>
   <script src="src/main.js" type="module"></script>
 </html>

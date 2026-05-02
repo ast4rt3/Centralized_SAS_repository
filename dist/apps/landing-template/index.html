@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Affairs and Services Portal</title>
+  <!-- Using Google Fonts for modern typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Boxicons for generic icons -->
+  <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+  <!-- Minimalist custom CSS -->
+  <link rel="stylesheet" crossorigin href="/assets/landingTemplate-BO_JxTP6.css">
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <div class="nav-logo">
+        <!-- Logo Placeholder -->
+        <div class="logo-placeholder"></div>
+        <span class="logo-text">SAS Portal</span>
+      </div>
+      
+      <!-- Mobile Menu Toggle -->
+      <button class="mobile-toggle" aria-label="Toggle Navigation">
+        <i class='bx bx-menu'></i>
+      </button>
+
+      <ul class="nav-links">
+        <li><a href="#home" class="active">Home</a></li>
+        <li><a href="#services">Core Services</a></li>
+        <li><a href="#activities">Activity Gallery</a></li>
+        <li><a href="#resources">Resources</a></li>
+      </ul>
+      
+      <div class="nav-actions">
+        <!-- Login Button redirects to the login view -->
+        <a href="../../index.html" class="btn-login" id="nav-login-btn">
+          <i class='bx bx-log-in-circle'></i> Login
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <header id="home" class="hero">
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <h1 class="hero-headline">Empowering Student Success</h1>
+      <p class="hero-subtext">
+        Welcome to the official portal for Student Affairs and Services. We are dedicated to providing holistic support, fostering growth, and documenting student life activities.
+      </p>
+      <div class="hero-actions">
+        <a href="#services" class="btn-primary">View Services</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Core Services Overview (Grid Layout) -->
+  <section id="services" class="section services-section">
+    <div class="section-container">
+      <div class="section-header">
+        <h2>Core Services</h2>
+        <p>Comprehensive support tailored for your academic and personal journey.</p>
+      </div>
+
+      <div class="services-grid">
+        <!-- Service Card 1 -->
+        <div class="service-card">
+          <div class="service-icon"><i class='bx bx-user-voice'></i></div>
+          <h3 class="service-title">Guidance & Counseling</h3>
+          <p class="service-desc">
+            Professional counseling, psychological testing, and dedicated support to help you navigate academic and personal challenges.
+          </p>
+        </div>
+
+        <!-- Service Card 2 -->
+        <div class="service-card">
+          <div class="service-icon"><i class='bx bx-check-shield'></i></div>
+          <h3 class="service-title">Student Discipline</h3>
+          <p class="service-desc">
+            Ensuring a safe, respectful, and orderly campus environment through fair implementation of institutional policies.
+          </p>
+        </div>
+
+        <!-- Service Card 3 -->
+        <div class="service-card">
+          <div class="service-icon"><i class='bx bx-award'></i></div>
+          <h3 class="service-title">Scholarships</h3>
+          <p class="service-desc">
+            Information and application processes for financial aid, grants, and merit-based scholarship programs.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Activity Documentation Feed -->
+  <section id="activities" class="section activities-section">
+    <div class="section-container">
+      <div class="section-header">
+        <h2>Recent Activities</h2>
+        <p>A gallery documenting vibrant student life and institutional events.</p>
+      </div>
+
+      <div class="activities-grid">
+        <!-- Activity Card 1 -->
+        <article class="activity-card">
+          <div class="activity-img-placeholder">
+            <i class='bx bx-image-alt'></i>
+          </div>
+          <div class="activity-content">
+            <div class="activity-meta">
+              <span class="activity-date"><i class='bx bx-calendar'></i> Oct 15, 2026</span>
+            </div>
+            <h3 class="activity-title">Leadership Training Seminar</h3>
+            <p class="activity-excerpt">
+              A 3-day workshop focused on developing communication skills and effective team management among student council officers.
+            </p>
+          </div>
+        </article>
+
+        <!-- Activity Card 2 -->
+        <article class="activity-card">
+          <div class="activity-img-placeholder">
+            <i class='bx bx-image-alt'></i>
+          </div>
+          <div class="activity-content">
+            <div class="activity-meta">
+              <span class="activity-date"><i class='bx bx-calendar'></i> Sep 28, 2026</span>
+            </div>
+            <h3 class="activity-title">Intramurals Opening</h3>
+            <p class="activity-excerpt">
+              The annual sports festival kicked off with a parade of colors, encouraging camaraderie and physical wellness.
+            </p>
+          </div>
+        </article>
+
+        <!-- Activity Card 3 -->
+        <article class="activity-card">
+          <div class="activity-img-placeholder">
+            <i class='bx bx-image-alt'></i>
+          </div>
+          <div class="activity-content">
+            <div class="activity-meta">
+              <span class="activity-date"><i class='bx bx-calendar'></i> Aug 12, 2026</span>
+            </div>
+            <h3 class="activity-title">Mental Health Awareness Week</h3>
+            <p class="activity-excerpt">
+              Interactive booths, seminars, and counseling sessions organized to destigmatize mental health issues on campus.
+            </p>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-brand">
+        <div class="logo-placeholder small"></div>
+        <span>SAS Portal</span>
+      </div>
+      <div class="footer-links">
+        <a href="#">Privacy Policy</a>
+        <a href="#">Terms of Service</a>
+        <a href="#">Institutional Link</a>
+      </div>
+      <div class="footer-contact">
+        <p><i class='bx bx-envelope'></i> sas@institution.edu</p>
+        <p><i class='bx bx-phone'></i> (123) 456-7890</p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2026 Student Affairs and Services. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <!-- Basic interactions for mobile nav -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const toggle = document.querySelector('.mobile-toggle');
+      const navLinks = document.querySelector('.nav-links');
+
+      toggle.addEventListener('click', () => {
+        navLinks.classList.toggle('active');
+        const icon = toggle.querySelector('i');
+        if (navLinks.classList.contains('active')) {
+          icon.classList.replace('bx-menu', 'bx-x');
+        } else {
+          icon.classList.replace('bx-x', 'bx-menu');
+        }
+      });
+      
+      // Update app.js logic placeholder 
+      // The instruction "ensure that when opening the site it goes to the landing page directly not on the log in"
+      // requires logic modification in the main `app.js` file and `index.html` file of the central repository.
+      // This template serves as the landing page itself.
+    });
+  </script>
+</body>
+</html>
