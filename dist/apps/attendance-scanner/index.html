@@ -941,6 +941,65 @@
             font-weight: 700;
             text-transform: uppercase;
         }
+
+        /* In-Scanner Event Switcher */
+        .scanner-event-switcher {
+            background: #020617; /* Deeper dark */
+            color: var(--nbsc-gold);
+            padding: 10px 15px 10px 60px;
+            font-size: 0.72rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            border-bottom: 1px solid rgba(255,255,255,0.15);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            transition: background 0.2s;
+        }
+
+        .scanner-event-switcher:active {
+            background: #0f172a;
+        }
+
+        .switcher-content {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        .switcher-label {
+            font-size: 0.55rem;
+            opacity: 0.5;
+            letter-spacing: 0.5px;
+        }
+
+        #activeScannerEventName {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .scanner-options {
+            position: absolute;
+            top: 100%;
+            left: 10px;
+            right: 10px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: none;
+            flex-direction: column;
+            z-index: 2000;
+            overflow: hidden;
+            animation: slideDown 0.2s ease-out;
+        }
+
+        .is-open-scanner .scanner-options {
+            display: flex;
+        }
     </style>
 
     <script src="https://unpkg.com/html5-qrcode"></script>
@@ -1162,8 +1221,15 @@
                 <button onclick="logoutScanner()"
                     style="margin-left:auto; background:#fee2e2; color:#dc2626; border:none; padding:6px 10px; border-radius:6px; font-size:0.6rem; font-weight:800; cursor:pointer;">LOGOUT</button>
             </div>
-            <div style="background: var(--nbsc-dark); color: var(--nbsc-gold); text-align: center; padding: 6px 6px 6px 60px; font-size: 0.75rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                EVENT: <span id="activeScannerEventName">NO EVENT SELECTED</span>
+            <div class="scanner-event-switcher" id="scannerEventDropdown" onclick="toggleScannerEventDropdown()">
+                <div class="switcher-content">
+                    <span class="switcher-label">Scanning Event:</span>
+                    <span id="activeScannerEventName">NO EVENT SELECTED</span>
+                </div>
+                <i class='bx bx-chevron-down switcher-icon'></i>
+                <div class="scanner-options" id="scannerOptionsList">
+                    <!-- Options cloned here via JS -->
+                </div>
             </div>
             <div id="windowStatus" class="status-loading">
                 <div class="status-dot loading" id="statusDot"></div>
@@ -1583,7 +1649,8 @@
             }
 
             try {
-                const res = await callBackend("getWindowStatus", {});
+                // Use Supabase directly instead of GAS
+                const res = await getSupabaseWindowStatus();
                 if (res) {
                     currentWindowInfo = res;
                     localStorage.setItem('cachedWindowStatus', JSON.stringify(res));
@@ -1597,6 +1664,50 @@
                     if (text) text.innerText = 'Offline: Check Connection';
                 }
             }
+        }
+
+        async function getSupabaseWindowStatus() {
+            const client = await initSupabase();
+            if (!client) return { isOpen: false };
+            
+            // Filter by the currently selected event
+            const eventId = localStorage.getItem('scannerEventId');
+            if (!eventId) return { isOpen: false };
+            
+            const now = new Date();
+            const todayStr = now.toLocaleDateString('en-CA');
+            const timeStr = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0') + ":00";
+            
+            const { data, error } = await client
+                .from('sas_schedules')
+                .select('*')
+                .eq('date', todayStr)
+                .eq('event_id', eventId)
+                .eq('is_active', true);
+                
+            if (error || !data) return { isOpen: false };
+
+            const active = data.find(w => {
+                const start = w.start_time;
+                const end = w.end_time;
+                return (start <= end) ? (timeStr >= start && timeStr <= end) : (timeStr >= start || timeStr <= end);
+            });
+
+            if (active) {
+                return { isOpen: true, type: active.label, id: active.id, start: active.start_time, end: active.end_time };
+            }
+
+            // Find next upcoming
+            const next = data
+                .filter(w => w.start_time > timeStr)
+                .sort((a, b) => a.start_time.localeCompare(b.start_time))[0];
+
+            return { 
+                isOpen: false, 
+                nextType: next ? next.label : null, 
+                nextStart: next ? next.start_time : null,
+                nextEnd: next ? next.end_time : null
+            };
         }
 
         function updateWindowUI(res) {
@@ -1894,12 +2005,8 @@
             console.log(`[SCAN] Request ${requestId} starting for token: ${token}`);
 
             try {
-                const response = await callBackend("checkTicket", {
-                    scannedID: token,
-                    scannerUser: scannerUser,
-                    scanMode: scanMode,
-                    requestId: requestId // Pass to backend for logging
-                });
+                // Use Supabase directly instead of GAS
+                const response = await checkTicketSupabase(token, scannerUser);
                 console.log(`[SCAN] Request ${requestId} finished. Status: ${response.status}`);
 
                 let colorClass = response.status === "success" ? "success" : response.status === "warning" ? "warning" : "error";
@@ -1937,6 +2044,73 @@
                 const errMsg = e.message || e.toString() || "Could not reach server.";
                 resultDiv.className = "error";
                 resultDiv.innerHTML = `<i class='bx bx-wifi-off result-icon'></i><h3>Connection Failure</h3><p>${errMsg}</p><button class=\"scan-btn-next\" onclick=\"resetScanner()\">RETRY SCAN</button>`;
+            }
+        }
+
+        async function checkTicketSupabase(scannedID, scannerUser) {
+            try {
+                const client = await initSupabase();
+                if (!client) throw new Error("Supabase not initialized");
+
+                // 1. Find student in masterlist
+                const idStr = String(scannedID || "").trim();
+                const { data: students, error: studentError } = await client
+                    .from('NBSC_masterlist')
+                    .or(`ID.eq.${idStr},qr_token.eq.${idStr}`)
+                    .select('*');
+
+                if (studentError) throw studentError;
+
+                if (!students || students.length === 0) {
+                    // Record rejected scan
+                    await client.from('rejected_scans').insert({
+                        scanned_id: idStr,
+                        scanner_user: scannerUser,
+                        original_timestamp: new Date().toISOString(),
+                        status: "Rejected (Live)",
+                        notes: "Student not found in NBSC_masterlist during live scan."
+                    });
+                    return { status: "error", message: "Student not found in Masterlist." };
+                }
+
+                const student = students[0];
+                const winRes = await getSupabaseWindowStatus();
+                
+                if (!winRes.isOpen) return { status: "error", message: "🕒 WINDOW CLOSED" };
+
+                // 2. Check for double scan
+                const { data: existing, error: logError } = await client
+                    .from('sas_attendance_logs')
+                    .select('scanned_at')
+                    .eq('student_id', student.ID)
+                    .eq('schedule_id', winRes.id);
+
+                if (logError) throw logError;
+
+                if (existing && existing.length > 0) {
+                    const recordedAt = new Date(existing[0].scanned_at);
+                    if ((new Date() - recordedAt) < 5000) {
+                        return { status: "success", message: "✅ RECORDED: " + student.Name, studentName: student.Name, windowType: winRes.type };
+                    }
+                    return { status: "error", message: "❌ ALREADY RECORDED (Today at " + recordedAt.toLocaleTimeString() + ")" };
+                }
+
+                // 3. Record attendance
+                const { error: insertError } = await client
+                    .from('sas_attendance_logs')
+                    .insert({
+                        student_id: student.ID,
+                        schedule_id: winRes.id,
+                        scanner_user: scannerUser,
+                        status: "present",
+                        scanned_at: new Date().toISOString()
+                    });
+
+                if (insertError) throw insertError;
+
+                return { status: "success", studentName: student.Name, message: "✅ " + winRes.type + " RECORDED", windowType: winRes.type };
+            } catch (e) {
+                return { status: "error", message: "Supabase Error: " + e.message };
             }
         }
 
@@ -2019,33 +2193,88 @@
             log("Connecting to server...");
 
             const remaining = [...queue];
-            while (remaining.length > 0) {
-                const chunk = remaining.splice(0, CHUNK_SIZE);
-                const formatted = chunk.map(item => ({
-                    scannedID: item.code,
-                    timestamp: item.timestamp,
-                    isFlagged: item.isFlagged || false,
-                    reason: item.reason || "",
-                    offlineName: item.name,
-                    needsValidation: item.name === "UNKNOWN STUDENT"
-                }));
-                chunk.forEach(item => log("Uploading: " + item.name + (item.isFlagged ? " [FLAG]" : "")));
+            try {
+                const client = await initSupabase();
+                if (!client) throw new Error("Supabase not initialized");
+                
+                const eventId = localStorage.getItem('scannerEventId');
+                
+                // Fetch Masterlist once for efficient lookup
+                const { data: masterList } = await client.from('NBSC_masterlist').select('ID,Name,qr_token');
+                
+                // Fetch active schedules for this event
+                const { data: allSchedules } = await client.from('sas_schedules').select('*').eq('event_id', eventId).eq('is_active', true);
 
-                try {
-                    const eventId = localStorage.getItem('scannerEventId');
-                    const res = await callBackend("syncOfflineScans", { scansArray: formatted, scannerUser, eventId });
-                    if (res.status !== "success") throw new Error(res.message || "Server error");
-                    uploaded += chunk.length;
-                    const pct = Math.round((uploaded / total) * 100);
-                    document.getElementById('syncProgressBar').style.width = pct + "%";
-                    document.getElementById('progressText').innerText = pct + "% — " + uploaded + " / " + total;
-                    log("Chunk complete (" + uploaded + "/" + total + ")");
-                } catch (err) {
-                    log("Error: " + err);
-                    document.getElementById('modalCloseBtn').style.display = 'block';
-                    document.getElementById('modal-title').innerText = "Sync Paused";
-                    return;
+                while (remaining.length > 0) {
+                    const chunk = remaining.splice(0, CHUNK_SIZE);
+                    
+                    for (const item of chunk) {
+                        log("Syncing: " + item.name);
+                        
+                        const scanTime = new Date(item.timestamp);
+                        const scanDateStr = scanTime.toLocaleDateString('en-CA');
+                        const scanTimeStr = scanTime.getHours().toString().padStart(2, '0') + ":" + 
+                                            scanTime.getMinutes().toString().padStart(2, '0') + ":00";
+
+                        // 1. Find Schedule Window
+                        const schedule = (allSchedules || []).find(s => {
+                            if (s.date !== scanDateStr) return false;
+                            const start = s.start_time;
+                            const end = s.end_time;
+                            return (start <= end) ? (scanTimeStr >= start && scanTimeStr <= end) : (scanTimeStr >= start || scanTimeStr <= end);
+                        });
+
+                        if (!schedule) {
+                            await client.from('rejected_scans').insert({
+                                scanned_id: item.code,
+                                scanner_user: scannerUser,
+                                original_timestamp: item.timestamp,
+                                status: "Rejected",
+                                notes: "Out of Window: Scanned at " + scanTimeStr
+                            });
+                            continue;
+                        }
+
+                        // 2. Find Student
+                        const searchToken = item.code.toLowerCase();
+                        const student = (masterList || []).find(s => 
+                            String(s.ID || "").toLowerCase() === searchToken || 
+                            String(s.qr_token || "").toLowerCase() === searchToken
+                        );
+
+                        if (student) {
+                            // Check for double scan
+                            const { data: existing } = await client.from('sas_attendance_logs').select('id').eq('student_id', student.ID).eq('schedule_id', schedule.id);
+                            if (!existing || existing.length === 0) {
+                                await client.from('sas_attendance_logs').insert({
+                                    student_id: student.ID,
+                                    schedule_id: schedule.id,
+                                    scanner_user: scannerUser,
+                                    status: "present",
+                                    scanned_at: item.timestamp
+                                });
+                            }
+                        } else {
+                            await client.from('rejected_scans').insert({
+                                scanned_id: item.code,
+                                scanner_user: scannerUser,
+                                original_timestamp: item.timestamp,
+                                status: "Rejected",
+                                notes: "Student not found in masterlist during offline sync."
+                            });
+                        }
+                        
+                        uploaded++;
+                        const pct = Math.round((uploaded / total) * 100);
+                        document.getElementById('syncProgressBar').style.width = pct + "%";
+                        document.getElementById('progressText').innerText = pct + "% — " + uploaded + " / " + total;
+                    }
                 }
+            } catch (err) {
+                log("Error: " + err.message);
+                document.getElementById('modalCloseBtn').style.display = 'block';
+                document.getElementById('modal-title').innerText = "Sync Failed";
+                return;
             }
 
             localStorage.removeItem('nbsc_offline_scans');
@@ -2384,8 +2613,9 @@
             }
 
             try {
-                const events = await callBackend("getAvailableEvents", {});
-                if (events) {
+                // Use Supabase directly instead of GAS
+                const events = await getSupabaseEvents();
+                if (events && events.length > 0) {
                     localStorage.setItem('cachedScannerEvents', JSON.stringify(events));
                     renderEventOptions(events, list, label, hiddenInput);
                 }
@@ -2397,48 +2627,83 @@
             }
         }
 
+        async function getSupabaseEvents() {
+            const client = await initSupabase();
+            if (!client) return [];
+            const { data, error } = await client
+                .from('sas_events')
+                .select('*')
+                .order('event_date', { ascending: true })
+                .limit(20);
+            if (error) { console.error("Supabase Events Error:", error); return []; }
+            return data || [];
+        }
+
+        function toggleCustomDropdown() {
+            document.getElementById('customEventDropdown').classList.toggle('is-open');
+        }
+
+        function toggleScannerEventDropdown() {
+            document.getElementById('scannerEventDropdown').classList.toggle('is-open-scanner');
+        }
+
         function renderEventOptions(events, list, label, hiddenInput) {
             if (!events || events.length === 0) {
                 list.innerHTML = '<div class="custom-option">No upcoming events</div>';
                 return;
             }
 
-            list.innerHTML = events.map(e => `
-                <div class="custom-option" data-id="${e.id}" data-name="${e.name}" onclick="selectEventOption('${e.id}', '${e.name.replace(/'/g, "\\'")}')">
+            const optionsHTML = events.map(e => `
+                <div class="custom-option" data-id="${e.id}" data-name="${e.name}" onclick="event.stopPropagation(); selectEventOption('${e.id}', '${e.name.replace(/'/g, "\\'")}')">
                     ${e.name} <br> <small style="opacity: 0.6; font-size: 0.65rem;">${e.event_date}</small>
                 </div>
             `).join('');
+
+            // Inject into main list
+            list.innerHTML = optionsHTML;
+            
+            // Also inject into scanner list if it exists
+            const scannerList = document.getElementById('scannerOptionsList');
+            if (scannerList) scannerList.innerHTML = optionsHTML;
 
             const savedId = localStorage.getItem('scannerEventId');
             const savedName = localStorage.getItem('scannerEventName');
 
             if (savedId && events.some(e => e.id === savedId)) {
-                hiddenInput.value = savedId;
-                label.innerText = savedName;
-                const option = list.querySelector(`[data-id="${savedId}"]`);
-                if (option) option.classList.add('is-selected');
+                syncEventUI(savedId, savedName);
             }
         }
 
         function selectEventOption(id, name) {
-            const label = document.getElementById('selectedEventLabel');
-            const hiddenInput = document.getElementById('eventSelector');
-            const list = document.getElementById('customOptionsList');
-
-            hiddenInput.value = id;
-            label.innerText = name;
-            
-            // Mark as selected
-            list.querySelectorAll('.custom-option').forEach(opt => opt.classList.remove('is-selected'));
-            const selection = list.querySelector(`[data-id="${id}"]`);
-            if (selection) selection.classList.add('is-selected');
-
             // Save to localStorage
             localStorage.setItem('scannerEventId', id);
             localStorage.setItem('scannerEventName', name);
 
-            // Close
-            toggleCustomDropdown();
+            // Sync all UI components
+            syncEventUI(id, name);
+
+            // Close all potential dropdowns
+            document.getElementById('customEventDropdown').classList.remove('is-open');
+            document.getElementById('scannerEventDropdown').classList.remove('is-open-scanner');
+            
+            // Refresh window status immediately for the new event
+            checkWindowStatus();
+        }
+
+        function syncEventUI(id, name) {
+            const homeLabel = document.getElementById('selectedEventLabel');
+            const scannerLabel = document.getElementById('activeScannerEventName');
+            const hiddenInput = document.getElementById('eventSelector');
+            
+            if (homeLabel) homeLabel.innerText = name;
+            if (scannerLabel) scannerLabel.innerText = name;
+            if (hiddenInput) hiddenInput.value = id;
+
+            // Update selection state in all lists
+            document.querySelectorAll('.custom-option').forEach(opt => {
+                if (opt.dataset.id === id) opt.classList.add('is-selected');
+                else opt.classList.remove('is-selected');
+            });
         }
 
         window.addEventListener('DOMContentLoaded', () => {
