@@ -1332,6 +1332,8 @@
                 throw new Error("Backend Configuration Missing");
             }
 
+            console.log(`[Backend] Calling ${action}...`);
+
             try {
                 // We use a robust JSONP-based fetch for GAS because it reliably handles cross-origin redirects
                 // and works even when CORS headers are finicky on the Google side.
@@ -1354,10 +1356,14 @@
                         payload: JSON.stringify(params || {})
                     });
                     
-                    script.src = gasUrl + (gasUrl.includes('?') ? '&' : '?') + queryParams.toString();
+                    const finalUrl = gasUrl + (gasUrl.includes('?') ? '&' : '?') + queryParams.toString();
+                    script.src = finalUrl;
+                    
                     script.onerror = () => {
                         delete window[callbackName];
-                        reject(new Error("GAS Connection Failed. Please check if the script is deployed to 'Anyone'."));
+                        // Log the failing URL to help debug
+                        console.error(`[Backend] Script failed to load: ${finalUrl}`);
+                        reject(new Error("GAS Connection Failed. If other apps work, please verify the script is deployed to 'Anyone' (Public)."));
                     };
                     
                     document.body.appendChild(script);
@@ -1366,6 +1372,8 @@
                     setTimeout(() => {
                         if (window[callbackName]) {
                             delete window[callbackName];
+                            const script = document.getElementById(callbackName);
+                            if (script) script.remove();
                             reject(new Error("Backend timeout (15s)"));
                         }
                     }, 15000);
