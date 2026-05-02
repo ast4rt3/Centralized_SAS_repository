@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
+import { viteStaticCopy } from 'vite-plugin-static-copy';
 
 export default defineConfig({
   base: '/Centralized_SAS_repository/',
@@ -17,5 +18,16 @@ export default defineConfig({
         scheduleManager: resolve(__dirname, 'apps/schedule-manager/index.html')
       }
     }
-  }
+  },
+  plugins: [
+    viteStaticCopy({
+      targets: [
+        { src: 'systems.json', dest: '.' },
+        { src: 'version.json', dest: '.' },
+        { src: 'manifest.json', dest: '.' },
+        { src: 'serviceWorker.js', dest: '.' },
+        { src: 'assets/*', dest: 'assets' }
+      ]
+    })
+  ]
 });

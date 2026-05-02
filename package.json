@@ -13,6 +13,7 @@
   },
   "devDependencies": {
     "gitnexus": "^1.6.2",
-    "vite": "^8.0.10"
+    "vite": "^8.0.10",
+    "vite-plugin-static-copy": "^4.1.0"
   }
 }
