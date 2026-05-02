@@ -117,7 +117,7 @@
         @media (max-width: 600px) { .header { padding: 16px; } .container { padding: 16px; } .actions-bar { flex-direction: column; align-items: stretch; } }
     </style>
   <script type="module" crossorigin src="/Centralized_SAS_repository/assets/modulepreload-polyfill-iJ-6Fn-a.js"></script>
-  <script type="module" crossorigin src="/Centralized_SAS_repository/assets/app-bridge-CQlIn24x.js"></script>
+  <script type="module" crossorigin src="/Centralized_SAS_repository/assets/app-bridge-B65APBmf.js"></script>
 </head>
 <body>
     <div id="loadingOverlay">
@@ -253,12 +253,27 @@
             stats: document.getElementById('statsText')
         };
 
+        // Helper to wait for window.ENV to be populated by app-bridge
+        async function waitForEnv(timeout = 5000) {
+            if (window.ENV) return window.ENV;
+            return new Promise((resolve) => {
+                const start = Date.now();
+                const interval = setInterval(() => {
+                    if (window.ENV || (Date.now() - start) > timeout) {
+                        clearInterval(interval);
+                        resolve(window.ENV);
+                    }
+                }, 100);
+            });
+        }
+
         async function init() {
-            if (!window.ENV?.SUPABASE_URL || !window.ENV?.SUPABASE_ANON_KEY) {
-                alert("Missing Supabase credentials");
+            const env = await waitForEnv();
+            if (!env?.SUPABASE_URL || !env?.SUPABASE_ANON_KEY) {
+                alert("Missing Supabase credentials. Ensure env.js is configured correctly.");
                 return;
             }
-            supabaseClient = window.supabase.createClient(window.ENV.SUPABASE_URL, window.ENV.SUPABASE_ANON_KEY);
+            supabaseClient = window.supabase.createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
             els.eventForm.addEventListener('submit', handleEventFormSubmit);
             els.windowForm.addEventListener('submit', handleWindowFormSubmit);
             

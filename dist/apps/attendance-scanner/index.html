@@ -1083,7 +1083,7 @@
         }
     </style>
   <script type="module" crossorigin src="/Centralized_SAS_repository/assets/modulepreload-polyfill-iJ-6Fn-a.js"></script>
-  <script type="module" crossorigin src="/Centralized_SAS_repository/assets/app-bridge-CQlIn24x.js"></script>
+  <script type="module" crossorigin src="/Centralized_SAS_repository/assets/app-bridge-B65APBmf.js"></script>
 </head>
 
 <body>
@@ -1295,59 +1295,82 @@
         let windowStatusInterval;
         let currentWindowInfo = null;
 
-        // ── Backend helper — replaces ALL google.script.run calls ──
-        // ── Supabase Initialization ──
+        // --- Backend helper — replaces ALL google.script.run calls ---
         let supabaseClient = null;
+
+        // Helper to wait for window.ENV to be populated by app-bridge
+        async function waitForEnv(timeout = 5000) {
+            if (window.ENV) return window.ENV;
+            return new Promise((resolve) => {
+                const start = Date.now();
+                const interval = setInterval(() => {
+                    if (window.ENV || (Date.now() - start) > timeout) {
+                        clearInterval(interval);
+                        resolve(window.ENV);
+                    }
+                }, 100);
+            });
+        }
+
         async function initSupabase() {
             if (supabaseClient) return supabaseClient;
-            if (window.ENV && window.ENV.SUPABASE_URL && window.ENV.SUPABASE_ANON_KEY) {
-                supabaseClient = window.supabase.createClient(window.ENV.SUPABASE_URL, window.ENV.SUPABASE_ANON_KEY);
+            const env = await waitForEnv();
+            if (env && env.SUPABASE_URL && env.SUPABASE_ANON_KEY) {
+                supabaseClient = window.supabase.createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
                 return supabaseClient;
             }
             console.error("Supabase credentials missing in env.js");
             return null;
         }
 
-        // ── Backend helper — Now Redirecting to GAS for Logic ──
+        // --- Backend helper — Now Redirecting to GAS for Logic ---
         async function callBackend(action, params) {
-            const gasUrl = window.ENV?.BACKEND_GAS_URL;
+            const env = await waitForEnv();
+            const gasUrl = env?.BACKEND_GAS_URL;
+            
             if (!gasUrl) {
                 console.error("BACKEND_GAS_URL missing in env.js");
                 throw new Error("Backend Configuration Missing");
             }
 
             try {
-                const response = await fetch(gasUrl, {
-                    method: 'POST',
-                    mode: 'no-cors', // Use no-cors for GAS redirects
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify({ action, ...params })
-                });
-
-                // Since 'no-cors' prevents reading the response body directly,
-                // we use a JSONP-like workaround or standard fetch if CORS is handled.
-                // However, the best way for SAS is a simple fetch with the action.
-                
-                // FALLBACK for GAS fetching (Modern SAS Pattern)
-                const finalRes = await new Promise((resolve, reject) => {
+                // We use a robust JSONP-based fetch for GAS because it reliably handles cross-origin redirects
+                // and works even when CORS headers are finicky on the Google side.
+                return await new Promise((resolve, reject) => {
                     const callbackName = 'gas_callback_' + Math.floor(Math.random() * 1000000);
                     window[callbackName] = (res) => {
                         delete window[callbackName];
+                        // Remove script tag from DOM
+                        const script = document.getElementById(callbackName);
+                        if (script) script.remove();
                         resolve(res);
                     };
 
                     const script = document.createElement('script');
+                    script.id = callbackName;
+                    
                     const queryParams = new URLSearchParams({
                         action: action,
                         callback: callbackName,
                         payload: JSON.stringify(params || {})
                     });
+                    
                     script.src = gasUrl + (gasUrl.includes('?') ? '&' : '?') + queryParams.toString();
-                    script.onerror = () => reject(new Error("GAS Connection Failed"));
+                    script.onerror = () => {
+                        delete window[callbackName];
+                        reject(new Error("GAS Connection Failed. Please check if the script is deployed to 'Anyone'."));
+                    };
+                    
                     document.body.appendChild(script);
+                    
+                    // Cleanup timeout
+                    setTimeout(() => {
+                        if (window[callbackName]) {
+                            delete window[callbackName];
+                            reject(new Error("Backend timeout (15s)"));
+                        }
+                    }, 15000);
                 });
-
-                return finalRes;
             } catch (err) {
                 console.error("Backend Call Failed:", err);
                 throw err;
