@@ -41,8 +41,9 @@ export default defineConfig({
         numbersToExpressions: true,
         simplify: true,
         stringArray: true,
-        stringArrayEncoding: ['base64'],
-        stringArrayThreshold: 1
+        stringArrayEncoding: ['rc4'],
+        stringArrayThreshold: 1,
+        renameProperties: false
       }
     })
   ]
