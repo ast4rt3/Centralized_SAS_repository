@@ -191,6 +191,10 @@ jobs:
         run: |
           npm ci
           npm run build
+          echo "=== PRODUCTION READINESS CHECK ==="
+          test -f dist/env.js && echo "✅ env.js present" || { echo "❌ env.js MISSING"; exit 1; }
+          test -f dist/src/utils/app-bridge.js && echo "✅ app-bridge.js present" || { echo "❌ app-bridge.js MISSING"; exit 1; }
+          test -f dist/apps/account-manager/account_manager.js && echo "✅ account_manager.js present" || { echo "❌ account_manager.js MISSING"; exit 1; }
           echo "=== BUILD COMPLETE: Listing dist contents ==="
           ls -R dist
 
