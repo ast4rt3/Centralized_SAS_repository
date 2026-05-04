@@ -22,7 +22,7 @@
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
   <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
   <link rel="stylesheet" href="styles.css?v=13.0">
   <script>
@@ -141,9 +141,9 @@
 }
 
 /* Force parent containers to match when messenger is active */
-body:has(#messages.active),
-.content:has(#messages.active),
-.page-content:has(#messages.active) {
+body.messenger-active,
+.content.messenger-active,
+.page-content.messenger-active {
     background: #0f172a !important;
     padding: 0 !important;
     margin: 0 !important;

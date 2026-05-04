@@ -829,7 +829,7 @@ sorted.forEach(user => {
       bubble.className = `msg-bubble ${isMe ? 'msg-bubble-me' : 'msg-bubble-other'}`;
       const time = data.timestamp ? new Date(data.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
       bubble.innerHTML = `
-        <div class="msg-text">${data.text || ''}</div>
+        <div class="msg-text">${escapeHtml(data.text || '')}</div>
         <span class="msg-time">${time}</span>
       `;
       messagesDiv.appendChild(bubble);
@@ -1475,6 +1475,15 @@ document.addEventListener('DOMContentLoaded', () => {
       window.activeMessengerUser = null;
     }
     
+    // Manage body class for special layouts (like messenger)
+    if (pageId === 'messages') {
+      document.body.classList.add('messenger-active');
+      document.querySelectorAll('.content, .page-content').forEach(el => el.classList.add('messenger-active'));
+    } else {
+      document.body.classList.remove('messenger-active');
+      document.querySelectorAll('.content, .page-content').forEach(el => el.classList.remove('messenger-active'));
+    }
+
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     const page = pageId === 'home'
       ? homePage
