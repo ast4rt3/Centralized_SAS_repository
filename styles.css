@@ -32,6 +32,9 @@ html {
 
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
   --shadow-soft: 0 4px 15px rgba(0, 0, 0, 0.08);
+
+  /* Missing variable used in several components */
+  --border-color: var(--border);
 }
 
 /* Custom Scrollbar Styling - Global */
