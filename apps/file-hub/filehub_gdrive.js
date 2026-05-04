@@ -621,4 +621,14 @@ function formatBytes(bytes, decimals = 2) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
+// Expose functions to window for HTML onclick handlers
+window.closePreview = closePreview;
+window.openShareModal = openShareModal;
+window.closeShareModal = closeShareModal;
+window.confirmShare = confirmShare;
+window.deleteFile = deleteFile;
+window.selectUser = selectUser;
+window.showFileDetails = showFileDetails;
+window.previewFile = previewFile;
+
 
