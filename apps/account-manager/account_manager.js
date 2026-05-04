@@ -13,26 +13,64 @@
     async function fetchPendingUsers() {
         if (!BACKEND_GAS_URL) return;
         
-        const userData = JSON.parse(localStorage.getItem('sas_user_data') || '{}');
-        if (!userData.username || !userData.token) {
-            showToast("Session expired. Please log in again.", "error");
+        // 1. Get session data from URL (most reliable for iframes)
+        const urlParams = new URLSearchParams(window.location.search);
+        let username = urlParams.get('portalUser');
+        let token = urlParams.get('portalToken');
+        let source = "URL";
+
+        // 2. Fallback to storage
+        if (!username || !token) {
+            let rawData = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
+            
+            // If empty and in iframe, try to get from parent
+            if (!rawData && window.parent && window.parent !== window) {
+                try {
+                    rawData = window.parent.localStorage.getItem('sas_user_data') || 
+                              window.parent.sessionStorage.getItem('sas_user_data');
+                } catch (e) {
+                    console.warn("[AccountManager] Cannot access parent storage:", e);
+                }
+            }
+
+            const userData = JSON.parse(rawData || '{}');
+            username = username || userData.username;
+            token = token || userData.token;
+            source = "Storage";
+        }
+
+        if (!username) {
+            console.error("[AccountManager] Session missing. No username found.");
+            showToast("Session missing. Please re-login.", "error");
             return;
         }
 
-        loadingIndicator.classList.remove('hidden');
-        try {
-            const formData = new URLSearchParams();
-            formData.append('action', 'getPendingUsers');
-            formData.append('username', userData.username);
-            formData.append('token', userData.token);
-            formData.append('portalUser', portalUser);
+        if (!token) {
+            console.warn("[AccountManager] Token missing for user:", username, ". Proceeding with username-only auth fallback.");
+        } else {
+            console.log(`[AccountManager] Authenticated via ${source}: ${username}`);
+        }
 
-            const r = await fetch(BACKEND_GAS_URL, {
-                method: 'POST',
-                body: formData
-            });
-            const data = await r.json();
-            console.log("[AccountManager] Pending Users Data:", data);
+        const userData = { username, token: token || "" };
+        loadingIndicator.classList.remove('hidden');
+
+        try {
+            // 3. Try GET first (more reliable in GAS)
+            const fetchUrl = `${BACKEND_GAS_URL}?action=getPendingUsers&username=${encodeURIComponent(userData.username)}&token=${encodeURIComponent(userData.token)}`;
+            console.log("[AccountManager] Fetching via GET:", fetchUrl);
+            
+            const r = await fetch(fetchUrl);
+            const rawText = await r.text();
+            
+            let data;
+            try {
+                data = JSON.parse(rawText);
+            } catch (parseErr) {
+                console.error("[AccountManager] RAW Response (Not JSON):", rawText);
+                throw new Error("Server returned an invalid response. Check console for details.");
+            }
+
+            console.log("[AccountManager] Server Response:", data);
 
             if (data.success) {
                 renderUsers(data.users || []);
@@ -104,32 +142,61 @@
         });
     }
 
-    async function handleAction(action, userId, username) {
+    async function handleAction(action, userId, targetUsername) {
         const actionText = action === 'approve' ? 'Approving' : 'Declining';
         const confirmText = action === 'approve' 
-            ? `Are you sure you want to approve ${username}?`
-            : `Are you sure you want to decline ${username}? This will remove the request.`;
+            ? `Are you sure you want to approve ${targetUsername}?`
+            : `Are you sure you want to decline ${targetUsername}? This will remove the request.`;
 
         if (!confirm(confirmText)) return;
 
         loadingIndicator.classList.remove('hidden');
         try {
-            const userData = JSON.parse(localStorage.getItem('sas_user_data') || '{}');
+            // Get current admin session
+            const urlParams = new URLSearchParams(window.location.search);
+            let adminUsername = urlParams.get('portalUser');
+            let adminToken = urlParams.get('portalToken');
+
+            if (!adminUsername || !adminToken) {
+                let rawData = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
+                if (!rawData && window.parent && window.parent !== window) {
+                    try {
+                        rawData = window.parent.localStorage.getItem('sas_user_data') || 
+                                  window.parent.sessionStorage.getItem('sas_user_data');
+                    } catch (e) {}
+                }
+                const userData = JSON.parse(rawData || '{}');
+                adminUsername = adminUsername || userData.username;
+                adminToken = adminToken || userData.token;
+            }
+
+            if (!adminUsername) {
+                showToast("Session missing. Please re-login.", "error");
+                return;
+            }
+
             const formData = new URLSearchParams();
             formData.append('action', action === 'approve' ? 'approveUser' : 'rejectUser');
-            formData.append('username', userData.username);
-            formData.append('token', userData.token);
-            formData.append('targetUsername', username);
-            formData.append('portalUser', portalUser);
+            formData.append('username', adminUsername);
+            formData.append('token', adminToken || "");
+            formData.append('targetUsername', targetUsername);
 
             const r = await fetch(BACKEND_GAS_URL, {
                 method: 'POST',
                 body: formData
             });
-            const data = await r.json();
+            const rawText = await r.text();
+            
+            let data;
+            try {
+                data = JSON.parse(rawText);
+            } catch (parseErr) {
+                console.error("[AccountManager] Action RAW Response:", rawText);
+                throw new Error("Server returned an invalid response.");
+            }
 
             if (data.success) {
-                showToast(`${username} ${action === 'approve' ? 'approved' : 'declined'} successfully`, "success");
+                showToast(`${targetUsername} ${action === 'approve' ? 'approved' : 'declined'} successfully`, "success");
                 fetchPendingUsers();
             } else {
                 showToast(data.message || `Failed to ${action} user`, "error");

@@ -4,10 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script>
-    // Trailing Slash Fix: Ensures relative paths work correctly
-    if (!window.location.pathname.endsWith('/') && !window.location.pathname.endsWith('.html')) {
-      window.location.replace(window.location.href + '/');
-    }
+    // Trailing Slash Fix: Ensures relative paths work correctly while preserving query parameters
+    (function() {
+      const url = new URL(window.location.href);
+      if (!url.pathname.endsWith('/') && !url.pathname.endsWith('.html')) {
+        url.pathname += '/';
+        window.location.replace(url.toString());
+      }
+    })();
   </script>
   <title>Account Approval Manager</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
@@ -352,7 +356,7 @@
   <div id="toast-container"></div>
 
   <!-- SAS App Bridge -->
-  <script type="module" src="../../src/utils/app-bridge.js"></script>
-  <script type="module" src="account_manager.js"></script>
+  <script src="../../src/utils/app-bridge.js"></script>
+  <script src="./account_manager.js?v=1.1"></script>
 </body>
 </html>

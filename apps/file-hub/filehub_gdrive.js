@@ -17,7 +17,14 @@ let selectedShareUser = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Detect Theme from Portal
-    const savedUser = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
+    let savedUser = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
+    if (!savedUser && window.parent && window.parent !== window) {
+        try {
+            savedUser = window.parent.localStorage.getItem('sas_user_data') || 
+                        window.parent.sessionStorage.getItem('sas_user_data');
+        } catch (e) { }
+    }
+
     if (savedUser) {
         try {
             const data = JSON.parse(savedUser);

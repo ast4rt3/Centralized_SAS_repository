@@ -4,12 +4,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script>
-    // Trailing Slash Fix: Ensures relative paths work correctly
-    if (!window.location.pathname.endsWith('/') && !window.location.pathname.endsWith('.html')) {
-      window.location.replace(window.location.href + '/');
-    }
-  </script>
+    <script>
+      // Trailing Slash Fix: Ensures relative paths work correctly while preserving query parameters
+      (function() {
+        const url = new URL(window.location.href);
+        if (!url.pathname.endsWith('/') && !url.pathname.endsWith('.html')) {
+          url.pathname += '/';
+          window.location.replace(url.toString());
+        }
+      })();
+    </script>
   <title>Attendance Tracker</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
   <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
