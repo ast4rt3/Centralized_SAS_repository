@@ -783,7 +783,7 @@ sorted.forEach(user => {
   function selectContact(user) {
     activeMessengerUser = user;
     window.activeMessengerUser = user;
-    if(emptyView) emptyView.style.display = 'none';
+    if(emptyView) emptyView.classList.add('hidden');
     if(chatView) chatView.classList.remove('hidden');
     
     // Update Header
