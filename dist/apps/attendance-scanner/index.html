@@ -11,11 +11,12 @@
 
     <title>NBSC SAS Entrance Scanner</title>
 
-    <link rel="manifest" href="/Centralized_SAS_repository/assets/manifest-VVOONrJA.json">
-    <link rel="apple-touch-icon" href="/Centralized_SAS_repository/assets/sas_logo_real-Dn9D14zx.png">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="../../assets/sas_logo_real.png">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
-    <!-- SAS App Bridge -->
+    <!-- SAS App Bridge -->
+    <script type="module" src="../../src/utils/app-bridge.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         // Fallback loader if primary CDN fails
@@ -1141,8 +1142,6 @@
             background: var(--nbsc-dark);
         }
     </style>
-  <script type="module" crossorigin src="/Centralized_SAS_repository/assets/modulepreload-polyfill-iJ-6Fn-a.js"></script>
-  <script type="module" crossorigin src="/Centralized_SAS_repository/assets/app-bridge-B65APBmf.js"></script>
 </head>
 
 <body>
@@ -1172,7 +1171,7 @@
     </div>
 
     <div id="homeScreen">
-        <img src="/Centralized_SAS_repository/assets/sas_logo_real-Dn9D14zx.png" class="home-logo"
+        <img src="../../assets/sas_logo_real.png" class="home-logo"
             alt="NBSC Logo">
         <div class="home-content">
             <h1>NBSC SAS</h1>
@@ -2196,7 +2195,7 @@
             document.getElementById('syncModal').style.display = 'flex';
 
             function log(msg) { logBox.innerHTML += msg + "<br>"; logBox.scrollTop = logBox.scrollHeight; }
-            log("Connecting to server...");
+            log("▶ Fetching verification data...");
 
             const remaining = [...queue];
             try {
@@ -2204,10 +2203,22 @@
                 if (!client) throw new Error("Supabase not initialized");
                 
                 const eventId = localStorage.getItem('scannerEventId');
-                
-                // Fetch Masterlist once for efficient lookup
-                const { data: masterList } = await client.from('NBSC_masterlist').select('ID,Name,qr_token');
-                
+                // Fetch Masterlist in batches to support >1000 students
+                let masterList = [];
+                let mFrom = 0;
+                let mStep = 1000;
+                let mFinished = false;
+                while (!mFinished) {
+                    const { data, error } = await client.from('NBSC_masterlist').select('ID, Name, qr_token').range(mFrom, mFrom + mStep - 1);
+                    if (error) throw error;
+                    if (!data || data.length === 0) mFinished = true;
+                    else {
+                        masterList = masterList.concat(data);
+                        if (data.length < mStep) mFinished = true;
+                        else mFrom += mStep;
+                    }
+                }
+
                 // Fetch active schedules for this event
                 const { data: allSchedules } = await client.from('sas_schedules').select('*').eq('event_id', eventId).eq('is_active', true);
 
