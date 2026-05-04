@@ -28,7 +28,9 @@ export default defineConfig({
         { src: 'manifest.json', dest: '.' },
         { src: 'serviceWorker.js', dest: '.' },
         { src: 'env.js', dest: '.' },
-        { src: 'assets/*', dest: 'assets' }
+        { src: 'assets/*', dest: 'assets' },
+        { src: 'src/utils/*.js', dest: 'src/utils' },
+        { src: 'apps/**/*.js', dest: 'apps' }
       ]
     }),
     obfuscator({
