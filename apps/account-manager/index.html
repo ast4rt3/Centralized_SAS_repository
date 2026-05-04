@@ -464,20 +464,35 @@
 
   <div id="toast-container"></div>
 
-  <!-- Dynamic Asset Loader -->
+  <!-- Diagnostic Asset Loader v1.1.24 -->
   <script>
     (function() {
       const isGH = window.location.hostname.includes('github.io');
       const repo = 'Centralized_SAS_repository';
       const root = isGH ? `/${repo}/` : '/';
       
-      const bridge = document.createElement('script');
-      bridge.src = root + 'src/utils/app-bridge.js';
-      document.body.appendChild(bridge);
+      console.log("[AccountManager] Environment: " + (isGH ? "GitHub Pages" : "Local"));
+      console.log("[AccountManager] Resolved Root: " + root);
 
-      const logic = document.createElement('script');
-      logic.src = root + 'apps/account-manager/account_manager.js?v=1.1.23';
-      document.body.appendChild(logic);
+      function loadScript(path, fallback) {
+        const s = document.createElement('script');
+        s.src = path;
+        s.onerror = () => {
+          console.warn("[AccountManager] Failed to load: " + path + ". Trying fallback...");
+          if (fallback) {
+            const f = document.createElement('script');
+            f.src = fallback;
+            document.body.appendChild(f);
+          }
+        };
+        document.body.appendChild(s);
+      }
+
+      // Load Bridge
+      loadScript(root + 'src/utils/app-bridge.js', '../../src/utils/app-bridge.js');
+      
+      // Load Logic
+      loadScript(root + 'apps/account-manager/account_manager.js', './account_manager.js');
     })();
   </script>
 </body>
