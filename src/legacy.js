@@ -2061,15 +2061,16 @@ function showAppUI(userObj) {
           const responseData = await r.json();
 
           if (responseData.success) {
-            // Store the JWT token to authenticate subsequent requests
+            console.log("[Auth] Login successful. Data received:", responseData);
             const sessionObj = { 
               username: responseData.username, 
               role: responseData.role, 
-              token: responseData.token,
+              token: responseData.token || responseData.jwt || "",
               displayName: responseData.displayName || responseData.username,
               profilePic: responseData.profilePic || "",
               theme: responseData.theme || "light"
             };
+            console.log("[Auth] Saving session object:", sessionObj);
             localStorage.setItem('sas_user_data', JSON.stringify(sessionObj));
 
             showAppUI(sessionObj);

@@ -129,8 +129,6 @@ export function syncFromHash(systems) {
   const systemFrame = document.getElementById('system-frame');
   if (systemFrame) {
     const glue = sys.url.includes('?') ? '&' : '?';
-    const currentUser = JSON.parse(localStorage.getItem('sas_user_data') || '{}').username || 'Unknown';
-    
     // Ensure URL is relative to the current portal path
     let targetUrl = sys.url;
     
@@ -142,8 +140,15 @@ export function syncFromHash(systems) {
         targetUrl += '/';
       }
     }
+
+    const rawData = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data') || '{}';
+    console.log("[Portal] Raw session data length:", rawData.length);
+    const userData = JSON.parse(rawData);
+    const currentUser = userData.username || 'Unknown';
+    const currentToken = userData.token || userData.jwt || '';
     
-    systemFrame.src = targetUrl + glue + 'portalUser=' + encodeURIComponent(currentUser);
+    console.log(`[Portal] Loading system: ${pageId} | User: ${currentUser} | Token: ${currentToken ? 'Present' : 'MISSING'}`);
+    systemFrame.src = targetUrl + glue + 'portalUser=' + encodeURIComponent(currentUser) + '&portalToken=' + encodeURIComponent(currentToken);
   }
 }
 
