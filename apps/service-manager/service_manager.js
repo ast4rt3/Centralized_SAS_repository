@@ -23,7 +23,7 @@ function getSession() {
     return { username, token };
 }
 
-const API_URL = window.parent.ENV?.BACKEND_GAS_URL || 'https://script.google.com/macros/s/AKfycbwXAyuE63HcK0maq2bmDtr3Bfvh1QjC1mqOcqGgClq8cj8t2jj9hbQIix66pYkT2d59Ag/exec';
+const API_URL = window.parent.ENV?.BACKEND_GAS_URL || 'https://script.google.com/macros/s/AKfycbyNmsUvDndrM5L2v_E3gJvM2jHqI1o30Tz8X-aI2H9vX-xYjZ0/exec';
 
 async function api(action, payload = {}) {
     const session = getSession();
@@ -57,22 +57,108 @@ function setupEventListeners() {
 
 // Categories
 async function loadCategories() {
+    const list = document.getElementById('category-list');
+    list.innerHTML = '<div style="padding:20px; text-align:center; opacity:0.5;"><i class="bx bx-loader-alt bx-spin"></i></div>';
+    
     const res = await api('getServiceCategories');
+    console.log("Categories Response:", res);
+    
     if (res.success) {
-        categories = res.categories;
-        renderCategoryList();
+        categories = res.categories || res.data || [];
+        console.log("Parsed Categories:", categories);
+        if (categories.length === 0) {
+            list.innerHTML = `
+                <div style="padding:20px; text-align:center; opacity:0.7; font-size:0.8rem;">
+                    <p>No categories found.</p>
+                    <button class="btn btn-primary" style="margin-top:10px; font-size:0.7rem; padding:6px 12px;" onclick="seedInitialCategories()">
+                        <i class='bx bx-refresh'></i> Seed Defaults
+                    </button>
+                </div>
+            `;
+        } else {
+            renderCategoryList();
+        }
+    } else {
+        list.innerHTML = `<div style="padding:20px; text-align:center; color:#ef4444; font-size:0.8rem;">Error: ${res.message}</div>`;
     }
 }
 
+window.seedInitialCategories = async () => {
+    const defaults = [
+        { name: 'Student Welfare Services', icon_class: 'bx-heart', description: 'Services ensuring students basic needs and well-being.' },
+        { name: 'Student Development Services', icon_class: 'bx-group', description: 'Services focusing on enhancing skills and engagement.' },
+        { name: 'Institutional Student Programs and Services', icon_class: 'bx-building-house', description: 'Required support services provided by the institution.' }
+    ];
+    
+    // Refresh local list first
+    const refreshRes = await api('getServiceCategories');
+    const existingNames = (refreshRes.categories || refreshRes.data || []).map(c => c.name);
+    
+    for (const cat of defaults) {
+        if (!existingNames.includes(cat.name)) {
+            await api('addServiceCategory', cat);
+        }
+    }
+    await loadCategories();
+};
+
 function renderCategoryList() {
     const list = document.getElementById('category-list');
-    list.innerHTML = categories.map(cat => `
-        <div class="category-item ${currentCategoryId === cat.id ? 'active' : ''}" onclick="selectCategory('${cat.id}')">
-            <i class='bx ${cat.icon_class || 'bx-folder'}'></i>
-            <span>${cat.name}</span>
+    if (!list) return;
+    
+    list.innerHTML = (categories || []).map(c => `
+        <div class="nav-item-wrapper" style="position:relative; margin-bottom:5px;">
+            <div class="nav-item ${currentCategoryId === c.id ? 'active' : ''}" onclick="selectCategory('${c.id}')">
+                <i class='bx ${c.icon_class || 'bx-folder'}'></i>
+                <span>${c.name}</span>
+            </div>
+            <div class="cat-delete-btn" onclick="deleteCategory(event, '${c.id}', '${c.name.replace(/'/g, "\\'")}')" title="Delete Category">
+                <i class='bx bx-x'></i>
+            </div>
         </div>
     `).join('');
 }
+
+window.deleteCategory = async (e, id, name) => {
+    e.stopPropagation();
+    
+    // Check if it has offices (local check first if currently selected)
+    let hasOffices = false;
+    if (currentCategoryId === id && offices.length > 0) {
+        hasOffices = true;
+    } else {
+        // Quick API check
+        const res = await api('getOfficesByCategory', { categoryName: name });
+        if (res.success && res.offices && res.offices.length > 0) {
+            hasOffices = true;
+        }
+    }
+    
+    const warnMsg = hasOffices ? 
+        `WARNING: This category "${name}" contains ${offices.length} offices. Deleting it will NOT delete the offices (they will become orphaned), but the category will be gone. Continue?` : 
+        `Are you sure you want to delete the category "${name}"?`;
+        
+    if (!confirm(warnMsg)) return;
+    
+    const delRes = await api('deleteServiceCategory', { id });
+    if (delRes.success) {
+        if (currentCategoryId === id) {
+            currentCategoryId = null;
+            document.getElementById('view-title').innerText = "Select a Category";
+            document.getElementById('category-actions').classList.add('hidden');
+            document.getElementById('office-grid').innerHTML = `
+                <div class="empty-state">
+                    <i class='bx bx-category'></i>
+                    <h3>No Category Selected</h3>
+                    <p>Choose a category from the sidebar to manage its offices.</p>
+                </div>
+            `;
+        }
+        await loadCategories();
+    } else {
+        alert("Error deleting category: " + delRes.message);
+    }
+};
 
 window.selectCategory = async (id) => {
     currentCategoryId = id;

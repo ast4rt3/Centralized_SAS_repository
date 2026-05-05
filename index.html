@@ -690,13 +690,126 @@
       color: #003366;
     }
 
-    .login-success {
-      padding: 10px 16px;
-      background: #ecfdf5;
-      color: #065f46;
-      border-radius: 8px;
-      font-size: 0.85rem;
+    /* --- Service Explorer Premium Styles --- */
+    #lp-service-explorer-view {
+      background: radial-gradient(circle at 50% 0%, #f8fafc 0%, #e2e8f0 100%) !important;
+    }
+
+    .lp-se-nav-bar {
+      background: rgba(255, 255, 255, 0.7) !important;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.3) !important;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+      margin-bottom: 20px;
+    }
+
+    .lp-se-office-info-card {
+      background: rgba(255, 255, 255, 0.8) !important;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.4) !important;
+      border-left: 5px solid var(--lp-primary) !important;
+      transition: transform 0.3s ease;
+    }
+
+    .lp-se-office-info-card:hover {
+      transform: translateY(-2px);
+    }
+
+    .lp-se-office-body-card {
+      background: rgba(255, 255, 255, 0.9) !important;
+      border: 1px solid rgba(0, 0, 0, 0.05) !important;
+      transition: all 0.3s ease;
+    }
+
+    .lp-se-office-body-card:hover {
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08) !important;
+    }
+
+    .lp-se-btn-back {
+      transition: all 0.2s ease;
+      padding: 8px 16px !important;
+      border-radius: 8px !important;
+    }
+
+    .lp-se-btn-back:hover {
+      background: rgba(0, 51, 102, 0.05) !important;
+      transform: translateX(-4px);
+    }
+
+    .lp-se-office-title {
+      background: linear-gradient(135deg, var(--lp-primary), #1e40af);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -1px;
+    }
+
+    .lp-se-doc-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: #f8fafc;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      text-decoration: none;
+      color: #1e293b;
       font-weight: 600;
+      transition: all 0.2s ease;
+    }
+
+    .lp-se-doc-item:hover {
+      background: #fff;
+      border-color: var(--lp-primary);
+      color: var(--lp-primary);
+      transform: scale(1.02);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+    
+    .lp-se-activity-mini {
+      padding: 12px;
+      border-left: 3px solid #e2e8f0;
+      margin-bottom: 10px;
+      transition: all 0.2s ease;
+    }
+    
+    .lp-se-activity-mini:hover {
+      border-left-color: var(--lp-primary);
+      background: rgba(0, 51, 102, 0.02);
+    }
+
+    .lp-se-activity-date {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .lp-se-activity-title {
+      font-size: 0.9rem;
+      font-weight: 800;
+      color: #1e293b;
+    }
+
+    .lp-se-export-btn {
+      background: var(--lp-primary) !important;
+      color: #fff !important;
+      font-weight: 800 !important;
+      border-radius: 12px !important;
+      padding: 14px 24px !important;
+      box-shadow: 0 8px 20px rgba(0, 51, 102, 0.2) !important;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    }
+
+    .lp-se-export-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 25px rgba(0, 51, 102, 0.3) !important;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
   </style>
 
@@ -800,63 +913,72 @@
           <h2>Our Services</h2>
           <p>Comprehensive programs designed to support student welfare and foster holistic development.</p>
         </div>
-
-        <div class="lp-services-grid">
-
-          <!-- Student Welfare Services -->
-          <div class="lp-service-card lp-service-clickable" onclick="openServiceCategory('Student Welfare Services')">
-            <div class="lp-service-icon"><i class='bx bx-heart'></i></div>
-            <h3 class="lp-service-title">Student Welfare Services</h3>
-            <p class="lp-service-desc">These ensure students’ basic needs and well-being:</p>
-            <ul class="lp-service-list">
-              <li><i class='bx bx-check'></i> Information and Orientation Services</li>
-              <li><i class='bx bx-check'></i> Guidance and Counseling</li>
-              <li><i class='bx bx-check'></i> Career and Placement Services</li>
-              <li><i class='bx bx-check'></i> Economic Enterprise Development (e.g., student employment)</li>
-              <li><i class='bx bx-check'></i> Student Handbook Development</li>
-            </ul>
-            <div class="lp-service-action"><i class='bx bx-right-arrow-alt'></i> View Offices</div>
+        <div class="lp-services-grid" id="lp-services-grid">
+          <!-- Dynamically populated from Supabase -->
+          <div style="grid-column:1/-1; text-align:center; padding:40px;">
+            <i class='bx bx-loader-alt bx-spin' style="font-size:2rem; color:var(--lp-primary);"></i>
+            <p style="margin-top:10px; color:#64748b;">Loading services...</p>
           </div>
-
-          <!-- Student Development Services -->
-          <div class="lp-service-card lp-service-clickable" onclick="openServiceCategory('Student Development Services')">
-            <div class="lp-service-icon"><i class='bx bx-group'></i></div>
-            <h3 class="lp-service-title">Student Development Services</h3>
-            <p class="lp-service-desc">These focus on enhancing skills and engagement:</p>
-            <ul class="lp-service-list">
-              <li><i class='bx bx-check'></i> Student Organizations and Activities</li>
-              <li><i class='bx bx-check'></i> Leadership Training</li>
-              <li><i class='bx bx-check'></i> Student Council/Government</li>
-              <li><i class='bx bx-check'></i> Campus Journalism (Student Publication)</li>
-              <li><i class='bx bx-check'></i> Sports Development</li>
-              <li><i class='bx bx-check'></i> Cultural and Arts Programs</li>
-            </ul>
-            <div class="lp-service-action"><i class='bx bx-right-arrow-alt'></i> View Offices</div>
-          </div>
-
-          <!-- Institutional Student Programs and Services -->
-          <div class="lp-service-card lp-service-clickable" onclick="openServiceCategory('Institutional Student Programs and Services')">
-            <div class="lp-service-icon"><i class='bx bx-building-house'></i></div>
-            <h3 class="lp-service-title">Institutional Student Programs and Services</h3>
-            <p class="lp-service-desc">These are required support services provided by the institution:</p>
-            <ul class="lp-service-list">
-              <li><i class='bx bx-check'></i> Admission Services</li>
-              <li><i class='bx bx-check'></i> Scholarship and Financial Assistance</li>
-              <li><i class='bx bx-check'></i> Health Services</li>
-              <li><i class='bx bx-check'></i> Food Services</li>
-              <li><i class='bx bx-check'></i> Safety and Security Services</li>
-              <li><i class='bx bx-check'></i> Services for Students with Special Needs (e.g., PWDs, IPs)</li>
-            </ul>
-            <div class="lp-service-action"><i class='bx bx-right-arrow-alt'></i> View Offices</div>
-          </div>
-
         </div>
         
         <script>
+          async function loadLPServices() {
+            const grid = document.getElementById('lp-services-grid');
+            try {
+              const res = await sasFetch('getServiceCategories');
+              const categories = res.categories || res.data || [];
+              if (res.success && categories.length > 0) {
+                grid.innerHTML = categories.map(cat => `
+                  <div class="lp-service-card lp-service-clickable" onclick="openServiceCategory('${cat.name.replace(/'/g, "\\'")}')">
+                    <div class="lp-service-icon"><i class='bx ${cat.icon_class || 'bx-folder'}'></i></div>
+                    <h3 class="lp-service-title">${cat.name}</h3>
+                    <p class="lp-service-desc">${cat.description || 'Comprehensive support services for students.'}</p>
+                    <div class="lp-service-action"><i class='bx bx-right-arrow-alt'></i> View Offices</div>
+                  </div>
+                `).join('');
+              } else {
+                grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:#ef4444;">Error loading services.</p>';
+              }
+            } catch (e) {
+              grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:#ef4444;">Connection error.</p>';
+            }
+          }
+
           function openServiceCategory(categoryName) {
             localStorage.setItem('sas_selected_service_category', categoryName);
             window.location.hash = 'service-viewer';
           }
+
+          async function loadLPActivities() {
+            const grid = document.getElementById('lp-activities-grid');
+            try {
+              const res = await sasFetch('getAllRecentActivities');
+              if (res.success && res.data) {
+                if (res.data.length === 0) {
+                  grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:#64748b; padding:40px;">No recent activities logged yet.</p>';
+                  return;
+                }
+                grid.innerHTML = res.data.map(act => `
+                  <div class="lp-activity-card">
+                    <div class="lp-activity-info">
+                      <div class="lp-activity-meta">
+                        <span class="lp-activity-date">${new Date(act.activity_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                        <span class="lp-activity-office">${act.sas_offices?.name || 'SAS Office'}</span>
+                      </div>
+                      <h3 class="lp-activity-title">${act.title}</h3>
+                      <p class="lp-activity-snippet">${act.description || ''}</p>
+                    </div>
+                  </div>
+                `).join('');
+              }
+            } catch (e) { console.error("Activities error:", e); }
+          }
+
+          // Initial load
+          document.addEventListener('DOMContentLoaded', () => {
+            loadLPServices();
+            loadLPActivities();
+          });
         </script>
       </div>
     </section>
@@ -955,8 +1077,8 @@
     <div id="lp-service-explorer-view" style="display:none; padding-top: 100px; min-height: 100vh; background: var(--lp-bg-alt);">
       <div class="lp-container">
         
-        <div class="lp-se-nav-bar" id="se-nav-bar" style="display:none; background:#fff; border-bottom:1px solid rgba(0,0,0,0.05); padding:12px 24px; align-items:center; gap:15px; border-radius:10px 10px 0 0;">
-          <button class="lp-se-btn-back" id="se-btn-back" style="background:none; border:none; color:var(--lp-primary); font-weight:700; font-size:.9rem; cursor:pointer; display:flex; align-items:center; gap:5px;"><i class='bx bx-left-arrow-alt'></i> Back to Categories</button>
+        <div class="lp-se-nav-bar" id="se-nav-bar" style="display:none; align-items:center; gap:15px; border-radius:10px 10px 0 0;">
+          <button class="lp-se-btn-back" id="se-btn-back"><i class='bx bx-left-arrow-alt'></i> Back to Categories</button>
           <div class="lp-se-breadcrumb" id="se-breadcrumb" style="font-size:.9rem; font-weight:600; color:#64748b;">Category</div>
         </div>
 
@@ -968,39 +1090,41 @@
           <!-- Category View: List of Offices -->
           <div class="lp-se-category-view" id="se-category-view" style="display:none;">
             <div class="lp-se-category-header" style="margin-bottom:25px;">
-              <h2 id="se-category-title" style="font-size:2rem; font-weight:800; color:var(--lp-primary);">Services</h2>
+              <h2 id="se-category-title" class="lp-se-office-title" style="font-size:2.2rem; font-weight:800;">Services</h2>
             </div>
             <div class="lp-se-offices-grid" id="se-offices-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:20px;"></div>
           </div>
 
           <!-- Office Details View -->
           <div class="lp-se-office-view" id="se-office-view" style="display:none; flex-direction:column; gap:25px;">
-            <div class="lp-se-office-info-card" style="background:linear-gradient(135deg, #fff, #f8fafc); border-radius:20px; padding:30px; box-shadow:var(--lp-shadow); border:1px solid rgba(0,0,0,0.03);">
-              <h2 class="lp-se-office-title" id="se-office-title" style="font-size:2.2rem; font-weight:800; color:var(--lp-primary); margin-bottom:10px;">Office Name</h2>
-              <div class="lp-se-office-info" id="se-office-info" style="font-size:1rem; color:#475569; line-height:1.6;">Information overview...</div>
+            <div class="lp-se-office-info-card" style="border-radius:20px; padding:30px; box-shadow:var(--lp-shadow);">
+              <h2 class="lp-se-office-title" id="se-office-title" style="font-size:2.5rem; font-weight:800; margin-bottom:10px;">Office Name</h2>
+              <div class="lp-se-office-info" id="se-office-info" style="font-size:1.1rem; color:#475569; line-height:1.6; font-weight:600;">Information overview...</div>
             </div>
 
-            <div class="lp-se-office-body-card" style="background:#fff; border-radius:16px; padding:30px; box-shadow:var(--lp-shadow); border:1px solid rgba(0,0,0,0.03);">
-              <h3 style="font-size:1.3rem; font-weight:800; color:#1e293b; margin-bottom:15px; display:flex; align-items:center; gap:8px;"><i class='bx bx-info-circle'></i> About Us</h3>
+            <div class="lp-se-office-body-card" style="border-radius:16px; padding:30px; box-shadow:var(--lp-shadow);">
+              <h3 style="font-size:1.3rem; font-weight:800; color:#1e293b; margin-bottom:15px; display:flex; align-items:center; gap:8px;"><i class='bx bx-info-circle' style="color:var(--lp-primary)"></i> About Us</h3>
               <div id="se-office-body" style="font-size:1rem; color:#334155; line-height:1.7; white-space:pre-wrap;">Detailed description goes here.</div>
             </div>
 
             <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:25px;">
-              <div class="lp-se-office-body-card" style="background:#fff; border-radius:16px; padding:30px; box-shadow:var(--lp-shadow); border:1px solid rgba(0,0,0,0.03);">
-                <h3 style="font-size:1.3rem; font-weight:800; color:#1e293b; margin-bottom:15px; display:flex; align-items:center; gap:8px;"><i class='bx bx-folder-open'></i> Public Documents</h3>
+              <div class="lp-se-office-body-card" style="border-radius:16px; padding:30px; box-shadow:var(--lp-shadow);">
+                <h3 style="font-size:1.3rem; font-weight:800; color:#1e293b; margin-bottom:15px; display:flex; align-items:center; gap:8px;"><i class='bx bx-folder-open' style="color:var(--lp-primary)"></i> Public Documents</h3>
                 <div id="se-docs-list" style="display:flex; flex-direction:column; gap:10px;"></div>
               </div>
 
-              <div class="lp-se-office-body-card" style="background:#fff; border-radius:16px; padding:30px; box-shadow:var(--lp-shadow); border:1px solid rgba(0,0,0,0.03);">
-                <h3 style="font-size:1.3rem; font-weight:800; color:#1e293b; margin-bottom:15px; display:flex; align-items:center; gap:8px;"><i class='bx bx-time-five'></i> Recent Activities</h3>
-                <div id="se-activities-list" style="display:flex; flex-direction:column; gap:15px;"></div>
+              <div class="lp-se-office-body-card" style="border-radius:16px; padding:30px; box-shadow:var(--lp-shadow);">
+                <h3 style="font-size:1.3rem; font-weight:800; color:#1e293b; margin-bottom:15px; display:flex; align-items:center; gap:8px;"><i class='bx bx-time-five' style="color:var(--lp-primary)"></i> Recent Activities</h3>
+                <div id="se-activities-list" style="display:flex; flex-direction:column; gap:5px;"></div>
               </div>
+            </div>
 
-              <div class="lp-se-export-card" style="background:#fff; border-radius:16px; padding:25px; box-shadow:var(--lp-shadow); border:1px solid rgba(0,0,0,0.03); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:15px;">
-                <h3 style="font-size:1.3rem; font-weight:800; color:#1e293b; margin:0;"><i class='bx bx-bar-chart-alt-2'></i> Analytics</h3>
-                <p style="font-size:.9rem; color:#64748b;">Download engagement and visitor reports for this office.</p>
-                <button id="se-btn-export" style="background:var(--lp-primary); color:#fff; padding:10px 20px; border-radius:10px; border:none; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px; transition:0.2s;"><i class='bx bxs-download'></i> Export Data (CSV)</button>
-              </div>
+            <div class="lp-se-office-body-card" style="border-radius:16px; padding:30px; box-shadow:var(--lp-shadow); text-align:center; background:linear-gradient(to bottom, #fff, #f1f5f9);">
+              <h3 style="font-size:1.3rem; font-weight:800; color:#1e293b; margin-bottom:10px; display:flex; align-items:center; justify-content:center; gap:8px;"><i class='bx bx-bar-chart-alt-2' style="color:var(--lp-primary)"></i> Analytics</h3>
+              <p style="font-size:0.9rem; color:#64748b; margin-bottom:20px;">Download engagement and visitor reports for this office.</p>
+              <button class="lp-se-export-btn" id="se-export-btn">
+                <i class='bx bx-download'></i> Export Data (CSV)
+              </button>
             </div>
           </div>
         </div>
@@ -1020,7 +1144,9 @@
           for (const [key, value] of Object.entries(params)) {
             url.searchParams.append(key, value);
           }
-          const r = await fetch(url.toString());
+          const finalUrl = url.toString();
+          console.log("sasFetch: Fetching", finalUrl);
+          const r = await fetch(finalUrl);
           return await r.json();
         } catch (e) {
           console.error("SAS Fetch Error:", e);
@@ -1030,13 +1156,6 @@
 
       let seCurrentCategoryName = 'Services';
       let seCurrentOfficeId = null;
-
-      window.loadServiceCategory = async function() {
-        const loadingState = document.getElementById('se-loading-state');
-        const categoryView = document.getElementById('se-category-view');
-        const officeView = document.getElementById('se-office-view');
-        const navBar = document.getElementById('se-nav-bar');
-        const breadcrumb = document.getElementById('se-breadcrumb');
 
       window.loadServiceCategory = async () => {
         const categoryView = document.getElementById('se-category-view');
@@ -1119,6 +1238,12 @@
       }
 
       async function loadOfficeDetails(officeId, officeName) {
+        console.log("Loading details for office:", officeId, officeName);
+        if (!officeId) {
+          console.error("loadOfficeDetails: Missing officeId!");
+          alert("Error: Missing office ID.");
+          return;
+        }
         seCurrentOfficeId = officeId;
         const categoryView = document.getElementById('se-category-view');
         const loadingState = document.getElementById('se-loading-state');
@@ -1133,6 +1258,7 @@
 
         try {
           const res = await sasFetch('getOfficeDetails', { officeId });
+          console.log("Office details response:", res);
           loadingState.style.display = 'none';
 
           if (res.success) {
@@ -1176,9 +1302,9 @@
         }
       }
 
-      document.getElementById('se-btn-export').addEventListener('click', async () => {
+      document.getElementById('se-export-btn').addEventListener('click', async () => {
         if (!seCurrentOfficeId) return;
-        const btn = document.getElementById('se-btn-export');
+        const btn = document.getElementById('se-export-btn');
         const origText = btn.innerHTML;
         btn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Exporting...';
         btn.disabled = true;
