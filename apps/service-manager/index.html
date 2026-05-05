@@ -86,27 +86,60 @@
       padding: 16px;
     }
 
-    .category-item {
+    .nav-item-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .nav-item {
+      flex: 1;
       display: flex;
       align-items: center;
       gap: 12px;
       padding: 12px 16px;
+      color: #94a3b8;
+      text-decoration: none;
+      font-weight: 500;
       border-radius: 10px;
-      cursor: pointer;
       transition: all 0.2s;
-      margin-bottom: 4px;
-      color: rgba(255,255,255,0.7);
+      cursor: pointer;
     }
 
-    .category-item:hover {
-      background: rgba(255,255,255,0.05);
+    .nav-item:hover {
+      background: rgba(255, 255, 255, 0.1);
       color: #fff;
     }
 
-    .category-item.active {
+    .nav-item.active {
       background: var(--nbsc-blue);
       color: #fff;
-      box-shadow: 0 4px 12px rgba(0, 74, 153, 0.3);
+      box-shadow: 0 4px 12px rgba(0, 51, 102, 0.3);
+    }
+
+    .cat-delete-btn {
+      position: absolute;
+      right: 10px;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: rgba(239, 68, 68, 0.1);
+      color: #ef4444;
+      opacity: 0;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .nav-item-wrapper:hover .cat-delete-btn {
+      opacity: 1;
+    }
+
+    .cat-delete-btn:hover {
+      background: #ef4444;
+      color: #fff;
     }
 
     .category-item i { font-size: 1.2rem; }
@@ -513,7 +546,7 @@
   </div>
 
   <script src="../../src/utils/app-bridge.js" type="module"></script>
-  <script src="service_manager.js" type="module"></script>
+  <script src="./service_manager.js" type="module"></script>
 </body>
 
 </html>
