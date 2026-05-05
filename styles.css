@@ -4938,11 +4938,37 @@ body.lp-mode .main-wrapper {
   transition: 0.3s;
   box-shadow: var(--lp-shadow);
   border: 1px solid rgba(0,0,0,0.03);
+  display: flex;
+  flex-direction: column;
 }
 
 .lp-service-card:hover {
   transform: translateY(-10px);
   border-color: var(--lp-accent);
+}
+
+.lp-service-clickable {
+  cursor: pointer;
+  position: relative;
+}
+
+.lp-service-clickable:hover .lp-service-action {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.lp-service-action {
+  margin-top: auto;
+  padding-top: 20px;
+  font-weight: 800;
+  color: var(--lp-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  opacity: 0.7;
+  transform: translateY(5px);
+  transition: all 0.3s;
 }
 
 .lp-service-icon {

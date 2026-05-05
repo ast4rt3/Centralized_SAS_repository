@@ -101,5 +101,16 @@
       "scanner",
       "uploader"
     ]
+  },
+  {
+    "id": "service-manager",
+    "name": "Service Manager",
+    "description": "Admin panel to configure service hierarchy.",
+    "url": "apps/service-manager/",
+    "external": false,
+    "section": "Data Management",
+    "roles": [
+      "admin"
+    ]
   }
 ]
