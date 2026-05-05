@@ -4969,6 +4969,7 @@ body.lp-mode .main-wrapper {
   color: var(--lp-text-muted);
   font-size: 1rem;
   line-height: 1.7;
+  margin-bottom: 15px;
 }
 
 /* --- Activities Feed --- */
