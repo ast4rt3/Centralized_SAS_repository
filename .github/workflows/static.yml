@@ -21,10 +21,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
       - name: Install Dependencies
-        run: npm install
-      
+        run: npm ci --omit=dev
+
       - name: Generate env.js from Secrets
         env:
           FIREBASE_CONFIG: "${{ secrets['FIREBASE_CONFIG'] }}"
@@ -50,8 +56,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
       - name: Install Dependencies
-        run: npm install
+        run: npm ci --omit=dev
       - name: Run System Diagnostic
         run: node scripts/system-diagnostic.js
 
@@ -64,8 +75,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
       - name: Install Dependencies
-        run: npm install
+        run: npm ci --omit=dev
       - name: Syntax Check
         run: node scripts/ci-syntax-check.js
       - name: Run Trivy Security Scan
@@ -76,7 +92,7 @@ jobs:
           exit-code: '1'
           severity: 'CRITICAL,HIGH'
 
-  # 4. ARTIFACT REPOSITORY
+  # 4. ARTIFACT REPOSITORY (for audit/review purposes only)
   artifact-repository:
     needs: security-analysis
     runs-on: ubuntu-latest
@@ -88,10 +104,20 @@ jobs:
         with:
           name: sas-production-build
           path: |
-            .
-            !node_modules
-            !.git
-            !.github
+            apps/
+            assets/
+            src/
+            scripts/
+            index.html
+            styles.css
+            manifest.json
+            serviceWorker.js
+            systems.json
+            version.json
+            vercel.json
+            env.example.js
+            package.json
+            package-lock.json
 
   # 5. DEPLOYMENT TO STAGING
   deployment-to-staging:
@@ -100,10 +126,15 @@ jobs:
       name: staging
     runs-on: ubuntu-latest
     steps:
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          name: sas-production-build
+          node-version: '20'
+          cache: 'npm'
+      - name: Install Dependencies
+        run: npm ci --omit=dev
       - name: Run Staging Connection Audit
         env:
           BACKEND_GAS_URL: ${{ secrets.BACKEND_GAS_URL }}
@@ -111,6 +142,8 @@ jobs:
         run: node scripts/ci-connection-check.js
 
   # 6. DEPLOYMENT TO PRODUCTION
+  # Uses a fresh checkout — avoids artifact extraction complexity entirely.
+  # env.js is gitignored so it is regenerated here from secrets.
   deployment-to-production:
     needs: deployment-to-staging
     environment:
@@ -118,12 +151,8 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: sas-production-build
-      # IMPORTANT: env.js needs to be regenerated in this job context because 
-      # it wasn't part of the shared git repo (ignored)
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Finalize env.js
         env:
           FIREBASE_CONFIG: "${{ secrets['FIREBASE_CONFIG'] }}"
@@ -141,12 +170,41 @@ jobs:
             systems: $(cat systems.json)
           };
           EOF
+      - name: Debug — Verify deployment files
+        run: |
+          echo "=== Root files ==="
+          ls -la
+          echo ""
+          echo "=== apps/file-hub/ ==="
+          ls -la apps/file-hub/
+          echo ""
+          echo "=== env.js exists? ==="
+          test -f env.js && echo "YES — env.js is present" || echo "NO — env.js is MISSING"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install and Build (Obfuscation)
+        run: |
+          npm ci
+          npm run build
+          echo "=== PRODUCTION READINESS CHECK ==="
+          test -f dist/env.js && echo "✅ env.js present" || { echo "❌ env.js MISSING"; exit 1; }
+          test -f dist/src/utils/app-bridge.js && echo "✅ app-bridge.js present" || { echo "❌ app-bridge.js MISSING"; exit 1; }
+          test -f dist/apps/account-manager/account_manager.js && echo "✅ account_manager.js present" || { echo "❌ account_manager.js MISSING"; exit 1; }
+          echo "=== BUILD COMPLETE: Listing dist contents ==="
+          ls -R dist
+
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: './dist'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

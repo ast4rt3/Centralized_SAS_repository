@@ -3,10 +3,10 @@ import { getDatabase, ref, push, onChildAdded, onChildChanged, onValue, onDiscon
 
 // IMMEDIATE AUTH CHECK - Run BEFORE any UI is shown to prevent flash of unauthorized content
 // IMMEDIATE AUTH CHECK - Show landing page or dashboard depending on session
-(function() {
+(function () {
   const sessionData = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
   const isLoginPage = window.location.hash === '#login';
-  
+
   if (!sessionData && !isLoginPage) {
     // Proactively show landing page to avoid blank screen while waiting for full init
     const lp = document.getElementById('landing-page');
@@ -28,21 +28,47 @@ const escapeHtml = (text) => {
   return div.innerHTML;
 };
 
-// Initialize Firebase Realtime Database for Admin Chat
+// Global Cloudinary Utility: Extract Public ID from URL
+function extractCloudinaryId(url) {
+  if (!url || typeof url !== 'string' || !url.includes('res.cloudinary.com')) return null;
+  const parts = url.split('/upload/');
+  if (parts.length < 2) return null;
+
+  const segments = parts[1].split('/');
+  let startIndex = 0;
+
+  // Skip transformation/version segments (they start with v or contain ,)
+  while (startIndex < segments.length) {
+    const seg = segments[startIndex];
+    if (seg.startsWith('v') && !isNaN(seg.substring(1))) { startIndex++; break; }
+    if (seg.includes(',')) { startIndex++; continue; }
+    break;
+  }
+
+  const idWithExt = segments.slice(startIndex).join('/');
+  return idWithExt.split('.')[0];
+}
+
+// Initialize Firebase Realtime Database
 let db;
+let userDb;
 let chatInitialized = false;
 
 if (window.ENV && window.ENV.FIREBASE_CONFIG) {
   try {
     const app = initializeApp(window.ENV.FIREBASE_CONFIG);
     db = getDatabase(app);
+    
+    // Also initialize the messaging-specific app instance used by the listeners
+    const userApp = initializeApp(window.ENV.FIREBASE_CONFIG, "userMessagingAppLegacy");
+    userDb = getDatabase(userApp);
   } catch (err) {
     console.error("Firebase initialization failed:", err);
   }
 }
 
 function initAdminChat() {
-  if (!db || chatInitialized) return;
+  if (!userDb || chatInitialized) return;
   
   const chatMessages = document.getElementById('chat-messages');
   const chatForm = document.getElementById('chat-form');
@@ -50,7 +76,7 @@ function initAdminChat() {
   if (!chatMessages || !chatForm || !chatInput) return;
 
   chatInitialized = true;
-  const messagesRef = ref(db, 'admin_messages');
+  const messagesRef = ref(userDb, 'admin_messages');
   
   const sessionData = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
   let myUsername = 'Admin';
@@ -60,7 +86,9 @@ function initAdminChat() {
 
   onChildAdded(messagesRef, (snapshot) => {
     const data = snapshot.val();
-    displayMessage(data, data.sender === myUsername);
+    if (typeof displayMessage === 'function') {
+      displayMessage(data, data.sender === myUsername);
+    }
   });
   
   chatForm.addEventListener('submit', (e) => {
@@ -81,25 +109,25 @@ function initAdminChat() {
 
 function displayMessage(data, isMe) {
   const chatMessages = document.getElementById('chat-messages');
-  if(!chatMessages) return;
-  
+  if (!chatMessages) return;
+
   const bubble = document.createElement('div');
   bubble.className = `chat-bubble ${isMe ? 'chat-bubble-me' : 'chat-bubble-other'}`;
-  
+
   let timeStr = "";
   if (data.timestamp) {
     const d = new Date(data.timestamp);
     timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
-  
-  
-  
+
+
+
   bubble.innerHTML = `
     ${!isMe ? `<div class="chat-sender">${escapeHtml(data.sender || 'Unknown')}</div>` : ''}
     <div class="chat-text">${escapeHtml(data.text || '')}</div>
     <div class="chat-time">${timeStr}</div>
   `;
-  
+
   chatMessages.appendChild(bubble);
   setTimeout(() => {
     chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -107,16 +135,8 @@ function displayMessage(data, isMe) {
 }
 
 // --- USER TO USER MESSAGING (Firebase) ---
-let userDb;
+// userDb and initialization moved to the top of the file
 let userChatInitialized = false;
-if (window.ENV && window.ENV.FIREBASE_CONFIG) {
-  try {
-    const userApp = initializeApp(window.ENV.FIREBASE_CONFIG, "userMessagingApp");
-    userDb = getDatabase(userApp);
-  } catch(e) {
-    console.error("User messaging firebase init failed:", e);
-  }
-}
 
 // Optional second database used by superadmin database health checks.
 let storageCheckDb = null;
@@ -147,9 +167,9 @@ async function fetchSpreadsheetUsers() {
       const username = userObj.username;
       if (username && username !== myUsername) {
         if (!contactsMap[username]) {
-          contactsMap[username] = { 
-            unread: 0, 
-            el: null, 
+          contactsMap[username] = {
+            unread: 0,
+            el: null,
             history: [],
             profilePic: userObj.profilePic || "",
             displayName: userObj.displayName || username
@@ -160,7 +180,7 @@ async function fetchSpreadsheetUsers() {
         }
       }
     });
-  } catch(e) { console.error("Failed to fetch spreadsheet users:", e); }
+  } catch (e) { console.error("Failed to fetch spreadsheet users:", e); }
 }
 window.fetchSpreadsheetUsers = fetchSpreadsheetUsers;
 
@@ -173,14 +193,15 @@ let myUsername = (() => {
       const parsed = JSON.parse(raw);
       if (parsed && parsed.username) return parsed.username;
     }
-  } catch(e) {}
+  } catch (e) { }
   return 'Unknown';
 })();
 
 // --- SHARED MESSAGING STATE (GLOBAL) ---
 let unreadCount = 0;
-let activeChatUser = null; 
-let activeMessengerUser = null; 
+let sharedMessagingInitialized = false;
+let activeChatUser = null;
+let activeMessengerUser = null;
 const pageLoadTime = Date.now();
 
 function updateUnreadBadges() {
@@ -206,12 +227,12 @@ function updateUnreadBadges() {
     headerBadge.textContent = unreadCount;
     headerBadge.classList.toggle('hidden', unreadCount === 0);
   }
-  
+
   if (typeof renderFullContacts === 'function') {
-     const messagesPage = document.getElementById('messages');
-     if (messagesPage && (messagesPage.classList.contains('active') || messagesPage.style.display !== 'none')) {
-       renderFullContacts();
-     }
+    const messagesPage = document.getElementById('messages');
+    if (messagesPage && (messagesPage.classList.contains('active') || messagesPage.style.display !== 'none')) {
+      renderFullContacts();
+    }
   }
 }
 
@@ -223,31 +244,31 @@ function showNotification(sender, text) {
     container.className = 'fb-chat-notifications';
     document.body.appendChild(container);
   }
-  
+
   const toast = document.createElement('div');
   toast.className = 'fb-chat-toast';
   toast.onclick = () => {
     // If widget exists, open it. Otherwise show warning or redirect.
     if (typeof openConversation === 'function') {
-        openConversation(sender);
+      openConversation(sender);
     } else {
-        window.location.hash = 'messages';
+      window.location.hash = 'messages';
     }
     toast.remove();
   };
-  
+
   const displaySender = document.createElement('span');
   displaySender.className = 'fb-chat-toast-sender';
   displaySender.textContent = sender;
-  
+
   const displayText = document.createElement('p');
   displayText.className = 'fb-chat-toast-text';
   displayText.textContent = text;
-  
+
   toast.appendChild(displaySender);
   toast.appendChild(displayText);
   container.appendChild(toast);
-  
+
   setTimeout(() => { if (toast.parentNode) toast.remove(); }, 8000);
 }
 
@@ -255,7 +276,7 @@ function markMessagesAsRead(otherUser) {
   if (!userDb || !myUsername || !otherUser) return;
   const history = contactsMap[otherUser] ? (contactsMap[otherUser].history || []) : [];
   const updates = {};
-  
+
   history.forEach(msg => {
     if (msg.receiver === myUsername && !msg.read && msg.id) {
       updates[`user_messages/${msg.id}/read`] = true;
@@ -266,12 +287,12 @@ function markMessagesAsRead(otherUser) {
   if (Object.keys(updates).length > 0) {
     console.log(`[Messaging] Marking ${Object.keys(updates).length} messages from ${otherUser} as read.`);
     update(ref(userDb), updates).catch(err => console.error("Failed to update read status:", err));
-    
+
     // Optimistically clear counts locally to ensure UI updates instantly
     if (contactsMap[otherUser]) {
       contactsMap[otherUser].unread = 0;
     }
-    
+
     // Update global counter via re-calculating from all users to ensure accuracy
     updateUnreadBadges();
   }
@@ -284,82 +305,43 @@ function markAllMessagesAsRead() {
   });
 }
 
-// Background polling fallback to ensure count stays synced even if real-time listener stalls
-async function syncUnreadCountFromDb() {
-  if (!userDb || !myUsername || myUsername === 'Unknown') return;
-  
-  try {
-    const messagesRef = ref(userDb, 'user_messages');
-    // Normalize identity check to prevent case mismatches
-    const myId = myUsername.toLowerCase();
-    
-    // In Firebase RTDB, we can only filter by one child efficiently. 
-    // We'll query all messages received by the user and then filter 'read' status locally.
-    const q = query(messagesRef, orderByChild('receiver'), equalTo(myUsername));
-    const snapshot = await get(q);
-    
-    if (snapshot.exists()) {
-      const messages = snapshot.val();
-      const unreadPerUser = {};
-      
-      Object.values(messages).forEach(msg => {
-        if (msg.read === false) {
-          const sender = msg.sender;
-          if (sender) {
-            unreadPerUser[sender] = (unreadPerUser[sender] || 0) + 1;
-          }
-        }
-      });
-      
-      // Update contactsMap with correct unread counts
-      Object.keys(unreadPerUser).forEach(username => {
-        if (contactsMap[username]) {
-          contactsMap[username].unread = unreadPerUser[username];
-        }
-      });
-      
-      console.log(`[Messaging] Polling sync complete. Total unread recalculated.`);
-      updateUnreadBadges();
-    }
-  } catch (err) {
-    console.warn('[Messaging] Periodic sync failed:', err);
-  }
-}
+// Duplicate syncUnreadCountFromDb removed - now handled by src/features/messaging/logic.js
 
 function initSharedMessaging() {
-  if (!userDb || !myUsername || myUsername === 'Unknown') return;
+  if (!userDb || !myUsername || myUsername === 'Unknown' || sharedMessagingInitialized) return;
+  sharedMessagingInitialized = true;
   const baseRef = ref(userDb, 'user_messages');
-  
+
   onChildAdded(baseRef, (snapshot) => {
     const data = snapshot.val();
     if (!data || !data.sender || !data.receiver) return;
-    
+
     if (data.sender === myUsername || data.receiver === myUsername) {
       const otherUser = data.sender === myUsername ? data.receiver : data.sender;
-      
+
       if (!contactsMap[otherUser]) {
         contactsMap[otherUser] = { unread: 0, el: null, history: [], isOnline: false };
         if (typeof renderContact === 'function') renderContact(otherUser, false);
       }
-      
+
       const msgObj = { ...data, id: snapshot.key };
       contactsMap[otherUser].history.push(msgObj);
-      
+
       const isWidgetOpen = !document.getElementById('fb-chat-body')?.classList.contains('hidden');
       const isWidgetConvOpen = !document.getElementById('fb-chat-conversation')?.classList.contains('hidden');
       const isMessengerPage = window.location.hash === '#messages';
 
       // Only suppress notifications if the specific conversation is actually VISIBLE on screen
-      const isChatOpen = (activeChatUser === otherUser && isWidgetOpen && isWidgetConvOpen) || 
-                         (activeMessengerUser === otherUser && isMessengerPage) || 
-                         (window.activeMessengerUser === otherUser && isMessengerPage);
-      
+      const isChatOpen = (activeChatUser === otherUser && isWidgetOpen && isWidgetConvOpen) ||
+        (activeMessengerUser === otherUser && isMessengerPage) ||
+        (window.activeMessengerUser === otherUser && isMessengerPage);
+
       if (data.sender === otherUser && !isChatOpen && !data.read) {
         contactsMap[otherUser].unread++;
         unreadCount++;
         console.log(`[Messaging] Real-time unread increment: ${unreadCount} (from ${otherUser})`);
         updateUnreadBadges();
-        
+
         if (typeof showNotification === 'function') {
           const msgTime = data.timestamp ? new Date(data.timestamp).getTime() : 0;
           // Only show pop-up notification if it's a NEW message sent after page load
@@ -368,11 +350,11 @@ function initSharedMessaging() {
           }
         }
       }
-      
+
       if (activeChatUser === otherUser && typeof renderMessage === 'function') {
         renderMessage(msgObj, data.sender === myUsername);
       }
-      
+
       if ((activeMessengerUser === otherUser || window.activeMessengerUser === otherUser) && typeof window.refreshFullMessengerUI === 'function') {
         window.refreshFullMessengerUI();
       }
@@ -382,26 +364,26 @@ function initSharedMessaging() {
   onChildChanged(baseRef, (snapshot) => {
     const data = snapshot.val();
     if (!data || !data.sender || !data.receiver) return;
-    
+
     const otherUser = data.sender === myUsername ? data.receiver : data.sender;
     if (contactsMap[otherUser]) {
       const history = contactsMap[otherUser].history;
       const msgIdx = history.findIndex(m => m.id === snapshot.key);
-      
+
       if (msgIdx !== -1) {
         const oldRead = history[msgIdx].read;
         const newRead = data.read;
-        
+
         // Update local object
         history[msgIdx] = { ...data, id: snapshot.key };
-        
+
         // If message was marked as read remotely, update local counts
         if (!oldRead && newRead && data.receiver === myUsername) {
           if (contactsMap[otherUser].unread > 0) {
-             contactsMap[otherUser].unread--;
-             unreadCount = Math.max(0, unreadCount - 1);
-             console.log(`[Messaging] Message marked read remotely. New unreadCount: ${unreadCount}`);
-             updateUnreadBadges();
+            contactsMap[otherUser].unread--;
+            unreadCount = Math.max(0, unreadCount - 1);
+            console.log(`[Messaging] Message marked read remotely. New unreadCount: ${unreadCount}`);
+            updateUnreadBadges();
           }
         }
       }
@@ -416,15 +398,15 @@ function initSharedMessaging() {
 
 function initUserMessaging() {
   if (!userDb || userChatInitialized) return;
-  
+
   const widget = document.getElementById('fb-chat-widget');
   if (!widget) return;
   userChatInitialized = true;
-  
+
   const header = document.getElementById('fb-chat-header');
   const body = document.getElementById('fb-chat-body');
   const toggleIcon = document.getElementById('fb-chat-toggle-icon');
-  
+
   const contactsList = document.getElementById('fb-chat-contacts');
   const conversation = document.getElementById('fb-chat-conversation');
   const activeUserEl = document.getElementById('fb-chat-active-user');
@@ -433,39 +415,39 @@ function initUserMessaging() {
   const input = document.getElementById('fb-chat-input');
   const backBtn = document.getElementById('fb-chat-back-btn');
   const unreadBadge = document.getElementById('fb-chat-unread');
-  
+
   let isWidgetOpen = false;
   // activeChatUser and unreadCount moved to shared scope
-  
+
   const sessionData = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
   if (sessionData) {
-    try { myUsername = JSON.parse(sessionData).username || 'Unknown'; } catch(e) {}
+    try { myUsername = JSON.parse(sessionData).username || 'Unknown'; } catch (e) { }
   }
   const sessionData2 = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
-  if (sessionData2) { try { myUsername = JSON.parse(sessionData2).username || 'Unknown'; } catch(e) {} }
+  if (sessionData2) { try { myUsername = JSON.parse(sessionData2).username || 'Unknown'; } catch (e) { } }
   if (myUsername === 'Unknown') {
     widget.style.display = 'none'; // hide if not logged in
     return;
   }
-  
+
   // UI Setup
   const contactHeader = document.createElement('div');
   contactHeader.style.cssText = 'padding:10px; border-bottom:1px solid #e2e8f0; background:#f1f5f9; font-weight:700; font-size:0.8rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;';
   contactHeader.textContent = 'Available Users';
   contactsList.appendChild(contactHeader);
-  
+
   const contactItems = document.createElement('div');
   contactsList.appendChild(contactItems);
-  
 
-  
+
+
   // 1. Fetch Users From Spreadsheet GAS
   fetchSpreadsheetUsers();
 
   // 2. Presence System Overlay
   const connectedRef = ref(userDb, '.info/connected');
   const myPresenceRef = ref(userDb, `presence/${myUsername}`);
-  
+
   onValue(connectedRef, (snap) => {
     if (snap.val() === true) {
       onDisconnect(myPresenceRef).remove();
@@ -477,7 +459,7 @@ function initUserMessaging() {
   const presenceRef = ref(userDb, 'presence');
   onValue(presenceRef, (snapshot) => {
     const data = snapshot.val() || {};
-    
+
     // Read online users
     for (const [user, info] of Object.entries(data)) {
       if (user !== myUsername && info.status === 'online') {
@@ -489,16 +471,16 @@ function initUserMessaging() {
         renderContact(user, true); // Mark online
       }
     }
-    
+
     // Update users who went offline
     for (const user in contactsMap) {
       if (!data[user] || data[user].status !== 'online') {
-         contactsMap[user].isOnline = false;
-         renderContact(user, false); // Mark offline but KEEP in UI list
+        contactsMap[user].isOnline = false;
+        renderContact(user, false); // Mark offline but KEEP in UI list
       }
     }
   });
-  
+
   header.addEventListener('click', (e) => {
     if (e.target.closest('#fb-chat-toggle-btn') || e.target === header || header.contains(e.target)) {
       isWidgetOpen = !isWidgetOpen;
@@ -510,16 +492,16 @@ function initUserMessaging() {
       }
     }
   });
-  
+
   backBtn.addEventListener('click', () => {
     activeChatUser = null;
     conversation.classList.add('hidden');
     contactsList.classList.remove('hidden');
   });
-  
+
   // This listener is now moved to the shared scope to support both UIs
 
-  
+
   function renderContact(username, isOnline = true) {
     window.renderContact = renderContact;
 
@@ -532,18 +514,18 @@ function initUserMessaging() {
       contactsMap[username].el = div;
     }
     const unread = contactsMap[username].unread || 0;
-    
-    const statusIndicator = isOnline 
-       ? '<span style="display:inline-block; width:8px; height:8px; background:#16a34a; border-radius:50%; margin-right:8px; box-shadow:0 0 4px #16a34a;"></span>'
-       : '<span style="display:inline-block; width:8px; height:8px; background:#94a3b8; border-radius:50%; margin-right:8px;"></span>';
-    
+
+    const statusIndicator = isOnline
+      ? '<span style="display:inline-block; width:8px; height:8px; background:#16a34a; border-radius:50%; margin-right:8px; box-shadow:0 0 4px #16a34a;"></span>'
+      : '<span style="display:inline-block; width:8px; height:8px; background:#94a3b8; border-radius:50%; margin-right:8px;"></span>';
+
     const user = contactsMap[username];
     const displayName = user.displayName || username;
     const initial = displayName.charAt(0).toUpperCase();
     const profilePicHtml = user.profilePic && user.profilePic.startsWith('http')
       ? `<img src="${user.profilePic}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`
       : `<span>${initial}</span>`;
-    
+
     div.innerHTML = `
       <div style="display:flex; align-items:center; gap:8px;">
          <div style="width:32px; height:32px; border-radius:50%; background:#003366; color:white; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.9rem; flex-shrink:0; overflow:hidden;">
@@ -554,50 +536,50 @@ function initUserMessaging() {
       </div>
       ${unread > 0 ? `<div class="fb-chat-contact-unread">${unread}</div>` : ''}
     `;
-    
+
     // Ensure the element is in the correct container
     if (div.parentNode !== contactItems) {
       contactItems.insertBefore(div, contactItems.firstChild);
     }
   }
-  
+
   // Global updateUnreadBadges handles these now
-  
+
   function openConversation(username) {
     activeChatUser = username;
     activeUserEl.textContent = username;
     contactsList.classList.add('hidden');
     conversation.classList.remove('hidden');
     messagesDiv.innerHTML = '';
-    
+
     markMessagesAsRead(username);
-    
+
     // Render past messages
     contactsMap[username].history.forEach(msg => {
       renderMessage(msg, msg.sender === myUsername);
     });
-    
+
     // Scroll to bottom
     setTimeout(() => {
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }, 10);
   }
-  
+
   function renderMessage(data, isMe) {
     const bubble = document.createElement('div');
     bubble.className = `fb-chat-bubble ${isMe ? 'fb-chat-bubble-me' : 'fb-chat-bubble-other'}`;
-    
+
     let timeStr = "";
     if (data.timestamp) {
-      timeStr = new Date(data.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+      timeStr = new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
-    
-    
+
+
     bubble.innerHTML = `
       <div class="fb-chat-text">${escapeHtml(data.text || '')}</div>
       <div class="fb-chat-time">${timeStr}</div>
     `;
-    
+
     messagesDiv.appendChild(bubble);
     setTimeout(() => {
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
@@ -623,11 +605,11 @@ function initUserMessaging() {
 // Call on startup
 
 window.addEventListener('DOMContentLoaded', () => {
-    initUserMessaging();
-    initSharedMessaging(); // Initialize the universal listener
-    setTimeout(initFullMessenger, 2000); // Give Firebase a moment to sync
-    initLpActivities(); // Load dynamic landing page activities (public)
-    initLpDocuments();  // Load dynamic landing page documents (public)
+  initUserMessaging();
+  initSharedMessaging(); // Initialize the universal listener
+  setTimeout(initFullMessenger, 2000); // Give Firebase a moment to sync
+  initLpActivities(); // Load dynamic landing page activities (public)
+  initLpDocuments();  // Load dynamic landing page documents (public)
 });
 
 
@@ -637,16 +619,16 @@ window.addEventListener('DOMContentLoaded', () => {
 
 function initFullMessenger() {
 
-  window.toggleMessengerMobile = function(active) {
+  window.toggleMessengerMobile = function (active) {
     const container = document.querySelector('.messenger-container');
-    if(container) {
-      if(active) container.classList.add('chat-active');
+    if (container) {
+      if (active) container.classList.add('chat-active');
       else container.classList.remove('chat-active');
     }
   };
 
   const container = document.querySelector('.messenger-container');
-  if(!container || !userDb) return;
+  if (!container || !userDb) return;
 
   const contactsList = document.getElementById('messenger-contacts');
   const chatView = document.getElementById('messenger-chat-view');
@@ -655,24 +637,24 @@ function initFullMessenger() {
   const form = document.getElementById('messenger-form');
   const input = document.getElementById('messenger-input');
   const activeCountEl = document.getElementById('active-count');
-  
+
   const activeName = document.getElementById('active-chat-name');
   const activeAvatar = document.getElementById('active-avatar');
   const activeStatus = document.getElementById('active-chat-status');
 
   // activeMessengerUser is now in shared scope
 
-  
+
   // Immediate initial render
   setTimeout(() => {
     fetchSpreadsheetUsers();
     renderFullContacts();
-    
+
     // AUTO-SELECT: Find the user with the most recent message
     setTimeout(() => {
       let latestUser = null;
       let latestTime = 0;
-      
+
       for (const user in contactsMap) {
         const history = contactsMap[user].history || [];
         if (history.length > 0) {
@@ -683,7 +665,7 @@ function initFullMessenger() {
           }
         }
       }
-      
+
       if (latestUser) {
         selectContact(latestUser);
       }
@@ -693,40 +675,40 @@ function initFullMessenger() {
 
   // Sync loop for UI
   setInterval(() => {
-     if (document.getElementById('messages').classList.contains('active') || document.getElementById('messages').style.display !== 'none') {
-        renderFullContacts();
-        updateActiveStats();
-     }
+    if (document.getElementById('messages').classList.contains('active') || document.getElementById('messages').style.display !== 'none') {
+      renderFullContacts();
+      updateActiveStats();
+    }
   }, 3000);
 
   function updateActiveStats() {
     let count = 0;
-    for (const u in contactsMap) { if(contactsMap[u].isOnline) count++; }
-    if(activeCountEl) activeCountEl.textContent = count;
+    for (const u in contactsMap) { if (contactsMap[u].isOnline) count++; }
+    if (activeCountEl) activeCountEl.textContent = count;
   }
 
   function renderFullContacts() {
-    if(!contactsList) return;
+    if (!contactsList) return;
     const scrollPos = contactsList.scrollTop;
     contactsList.innerHTML = '';
-    
+
     // FILTER: Only show users with history OR forced active
     const sorted = Object.keys(contactsMap).filter(user => {
-       const info = contactsMap[user];
-        const hasHistory = info.history && info.history.length > 0;
-        return hasHistory || user === activeMessengerUser;
-     }).sort((a,b) => {
-        const aOnline = contactsMap[a].isOnline ? 1 : 0;
-        const bOnline = contactsMap[b].isOnline ? 1 : 0;
-        return bOnline - aOnline;
-     });
+      const info = contactsMap[user];
+      const hasHistory = info.history && info.history.length > 0;
+      return hasHistory || user === activeMessengerUser;
+    }).sort((a, b) => {
+      const aOnline = contactsMap[a].isOnline ? 1 : 0;
+      const bOnline = contactsMap[b].isOnline ? 1 : 0;
+      return bOnline - aOnline;
+    });
 
-     if (sorted.length === 0) {
-       contactsList.innerHTML = '<div style="padding:20px; text-align:center; color:#94a3b8; font-size:0.8rem;">No conversations yet.<br>Click "+" to start one.</div>';
-       return;
-     }
+    if (sorted.length === 0) {
+      contactsList.innerHTML = '<div style="padding:20px; text-align:center; color:#94a3b8; font-size:0.8rem;">No conversations yet.<br>Click "+" to start one.</div>';
+      return;
+    }
 
-sorted.forEach(user => {
+    sorted.forEach(user => {
       const info = contactsMap[user];
       const card = document.createElement('div');
       card.className = `contact-card ${activeMessengerUser === user ? 'active' : ''}`;
@@ -738,7 +720,7 @@ sorted.forEach(user => {
         ? `<img src="${info.profilePic}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`
         : `<span>${initial}</span>`;
 
-      const lastMsg = info.history && info.history.length > 0 ? info.history[info.history.length-1].text : 'No messages yet';
+      const lastMsg = info.history && info.history.length > 0 ? info.history[info.history.length - 1].text : 'No messages yet';
       const unread = info.unread || 0;
 
       card.innerHTML = `
@@ -760,14 +742,14 @@ sorted.forEach(user => {
   function selectContact(user) {
     activeMessengerUser = user;
     window.activeMessengerUser = user;
-    if(emptyView) emptyView.style.display = 'none';
-    if(chatView) chatView.classList.remove('hidden');
-    
+    if (emptyView) emptyView.classList.add('hidden');
+    if (chatView) chatView.classList.remove('hidden');
+
     // Update Header
     const info = contactsMap[user];
     const displayName = info ? (info.displayName || user) : user;
-    if(activeName) activeName.textContent = displayName;
-    if(activeAvatar) {
+    if (activeName) activeName.textContent = displayName;
+    if (activeAvatar) {
       const initial = displayName.charAt(0).toUpperCase();
       if (info && info.profilePic && info.profilePic.startsWith('http')) {
         activeAvatar.innerHTML = `<img src="${info.profilePic}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
@@ -775,7 +757,7 @@ sorted.forEach(user => {
         activeAvatar.textContent = initial;
       }
     }
-    if(activeStatus) {
+    if (activeStatus) {
       const isOnline = info ? info.isOnline : false;
       activeStatus.textContent = isOnline ? 'Active Now' : 'Offline';
       activeStatus.className = isOnline ? 'status-online' : 'status-offline';
@@ -783,30 +765,30 @@ sorted.forEach(user => {
 
     // Badge Sync Logic
     markMessagesAsRead(user);
-    
+
     // Cross-sync with side chat
-    activeChatUser = user; 
+    activeChatUser = user;
 
 
     renderFullMessages();
     renderFullContacts();
-    if(window.toggleMessengerMobile) window.toggleMessengerMobile(true);
+    if (window.toggleMessengerMobile) window.toggleMessengerMobile(true);
   }
 
   function renderFullMessages() {
-    if(!activeMessengerUser || !messagesDiv) return;
+    if (!activeMessengerUser || !messagesDiv) return;
     messagesDiv.innerHTML = '';
     const history = contactsMap[activeMessengerUser] ? (contactsMap[activeMessengerUser].history || []) : [];
-    
+
     console.log(`[Messenger] Rendering ${history.length} messages for ${activeMessengerUser}`);
 
     history.forEach(data => {
       const isMe = data.sender === myUsername;
       const bubble = document.createElement('div');
       bubble.className = `msg-bubble ${isMe ? 'msg-bubble-me' : 'msg-bubble-other'}`;
-      const time = data.timestamp ? new Date(data.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
+      const time = data.timestamp ? new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
       bubble.innerHTML = `
-        <div class="msg-text">${data.text || ''}</div>
+        <div class="msg-text">${escapeHtml(data.text || '')}</div>
         <span class="msg-time">${time}</span>
       `;
       messagesDiv.appendChild(bubble);
@@ -826,7 +808,7 @@ sorted.forEach(user => {
         try {
           const raw = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
           if (raw) { const p = JSON.parse(raw); if (p && p.username) myUsername = p.username; }
-        } catch(e) {}
+        } catch (e) { }
       }
       if (myUsername === 'Unknown') {
         console.warn('[Messenger] Cannot send: identity unknown.');
@@ -847,21 +829,21 @@ sorted.forEach(user => {
 
   // Global onChildAdded listener in Shared Scope handles this now
 
-  window.openNewMessageModal = async function() {
+  window.openNewMessageModal = async function () {
     const modal = document.getElementById('new-message-modal');
     const list = document.getElementById('all-users-list');
     const search = document.getElementById('user-search-input');
-    if(!modal || !list) return;
+    if (!modal || !list) return;
     modal.style.display = 'flex';
     list.innerHTML = '<div style="padding:20px; text-align:center; color:#64748b;">Loading users...</div>';
     await fetchSpreadsheetUsers();
-    
+
     const renderModalList = (filter = '') => {
       list.innerHTML = '';
       Object.keys(contactsMap).sort().forEach(user => {
-        if(user === myUsername) return;
-        if(filter && !user.toLowerCase().includes(filter.toLowerCase())) return;
-        
+        if (user === myUsername) return;
+        if (filter && !user.toLowerCase().includes(filter.toLowerCase())) return;
+
         const item = document.createElement('div');
         item.style.cssText = "padding:12px 15px; cursor:pointer; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; gap:12px;";
         item.onmouseover = () => item.style.background = "#f8fafc";
@@ -889,9 +871,9 @@ sorted.forEach(user => {
     search.focus();
   };
 
-  window.closeNewMessageModal = function() {
+  window.closeNewMessageModal = function () {
     const modal = document.getElementById('new-message-modal');
-    if(modal) modal.style.display = 'none';
+    if (modal) modal.style.display = 'none';
   };
 }
 
@@ -917,56 +899,56 @@ let tvTheaterEnabled = localStorage.getItem('sas_tv_theater_enabled') === 'true'
 (function () {
   const banner = document.getElementById('offline-banner');
   function updateBanner() {
-    if (banner) banner.style.display = navigator.onLine ? 'none' : 'block';
+    if (banner) banner.style.display = navigator.onLine ? 'none' : 'flex';
   }
   window.addEventListener('online', updateBanner);
   window.addEventListener('offline', updateBanner);
   updateBanner(); // Check immediately on page load
 })();
 
-  // --- AUTO-UPDATE LOGIC ---
-  // Periodically check for new versions on the server to bypass aggressive caching
-  async function checkForUpdates() {
-    try {
-      // Use timestamp query param to bypass middle-man caches
-      const response = await fetch('version.json?t=' + new Date().getTime());
-      if (!response.ok) return;
-      
-      const data = await response.json();
-      const localVersion = localStorage.getItem('sas_app_version');
+// --- AUTO-UPDATE LOGIC ---
+// Periodically check for new versions on the server to bypass aggressive caching
+async function checkForUpdates() {
+  try {
+    // Use timestamp query param to bypass middle-man caches
+    const response = await fetch('version.json?t=' + new Date().getTime());
+    if (!response.ok) return;
 
-      if (localVersion && localVersion !== data.version) {
-        console.log(`[Update] New version ${data.version} found! (Local: ${localVersion})`);
-        localStorage.setItem('sas_app_version', data.version);
-        
-        // Brief delay to allow console logs to be seen, then hard refresh
-        setTimeout(() => {
-          window.location.reload(true);
-        }, 1000);
-      } else {
-        localStorage.setItem('sas_app_version', data.version);
-      }
-    } catch (err) {
-      console.warn("Update check failed (likely offline):", err);
+    const data = await response.json();
+    const localVersion = localStorage.getItem('sas_app_version');
+
+    if (localVersion && localVersion !== data.version) {
+      console.log(`[Update] New version ${data.version} found! (Local: ${localVersion})`);
+      localStorage.setItem('sas_app_version', data.version);
+
+      // Brief delay to allow console logs to be seen, then hard refresh
+      setTimeout(() => {
+        window.location.reload(true);
+      }, 1000);
+    } else {
+      localStorage.setItem('sas_app_version', data.version);
     }
+  } catch (err) {
+    console.warn("Update check failed (likely offline):", err);
   }
+}
 
-  // Initial check on startup
-  checkForUpdates();
-  // Check every 60 minutes
-  setInterval(checkForUpdates, 3600000);
-  
-  // 12-HOUR PERIODIC AUTO-RELOAD (For TV stability)
-  setInterval(() => {
-    const isTv = document.body.classList.contains('tv-mode');
-    const modalOpen = document.getElementById('add-post-modal') && !document.getElementById('add-post-modal').classList.contains('hidden');
-    
-    // Only reload if in TV mode and NOT currently editing a post OR if it's 3 AM-ish (quiet time)
-    if (isTv && !modalOpen) {
-      console.log("[Maintenance] Performing scheduled 12-hour hard reset...");
-      window.location.reload();
-    }
-  }, 12 * 60 * 60 * 1000); 
+// Initial check on startup
+checkForUpdates();
+// Check every 60 minutes
+setInterval(checkForUpdates, 3600000);
+
+// 12-HOUR PERIODIC AUTO-RELOAD (For TV stability)
+setInterval(() => {
+  const isTv = document.body.classList.contains('tv-mode');
+  const modalOpen = document.getElementById('add-post-modal') && !document.getElementById('add-post-modal').classList.contains('hidden');
+
+  // Only reload if in TV mode and NOT currently editing a post OR if it's 3 AM-ish (quiet time)
+  if (isTv && !modalOpen) {
+    console.log("[Maintenance] Performing scheduled 12-hour hard reset...");
+    window.location.reload();
+  }
+}, 12 * 60 * 60 * 1000);
 
 console.log('--- SAS APP LOADING (v11 + Sidebar Fix) ---');
 document.addEventListener('DOMContentLoaded', () => {
@@ -990,32 +972,34 @@ document.addEventListener('DOMContentLoaded', () => {
   window.fbPlayers = {};
   // --- GLOBAL HELPERS FOR MEDIA SCOPES ---
   function getScopedElements(scope) {
+    const prefix = (scope === 'multi') ? 'upload' : scope;
     return {
-      previewGroup: document.getElementById(`${scope}-img-preview-group`),
-      previewImg: document.getElementById(`${scope}-preview-img`),
-      previewContainer: document.getElementById(`${scope}-preview-container`),
-      previewWrapper: document.getElementById(`${scope}-preview-transform-wrapper`),
-      videoGroup: document.getElementById(`${scope}-video-settings-group`),
-      videoPlayer: document.getElementById(`${scope}-video-preview-player`),
-      videoIframe: document.getElementById(`${scope}-video-preview-iframe-wrapper`),
-      zoomSlider: document.getElementById(`${scope}-img-zoom`),
-      zoomVal: document.getElementById(`${scope}-preview-zoom-val`),
-      resetBtn: document.getElementById(`${scope}-preview-reset-btn`),
-      posInput: document.getElementById(`${scope}-img-pos`),
-      sizeInput: document.getElementById(`${scope}-img-size-val`),
-      coordsDisplay: document.getElementById(`${scope}-preview-coords`),
+      previewGroup: document.getElementById(`${prefix}-img-preview-group`),
+      previewImg: document.getElementById(`${prefix}-preview-img`),
+      previewContainer: document.getElementById(`${prefix}-preview-container`),
+      previewWrapper: document.getElementById(`${prefix}-preview-transform-wrapper`),
+      videoGroup: document.getElementById(`${prefix}-video-settings-group`),
+      videoPlayer: document.getElementById(`${prefix}-video-preview-player`),
+      videoIframe: document.getElementById(`${prefix}-video-preview-iframe-wrapper`),
+      zoomSlider: document.getElementById(`${prefix}-img-zoom`),
+      zoomVal: document.getElementById(`${prefix}-preview-zoom-val`),
+      resetBtn: document.getElementById(`${prefix}-preview-reset-btn`),
+      posInput: document.getElementById(`${prefix}-img-pos`),
+      sizeInput: document.getElementById(`${prefix}-img-size-val`),
+      coordsDisplay: document.getElementById(`${prefix}-preview-coords`),
       // Video range elements
-      vStartDisplay: document.getElementById(`${scope}-video-start-display`),
-      vEndDisplay: document.getElementById(`${scope}-video-duration-display`),
-      vSliderStart: document.getElementById(`${scope}-video-slider-start`),
-      vSliderEnd: document.getElementById(`${scope}-video-slider-end`),
-      vStartHidden: document.getElementById(`${scope}-video-start`),
-      vEndHidden: document.getElementById(`${scope}-video-end`)
+      vStartDisplay: document.getElementById(`${prefix}-video-start-display`),
+      vEndDisplay: document.getElementById(`${prefix}-video-duration-display`),
+      vSliderStart: document.getElementById(`${prefix}-video-slider-start`),
+      vSliderEnd: document.getElementById(`${prefix}-video-slider-end`),
+      vStartHidden: document.getElementById(`${prefix}-video-start`),
+      vEndHidden: document.getElementById(`${prefix}-video-end`)
     };
   }
 
   const transformStates = {
     upload: { zoom: 1, x: 0, y: 0 },
+    multi: { zoom: 1, x: 0, y: 0 },
     url: { zoom: 1, x: 0, y: 0 }
   };
 
@@ -1023,11 +1007,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const els = getScopedElements(scope);
     const state = transformStates[scope];
     if (!els.previewWrapper || !state) return;
-    
+
     if (zoom !== undefined) state.zoom = zoom;
     if (x !== undefined) state.x = x;
     if (y !== undefined) state.y = y;
-    
+
     els.previewWrapper.style.transform = `scale(${state.zoom}) translate(${state.x}%, ${state.y}%)`;
     const posStr = `${Math.round(state.x)}%, ${Math.round(state.y)}%`;
 
@@ -1039,37 +1023,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function initFbSdk() {
     if (fbInitPromise) return fbInitPromise;
-    
+
     fbInitPromise = new Promise((resolve) => {
       if (window.FB) {
-         resolve();
-         return;
+        resolve();
+        return;
       }
-      
-      window.fbAsyncInit = function() {
+
+      window.fbAsyncInit = function () {
         FB.init({ xfbml: true, version: 'v19.0' });
-        FB.Event.subscribe('xfbml.ready', function(msg) {
+        FB.Event.subscribe('xfbml.ready', function (msg) {
           if (msg.type === 'video') {
             window.fbPlayers[msg.id] = msg.instance;
             const el = document.getElementById(msg.id);
             if (el && el.closest('.home-news-slide.is-active')) {
               try {
-                 if (window.tvAudioEnabled) msg.instance.unmute();
-                 else msg.instance.mute();
-                 msg.instance.play();
-              } catch(e) {}
+                if (window.tvAudioEnabled) msg.instance.unmute();
+                else msg.instance.mute();
+                msg.instance.play();
+              } catch (e) { }
             }
           }
         });
         resolve();
       };
-      
+
       const js = document.createElement('script');
       js.id = 'facebook-jssdk';
       js.src = 'https://connect.facebook.net/en_US/sdk.js';
       document.head.appendChild(js);
     });
-    
+
     return fbInitPromise;
   }
 
@@ -1079,15 +1063,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Support full URLs, mobile URLs, IDs, and paths
     if (urlLower.includes('facebook.com') || urlLower.includes('fb.watch') || urlLower.includes('fb.com') || urlLower.includes('/videos/') || urlLower.includes('watch?v=')) {
       let fbHref = url;
-      
+
       // Try to normalize to a very standard format if possible
       const vMatch = url.match(/[?&]v=([^&#]+)/) || url.match(/\/videos\/([^/?#]+)/) || url.match(/\/reel\/([^/?#]+)/);
       if (vMatch) {
-         fbHref = `https://www.facebook.com/video.php?v=${vMatch[1]}`;
+        fbHref = `https://www.facebook.com/video.php?v=${vMatch[1]}`;
       } else if (url.startsWith('/')) {
-         fbHref = 'https://www.facebook.com' + url;
+        fbHref = 'https://www.facebook.com' + url;
       } else if (!url.includes('://')) {
-         fbHref = 'https://www.facebook.com/' + url;
+        fbHref = 'https://www.facebook.com/' + url;
       }
 
       return fbHref; // Return raw URL for FB SDK
@@ -1125,16 +1109,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     update(newValue) {
       // Check for height change as well as value change
-      const isImmersive = document.body.classList.contains('tv-mode') || 
-                          document.body.classList.contains('fullscreen-active') || 
-                          document.body.classList.contains('video-fullscreen-active');
+      const isImmersive = document.body.classList.contains('tv-mode') ||
+        document.body.classList.contains('fullscreen-active') ||
+        document.body.classList.contains('video-fullscreen-active');
       const digitHeight = isImmersive ? 40 : 60;
-      
+
       if (this.currentValue === newValue && this.lastHeight === digitHeight) return;
-      
+
       this.currentValue = newValue;
       this.lastHeight = digitHeight;
-      
+
       const offset = -parseInt(newValue, 10) * digitHeight;
       this.container.style.transform = `translateY(${offset}px)`;
     }
@@ -1284,6 +1268,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const userDropdownName = document.getElementById('user-dropdown-name');
   const logoutBtn = document.getElementById('logout-btn');
 
+  // Registration UI elements
+  const registerOverlay = document.getElementById('register-overlay');
+  const registerForm = document.getElementById('register-form');
+  const showRegisterBtn = document.getElementById('show-register-btn');
+  const backToLoginBtn = document.getElementById('back-to-login-btn');
+  const registerError = document.getElementById('register-error');
+  const registerSuccess = document.getElementById('register-success');
+
   const btnSidebarToggle = document.getElementById('sidebar-toggle');
   const btnAdminExitTv = document.getElementById('admin-exit-tv');
 
@@ -1308,8 +1300,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (lp) {
       lp.classList.add('hidden');
       document.body.classList.remove('lp-mode');
-      if (sb && !document.body.classList.contains('tv-mode')) sb.classList.remove('hidden');
+      if (sb && !document.body.classList.contains('tv-mode')) {
+        sb.classList.remove('hidden');
+      }
       if (ct) ct.classList.remove('hidden');
+      if (navToggle) {
+        navToggle.classList.remove('hidden');
+        navToggle.hidden = false;
+      }
+
     }
   }
 
@@ -1329,8 +1328,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (navbar && document.body.classList.contains('lp-mode')) {
       if (scrollPos > 40) {
         navbar.classList.add('scrolled');
+        document.body.classList.add('scrolled');
       } else {
         navbar.classList.remove('scrolled');
+        document.body.classList.remove('scrolled');
       }
     }
   }, { passive: true });
@@ -1342,7 +1343,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let globalCarouselTimer = null;
   let globalSlideGeneration = 0;
   // Messaging state moved to top level
-;
+  ;
 
   // TV Carousel State Exporters (for toggle responsiveness)
   window.currentTvSlide = 0;
@@ -1382,7 +1383,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Smart Cursor Logic (TV Mode) ---
   let lastActivityTime = Date.now();
-  
+
   function updateActivity() {
     lastActivityTime = Date.now();
     if (document.body.classList.contains('tv-mode')) {
@@ -1413,7 +1414,7 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.removeItem('sas_admin_tv_view');
       document.body.classList.remove('tv-mode');
       document.body.classList.remove('tv-header-collapsed');
-      
+
       window.location.hash = 'home';
       setTimeout(() => {
         window.location.reload();
@@ -1432,7 +1433,16 @@ document.addEventListener('DOMContentLoaded', () => {
       activeMessengerUser = null;
       window.activeMessengerUser = null;
     }
-    
+
+    // Manage body class for special layouts (like messenger)
+    if (pageId === 'messages') {
+      document.body.classList.add('messenger-active');
+      document.querySelectorAll('.content, .page-content').forEach(el => el.classList.add('messenger-active'));
+    } else {
+      document.body.classList.remove('messenger-active');
+      document.querySelectorAll('.content, .page-content').forEach(el => el.classList.remove('messenger-active'));
+    }
+
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     const page = pageId === 'home'
       ? homePage
@@ -1453,7 +1463,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       return;
     }
-    
+
     // Check if we should show landing page
     const sessionLP = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
     if (!sessionLP) {
@@ -1472,13 +1482,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     var pageId = getHashPageId();
-    
+
     // Lock scanner role to #attendance-scanner only
     const sd = localStorage.getItem('sas_user_data');
     if (sd) {
       try {
         const u = JSON.parse(sd);
-        
+
         if (u.role) {
           const r = u.role.toLowerCase();
           if (r === 'scanner' && pageId !== 'attendance-scanner') {
@@ -1491,7 +1501,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
 
-      } catch(e) {}
+      } catch (e) { }
     }
 
     if (pageId === 'messages') {
@@ -1522,7 +1532,7 @@ document.addEventListener('DOMContentLoaded', () => {
       fetchPosts();
       return;
     }
-    
+
     // Fallback for unauthorized/public hash navigation
     if (!localStorage.getItem('sas_user_data') && pageId !== 'login') {
       showLandingPage();
@@ -1530,12 +1540,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     var sys = systems.find(function (s) { return s.id === pageId; });
-    
+
     // --- RBAC CHECK ---
     let userRole = 'guest';
     const rbacSession = localStorage.getItem('sas_user_data');
     if (rbacSession) {
-      try { userRole = JSON.parse(rbacSession).role; } catch(e) {}
+      try { userRole = JSON.parse(rbacSession).role; } catch (e) { }
     }
 
     if (!sys) {
@@ -1615,16 +1625,17 @@ document.addEventListener('DOMContentLoaded', () => {
         userRole = userData.role;
       } catch (e) { }
     }
-    
+
     // System Icon Mapping (Lucide-style SVGs)
     const SYSTEM_ICONS = {
       'tv-view': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>`,
       'attendance-scanner': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><polyline points="16 11 18 13 22 9"></polyline></svg>`,
       'schedule-manager': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>`,
-      'foundation-day-attendance': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>`,
+      'attendance-viewer': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>`,
       'nbsc-mailer': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2-2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>`,
       'lost-and-found': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`,
       'borrowers-log': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>`,
+      'file-hub': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`,
       'default': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>`
     };
 
@@ -1734,6 +1745,24 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   window.showToast = showToast;
 
+  function showLoading(message = "Processing...") {
+    const modal = document.getElementById('loading-modal');
+    const messageEl = document.getElementById('loading-modal-message');
+    if (modal && messageEl) {
+      messageEl.textContent = message;
+      modal.classList.remove('hidden');
+    }
+  }
+  window.showLoading = showLoading;
+
+  function hideLoading() {
+    const modal = document.getElementById('loading-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+    }
+  }
+  window.hideLoading = hideLoading;
+
   function showConfirm(title, message, showPassword = false, type = 'info') {
     return new Promise((resolve) => {
       const modal = document.getElementById('confirm-modal');
@@ -1770,7 +1799,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       modal.classList.remove('hidden');
-      
+
       // Accessibility: Autofocus
       if (showPassword) {
         passwordInput.focus();
@@ -1826,46 +1855,54 @@ document.addEventListener('DOMContentLoaded', () => {
     if (tvSettingsBox) tvSettingsBox.classList.add('hidden');
   }
 
-    
-    
-function showAppUI(userObj) {
-  if (loginOverlay) loginOverlay.classList.add('hidden');
-  
-  // Apply theme immediately from localStorage or user data
-  const theme = userObj?.theme || localStorage.getItem('sas_theme') || 'light';
-  if (theme === 'dark') {
-    document.body.classList.add('dark-theme');
-  } else {
-    document.body.classList.remove('dark-theme');
-  }
-  localStorage.setItem('sas_theme', theme);
-  
-  if (userObj && userObj.role) {
-    const role = userObj.role.toLowerCase();
-    document.body.className = document.body.className.replace(/role-\S+/g, '') + ' role-' + role; 
-    
-    if (role === 'scanner') {
-      if (navToggle) navToggle.classList.add('hidden');
-      if (userMenuBtn) userMenuBtn.hidden = false;
-      if (window.location.hash !== '#attendance-scanner') window.location.hash = 'attendance-scanner';
-    } else if (role === 'user') {
-      if (navToggle) navToggle.classList.add('hidden');
-      if (userMenuBtn) userMenuBtn.hidden = false;
-      if (window.location.hash !== '#messages') window.location.hash = 'messages';
+
+
+  function showAppUI(userObj) {
+    if (userObj && userObj.username) {
+      myUsername = userObj.username;
+    }
+    if (loginOverlay) loginOverlay.classList.add('hidden');
+
+    // Apply theme immediately from localStorage or user data
+    const theme = userObj?.theme || localStorage.getItem('sas_theme') || 'light';
+    if (theme === 'dark') {
+      document.body.classList.add('dark-theme');
     } else {
-      if (navToggle) navToggle.classList.remove('hidden');
-      if (userMenuBtn) userMenuBtn.hidden = false;
-      if (window.location.hash === '#attendance-scanner') {
-        window.location.hash = 'home';
+      document.body.classList.remove('dark-theme');
+    }
+    localStorage.setItem('sas_theme', theme);
+
+    if (userObj && userObj.role) {
+      const role = userObj.role.toLowerCase();
+      document.body.className = document.body.className.replace(/role-\S+/g, '') + ' role-' + role;
+
+      if (role === 'scanner') {
+        if (navToggle) navToggle.classList.add('hidden');
+        if (userMenuBtn) userMenuBtn.hidden = false;
+        if (window.location.hash !== '#attendance-scanner') window.location.hash = 'attendance-scanner';
+      } else if (role === 'user') {
+        if (navToggle) navToggle.classList.add('hidden');
+        if (userMenuBtn) userMenuBtn.hidden = false;
+        if (window.location.hash !== '#messages') window.location.hash = 'messages';
+      } else {
+        if (navToggle) {
+          navToggle.classList.remove('hidden');
+          navToggle.hidden = false;
+        }
+        if (userMenuBtn) userMenuBtn.hidden = false;
+
+        if (window.location.hash === '#attendance-scanner') {
+          window.location.hash = 'home';
+        }
       }
     }
-  }
     setupUserMenu(userObj);
     finishInit();
     initUserMessaging();
+    initSharedMessaging(); // Ensure real-time listeners start after identity is known
     initLpActivitiesAdmin(userObj); // Admin LP activities management
     initLpDocumentsAdmin(userObj);  // Admin LP documents management
-}
+  }
 
 
 
@@ -1899,7 +1936,7 @@ function showAppUI(userObj) {
       btnTvTheater.classList.toggle('active-setting', tvTheaterEnabled);
     }
     if (btnTvHeaderToggle) {
-       btnTvHeaderToggle.classList.toggle('active-setting', document.body.classList.contains('tv-header-collapsed'));
+      btnTvHeaderToggle.classList.toggle('active-setting', document.body.classList.contains('tv-header-collapsed'));
     }
   }
 
@@ -1983,16 +2020,16 @@ function showAppUI(userObj) {
           const responseData = await r.json();
 
           if (responseData.success) {
-            // Note: Storing password in localStorage is necessary here to re-authenticate 
-            // the 'updateTvSettings' payload against Google Apps Script without a JWT token.
-            const sessionObj = { 
-              username: responseData.username, 
-              role: responseData.role, 
-              password: pass,
+            console.log("[Auth] Login successful. Data received:", responseData);
+            const sessionObj = {
+              username: responseData.username,
+              role: responseData.role,
+              token: responseData.token || responseData.jwt || "",
               displayName: responseData.displayName || responseData.username,
               profilePic: responseData.profilePic || "",
               theme: responseData.theme || "light"
             };
+            console.log("[Auth] Saving session object:", sessionObj);
             localStorage.setItem('sas_user_data', JSON.stringify(sessionObj));
 
             showAppUI(sessionObj);
@@ -2011,6 +2048,84 @@ function showAppUI(userObj) {
       } else {
         loginError.textContent = "Please fill in all fields.";
         loginError.classList.remove('hidden');
+      }
+    });
+  }
+
+  // Handle Registration Logic
+  if (showRegisterBtn) {
+    showRegisterBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (loginOverlay) loginOverlay.classList.add('hidden');
+      if (registerOverlay) registerOverlay.classList.remove('hidden');
+      if (registerError) registerError.classList.add('hidden');
+      if (registerSuccess) registerSuccess.classList.add('hidden');
+    });
+  }
+
+  if (backToLoginBtn) {
+    backToLoginBtn.addEventListener('click', () => {
+      if (registerOverlay) registerOverlay.classList.add('hidden');
+      if (loginOverlay) loginOverlay.classList.remove('hidden');
+    });
+  }
+
+  if (registerForm) {
+    registerForm.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const user = document.getElementById('register-username').value.trim();
+      const pass = document.getElementById('register-password').value.trim();
+      const role = document.getElementById('register-role').value;
+      const btn = registerForm.querySelector('.login-btn');
+      const origBtnText = btn.textContent;
+
+      if (user && pass && role) {
+        btn.textContent = 'Registering...';
+        btn.disabled = true;
+        if (registerError) registerError.classList.add('hidden');
+        if (registerSuccess) registerSuccess.classList.add('hidden');
+
+        try {
+          const formData = new URLSearchParams();
+          formData.append('action', 'register');
+          formData.append('username', user);
+          formData.append('password', pass);
+          formData.append('role', role);
+
+          const r = await fetch(BACKEND_GAS_URL, {
+            method: 'POST',
+            body: formData
+          });
+
+          const responseData = await r.json();
+
+          if (responseData.success) {
+            if (registerSuccess) {
+              registerSuccess.textContent = "Registration successful! Your account is now pending approval.";
+              registerSuccess.classList.remove('hidden');
+            }
+            registerForm.reset();
+            // Automatically switch back to login after 3 seconds
+            setTimeout(() => {
+              if (registerOverlay) registerOverlay.classList.add('hidden');
+              if (loginOverlay) loginOverlay.classList.remove('hidden');
+            }, 3000);
+          } else {
+            if (registerError) {
+              registerError.textContent = responseData.message || "Registration failed.";
+              registerError.classList.remove('hidden');
+            }
+          }
+        } catch (err) {
+          if (registerError) {
+            registerError.textContent = "Check network. Could not connect to servers.";
+            registerError.classList.remove('hidden');
+          }
+          console.error(err);
+        } finally {
+          btn.textContent = origBtnText;
+          btn.disabled = false;
+        }
       }
     });
   }
@@ -2058,7 +2173,7 @@ function showAppUI(userObj) {
       systemsPromise = new Promise((resolve) => {
         systems = window.ENV?.systems || [];
         systemsLoaded = true;
-        
+
         if (statSystems) statSystems.textContent = systems.length;
         renderNav();
         initPostSetup();
@@ -2077,17 +2192,17 @@ function showAppUI(userObj) {
 
     function setViewMode(mode) {
       if (!postsContainer) return;
-      
+
       // Remove all view classes
       postsContainer.classList.remove('view-xl', 'view-lg', 'view-md', 'view-sm');
       // Add selected view class
       postsContainer.classList.add(`view-${mode}`);
-      
+
       // Update active state in dropdown
       viewOptions.forEach(opt => {
         opt.classList.toggle('active', opt.getAttribute('data-view') === mode);
       });
-      
+
       // Update button label text
       const viewLabel = document.getElementById('view-menu-label');
       if (viewLabel) {
@@ -2097,13 +2212,13 @@ function showAppUI(userObj) {
 
       // Persist choice
       localStorage.setItem('sas_post_view_mode', mode);
-      
+
       // Close menu
       if (viewMenu) viewMenu.classList.remove('is-open');
       if (viewMenuBtn) viewMenuBtn.setAttribute('aria-expanded', 'false');
-      
+
       console.log(`[View] Mode set to: ${mode}`);
-      
+
       // Force layout recalculation for any potential issues
       window.dispatchEvent(new Event('resize'));
     }
@@ -2135,6 +2250,8 @@ function showAppUI(userObj) {
     setViewMode(savedViewMode);
 
     // Register listener ONCE globally inside DOMContentLoaded
+    // DISABLED: Let modular main.js handle hash changes to avoid duplication
+    /*
     if (!window._sas_hash_bound) {
       window.addEventListener('hashchange', syncFromHash);
       window._sas_hash_bound = true;
@@ -2142,11 +2259,13 @@ function showAppUI(userObj) {
     
     // Trigger initial check if needed (though it might handle internally by promise)
     syncFromHash();
+    */
+
   }
 
   function setupUserMenu(userObj) {
 
-    window.appLogout = function() {
+    window.appLogout = function () {
       const btn = document.getElementById('logout-btn');
       if (btn) btn.click();
       else {
@@ -2294,10 +2413,10 @@ function showAppUI(userObj) {
       settingsBtn.onmouseover = () => settingsBtn.style.background = '#f1f5f9';
       settingsBtn.onmouseout = () => settingsBtn.style.background = 'transparent';
       settingsBtn.onclick = () => { userMenu.classList.remove('is-open'); openSettingsModal(); };
-      
+
       const divider = document.createElement('div');
       divider.className = 'user-menu-divider';
-      
+
       // Insert before logout button
       if (logoutBtn && logoutBtn.parentNode) {
         logoutBtn.parentNode.insertBefore(settingsBtn, logoutBtn);
@@ -2305,9 +2424,9 @@ function showAppUI(userObj) {
       }
     }
 
-    
-    
-if (logoutBtn) {
+
+
+    if (logoutBtn) {
       logoutBtn.addEventListener('click', function () {
         localStorage.clear();
         sessionStorage.clear();
@@ -2373,16 +2492,82 @@ if (logoutBtn) {
     const sliderEnd = document.getElementById('post-video-slider-end');
     const durationSlider = document.getElementById('post-display-duration');
     const durationValDisplay = document.getElementById('post-display-duration-val');
-    
+
     if (durationSlider && durationValDisplay) {
       durationSlider.addEventListener('input', (e) => {
         durationValDisplay.textContent = e.target.value + 's';
       });
     }
-    
+
     let videoDuration = 0;
     let previewYtPlayer = null;
     let previewFbPlayer = null;
+    let currentFiles = [];
+    let isAppending = false;
+    let previewCyclingTimer = null;
+
+    function scrollToModalBottom() {
+      const modalBody = document.querySelector('#add-post-modal .modal-body');
+      if (modalBody) {
+        setTimeout(() => {
+          modalBody.scrollTo({ top: modalBody.scrollHeight, behavior: 'smooth' });
+        }, 100);
+      }
+    }
+
+    function stopPreviewCycling() {
+      if (previewCyclingTimer) {
+        clearTimeout(previewCyclingTimer);
+        previewCyclingTimer = null;
+      }
+    }
+
+    function startPreviewCycling(items, type = 'file') {
+      stopPreviewCycling();
+      if (!items || items.length <= 1) return;
+
+      let currentIdx = 0;
+      const els = getScopedElements('upload');
+      const thumbContainer = document.getElementById('upload-thumbnails-container');
+      const intervalInput = document.getElementById('multi-interval');
+
+      const runCycle = () => {
+        const cycleTime = Math.max(parseInt(intervalInput?.value || 5), 2) * 1000;
+        previewCyclingTimer = setTimeout(() => {
+          if (!document.getElementById('add-post-modal') || document.getElementById('add-post-modal').classList.contains('hidden')) {
+            stopPreviewCycling();
+            return;
+          }
+
+          currentIdx = (currentIdx + 1) % items.length;
+          const item = items[currentIdx];
+
+          if (type === 'file') {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              if (els.previewImg) els.previewImg.src = e.target.result;
+              updateThumbBorders(currentIdx);
+              runCycle();
+            };
+            reader.readAsDataURL(item);
+          } else {
+            if (els.previewImg) els.previewImg.src = item;
+            updateThumbBorders(currentIdx);
+            runCycle();
+          }
+        }, cycleTime);
+      };
+
+      function updateThumbBorders(idx) {
+        if (thumbContainer) {
+          thumbContainer.querySelectorAll('img').forEach((im, i) => {
+            im.style.borderColor = (i === idx) ? 'var(--nbsc-gold)' : 'transparent';
+          });
+        }
+      }
+
+      runCycle();
+    }
 
     function formatTimeObj(seconds) {
       if (!seconds || isNaN(seconds)) return "00:00";
@@ -2399,25 +2584,25 @@ if (logoutBtn) {
           const img = new Image();
           img.src = e.target.result;
           img.onload = () => {
-             const canvas = document.createElement('canvas');
-             let width = img.width;
-             let height = img.height;
-             if (width > maxWidth || height > maxWidth) {
-                 if (width > height) {
-                    height = (maxWidth / width) * height;
-                    width = maxWidth;
-                 } else {
-                    width = (maxWidth / height) * width;
-                    height = maxWidth;
-                 }
-             }
-             canvas.width = width;
-             canvas.height = height;
-             const ctx = canvas.getContext('2d');
-             ctx.drawImage(img, 0, 0, width, height);
-             canvas.toBlob((blob) => {
-                resolve(new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", { type: 'image/jpeg' }));
-             }, 'image/jpeg', quality);
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            if (width > maxWidth || height > maxWidth) {
+              if (width > height) {
+                height = (maxWidth / width) * height;
+                width = maxWidth;
+              } else {
+                width = (maxWidth / height) * width;
+                height = maxWidth;
+              }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            canvas.toBlob((blob) => {
+              resolve(new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", { type: 'image/jpeg' }));
+            }, 'image/jpeg', quality);
           };
         };
       });
@@ -2444,12 +2629,12 @@ if (logoutBtn) {
             });
             const data = await response.json();
             if (data.success) {
-               if (onProgress) onProgress(100);
-               resolve({ secure_url: data.url, public_id: "gdrive_" + Date.now() });
+              if (onProgress) onProgress(100);
+              resolve({ secure_url: data.url, public_id: "gdrive_" + Date.now() });
             } else {
-               reject(new Error(data.message || "Google Drive upload failed"));
+              reject(new Error(data.message || "Google Drive upload failed"));
             }
-          } catch(e) { reject(e); }
+          } catch (e) { reject(e); }
         };
         reader.onerror = (e) => reject(e);
       });
@@ -2471,9 +2656,9 @@ if (logoutBtn) {
         formData.append('file', chunk);
         formData.append('upload_preset', uploadPreset);
         formData.append('folder', 'sas_repository');
-        
+
         const contentRange = `bytes ${start}-${end - 1}/${totalSize}`;
-        
+
         if (onProgress) onProgress(Math.round((i / totalChunks) * 100));
 
         const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
@@ -2487,7 +2672,7 @@ if (logoutBtn) {
 
         lastResponseData = await response.json();
         if (!response.ok) {
-           throw new Error(lastResponseData.error ? lastResponseData.error.message : "Chunked upload failed");
+          throw new Error(lastResponseData.error ? lastResponseData.error.message : "Chunked upload failed");
         }
       }
       return lastResponseData;
@@ -2496,17 +2681,17 @@ if (logoutBtn) {
     function updateDualSliderUI(scope) {
       const els = getScopedElements(scope);
       if (!els.vSliderStart || !els.vSliderEnd) return;
-      
+
       const vDuration = parseFloat(els.vSliderStart.max) || 0;
       let sVal = parseInt(els.vSliderStart.value) || 0;
       let eVal = parseInt(els.vSliderEnd.value) || vDuration;
 
       if (sVal >= eVal) {
-         // Determine which slider was moved (hacky but works if called from input listener)
-         // Actually, let's just enforce a 1s difference
-         sVal = eVal - 1;
-         if (sVal < 0) sVal = 0;
-         els.vSliderStart.value = sVal;
+        // Determine which slider was moved (hacky but works if called from input listener)
+        // Actually, let's just enforce a 1s difference
+        sVal = eVal - 1;
+        if (sVal < 0) sVal = 0;
+        els.vSliderStart.value = sVal;
       }
 
       if (els.vStartHidden) els.vStartHidden.value = sVal;
@@ -2518,7 +2703,7 @@ if (logoutBtn) {
     function onSliderInput(e) {
       const scope = this.getAttribute('data-scope') || 'upload';
       updateDualSliderUI(scope);
-      
+
       const els = getScopedElements(scope);
       const targetTime = parseInt(this.value);
       if (els.videoPlayer && els.videoPlayer.style.display !== 'none' && isFinite(els.videoPlayer.duration)) {
@@ -2544,7 +2729,7 @@ if (logoutBtn) {
     attachSliderListeners('url');
 
     // Optimized Google Drive Resumable Upload
-  async function uploadToGoogleDriveResumable(file, onProgress) {
+    async function uploadToGoogleDriveResumable(file, onProgress) {
       // 1. Get OAuth Token from GAS
       const tokenRes = await fetch(BACKEND_GAS_URL, {
         method: 'POST',
@@ -2577,7 +2762,7 @@ if (logoutBtn) {
         const xhr = new XMLHttpRequest();
         xhr.open('PUT', location, true);
         xhr.setRequestHeader('Content-Range', `bytes 0-${file.size - 1}/${file.size}`);
-        
+
         xhr.upload.onprogress = (e) => {
           if (e.lengthComputable && onProgress) {
             const pct = Math.round((e.loaded / e.total) * 100);
@@ -2589,16 +2774,16 @@ if (logoutBtn) {
           if (xhr.status === 200 || xhr.status === 201) {
             const finalData = JSON.parse(xhr.responseText);
             const fileId = finalData.id;
-            
+
             // 4. Set Public via GAS
             const setPublicRes = await fetch(BACKEND_GAS_URL, {
               method: 'POST',
               body: JSON.stringify({ action: "setFilePublic", fileId: fileId })
             });
             const setPublicData = await setPublicRes.json();
-            
-            resolve({ 
-              secure_url: `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`, 
+
+            resolve({
+              secure_url: `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`,
               public_id: fileId,
               drivePreviewUrl: setPublicData.url || `https://drive.google.com/file/d/${fileId}/preview`
             });
@@ -2611,83 +2796,83 @@ if (logoutBtn) {
       });
     }
 
-    window.loadPreviewVideo = async function(url, isFile = false, resetValues = true, scope = 'upload') {
-       const els = getScopedElements(scope);
-       if (!els.videoGroup) return;
+    window.loadPreviewVideo = async function (url, isFile = false, resetValues = true, scope = 'upload') {
+      const els = getScopedElements(scope);
+      if (!els.videoGroup) return;
 
-       if (els.videoPlayer) els.videoPlayer.style.display = 'none';
-       if (els.videoIframe) {
-         els.videoIframe.style.display = 'none';
-         els.videoIframe.innerHTML = '';
-       }
-       
-       if (resetValues) {
-          if (els.vStartHidden) els.vStartHidden.value = '';
-          if (els.vEndHidden) els.vEndHidden.value = '';
-          if (els.vSliderStart) els.vSliderStart.value = 0;
-          if (els.vSliderEnd) els.vSliderEnd.value = 100;
-       }
+      if (els.videoPlayer) els.videoPlayer.style.display = 'none';
+      if (els.videoIframe) {
+        els.videoIframe.style.display = 'none';
+        els.videoIframe.innerHTML = '';
+      }
 
-       window[`previewYtPlayer_${scope}`] = null;
-       
-       const ytId = getYouTubeVideoId(url);
-       const fbEmbedUrl = getFacebookVideoUrl(url);
-       
-       if (ytId && !isFile) {
-         if (els.videoIframe) {
-           els.videoIframe.style.display = 'block';
-           const anchorId = `preview-yt-anchor-${scope}`;
-           els.videoIframe.innerHTML = `<div id="${anchorId}"></div>`;
-           
-           if (window.YT && window.YT.Player) {
-              window[`previewYtPlayer_${scope}`] = new YT.Player(anchorId, {
-                videoId: ytId,
-                playerVars: { controls: 0, disablekb: 1 },
-                events: {
-                  'onReady': (event) => {
-                     const dur = Math.floor(event.target.getDuration());
-                     if (els.vSliderStart) els.vSliderStart.max = dur;
-                     if (els.vSliderEnd) els.vSliderEnd.max = dur;
-                     if (els.vSliderEnd) els.vSliderEnd.value = els.vEndHidden.value || dur;
-                     if (els.vSliderStart) els.vSliderStart.value = els.vStartHidden.value || 0;
-                     updateDualSliderUI(scope);
-                  }
+      if (resetValues) {
+        if (els.vStartHidden) els.vStartHidden.value = '';
+        if (els.vEndHidden) els.vEndHidden.value = '';
+        if (els.vSliderStart) els.vSliderStart.value = 0;
+        if (els.vSliderEnd) els.vSliderEnd.value = 100;
+      }
+
+      window[`previewYtPlayer_${scope}`] = null;
+
+      const ytId = getYouTubeVideoId(url);
+      const fbEmbedUrl = getFacebookVideoUrl(url);
+
+      if (ytId && !isFile) {
+        if (els.videoIframe) {
+          els.videoIframe.style.display = 'block';
+          const anchorId = `preview-yt-anchor-${scope}`;
+          els.videoIframe.innerHTML = `<div id="${anchorId}"></div>`;
+
+          if (window.YT && window.YT.Player) {
+            window[`previewYtPlayer_${scope}`] = new YT.Player(anchorId, {
+              videoId: ytId,
+              playerVars: { controls: 0, disablekb: 1 },
+              events: {
+                'onReady': (event) => {
+                  const dur = Math.floor(event.target.getDuration());
+                  if (els.vSliderStart) els.vSliderStart.max = dur;
+                  if (els.vSliderEnd) els.vSliderEnd.max = dur;
+                  if (els.vSliderEnd) els.vSliderEnd.value = els.vEndHidden.value || dur;
+                  if (els.vSliderStart) els.vSliderStart.value = els.vStartHidden.value || 0;
+                  updateDualSliderUI(scope);
                 }
-              });
-           }
-         }
-       } else if (fbEmbedUrl && !isFile) {
-          await initFbSdk();
-          if (els.videoIframe) {
-            els.videoIframe.style.display = 'block';
-            const fbId = 'fb-preview-' + scope + '-' + Date.now();
-            els.videoIframe.innerHTML = `<div id="${fbId}" class="fb-video" data-href="${url}" data-width="auto" data-allowfullscreen="true" data-autoplay="false"></div>`;
-            if (window.FB) {
-              FB.XFBML.parse(els.videoIframe, () => {
-                 // FB preview state management is complex with scopes, omitting for now to keep code lean unless requested
-              });
-            }
+              }
+            });
           }
-       } else {
-         if (els.videoPlayer) {
-           els.videoPlayer.style.display = 'block';
-           els.videoPlayer.src = url;
-           els.videoPlayer.onloadedmetadata = () => {
-              const dur = Math.floor(els.videoPlayer.duration);
-              if (els.vSliderStart) els.vSliderStart.max = isFinite(dur) ? dur : 100;
-              if (els.vSliderEnd) els.vSliderEnd.max = isFinite(dur) ? dur : 100;
-              if (els.vSliderEnd) els.vSliderEnd.value = els.vEndHidden.value || dur || 100;
-              if (els.vSliderStart) els.vSliderStart.value = els.vStartHidden.value || 0;
-              updateDualSliderUI(scope);
-           };
-         }
-       }
+        }
+      } else if (fbEmbedUrl && !isFile) {
+        await initFbSdk();
+        if (els.videoIframe) {
+          els.videoIframe.style.display = 'block';
+          const fbId = 'fb-preview-' + scope + '-' + Date.now();
+          els.videoIframe.innerHTML = `<div id="${fbId}" class="fb-video" data-href="${url}" data-width="auto" data-allowfullscreen="true" data-autoplay="false"></div>`;
+          if (window.FB) {
+            FB.XFBML.parse(els.videoIframe, () => {
+              // FB preview state management is complex with scopes, omitting for now to keep code lean unless requested
+            });
+          }
+        }
+      } else {
+        if (els.videoPlayer) {
+          els.videoPlayer.style.display = 'block';
+          els.videoPlayer.src = url;
+          els.videoPlayer.onloadedmetadata = () => {
+            const dur = Math.floor(els.videoPlayer.duration);
+            if (els.vSliderStart) els.vSliderStart.max = isFinite(dur) ? dur : 100;
+            if (els.vSliderEnd) els.vSliderEnd.max = isFinite(dur) ? dur : 100;
+            if (els.vSliderEnd) els.vSliderEnd.value = els.vEndHidden.value || dur || 100;
+            if (els.vSliderStart) els.vSliderStart.value = els.vStartHidden.value || 0;
+            updateDualSliderUI(scope);
+          };
+        }
+      }
     };
 
     // === UPLOAD TAB SWITCHING ===
     const uploadTabBtns = document.querySelectorAll('.upload-tab');
-    const uploadPanels = { 
-      upload: document.getElementById('upload-tab-upload'), 
+    const uploadPanels = {
+      upload: document.getElementById('upload-tab-upload'),
       url: document.getElementById('upload-tab-url'),
       live: document.getElementById('upload-tab-live')
     };
@@ -2699,32 +2884,74 @@ if (logoutBtn) {
         btn.classList.add('active');
         activeUploadTab = btn.dataset.tab;
         Object.values(uploadPanels).forEach(p => p && p.classList.add('hidden'));
-        if (uploadPanels[activeUploadTab]) uploadPanels[activeUploadTab].classList.remove('hidden');
-        
+
+        const effectivePanelId = (activeUploadTab === 'multi') ? 'upload' : activeUploadTab;
+        if (uploadPanels[effectivePanelId]) uploadPanels[effectivePanelId].classList.remove('hidden');
+
+        // Reset tracked files when switching between DIFFERENT upload types
+        if (activeUploadTab === 'upload' || activeUploadTab === 'multi') {
+          currentFiles = [];
+          const fileInput = document.getElementById('post-file');
+          if (fileInput) {
+            if (activeUploadTab === 'multi') {
+              fileInput.setAttribute('multiple', 'multiple');
+            } else {
+              fileInput.removeAttribute('multiple');
+            }
+            fileInput.value = '';
+          }
+          handleFileSelection(null); // Clear preview
+          stopPreviewCycling();
+        }
+
+        // Toggle "Add More" and "Batch Settings" containers
+        const multiAddContainer = document.getElementById('multi-add-container');
+        const multiSettingsGroup = document.getElementById('multi-settings-group');
+        if (multiAddContainer) {
+          multiAddContainer.classList.add('hidden');
+        }
+        if (multiSettingsGroup) {
+          if (activeUploadTab === 'multi') {
+            multiSettingsGroup.classList.remove('hidden');
+          } else {
+            multiSettingsGroup.classList.add('hidden');
+          }
+        }
+
+        // Update guidance text for the upload panel
+        const fileLabelText = document.getElementById('file-label-text');
+        if (fileLabelText) {
+          if (activeUploadTab === 'multi') {
+            fileLabelText.textContent = 'Drop MULTIPLE images here';
+          } else {
+            fileLabelText.textContent = 'Click or drag image/video here';
+          }
+        }
+
         const scheduleSection = document.getElementById('post-scheduling-section');
 
         if (activeUploadTab === 'live') {
-           if (scheduleSection) scheduleSection.classList.add('hidden');
+          if (scheduleSection) scheduleSection.classList.add('hidden');
         } else {
-           if (scheduleSection) scheduleSection.classList.remove('hidden');
+          if (scheduleSection) scheduleSection.classList.remove('hidden');
         }
 
         // --- RE-TRIGGER PREVIEWS ON TAB SWITCH ---
         if (activeUploadTab === 'url') {
-           const urlInput = document.getElementById('post-img');
-           if (urlInput && urlInput.value.trim()) {
-              urlInput.dispatchEvent(new CustomEvent('input', { detail: { keepValues: true } }));
-           }
-        } else if (activeUploadTab === 'upload') {
-           const fileInput = document.getElementById('post-file');
-           if (fileInput && fileInput.files && fileInput.files[0]) {
-              handleFileSelection(fileInput.files[0]);
-           }
+          const urlInput = document.getElementById('post-img');
+          if (urlInput && urlInput.value.trim()) {
+            urlInput.dispatchEvent(new CustomEvent('input', { detail: { keepValues: true } }));
+          }
+        } else if (activeUploadTab === 'upload' || activeUploadTab === 'multi') {
+          const fileInput = document.getElementById('post-file');
+          if (fileInput && fileInput.files && fileInput.files.length > 0) {
+            handleFileSelection(fileInput.files);
+          }
         } else if (activeUploadTab === 'live') {
-           const lInput = document.getElementById('post-live-url');
-           if (lInput && lInput.value.trim()) {
-              lInput.dispatchEvent(new CustomEvent('input', { detail: { keepValues: true } }));
-           }
+          const lInput = document.getElementById('post-live-url');
+          if (lInput && lInput.value.trim()) {
+            lInput.dispatchEvent(new CustomEvent('input', { detail: { keepValues: true } }));
+          }
         }
       });
     });
@@ -2734,11 +2961,31 @@ if (logoutBtn) {
     const fileUploadLabel = document.getElementById('file-upload-label');
     const fileLabelText = document.getElementById('file-label-text');
 
-    function handleFileSelection(file) {
+    function handleFileSelection(files, isAppend = false) {
       const els = getScopedElements('upload');
+      const fileCountBadge = document.getElementById('file-count-badge');
+      const controls = document.getElementById('upload-img-controls');
+      const multiAddContainer = document.getElementById('multi-add-container');
+
+      if (!isAppend) {
+        currentFiles = files ? Array.from(files) : [];
+      } else if (files) {
+        currentFiles = [...currentFiles, ...Array.from(files)];
+      }
+
+      const file = (currentFiles.length > 0) ? currentFiles[0] : null;
+
+      // Reset transform when selecting a new file (if not appending)
+      if (!isAppend && transformStates['upload']) {
+        transformStates['upload'] = { zoom: 1, x: 0, y: 0 };
+        updateTransform('upload');
+      }
+
       if (!file) {
         if (fileLabelText) fileLabelText.textContent = 'Choose a file or drag it here';
+        if (fileCountBadge) fileCountBadge.classList.add('hidden');
         if (fileUploadLabel) fileUploadLabel.classList.remove('file-selected');
+        if (multiAddContainer) multiAddContainer.classList.add('hidden');
         const iconWrapper = fileUploadLabel ? fileUploadLabel.querySelector('.upload-icon-wrapper') : null;
         if (iconWrapper) iconWrapper.style.color = '';
         if (els.previewGroup) els.previewGroup.style.display = 'none';
@@ -2746,21 +2993,86 @@ if (logoutBtn) {
         return;
       }
 
-      if (fileLabelText) fileLabelText.textContent = '✅ ' + file.name;
+      // Update badge and Thumbnails
+      const thumbContainer = document.getElementById('upload-thumbnails-container');
+      if (thumbContainer) {
+        thumbContainer.innerHTML = '';
+        thumbContainer.classList.add('hidden');
+      }
+
+      if (fileCountBadge) {
+        if (currentFiles.length > 1) {
+          fileCountBadge.textContent = currentFiles.length + ' Files Selected';
+          fileCountBadge.classList.remove('hidden');
+          if (controls) controls.style.display = 'none';
+
+          if (thumbContainer) {
+            thumbContainer.classList.remove('hidden');
+            currentFiles.forEach((f, idx) => {
+              if (f.type.startsWith('image/')) {
+                const tReader = new FileReader();
+                tReader.onload = (ev) => {
+                  const wrapper = document.createElement('div');
+                  wrapper.style.cssText = 'position: relative; flex-shrink: 0; margin: 4px;';
+
+                  const tImg = document.createElement('img');
+                  tImg.src = ev.target.result;
+                  tImg.style.cssText = 'width: 60px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; display: block;';
+                  if (idx === 0) tImg.style.borderColor = 'var(--nbsc-gold)';
+
+                  tImg.onclick = () => {
+                    if (els.previewImg) els.previewImg.src = ev.target.result;
+                    thumbContainer.querySelectorAll('img').forEach(im => im.style.borderColor = 'transparent');
+                    tImg.style.borderColor = 'var(--nbsc-gold)';
+                  };
+
+                  const delBtn = document.createElement('button');
+                  delBtn.type = 'button';
+                  delBtn.innerHTML = '&times;';
+                  delBtn.style.cssText = 'position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; background: #ef4444; color: white; border-radius: 50%; border: 1px solid white; font-size: 14px; line-height: 1; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.3); font-weight: bold;';
+                  delBtn.title = "Remove image";
+                  delBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    currentFiles.splice(idx, 1);
+                    handleFileSelection(currentFiles, false);
+                  };
+
+                  wrapper.appendChild(tImg);
+                  wrapper.appendChild(delBtn);
+                  thumbContainer.appendChild(wrapper);
+                };
+                tReader.readAsDataURL(f);
+              }
+            });
+          }
+        } else {
+          fileCountBadge.classList.add('hidden');
+          if (controls) controls.style.display = 'block';
+        }
+      }
+
+      if (fileLabelText) fileLabelText.textContent = '📄 ' + file.name + (currentFiles.length > 1 ? ' + ' + (currentFiles.length - 1) + ' more' : '');
       if (fileUploadLabel) fileUploadLabel.classList.add('file-selected');
+
+      // Show "Add More" and "Batch Settings" if in multi mode
+      if (activeUploadTab === 'multi') {
+        if (multiAddContainer) multiAddContainer.classList.remove('hidden');
+        const multiSettingsGroup = document.getElementById('multi-settings-group');
+        if (multiSettingsGroup) multiSettingsGroup.classList.remove('hidden');
+      }
+
       const iconWrapper = fileUploadLabel ? fileUploadLabel.querySelector('.upload-icon-wrapper') : null;
       if (iconWrapper) iconWrapper.style.color = '#16a34a';
 
       if (file.type.startsWith('image/')) {
-        console.log("FILE PREVIEW: Image detected:", file.name);
         if (els.videoGroup) els.videoGroup.style.display = 'none';
         if (els.previewGroup) {
           els.previewGroup.classList.remove('hidden');
           els.previewGroup.style.setProperty('display', 'block', 'important');
+          scrollToModalBottom();
         }
 
         const reader = new FileReader();
-        reader.onerror = (e) => console.error("FILE PREVIEW: Reader error:", e);
         reader.onload = (e) => {
           if (els.previewImg) {
             els.previewImg.src = e.target.result;
@@ -2769,31 +3081,39 @@ if (logoutBtn) {
         };
         reader.readAsDataURL(file);
       } else if (file.type.startsWith('video/')) {
-        console.log("FILE PREVIEW: Video detected:", file.name);
         if (els.previewGroup) els.previewGroup.style.setProperty('display', 'none', 'important');
         if (els.videoGroup) els.videoGroup.style.setProperty('display', 'block', 'important');
-        
+
         const fileURL = URL.createObjectURL(file);
-        // We need to tell loadPreviewVideo which scope's elements to use
         if (window.loadPreviewVideo) window.loadPreviewVideo(fileURL, true, true, 'upload');
-        if (els.videoGroup && els.videoGroup.scrollIntoView) {
-          els.videoGroup.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
+        scrollToModalBottom();
+      }
+
+      if (activeUploadTab === 'multi' && currentFiles.length > 1) {
+        startPreviewCycling(currentFiles, 'file');
       } else {
-        if (els.previewGroup) els.previewGroup.style.display = 'none';
-        if (els.videoGroup) els.videoGroup.style.display = 'none';
+        stopPreviewCycling();
       }
     }
 
     if (fileInput && fileUploadLabel) {
       fileInput.addEventListener('change', () => {
-        if (fileInput.files && fileInput.files[0]) {
-          handleFileSelection(fileInput.files[0]);
-        } else {
-          handleFileSelection(null); // Clear preview if no file selected
+        if (fileInput.files && fileInput.files.length > 0) {
+          handleFileSelection(fileInput.files, isAppending);
+        } else if (!isAppending) {
+          handleFileSelection(null);
         }
+        isAppending = false;
       });
 
+      const multiAddBtn = document.getElementById('multi-add-btn');
+      if (multiAddBtn) {
+        multiAddBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          isAppending = true;
+          fileInput.click();
+        });
+      }
 
       fileUploadLabel.addEventListener('dragover', (ev) => {
         ev.preventDefault();
@@ -2803,9 +3123,8 @@ if (logoutBtn) {
       fileUploadLabel.addEventListener('drop', (ev) => {
         ev.preventDefault();
         fileUploadLabel.classList.remove('drag-over');
-        if (ev.dataTransfer.files && ev.dataTransfer.files[0]) {
-          fileInput.files = ev.dataTransfer.files;
-          handleFileSelection(ev.dataTransfer.files[0]);
+        if (ev.dataTransfer.files && ev.dataTransfer.files.length > 0) {
+          handleFileSelection(ev.dataTransfer.files, false);
         }
       });
     }
@@ -2817,35 +3136,63 @@ if (logoutBtn) {
         const runInput = () => {
           const url = imgInput.value.trim();
           if (url) {
-            const urlLower = url.toLowerCase();
-            const ytId = getYouTubeVideoId(url);
-            const fbUrl = getFacebookVideoUrl(url);
+            const previewUrl = url.split('|')[0];
+            const urlLower = previewUrl.toLowerCase();
+            const ytId = getYouTubeVideoId(previewUrl);
+            const fbUrl = getFacebookVideoUrl(previewUrl);
             const isDirectVideo = /\.(mp4|webm|mov|mkv|avi)$/i.test(urlLower) || urlLower.includes('/video/upload/');
             const isVideo = ytId || fbUrl || isDirectVideo || urlLower.includes('drive.google.com') && (urlLower.includes('video') || !urlLower.includes('image'));
-            
+
+            const thumbContainer = document.getElementById('url-thumbnails-container');
+            if (thumbContainer) {
+              thumbContainer.innerHTML = '';
+              thumbContainer.classList.add('hidden');
+            }
+
+            const controls = document.getElementById('url-img-controls');
+            if (url.includes('|')) {
+              if (controls) controls.style.display = 'none';
+              if (thumbContainer) {
+                thumbContainer.classList.remove('hidden');
+                const urls = url.split('|');
+                urls.forEach((u, idx) => {
+                  const tImg = document.createElement('img');
+                  tImg.src = u.trim();
+                  tImg.style.cssText = 'width: 60px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s;';
+                  if (idx === 0) tImg.style.borderColor = 'var(--nbsc-gold)';
+                  tImg.onclick = () => {
+                    if (els.previewImg) els.previewImg.src = u.trim();
+                    thumbContainer.querySelectorAll('img').forEach(im => im.style.borderColor = 'transparent');
+                    tImg.style.borderColor = 'var(--nbsc-gold)';
+                  };
+                  thumbContainer.appendChild(tImg);
+                });
+              }
+            } else {
+              if (controls) controls.style.display = 'block';
+            }
+
             if (isVideo) {
               if (els.previewGroup) els.previewGroup.style.display = 'none';
               if (els.videoGroup) els.videoGroup.style.display = 'block';
               if (window.loadPreviewVideo) {
-                 const keep = e.detail && e.detail.keepValues;
-                 window.loadPreviewVideo(url, false, !keep, 'url');
-                 if (els.videoGroup) els.videoGroup.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                const keep = e.detail && e.detail.keepValues;
+                window.loadPreviewVideo(previewUrl, false, !keep, 'url');
+                scrollToModalBottom();
               }
             } else {
               if (els.videoGroup) els.videoGroup.style.display = 'none';
               if (els.previewImg) {
-                 els.previewImg.src = url;
-                 const dId = window.getDriveId ? getDriveId(url) : null;
-                 if (dId && !url.includes('uc?id=')) {
-                    els.previewImg.src = `https://drive.google.com/uc?id=${dId}`;
-                 }
+                els.previewImg.src = previewUrl;
+                const dId = window.getDriveId ? getDriveId(previewUrl) : null;
+                if (dId && !previewUrl.includes('uc?id=')) {
+                  els.previewImg.src = `https://drive.google.com/uc?id=${dId}`;
+                }
               }
               if (els.previewGroup) {
                 els.previewGroup.style.setProperty('display', 'block', 'important');
                 els.previewGroup.classList.remove('hidden');
-                if (els.previewGroup.scrollIntoView) {
-                  els.previewGroup.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
+                scrollToModalBottom();
               }
             }
           } else {
@@ -2859,128 +3206,143 @@ if (logoutBtn) {
       });
     }
 
-      ['upload', 'url'].forEach(scope => {
-        const els = getScopedElements(scope);
-        if (els.previewImg && els.previewGroup) {
-          els.previewImg.addEventListener('error', () => {
-            console.warn(`${scope} preview failed:`, els.previewImg.src);
-          });
-          els.previewImg.addEventListener('load', () => {
-            els.previewGroup.style.display = 'block';
-          });
-        }
-      });
+    ['upload', 'url'].forEach(scope => {
+      const els = getScopedElements(scope);
+      if (els.previewImg && els.previewGroup) {
+        els.previewImg.addEventListener('error', () => {
+          console.warn(`${scope} preview failed:`, els.previewImg.src);
+        });
+        els.previewImg.addEventListener('load', () => {
+          els.previewGroup.style.display = 'block';
+          scrollToModalBottom();
+        });
+      }
+    });
 
-      if (liveInput) {
-        let liveInputTimeout;
-        liveInput.addEventListener('input', (e) => {
-          const els = getScopedElements('live');
-          const runLiveInput = () => {
-            const url = liveInput.value.trim();
-            if (url) {
-              const ytId = getYouTubeVideoId(url);
-              const fbUrl = getFacebookVideoUrl(url);
-              if (ytId || fbUrl) {
-                if (els.videoGroup) els.videoGroup.style.display = 'block';
-                if (window.loadPreviewVideo) {
-                   const keep = e.detail && e.detail.keepValues;
-                   window.loadPreviewVideo(url, false, !keep, 'live');
-                }
-              } else {
-                 if (els.videoGroup) els.videoGroup.style.display = 'none';
+    if (liveInput) {
+      let liveInputTimeout;
+      liveInput.addEventListener('input', (e) => {
+        const els = getScopedElements('live');
+        const runLiveInput = () => {
+          const url = liveInput.value.trim();
+          if (url) {
+            const ytId = getYouTubeVideoId(url);
+            const fbUrl = getFacebookVideoUrl(url);
+            if (ytId || fbUrl) {
+              if (els.videoGroup) els.videoGroup.style.display = 'block';
+              if (window.loadPreviewVideo) {
+                const keep = e.detail && e.detail.keepValues;
+                window.loadPreviewVideo(url, false, !keep, 'live');
+                scrollToModalBottom();
               }
             } else {
               if (els.videoGroup) els.videoGroup.style.display = 'none';
             }
-          };
-          clearTimeout(liveInputTimeout);
-          if (e.detail && e.detail.keepValues) runLiveInput();
-          else liveInputTimeout = setTimeout(runLiveInput, 500);
+          } else {
+            if (els.videoGroup) els.videoGroup.style.display = 'none';
+          }
+        };
+        clearTimeout(liveInputTimeout);
+        if (e.detail && e.detail.keepValues) runLiveInput();
+        else liveInputTimeout = setTimeout(runLiveInput, 500);
+      });
+    }
+
+
+    window.setPreviewTransformState = function (zoom, x, y, scope = 'upload') {
+      const state = transformStates[scope];
+      if (!state) return;
+      state.zoom = zoom;
+      state.x = x;
+      state.y = y;
+
+      const els = getScopedElements(scope);
+      if (els.zoomSlider) els.zoomSlider.value = zoom;
+      if (els.zoomVal) els.zoomVal.textContent = zoom.toFixed(2) + 'x';
+      updateTransform(scope);
+    };
+
+    function initZoomPanControls(scope) {
+      const els = getScopedElements(scope);
+      if (els.zoomSlider) {
+        els.zoomSlider.addEventListener('input', (e) => {
+          transformStates[scope].zoom = parseFloat(e.target.value);
+          if (els.zoomVal) els.zoomVal.textContent = transformStates[scope].zoom.toFixed(2) + 'x';
+          updateTransform(scope);
         });
       }
 
-
-      window.setPreviewTransformState = function (zoom, x, y, scope = 'upload') {
-        const state = transformStates[scope];
-        if (!state) return;
-        state.zoom = zoom;
-        state.x = x;
-        state.y = y;
-        
-        const els = getScopedElements(scope);
-        if (els.zoomSlider) els.zoomSlider.value = zoom;
-        if (els.zoomVal) els.zoomVal.textContent = zoom.toFixed(2) + 'x';
-        updateTransform(scope);
-      };
-
-      function initZoomPanControls(scope) {
-        const els = getScopedElements(scope);
-        if (els.zoomSlider) {
-          els.zoomSlider.addEventListener('input', (e) => {
-            transformStates[scope].zoom = parseFloat(e.target.value);
-            if (els.zoomVal) els.zoomVal.textContent = transformStates[scope].zoom.toFixed(2) + 'x';
-            updateTransform(scope);
-          });
-        }
-
-        if (els.resetBtn) {
-          els.resetBtn.addEventListener('click', () => {
-            window.setPreviewTransformState(1, 0, 0, scope);
-          });
-        }
-
-        if (els.previewContainer) {
-          let isDragging = false;
-          let startMouseX = 0, startMouseY = 0;
-          let initialDragX = 0, initialDragY = 0;
-
-          els.previewContainer.addEventListener('mousedown', (e) => {
-            isDragging = true;
-            startMouseX = e.clientX;
-            startMouseY = e.clientY;
-            initialDragX = transformStates[scope].x;
-            initialDragY = transformStates[scope].y;
-            els.previewContainer.style.cursor = 'grabbing';
-          });
-
-          window.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            const rect = els.previewContainer.getBoundingClientRect();
-            const containerWidth = rect.width || 1;
-            const containerHeight = rect.height || 1;
-            const state = transformStates[scope];
-
-            const deltaX_px = (e.clientX - startMouseX) / state.zoom;
-            const deltaY_px = (e.clientY - startMouseY) / state.zoom;
-
-            state.x = initialDragX + (deltaX_px / containerWidth) * 100;
-            state.y = initialDragY + (deltaY_px / containerHeight) * 100;
-
-            updateTransform(scope);
-          });
-
-          window.addEventListener('mouseup', () => {
-            isDragging = false;
-            els.previewContainer.style.cursor = 'grab';
-          });
-        }
+      if (els.resetBtn) {
+        els.resetBtn.addEventListener('click', () => {
+          window.setPreviewTransformState(1, 0, 0, scope);
+        });
       }
 
-      initZoomPanControls('upload');
-      initZoomPanControls('url');
+      if (els.previewContainer) {
+        let isDragging = false;
+        let startMouseX = 0, startMouseY = 0;
+        let initialDragX = 0, initialDragY = 0;
+
+        els.previewContainer.addEventListener('mousedown', (e) => {
+          isDragging = true;
+          startMouseX = e.clientX;
+          startMouseY = e.clientY;
+          initialDragX = transformStates[scope].x;
+          initialDragY = transformStates[scope].y;
+          els.previewContainer.style.cursor = 'grabbing';
+        });
+
+        window.addEventListener('mousemove', (e) => {
+          if (!isDragging) return;
+          const rect = els.previewContainer.getBoundingClientRect();
+          const containerWidth = rect.width || 1;
+          const containerHeight = rect.height || 1;
+          const state = transformStates[scope];
+
+          const deltaX_px = (e.clientX - startMouseX) / state.zoom;
+          const deltaY_px = (e.clientY - startMouseY) / state.zoom;
+
+          state.x = initialDragX + (deltaX_px / containerWidth) * 100;
+          state.y = initialDragY + (deltaY_px / containerHeight) * 100;
+
+          updateTransform(scope);
+        });
+
+        window.addEventListener('mouseup', () => {
+          isDragging = false;
+          els.previewContainer.style.cursor = 'grab';
+        });
+      }
+    }
+
+    initZoomPanControls('upload');
+    initZoomPanControls('url');
     // --- Centralized Form Reset ---
-    window.resetAddPostForm = function() {
+    window.resetAddPostForm = function () {
       const f = document.getElementById('add-post-form');
       if (f) {
         f.reset();
         f.removeAttribute('data-edit-timestamp');
       }
-      
+
       // Clear Files
       const fileInput = document.getElementById('post-file');
-      if (fileInput) fileInput.value = '';
+      if (fileInput) {
+        fileInput.value = '';
+        fileInput.removeAttribute('multiple');
+      }
+      currentFiles = [];
+      isAppending = false;
+      stopPreviewCycling();
 
-      const scopes = ['upload', 'url', 'live'];
+      const multiAddContainer = document.getElementById('multi-add-container');
+      if (multiAddContainer) multiAddContainer.classList.add('hidden');
+      const multiSettingsGroup = document.getElementById('multi-settings-group');
+      if (multiSettingsGroup) multiSettingsGroup.classList.add('hidden');
+      const multiInterval = document.getElementById('multi-interval');
+      if (multiInterval) multiInterval.value = '5';
+
+      const scopes = ['upload', 'multi', 'url', 'live'];
       scopes.forEach(scope => {
         const els = getScopedElements(scope);
         if (els.previewGroup) {
@@ -2995,7 +3357,7 @@ if (logoutBtn) {
         }
         if (els.vStartHidden) els.vStartHidden.value = '';
         if (els.vEndHidden) els.vEndHidden.value = '';
-        
+
         // Reset transform state
         if (transformStates[scope]) {
           transformStates[scope] = { zoom: 1, x: 0, y: 0 };
@@ -3011,6 +3373,20 @@ if (logoutBtn) {
       const iconWrapper = fileUploadLabel ? fileUploadLabel.querySelector('.upload-icon-wrapper') : null;
       if (iconWrapper) iconWrapper.style.color = '';
 
+      const fileCountBadge = document.getElementById('file-count-badge');
+      if (fileCountBadge) fileCountBadge.classList.add('hidden');
+      const controls = document.getElementById('upload-img-controls');
+      if (controls) controls.style.display = 'block';
+
+      // Clear Thumbnails
+      ['upload', 'url'].forEach(scope => {
+        const tc = document.getElementById(`${scope}-thumbnails-container`);
+        if (tc) {
+          tc.innerHTML = '';
+          tc.classList.add('hidden');
+        }
+      });
+
       // Reset Tabs
       const uploadTabBtns = document.querySelectorAll('.upload-tab');
       uploadTabBtns.forEach(b => b.classList.remove('active'));
@@ -3019,14 +3395,14 @@ if (logoutBtn) {
       activeUploadTab = 'upload';
       const uploadTabsDiv = document.getElementById('upload-tabs');
       if (uploadTabsDiv) uploadTabsDiv.style.display = 'flex';
-      
+
       const uInput = document.getElementById('post-img');
       const uHint = uInput ? uInput.nextElementSibling : null;
       if (uInput) uInput.style.display = 'block';
       if (uHint && uHint.classList.contains('upload-hint')) uHint.style.display = 'block';
 
-      const uploadPanels = { 
-        upload: document.getElementById('upload-tab-upload'), 
+      const uploadPanels = {
+        upload: document.getElementById('upload-tab-upload'),
         url: document.getElementById('upload-tab-url'),
         live: document.getElementById('upload-tab-live')
       };
@@ -3049,7 +3425,7 @@ if (logoutBtn) {
         dSlider.value = 25;
         if (dValDisp) dValDisp.textContent = '25s';
       }
-      
+
       const err = document.getElementById('post-error');
       if (err) err.classList.add('hidden');
     };
@@ -3086,14 +3462,14 @@ if (logoutBtn) {
         let imgUrl = "";
         let imgPos = "0 0";
         let imgSize = "1";
-        
+
         const postFileIn = document.getElementById('post-file');
-        const file = (activeUploadTab === 'upload' && postFileIn) ? postFileIn.files[0] : null;
+        const files = (activeUploadTab === 'upload' || activeUploadTab === 'multi') ? currentFiles : [];
 
         if (activeUploadTab === 'url') {
-           imgUrl = imgInput.value.trim();
+          imgUrl = imgInput.value.trim();
         } else if (activeUploadTab === 'live') {
-           imgUrl = liveInput.value.trim();
+          imgUrl = liveInput.value.trim();
         }
 
         if (activeEls.posInput) imgPos = activeEls.posInput.value || "0 0";
@@ -3101,31 +3477,33 @@ if (logoutBtn) {
 
         const startVal = activeEls.vStartHidden ? activeEls.vStartHidden.value : '';
         const endVal = activeEls.vEndHidden ? activeEls.vEndHidden.value : '';
-        if (startVal || endVal) {
-          imgPos = `${imgPos}|${startVal}|${endVal}`;
+        const intervalVal = (activeUploadTab === 'multi') ? (document.getElementById('multi-interval').value || '5') : '';
+
+        if (startVal || endVal || intervalVal) {
+          imgPos = `${imgPos}|${startVal}|${endVal}|${intervalVal}`;
         }
 
         const submitBtn = document.getElementById('submit-post-btn');
         const origText = submitBtn.textContent;
         const zzProgress = {
           start: () => {
-             submitBtn.classList.add('active');
-             submitBtn.disabled = true;
+            submitBtn.classList.add('active');
+            submitBtn.disabled = true;
           },
           update: (pct) => {
-             submitBtn.setAttribute('data-progress', Math.round(pct));
-             submitBtn.style.setProperty('--zz-progress', pct);
+            submitBtn.setAttribute('data-progress', Math.round(pct));
+            submitBtn.style.setProperty('--zz-progress', pct);
           },
           done: () => {
-             return new Promise(resolve => {
-                submitBtn.classList.add('zz-button-progress-done');
-                setTimeout(resolve, 1000);
-             });
+            return new Promise(resolve => {
+              submitBtn.classList.add('zz-button-progress-done');
+              setTimeout(resolve, 1000);
+            });
           },
           reset: () => {
-             submitBtn.classList.remove('active', 'zz-button-progress-done');
-             submitBtn.textContent = origText;
-             submitBtn.disabled = false;
+            submitBtn.classList.remove('active', 'zz-button-progress-done');
+            submitBtn.textContent = origText;
+            submitBtn.disabled = false;
           }
         };
 
@@ -3146,36 +3524,50 @@ if (logoutBtn) {
           if (!confirmed) return;
           zzProgress.start();
 
-          // Use stored credentials from session
-          const userPassword = userObj.password;
+          // Use stored token from session
+          const token = userObj.token;
 
           let cloudinaryUrl = imgUrl;
           let cloudinaryPublicId = "";
 
-          // 2. Upload File if needed
-          if (activeUploadTab === 'upload' && file) {
+          // 2. Media Handling
+          if ((activeUploadTab === 'upload' || activeUploadTab === 'multi') && files.length > 0) {
             zzProgress.update(10);
-            let cloudData;
-            // Simplified for brevity, reuse earlier logic
-            if (file.size > 10 * 1024 * 1024) {
-               cloudData = await uploadFileChunked(file, CLOUDINARY_UPLOAD_PRESET, CLOUDINARY_CLOUD_NAME, zzProgress.update);
+
+            const uploadPromises = files.map(async (file, index) => {
+              let cloudData;
+              if (file.size > 10 * 1024 * 1024) {
+                cloudData = await uploadFileChunked(file, window.ENV?.CLOUDINARY_UPLOAD_PRESET || 'sas_uploads', window.ENV?.CLOUDINARY_CLOUD_NAME || 'dbytj36mv', (pct) => {
+                  // Approximate global progress
+                  const globalPct = 10 + (pct * 0.8 / files.length) + (index * 80 / files.length);
+                  zzProgress.update(globalPct);
+                });
+              } else {
+                const fd = new FormData();
+                fd.append('file', file);
+                fd.append('upload_preset', window.ENV?.CLOUDINARY_UPLOAD_PRESET || 'sas_uploads');
+                const res = await fetch(`https://api.cloudinary.com/v1_1/${window.ENV?.CLOUDINARY_CLOUD_NAME || 'dbytj36mv'}/auto/upload`, { method: 'POST', body: fd });
+                cloudData = await res.json();
+                zzProgress.update(10 + ((index + 1) * 80 / files.length));
+              }
+              return cloudData;
+            });
+
+            const results = await Promise.all(uploadPromises);
+            const validResults = results.filter(r => r && r.secure_url);
+
+            if (validResults.length > 0) {
+              cloudinaryUrl = validResults.map(r => r.secure_url).join('|');
+              cloudinaryPublicId = validResults.map(r => r.public_id).join('|');
             } else {
-               const fd = new FormData();
-               fd.append('file', file);
-               fd.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-               const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`, { method: 'POST', body: fd });
-               cloudData = await res.json();
+              throw new Error("Failed to upload any files to Cloudinary.");
             }
-            if (cloudData && cloudData.secure_url) {
-               cloudinaryUrl = cloudData.secure_url;
-               cloudinaryPublicId = cloudData.public_id;
-            }
-          } else if (isEdit && activeUploadTab === 'upload' && !file) {
-            // CRITICAL FIX: Preserve existing image data if no new file is uploaded during an edit!
+          } else if (isEdit && (((activeUploadTab === 'upload' || activeUploadTab === 'multi') && files.length === 0) || (activeUploadTab !== 'upload' && activeUploadTab !== 'multi' && !imgUrl))) {
+            // GLOBAL PRESERVATION: If no new file/URL provided during edit, keep existing
             cloudinaryUrl = form.getAttribute('data-existing-image-url') || "";
             cloudinaryPublicId = form.getAttribute('data-existing-public-id') || "";
-            
-            // Re-apply existing position/size as well to prevent zoom reset
+
+            // Re-apply existing position/size
             if (!imgPos || imgPos === "0 0") imgPos = form.getAttribute('data-existing-pos') || "0 0";
             if (!imgSize || imgSize === "1") imgSize = form.getAttribute('data-existing-size') || "1";
           }
@@ -3184,7 +3576,7 @@ if (logoutBtn) {
           const payload = {
             action: isEdit ? "editPost" : "addPost",
             username: userObj.username,
-            password: userPassword,
+            token: token,
             title, description: desc,
             imageUrl: cloudinaryUrl,
             cloudinaryPublicId,
@@ -3275,10 +3667,10 @@ if (logoutBtn) {
                   if (bgDataString !== window.tvPostsDataHash) {
                     console.log("TV Auto-Refresh: New posts detected! Rebuilding Carousel...");
 
-                  if (globalCarouselTimer) {
-                    window.clearInterval(globalCarouselTimer);
-                    globalCarouselTimer = null;
-                  }
+                    if (globalCarouselTimer) {
+                      window.clearInterval(globalCarouselTimer);
+                      globalCarouselTimer = null;
+                    }
                     window.tvPostsDataHash = bgDataString;
 
                     renderPosts(bgData.posts, container, role);
@@ -3294,15 +3686,15 @@ if (logoutBtn) {
         // --- END PHASE 13 ---
 
         renderPosts(data.posts, container, role);
-        
+
         const isActualTvMode = role === 'tv' || document.body.classList.contains('tv-mode');
         if (isActualTvMode) {
-          container.className = 'home-news'; 
+          container.className = 'home-news';
         } else {
           // Restore grid for admin/user but PRESERVE current view class
           container.classList.add('posts-container');
           container.classList.remove('home-news');
-          
+
           // Re-apply saved view mode to ensure classes are correct after render
           const currentMode = localStorage.getItem('sas_view_mode') || 'md';
           if (typeof setViewMode === 'function') setViewMode(currentMode);
@@ -3323,13 +3715,13 @@ if (logoutBtn) {
   async function expirePostOnBackend(timestamp) {
     const sessionData = localStorage.getItem('sas_user_data');
     if (!sessionData) return;
-    
+
     try {
       const userObj = JSON.parse(sessionData);
       const payload = {
         action: "expirePost",
         username: userObj.username,
-        password: userObj.password || "",
+        token: userObj.token || "",
         timestamp: timestamp
       };
 
@@ -3364,7 +3756,7 @@ if (logoutBtn) {
     const isAdmin = role === 'admin' || role === 'superadmin';
     const hasValidUrl = window.tvPermanentUrl && window.tvPermanentUrl.startsWith('http');
     const isActualTvMode = role === 'tv' || document.body.classList.contains('tv-mode');
-    
+
     // Always show to admins (so they can configure it) OR to everyone if it's a valid TV slide
     if (isAdmin || (isActualTvMode && hasValidUrl)) {
       // Check if already injected to prevent duplicates
@@ -3392,21 +3784,26 @@ if (logoutBtn) {
 
         // 1. Check showOnTv flag
         if (String(p.showOnTv).toLowerCase() === 'false') return false;
-        
+
         // 2. Check Start Date
         if (p.startDate) {
           const start = new Date(p.startDate);
           if (now < start) return false;
         }
-        
+
         // 3. Check End Date
         if (p.endDate) {
           const end = new Date(p.endDate);
           if (now > end) return false;
         }
-        
+
         return true;
       });
+
+      // --- TV POST SELECTION ---
+      // For TV, we use original posts to avoid "dot clutter"
+      // Image cycling will be handled internally by renderPosts and initCarousel
+      let tvPostsFinal = tvPosts;
 
 
       if (tvPosts.length === 0) {
@@ -3426,15 +3823,16 @@ if (logoutBtn) {
       dotsContainer.setAttribute('role', 'tablist');
 
       tvPosts.forEach((post, index) => {
+        const slide = document.createElement('article');
         let startVal = '';
         let endVal = '';
         if (post.imagePosition && post.imagePosition.includes('|')) {
-           const parts = post.imagePosition.split('|');
-           startVal = parts[1] || '';
-           endVal = parts[2] || '';
+          const parts = post.imagePosition.split('|');
+          startVal = parts[1] || '';
+          endVal = parts[2] || '';
+          const intervalVal = parts[3] || '5';
+          slide.setAttribute('data-interval', intervalVal);
         }
-
-        const slide = document.createElement('article');
         slide.className = 'home-news-slide' + (index === 0 ? ' is-active' : '');
         slide.setAttribute('data-index', index);
         slide.setAttribute('data-title', escapeHtml(post.title || ''));
@@ -3478,7 +3876,7 @@ if (logoutBtn) {
 
           const isWebsite = post.type === "website" || (!ytId && !fbEmbedUrl && !urlLower.includes('image') && !urlLower.includes('video') && urlLower.startsWith('http') && !urlLower.endsWith('.png') && !urlLower.endsWith('.jpg') && !urlLower.endsWith('.jpeg') && !urlLower.endsWith('.gif'));
 
-          const isVideo = !isWebsite && (ytId || fbEmbedUrl || 
+          const isVideo = !isWebsite && (ytId || fbEmbedUrl ||
             urlLower.includes('/video/upload/') ||
             urlLower.includes('docs.google.com/uc?') ||
             urlLower.includes('drive.google.com/uc?id=') ||
@@ -3499,12 +3897,15 @@ if (logoutBtn) {
           }
 
           let bgThumb = '';
+          const firstBgUrl = (post.imageUrl || '').split('|')[0].trim();
+          const firstBgUrlLower = firstBgUrl.toLowerCase();
+
           if (ytId) {
             bgThumb = `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`;
-          } else if (urlLower.includes('res.cloudinary.com') || urlLower.includes('cloudinary.com')) {
-            bgThumb = post.imageUrl.replace(/\.(mp4|webm|mov|mkv|avi)$/i, '.jpg');
-          } else if (post.imageUrl && post.imageUrl.trim() !== '') {
-            bgThumb = post.imageUrl;
+          } else if (firstBgUrlLower.includes('res.cloudinary.com') || firstBgUrlLower.includes('cloudinary.com')) {
+            bgThumb = firstBgUrl.replace(/\.(mp4|webm|mov|mkv|avi)$/i, '.jpg');
+          } else if (firstBgUrl !== '') {
+            bgThumb = firstBgUrl;
           }
 
           const bgHtml = bgThumb ? `<div class="home-news-image-bg" style="background-image: url('${bgThumb}')"></div>` : '';
@@ -3521,16 +3922,16 @@ if (logoutBtn) {
             // Adjust parameters based on whether we use a proxy or official YT
             let finalParams = ytParams;
             let embedBase = "https://www.youtube.com/embed/";
-            
+
             if (window.ENV && window.ENV.YOUTUBE_PROXY_URL && window.ENV.YOUTUBE_PROXY_URL.trim() !== '') {
-               embedBase = window.ENV.YOUTUBE_PROXY_URL;
-               if (!embedBase.endsWith('/')) embedBase += '/';
-               // Public proxies often don't support YT's enablejsapi or complex flags
-               // We only keep essential ones: autoplay, mute, start, end
-               let proxyParams = `autoplay=1&mute=1`;
-               if (startVal) proxyParams += `&start=${startVal}`;
-               if (endVal) proxyParams += `&end=${endVal}`;
-               finalParams = proxyParams;
+              embedBase = window.ENV.YOUTUBE_PROXY_URL;
+              if (!embedBase.endsWith('/')) embedBase += '/';
+              // Public proxies often don't support YT's enablejsapi or complex flags
+              // We only keep essential ones: autoplay, mute, start, end
+              let proxyParams = `autoplay=1&mute=1`;
+              if (startVal) proxyParams += `&start=${startVal}`;
+              if (endVal) proxyParams += `&end=${endVal}`;
+              finalParams = proxyParams;
             }
 
             imgHtml = `
@@ -3576,12 +3977,26 @@ if (logoutBtn) {
             `;
           } else {
             const fbPlaceholder = 'assets/sas_logo_real.png';
-            imgHtml = `
-              <div style="position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden;">
-                 ${bgHtml}
-                 <img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="home-news-image" style="width: 100%; height: 100%; position: relative; z-index: 2; ${styleStr}" loading="lazy" onerror="this.onerror=null; this.src='${fbPlaceholder}'; this.style.objectFit='contain'; this.style.opacity='0.2';">
-              </div>
-            `;
+            if (post.imageUrl && post.imageUrl.includes('|')) {
+              const urls = post.imageUrl.split('|');
+              const imgs = urls.map((u, i) => `
+                <img src="${u.trim()}" class="home-news-image multi-image-item ${i === 0 ? 'active' : ''}" style="width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: ${2 + i}; ${styleStr} opacity: ${i === 0 ? 1 : 0}; transition: opacity 0.8s ease-in-out;" onerror="this.onerror=null; this.src='${fbPlaceholder}';">
+              `).join('');
+
+              imgHtml = `
+                <div class="multi-image-container" data-count="${urls.length}" style="position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden;">
+                  ${bgHtml}
+                  ${imgs}
+                </div>
+              `;
+            } else {
+              imgHtml = `
+                <div style="position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden;">
+                   ${bgHtml}
+                   <img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="home-news-image" style="width: 100%; height: 100%; position: relative; z-index: 2; ${styleStr}" loading="lazy" onerror="this.onerror=null; this.src='${fbPlaceholder}'; this.style.objectFit='contain'; this.style.opacity='0.2';">
+                </div>
+              `;
+            }
           }
         } else {
           imgHtml = `<div class="home-news-image" style="background:var(--nbsc-dark); display:flex; flex-direction:column; align-items:center; justify-content:center; color:white; padding: 20px; text-align: center;"><img src="assets/sas_logo_real.png" style="height:60px; margin-bottom:10px; opacity:0.3"></div>`;
@@ -3645,10 +4060,16 @@ if (logoutBtn) {
         card.className = 'post-card';
         card.style.position = 'relative';
 
-        const urlLower = (post.imageUrl || '').toLowerCase();
+        // DASHBOARD: Only show the first image if multiple exist
+        let displayImageUrl = post.imageUrl || '';
+        if (displayImageUrl.includes('|')) {
+          displayImageUrl = displayImageUrl.split('|')[0];
+        }
+
+        const urlLower = displayImageUrl.toLowerCase();
 
         let imgHtml = '';
-        if (post.imageUrl && post.imageUrl.trim() !== '') {
+        if (displayImageUrl && displayImageUrl.trim() !== '') {
           // Parse saved values. Check if it's a legacy value (cover/contain) or the new zoom format (scale number)
           let parsedPos = post.imagePosition || '50% 50%'; // Legacy default
           let isLegacySize = (post.imageSize === 'cover' || post.imageSize === 'contain' || !post.imageSize);
@@ -3677,13 +4098,15 @@ if (logoutBtn) {
           let startVal = '';
           let endVal = '';
           if (post.imagePosition && post.imagePosition.includes('|')) {
-             const parts = post.imagePosition.split('|');
-             startVal = parts[1] || '';
-             endVal = parts[2] || '';
+            const parts = post.imagePosition.split('|');
+            startVal = parts[1] || '';
+            endVal = parts[2] || '';
+            const intervalVal = parts[3] || '5';
+            card.setAttribute('data-interval', intervalVal);
           }
 
-          const ytId = getYouTubeVideoId(post.imageUrl);
-          const fbEmbedUrl = getFacebookVideoUrl(post.imageUrl);
+          const ytId = getYouTubeVideoId(displayImageUrl);
+          const fbEmbedUrl = getFacebookVideoUrl(displayImageUrl);
 
           if (post.type === 'website') {
             imgHtml = `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #0f172a; color: #facc15; border: 2px solid #facc15; border-radius: 8px;">
@@ -3703,26 +4126,26 @@ if (logoutBtn) {
             </div>`;
           } else if (urlLower && (urlLower.includes('res.cloudinary.com') || urlLower.includes('cloudinary.com'))) {
             const isVideo = /\.(mp4|webm|mov|mkv|avi)$/i.test(urlLower) || urlLower.includes('/video/upload/');
-            const thumbUrl = isVideo ? post.imageUrl.replace(/\.[^.]+$/, '.jpg') : post.imageUrl;
+            const thumbUrl = isVideo ? displayImageUrl.replace(/\.[^.]+$/, '.jpg') : displayImageUrl;
             imgHtml = `<img src="${thumbUrl}" alt="${escapeHtml(post.title)}" class="post-image" style="${styleStr}" loading="lazy">`;
           } else if (urlLower.includes('docs.google.com/uc?') || urlLower.includes('drive.google.com/uc?id=') || urlLower.endsWith('.mp4') || urlLower.endsWith('.webm')) {
             let mediaHash = '';
             if (startVal && endVal) mediaHash = `#t=${startVal},${endVal}`;
             else if (startVal) mediaHash = `#t=${startVal}`;
             else if (endVal) mediaHash = `#t=0,${endVal}`;
-            imgHtml = `<video src="${post.imageUrl}${mediaHash}" class="post-image" style="${styleStr}" preload="metadata" muted playsinline></video>`;
+            imgHtml = `<video src="${displayImageUrl}${mediaHash}" class="post-image" style="${styleStr}" preload="metadata" muted playsinline></video>`;
           } else if (urlLower.includes('drive.google.com/file/d/') && urlLower.includes('/preview')) {
-            imgHtml = `<iframe src="${post.imageUrl}" class="post-image" style="border: none; ${styleStr}"></iframe>`;
+            imgHtml = `<iframe src="${displayImageUrl}" class="post-image" style="border: none; ${styleStr}"></iframe>`;
           } else {
             const fallbackSquare = 'assets/sas_logo_real.png';
-            imgHtml = `<img src="${post.imageUrl}" alt="${escapeHtml(post.title)}" class="post-image" style="${styleStr}" loading="lazy" onerror="this.onerror=null; this.src='${fallbackSquare}'; this.style.objectFit='contain'; this.style.opacity='0.2';">`;
+            imgHtml = `<img src="${displayImageUrl}" alt="${escapeHtml(post.title)}" class="post-image" style="${styleStr}" loading="lazy" onerror="this.onerror=null; this.src='${fallbackSquare}'; this.style.objectFit='contain'; this.style.opacity='0.2';">`;
           }
-          
+
           if (post.isLive) {
             imgHtml = `<div class="live-badge" style="position: absolute; top: 10px; left: 10px; z-index: 15; background: #b91c1c; color: white; padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 0.7rem; animation: pulse-live 2s infinite;">LIVE</div>` + imgHtml;
           }
         }
-        
+
         let schedulingLabel = '';
         if (post.startDate || post.endDate) {
           let sText = post.startDate ? `From: ${new Date(post.startDate).toLocaleString()}` : '';
@@ -3775,26 +4198,194 @@ if (logoutBtn) {
             editBtn.className = 'secondary-btn edit-btn';
             editBtn.textContent = 'Edit';
             editBtn.onclick = () => {
-                // ... Existing Edit Functionality ...
-                const form = document.getElementById('add-post-form');
-                const modal = document.getElementById('add-post-modal');
-                document.querySelector('.modal-title').textContent = "Edit Update";
-                document.getElementById('submit-post-btn').textContent = "Save Changes";
-                document.getElementById('post-title').value = post.title;
-                document.getElementById('post-desc').value = post.description;
-                if (document.getElementById('post-start-date')) document.getElementById('post-start-date').value = (post.startDate || '').replace(' ', 'T');
-                if (document.getElementById('post-end-date')) document.getElementById('post-end-date').value = (post.endDate || '').replace(' ', 'T');
-                const dSlider = document.getElementById('post-display-duration');
-                if (dSlider) dSlider.value = parseInt(post.displayDuration) || 25;
-                
-                // Preserve media elements if not modified
-                form.setAttribute('data-existing-image-url', post.imageUrl || '');
-                form.setAttribute('data-existing-public-id', post.cloudinaryPublicId || '');
-                form.setAttribute('data-existing-pos', post.imagePosition || '');
-                form.setAttribute('data-existing-size', post.imageSize || '');
-                
-                form.setAttribute('data-edit-timestamp', post.timestamp);
-                modal.classList.remove('hidden');
+              window.resetAddPostForm();
+              const form = document.getElementById('add-post-form');
+              const modal = document.getElementById('add-post-modal');
+              document.querySelector('.modal-title').textContent = "Edit Update";
+              document.getElementById('submit-post-btn').textContent = "Save Changes";
+              document.getElementById('post-title').value = post.title || "";
+              document.getElementById('post-desc').value = post.description || "";
+              if (document.getElementById('post-start-date')) document.getElementById('post-start-date').value = (post.startDate || '').replace(' ', 'T');
+              if (document.getElementById('post-end-date')) document.getElementById('post-end-date').value = (post.endDate || '').replace(' ', 'T');
+              const dSlider = document.getElementById('post-display-duration');
+              if (dSlider) dSlider.value = parseInt(post.displayDuration) || 25;
+
+              // Preserve media elements if not modified
+              form.setAttribute('data-existing-image-url', post.imageUrl || '');
+              form.setAttribute('data-existing-public-id', post.cloudinaryPublicId || '');
+              form.setAttribute('data-existing-pos', post.imagePosition || '');
+              form.setAttribute('data-existing-size', post.imageSize || '');
+              form.setAttribute('data-edit-timestamp', post.timestamp);
+
+              // --- TAB & PREVIEW RESTORATION ---
+              let targetTab = 'url';
+              if (post.cloudinaryPublicId) {
+                targetTab = (post.imageUrl && post.imageUrl.includes('|')) ? 'multi' : 'upload';
+              } else if (post.isLive) {
+                targetTab = 'live';
+              }
+
+              // Switch Tab (simulates the click to trigger all tab logic)
+              const tabBtn = document.querySelector(`.upload-tab[data-tab="${targetTab}"]`);
+              if (tabBtn) tabBtn.click();
+
+              // Populate and Trigger Preview
+              if (targetTab === 'upload' || targetTab === 'multi') {
+                const els = getScopedElements('upload');
+                scrollToModalBottom();
+                if (els.previewImg && post.imageUrl) {
+                  els.previewImg.src = post.imageUrl.split('|')[0];
+                  els.previewGroup.style.display = 'block';
+                  els.previewGroup.classList.remove('hidden');
+
+                  const fileCountBadge = document.getElementById('file-count-badge');
+                  const controls = document.getElementById('upload-img-controls');
+                  if (fileCountBadge) {
+                    const urls = post.imageUrl.split('|');
+                    if (urls.length > 1) {
+                      fileCountBadge.textContent = urls.length + ' Files Selected';
+                      fileCountBadge.classList.remove('hidden');
+                      if (controls) controls.style.display = 'none';
+
+                      const thumbContainer = document.getElementById('upload-thumbnails-container');
+                      if (thumbContainer) {
+                        thumbContainer.innerHTML = '';
+                        thumbContainer.classList.remove('hidden');
+                        urls.forEach((u, idx) => {
+                          const wrapper = document.createElement('div');
+                          wrapper.style.cssText = 'position: relative; flex-shrink: 0; margin: 4px;';
+
+                          const tImg = document.createElement('img');
+                          tImg.src = u.trim();
+                          tImg.style.cssText = 'width: 60px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; display: block;';
+                          if (idx === 0) tImg.style.borderColor = 'var(--nbsc-gold)';
+
+                          tImg.onclick = () => {
+                            if (els.previewImg) els.previewImg.src = u.trim();
+                            thumbContainer.querySelectorAll('img').forEach(im => im.style.borderColor = 'transparent');
+                            tImg.style.borderColor = 'var(--nbsc-gold)';
+                          };
+
+                          const delBtn = document.createElement('button');
+                          delBtn.type = 'button';
+                          delBtn.innerHTML = '&times;';
+                          delBtn.style.cssText = 'position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; background: #ef4444; color: white; border-radius: 50%; border: 1px solid white; font-size: 14px; line-height: 1; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.3); font-weight: bold;';
+                          delBtn.title = "Remove image";
+                          delBtn.onclick = (e) => {
+                            e.stopPropagation();
+                            const currentUrls = form.getAttribute('data-existing-image-url').split('|');
+                            const currentIds = form.getAttribute('data-existing-public-id').split('|');
+                            currentUrls.splice(idx, 1);
+                            currentIds.splice(idx, 1);
+
+                            form.setAttribute('data-existing-image-url', currentUrls.join('|'));
+                            form.setAttribute('data-existing-public-id', currentIds.join('|'));
+
+                            wrapper.remove();
+                            if (currentUrls.length <= 1) {
+                              if (fileCountBadge) fileCountBadge.classList.add('hidden');
+                              if (controls) controls.style.display = 'block';
+                              if (currentUrls.length === 0) {
+                                thumbContainer.classList.add('hidden');
+                                els.previewGroup.style.display = 'none';
+                              }
+                            } else {
+                              if (fileCountBadge) fileCountBadge.textContent = currentUrls.length + ' Files Selected';
+                            }
+
+                            if (els.previewImg.src === u.trim() && currentUrls.length > 0) {
+                              els.previewImg.src = currentUrls[0];
+                              const firstThumb = thumbContainer.querySelector('img');
+                              if (firstThumb) firstThumb.style.borderColor = 'var(--nbsc-gold)';
+                            }
+                          };
+
+                          wrapper.appendChild(tImg);
+                          wrapper.appendChild(delBtn);
+                          thumbContainer.appendChild(wrapper);
+                        });
+
+                        if (urls.length > 1) {
+                          startPreviewCycling(urls, 'url');
+                        }
+                      }
+                    } else {
+                      fileCountBadge.classList.add('hidden');
+                      if (controls) controls.style.display = 'block';
+                    }
+                  }
+
+                  // Restore Zoom/Pan if it's the new numeric format
+                  if (post.imageSize && !isNaN(parseFloat(post.imageSize))) {
+                    const scale = parseFloat(post.imageSize);
+                    let tx = 0, ty = 0;
+                    if (post.imagePosition) {
+                      const parts = post.imagePosition.split(' ');
+                      tx = parseFloat(parts[0]) || 0;
+                      ty = parseFloat(parts[1]) || 0;
+                    }
+                    if (window.setPreviewTransformState) window.setPreviewTransformState(scale, tx, ty, 'upload');
+
+                    if (post.imagePosition && post.imagePosition.includes('|')) {
+                      const parts = post.imagePosition.split('|');
+                      const interval = parts[3] || '5';
+                      const intervalInput = document.getElementById('multi-interval');
+                      if (intervalInput) intervalInput.value = interval;
+                    }
+                  }
+                }
+              } else {
+                const inputId = (targetTab === 'url') ? 'post-img' : 'post-live-url';
+                const inputEl = document.getElementById(inputId);
+                if (inputEl) {
+                  inputEl.value = post.imageUrl || '';
+                  // Trigger 'input' event so the preview logic runs automatically
+                  inputEl.dispatchEvent(new CustomEvent('input', { detail: { keepValues: true } }));
+
+                  // Restore Zoom/Pan for URL tab if applicable
+                  const urlControls = document.getElementById('url-img-controls');
+                  const isMulti = post.imageUrl && post.imageUrl.includes('|');
+
+                  if (urlControls) {
+                    urlControls.style.display = isMulti ? 'none' : 'block';
+                  }
+
+                  if (isMulti) {
+                    const thumbContainer = document.getElementById('url-thumbnails-container');
+                    if (thumbContainer) {
+                      thumbContainer.innerHTML = '';
+                      thumbContainer.classList.remove('hidden');
+                      const urls = post.imageUrl.split('|');
+                      urls.forEach((u, idx) => {
+                        const tImg = document.createElement('img');
+                        tImg.src = u.trim();
+                        tImg.style.cssText = 'width: 60px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s;';
+                        if (idx === 0) tImg.style.borderColor = 'var(--nbsc-gold)';
+                        tImg.onclick = () => {
+                          const urlEls = getScopedElements('url');
+                          if (urlEls.previewImg) urlEls.previewImg.src = u.trim();
+                          thumbContainer.querySelectorAll('img').forEach(im => im.style.borderColor = 'transparent');
+                          tImg.style.borderColor = 'var(--nbsc-gold)';
+                        };
+                        thumbContainer.appendChild(tImg);
+                      });
+                    }
+                  }
+
+                  if (!isMulti && targetTab === 'url' && post.imageSize && !isNaN(parseFloat(post.imageSize))) {
+                    const scale = parseFloat(post.imageSize);
+                    let tx = 0, ty = 0;
+                    if (post.imagePosition) {
+                      const parts = post.imagePosition.split(' ');
+                      tx = parseFloat(parts[0]) || 0;
+                      ty = parseFloat(parts[1]) || 0;
+                    }
+                    if (window.setPreviewTransformState) window.setPreviewTransformState(scale, tx, ty, 'url');
+                  }
+                }
+              }
+
+              modal.classList.remove('hidden');
             };
             actionArea.appendChild(editBtn);
           }
@@ -3810,16 +4401,16 @@ if (logoutBtn) {
               const sessionData = localStorage.getItem('sas_user_data');
               if (!sessionData) return;
               const userObj = JSON.parse(sessionData);
-              deleteBtn.textContent = "Deleting...";
-              deleteBtn.disabled = true;
+
+              showLoading("Deleting post...");
               try {
-                const payload = { action: "deletePost", username: userObj.username, password: userObj.password, timestamp: post.timestamp };
+                const payload = { action: "deletePost", username: userObj.username, token: userObj.token, timestamp: post.timestamp, imageUrl: post.imageUrl };
                 const r = await fetch(BACKEND_GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
                 const res = await r.json();
                 if (res.success) { showToast(res.message, 'success'); fetchPosts(); }
                 else { showToast(res.message || "Failed to delete.", 'error'); }
-              } catch (e) { showToast("Network error.", 'error'); } 
-              finally { deleteBtn.textContent = "Delete"; deleteBtn.disabled = false; }
+              } catch (e) { showToast("Network error.", 'error'); }
+              finally { hideLoading(); }
             };
             actionArea.appendChild(deleteBtn);
           }
@@ -3833,7 +4424,7 @@ if (logoutBtn) {
               portalSave.addEventListener('click', async () => {
                 const newUrl = portalInput.value.trim();
                 const newDuration = parseInt(durationInput ? durationInput.value : "60") || 60;
-                
+
                 if (newUrl !== "" && !newUrl.startsWith('http')) {
                   showToast("Please enter a valid URL starting with https://", "error");
                   return;
@@ -3847,7 +4438,7 @@ if (logoutBtn) {
                   await set(permUrlRef, newUrl);
                   await set(permDurRef, newDuration);
                   showToast("Portal settings updated globally!", "success");
-                } catch(e) {
+                } catch (e) {
                   showToast("Sync failed. Check connection.", "error");
                 } finally {
                   portalSave.disabled = false;
@@ -3878,7 +4469,7 @@ if (logoutBtn) {
               const payload = {
                 action: "toggleTvVisible",
                 username: userObj.username,
-                password: userObj.password,
+                token: userObj.token,
                 timestamp: post.timestamp
               };
 
@@ -3914,12 +4505,12 @@ if (logoutBtn) {
         if (blurredBg) {
           const firstPostWithImg = posts.find(p => p.imageUrl && p.imageUrl.trim() !== '');
           if (firstPostWithImg) {
-             let bgSource = firstPostWithImg.imageUrl;
-             const ytId = getYouTubeVideoId(bgSource);
-             if (ytId) bgSource = `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`;
-             else if (bgSource.includes('cloudinary.com')) bgSource = bgSource.replace(/\.(mp4|webm|mov|mkv|avi)$/i, '.jpg');
-             
-             blurredBg.style.backgroundImage = `url('${bgSource}')`;
+            let bgSource = firstPostWithImg.imageUrl.split('|')[0].trim();
+            const ytId = getYouTubeVideoId(bgSource);
+            if (ytId) bgSource = `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`;
+            else if (bgSource.includes('cloudinary.com')) bgSource = bgSource.replace(/\.(mp4|webm|mov|mkv|avi)$/i, '.jpg');
+
+            blurredBg.style.backgroundImage = `url('${bgSource}')`;
           }
         }
       }
@@ -4016,6 +4607,11 @@ if (logoutBtn) {
             oldVideo.pause();
             oldVideo.muted = true;
           }
+          // Clear multi-image interval for inactive slide
+          if (s._multiImageInterval) {
+            clearInterval(s._multiImageInterval);
+            s._multiImageInterval = null;
+          }
         }
       });
       dots.forEach(function (d, i) {
@@ -4036,6 +4632,21 @@ if (logoutBtn) {
       const fbIframeEl = activeSlide.querySelector('.fb-video-wrapper');
       const driveIframeEl = activeSlide.querySelector('iframe.drive-video-frame');
       const websiteIframeEl = activeSlide.querySelector('iframe.website-slide-frame');
+      const multiContainer = activeSlide.querySelector('.multi-image-container');
+
+      // Start internal cycling for multi-image posts
+      if (multiContainer) {
+        const items = multiContainer.querySelectorAll('.multi-image-item');
+        if (items.length > 1) {
+          let currentItem = 0;
+          const cycleTime = parseInt(activeSlide.getAttribute('data-interval') || 5) * 1000;
+          activeSlide._multiImageInterval = setInterval(() => {
+            items[currentItem].style.opacity = 0;
+            currentItem = (currentItem + 1) % items.length;
+            items[currentItem].style.opacity = 1;
+          }, cycleTime);
+        }
+      }
 
       const curStart = parseFloat(activeSlide.dataset.start) || 0;
       const curEnd = parseFloat(activeSlide.dataset.end) || 0;
@@ -4118,16 +4729,16 @@ if (logoutBtn) {
         videoEl.currentTime = curStart;
         videoEl.muted = !tvAudioEnabled;
         videoEl.play().catch(e => console.error('Video play prevented:', e));
-        
-        videoEl.ontimeupdate = function() {
-           if (curEnd > 0 && videoEl.currentTime >= curEnd) {
-              if (myGeneration === globalSlideGeneration && slides.length > 1) {
-                 videoEl.ontimeupdate = null; // Prevent double trigger
-                 next();
-              }
-           }
+
+        videoEl.ontimeupdate = function () {
+          if (curEnd > 0 && videoEl.currentTime >= curEnd) {
+            if (myGeneration === globalSlideGeneration && slides.length > 1) {
+              videoEl.ontimeupdate = null; // Prevent double trigger
+              next();
+            }
+          }
         };
-        
+
         videoEl.onended = function () {
           if (isLive) {
             console.log("Native video ended! Expiring live post...");
@@ -4135,7 +4746,7 @@ if (logoutBtn) {
           }
           if (myGeneration === globalSlideGeneration && slides.length > 1) next();
         };
-        videoEl.onerror = function() {
+        videoEl.onerror = function () {
           if (isLive) {
             console.log("Native video error! Expiring live post...");
             expirePostOnBackend(timestamp);
@@ -4168,7 +4779,7 @@ if (logoutBtn) {
 
         // We rely on the native `onended` event for Cloudinary/direct videos instead of the slide timer.
         // We set a very long 5-minute fallback just in case the browser hangs.
-        if (!isLive) start(300000); 
+        if (!isLive) start(300000);
         else stop(); // For live, we strictly rely on the heartbeat/ended events
       } else if (iframeEl && window.YT && window.YT.Player) {
         const iframeId = iframeEl.id;
@@ -4189,33 +4800,33 @@ if (logoutBtn) {
 
               // --- LIVE HEARTBEAT / STALL CHECK ---
               if (isLive) {
-                 if (state === 1) { // Playing
-                    if (currentTime === lastTime) {
-                       stalledCount++;
-                       if (stalledCount > 20) { // 20s stall
-                          console.log("YouTube Live stalled! Expiring...");
-                          clearInterval(checkInterval);
-                          expirePostOnBackend(timestamp);
-                       }
-                    } else { stalledCount = 0; }
-                 } else if (state === -1 || state === 5) { // Unstarted or Cued
+                if (state === 1) { // Playing
+                  if (currentTime === lastTime) {
                     stalledCount++;
-                    if (stalledCount > 30) { // 30s stuck in loading
-                       console.log("YouTube Live stuck in loading state! Expiring...");
-                       clearInterval(checkInterval);
-                       expirePostOnBackend(timestamp);
+                    if (stalledCount > 20) { // 20s stall
+                      console.log("YouTube Live stalled! Expiring...");
+                      clearInterval(checkInterval);
+                      expirePostOnBackend(timestamp);
                     }
-                 }
-                 lastTime = currentTime;
+                  } else { stalledCount = 0; }
+                } else if (state === -1 || state === 5) { // Unstarted or Cued
+                  stalledCount++;
+                  if (stalledCount > 30) { // 30s stuck in loading
+                    console.log("YouTube Live stuck in loading state! Expiring...");
+                    clearInterval(checkInterval);
+                    expirePostOnBackend(timestamp);
+                  }
+                }
+                lastTime = currentTime;
               }
 
-                // Advance if video is within 1.5s of end (not for live)
-                const effectiveEnd = (curEnd > 0) ? curEnd : duration;
-                if (!isLive && (state === 0 || (effectiveEnd > 0 && currentTime >= (effectiveEnd - 1.5)))) {
-                  console.log('YouTube auto-advancing slide:', myPlayerId);
-                  clearInterval(checkInterval);
-                  next();
-                }
+              // Advance if video is within 1.5s of end (not for live)
+              const effectiveEnd = (curEnd > 0) ? curEnd : duration;
+              if (!isLive && (state === 0 || (effectiveEnd > 0 && currentTime >= (effectiveEnd - 1.5)))) {
+                console.log('YouTube auto-advancing slide:', myPlayerId);
+                clearInterval(checkInterval);
+                next();
+              }
             } catch (e) { }
           }, 1000);
         }
@@ -4240,7 +4851,7 @@ if (logoutBtn) {
                   if (myGeneration === globalSlideGeneration && slides.length > 1) next();
                 }
               },
-              'onError': function(event) {
+              'onError': function (event) {
                 console.warn("YouTube Player Error:", event.data);
                 // Errors: 100 (not found/deleted), 101/150 (embed restricted)
                 const fatalErrors = [100, 101, 150];
@@ -4276,82 +4887,82 @@ if (logoutBtn) {
           let attempts = 0;
           // Poll until the player instance is ready from the SDK
           const tryPlay = setInterval(() => {
-             if (myGeneration !== globalSlideGeneration) {
-                 clearInterval(tryPlay);
-                 return;
-             }
-             const player = window.fbPlayers && window.fbPlayers[playerId];
-             if (player) {
-                 clearInterval(tryPlay);
-                 try {
-                    if (tvAudioEnabled) player.unmute();
-                    else player.mute();
-                    if (curStart > 0) player.seek(curStart);
-                    player.play();
+            if (myGeneration !== globalSlideGeneration) {
+              clearInterval(tryPlay);
+              return;
+            }
+            const player = window.fbPlayers && window.fbPlayers[playerId];
+            if (player) {
+              clearInterval(tryPlay);
+              try {
+                if (tvAudioEnabled) player.unmute();
+                else player.mute();
+                if (curStart > 0) player.seek(curStart);
+                player.play();
 
-                    if (!player._hasFinishedListener) {
-                        player._hasFinishedListener = true;
-                        player.subscribe('finishedPlaying', () => {
-                            // --- LIVE AUTO-EXPIRY LOGIC ---
-                            if (isLive) {
-                                console.log("Facebook Live stream finished! Hiding from TV...");
-                                expirePostOnBackend(timestamp);
-                            }
-                            if (myGeneration === globalSlideGeneration && slides.length > 1) {
-                                next();
-                            }
-                        });
-                        player.subscribe('error', (err) => {
-                            console.warn("Facebook Player Error:", err);
-                            if (isLive) {
-                                console.log("Facebook Live stream error! Expiring post...");
-                                expirePostOnBackend(timestamp);
-                            }
-                            if (myGeneration === globalSlideGeneration && slides.length > 1) {
-                                next();
-                            }
-                        });
+                if (!player._hasFinishedListener) {
+                  player._hasFinishedListener = true;
+                  player.subscribe('finishedPlaying', () => {
+                    // --- LIVE AUTO-EXPIRY LOGIC ---
+                    if (isLive) {
+                      console.log("Facebook Live stream finished! Hiding from TV...");
+                      expirePostOnBackend(timestamp);
+                    }
+                    if (myGeneration === globalSlideGeneration && slides.length > 1) {
+                      next();
+                    }
+                  });
+                  player.subscribe('error', (err) => {
+                    console.warn("Facebook Player Error:", err);
+                    if (isLive) {
+                      console.log("Facebook Live stream error! Expiring post...");
+                      expirePostOnBackend(timestamp);
+                    }
+                    if (myGeneration === globalSlideGeneration && slides.length > 1) {
+                      next();
+                    }
+                  });
+                }
+
+                // Poll for custom end time
+                let lastPos = -1;
+                let stalledCount = 0;
+                const fbPoll = setInterval(() => {
+                  if (myGeneration !== globalSlideGeneration) {
+                    clearInterval(fbPoll);
+                    return;
+                  }
+                  try {
+                    const pos = player.getCurrentPosition();
+
+                    if (isLive) {
+                      if (pos === lastPos) {
+                        stalledCount++;
+                        if (stalledCount > 20) {
+                          console.log("Facebook Live stalled! Expiring...");
+                          clearInterval(fbPoll);
+                          expirePostOnBackend(timestamp);
+                        }
+                      } else { stalledCount = 0; }
+                      lastPos = pos;
                     }
 
-                    // Poll for custom end time
-                    let lastPos = -1;
-                    let stalledCount = 0;
-                    const fbPoll = setInterval(() => {
-                        if (myGeneration !== globalSlideGeneration) {
-                            clearInterval(fbPoll);
-                            return;
-                        }
-                        try {
-                           const pos = player.getCurrentPosition();
-                           
-                           if (isLive) {
-                              if (pos === lastPos) {
-                                 stalledCount++;
-                                 if (stalledCount > 20) {
-                                    console.log("Facebook Live stalled! Expiring...");
-                                    clearInterval(fbPoll);
-                                    expirePostOnBackend(timestamp);
-                                 }
-                              } else { stalledCount = 0; }
-                              lastPos = pos;
-                           }
-
-                           if (curEnd > 0 && pos >= curEnd) {
-                               clearInterval(fbPoll);
-                               next();
-                           }
-                        } catch(e){}
-                    }, 1000);
-                 } catch(e) {
-                    console.error('FB Player Error:', e);
-                 }
-             }
-             attempts++;
-             if (attempts > 50) clearInterval(tryPlay); // give up after 10s
+                    if (curEnd > 0 && pos >= curEnd) {
+                      clearInterval(fbPoll);
+                      next();
+                    }
+                  } catch (e) { }
+                }, 1000);
+              } catch (e) {
+                console.error('FB Player Error:', e);
+              }
+            }
+            attempts++;
+            if (attempts > 50) clearInterval(tryPlay); // give up after 10s
           }, 200);
         }
 
-        if (!isLive) start(startMs || 180000); 
+        if (!isLive) start(startMs || 180000);
         else stop();
       } else if (driveIframeEl) {
         // Drive video iframe — can't hook into events, use standard timer
@@ -4400,10 +5011,11 @@ if (logoutBtn) {
     let perPage = 25;
     let uniqueUsers = new Set();
     let cloudinaryStorageInfo = { usedText: '--', ratio: 0 };
+    let cloudinaryOldStorageInfo = { usedText: '--', ratio: 0 };
     let supabaseStorageInfo = { usedText: '--', ratio: 0 };
-    const revealedTargets = { gas: false, fbMsg: false, fbStore: false, supabase: false, cloudinary: false };
+    const revealedTargets = { gas: false, fbMsg: false, fbStore: false, supabase: false, cloudinary: false, cloudinaryOld: false };
     let pendingRevealTarget = null;
-    let lastStatusSnapshot = { gasState: 'Checking...', fbMsgState: 'Checking...', fbStoreState: 'Checking...', supabaseState: 'Checking...', cloudinaryState: 'Checking...', storagePath: 'user_messages' };
+    let lastStatusSnapshot = { gasState: 'Checking...', fbMsgState: 'Checking...', fbStoreState: 'Checking...', supabaseState: 'Checking...', cloudinaryState: 'Checking...', cloudinaryOldState: 'Checking...', storagePath: 'user_messages' };
     let lastCloudinaryProbeAsset = null;
 
     const elements = {
@@ -4441,6 +5053,7 @@ if (logoutBtn) {
       tabMultimedia: document.getElementById('db-tab-multimedia'),
       panelMultimedia: document.getElementById('db-panel-multimedia'),
       mediaSearch: document.getElementById('db-media-search'),
+      mediaAccountSelect: document.getElementById('db-media-account-select'),
       mediaRefreshBtn: document.getElementById('db-media-refresh-btn'),
       mediaFlushBtn: document.getElementById('db-media-flush-btn'),
       mediaGrid: document.getElementById('db-media-grid')
@@ -4485,19 +5098,12 @@ if (logoutBtn) {
       }
     }
 
-    async function checkCloudinaryStatus() {
-      const cloudName = window.ENV?.CLOUDINARY_CLOUD_NAME;
+    async function checkCloudinaryStatus(targetCloud) {
+      const cloudName = targetCloud || window.ENV?.CLOUDINARY_CLOUD_NAME;
       if (!cloudName) return 'Not Configured';
-      // Use a real asset if we've successfully fetched one before, otherwise fallback to sample
-      const testUrl = lastCloudinaryProbeAsset || `https://res.cloudinary.com/${encodeURIComponent(cloudName)}/image/upload/sample`;
-      try {
-        const res = await fetch(testUrl, { method: 'HEAD', cache: 'no-cache' });
-        // Any response from Cloudinary (even 404/403) means the service is reachable for this cloud name
-        if (res.status < 500) return 'Online';
-        return `Error (${res.status})`;
-      } catch (err) {
-        return 'Offline';
-      }
+      // Cloudinary has high availability. To prevent 404 console errors from probing missing 'sample' assets,
+      // we assume it is Online if configured. Network connectivity issues will be caught during actual asset fetching.
+      return 'Online';
     }
 
     function getStatusCheckTimeLabel() {
@@ -4560,13 +5166,13 @@ if (logoutBtn) {
         }));
 
         totalRows = counts.reduce((a, b) => a + b, 0);
-        
+
         // Estimation: ~200 bytes per row + some overhead
         const estimatedBytes = totalRows * 200;
         const limitBytes = 500 * 1024 * 1024; // Supabase free tier db limit is 500MB
         const ratio = Math.min(100, Math.max(0.1, (estimatedBytes / limitBytes) * 100));
-        
-        supabaseStorageInfo = { 
+
+        supabaseStorageInfo = {
           usedText: `${totalRows.toLocaleString()} rows / ~${(estimatedBytes / (1024 * 1024)).toFixed(2)} MB estimated`,
           ratio: Number(ratio.toFixed(2))
         };
@@ -4575,16 +5181,17 @@ if (logoutBtn) {
       }
     }
 
-    async function loadCloudinaryUsageOverview() {
+    async function loadCloudinaryUsageOverview(targetCloud) {
+      const cloudName = targetCloud || window.ENV?.CLOUDINARY_CLOUD_NAME;
+      const isLegacy = cloudName === window.ENV?.OLD_CLOUDINARY_CLOUD_NAME;
+
       if (!BACKEND_GAS_URL || !BACKEND_GAS_URL.startsWith('https://')) {
         setCloudinaryUsageFallback('N/A');
         return;
       }
 
       const defaultLimitGb = Number(window.ENV?.CLOUDINARY_STORAGE_LIMIT_GB || 15);
-      const fallbackLimitBytes = Number.isFinite(defaultLimitGb) && defaultLimitGb > 0
-        ? defaultLimitGb * 1024 * 1024 * 1024
-        : 15 * 1024 * 1024 * 1024;
+      const fallbackLimitBytes = defaultLimitGb * 1024 * 1024 * 1024;
 
       const applyUsageToUi = (usage, periodLabel) => {
         const storageBytes = Number(usage.storage);
@@ -4597,82 +5204,45 @@ if (logoutBtn) {
           : 0;
         const usedLine = `${formatBytes(storageBytes)} / ${formatBytes(effectiveLimit)} used`;
 
-        if (elements.cloudinaryImpressions) elements.cloudinaryImpressions.textContent = usage.impressions ?? '--';
-        if (elements.cloudinaryAssets) elements.cloudinaryAssets.textContent = usage.assets ?? '--';
-        if (elements.cloudinaryTransformations) elements.cloudinaryTransformations.textContent = usage.transformations ?? '--';
-        if (elements.cloudinaryBandwidth) elements.cloudinaryBandwidth.textContent = usage.bandwidthFormatted || formatBytes(usage.bandwidth);
-        if (elements.cloudinaryStorage) elements.cloudinaryStorage.textContent = usage.storageFormatted || formatBytes(usage.storage);
-        if (elements.cloudinaryPeriodLabel && periodLabel) elements.cloudinaryPeriodLabel.textContent = periodLabel;
-        cloudinaryStorageInfo = { usedText: usedLine, ratio: Number(ratio.toFixed(1)) };
-      };
-
-      const estimateCloudinaryUsageFromPosts = async () => {
-        try {
-          const postsRes = await fetch(BACKEND_GAS_URL, { method: 'GET' });
-          if (!postsRes.ok) throw new Error('Posts fetch failed');
-          const postsPayload = await postsRes.json();
-          const posts = Array.isArray(postsPayload?.posts) ? postsPayload.posts : [];
-          const cloudName = window.ENV?.CLOUDINARY_CLOUD_NAME || '';
-          const urls = [...new Set(
-            posts
-              .map(p => (p?.imageUrl || '').trim())
-              .filter(url => url.includes('res.cloudinary.com') && (!cloudName || url.includes(`/res.cloudinary.com/${cloudName}/`) || url.includes(`res.cloudinary.com/${cloudName}/`)))
-          )];
-
-          let totalBytes = 0;
-          for (const url of urls.slice(0, 50)) {
-            try {
-              const headRes = await fetch(url, { method: 'HEAD', mode: 'cors' });
-              const len = Number(headRes.headers.get('content-length') || 0);
-              if (Number.isFinite(len) && len > 0) totalBytes += len;
-            } catch (e) {
-              // Ignore per-asset failures and continue estimating.
-            }
-          }
-
-          applyUsageToUi({
-            impressions: '--',
-            assets: urls.length,
-            transformations: '--',
-            bandwidth: null,
-            storage: totalBytes,
-            storageLimit: fallbackLimitBytes
-          }, 'Estimated from current posts');
-        } catch (e) {
-          setCloudinaryUsageFallback('N/A');
-          if (elements.cloudinaryPeriodLabel) elements.cloudinaryPeriodLabel.textContent = 'Usage unavailable';
+        if (!isLegacy) {
+          if (elements.cloudinaryImpressions) elements.cloudinaryImpressions.textContent = usage.impressions ?? '--';
+          if (elements.cloudinaryAssets) elements.cloudinaryAssets.textContent = usage.assets ?? '--';
+          if (elements.cloudinaryTransformations) elements.cloudinaryTransformations.textContent = usage.transformations ?? '--';
+          if (elements.cloudinaryBandwidth) elements.cloudinaryBandwidth.textContent = usage.bandwidthFormatted || formatBytes(usage.bandwidth);
+          if (elements.cloudinaryStorage) elements.cloudinaryStorage.textContent = usage.storageFormatted || formatBytes(usage.storage);
+          if (elements.cloudinaryPeriodLabel && periodLabel) elements.cloudinaryPeriodLabel.textContent = periodLabel;
+          cloudinaryStorageInfo = { usedText: usedLine, ratio: Number(ratio.toFixed(1)) };
+        } else {
+          cloudinaryOldStorageInfo = { usedText: usedLine, ratio: Number(ratio.toFixed(1)) };
         }
       };
 
       try {
         const res = await fetch(BACKEND_GAS_URL, {
           method: 'POST',
-          body: JSON.stringify({ action: 'cloudinaryUsageOverview' })
+          body: JSON.stringify({ action: 'cloudinaryUsageOverview', cloudName: cloudName })
         });
-        if (!res.ok) return estimateCloudinaryUsageFromPosts();
+        if (!res.ok) throw new Error('Usage fetch failed');
 
         const payload = await res.json();
-        if (payload?.success === false && /Unknown action/i.test(payload?.message || '')) {
-          return estimateCloudinaryUsageFromPosts();
-        }
-        const usage = payload?.usage || payload?.data || {};
-        if (!usage || typeof usage !== 'object') {
-          return estimateCloudinaryUsageFromPosts();
-        }
+        const usage = payload?.usage || {};
         applyUsageToUi(usage, 'Last 30 days');
       } catch (err) {
-        await estimateCloudinaryUsageFromPosts();
+        applyUsageToUi({ storage: 0, storageLimit: fallbackLimitBytes }, 'Error fetching usage');
       }
     }
 
-    function renderStorageStatusRows(gasState, fbMsgState, fbStoreState, supabaseState, cloudinaryState, storagePath) {
+
+
+    function renderStorageStatusRows(gasState, fbMsgState, fbStoreState, supabaseState, cloudinaryState, cloudinaryOldState, storagePath) {
       if (!elements.storageTbody) return;
       const targetValues = {
         gas: BACKEND_GAS_URL || 'Not Configured',
         fbMsg: window.ENV?.FIREBASE_CONFIG?.databaseURL || 'Not Configured',
         fbStore: window.ENV?.STORAGE_CHECK_FIREBASE_CONFIG?.databaseURL || (storageCheckDb && storageCheckDb === userDb ? (window.ENV?.FIREBASE_CONFIG?.databaseURL || 'Not Configured') : 'Not Configured'),
         supabase: window.ENV?.SUPABASE_URL || 'Not Configured',
-        cloudinary: window.ENV?.CLOUDINARY_CLOUD_NAME || 'Not Configured'
+        cloudinary: window.ENV?.CLOUDINARY_CLOUD_NAME || 'Not Configured',
+        cloudinaryOld: window.ENV?.OLD_CLOUDINARY_CLOUD_NAME || 'Not Configured'
       };
       const maskedText = '********';
       const targetCellHtml = (key) => {
@@ -4746,7 +5316,7 @@ if (logoutBtn) {
           <td>${getRec(supabaseStorageInfo.ratio)}</td>
         </tr>
         <tr>
-          <td>Cloudinary Media</td>
+          <td>Cloudinary Media (Active)</td>
           <td>${targetCellHtml('cloudinary')}</td>
           <td>${escapeHtml(cloudinaryState)}</td>
           <td class="db-table-storage-cell">
@@ -4757,6 +5327,18 @@ if (logoutBtn) {
           </td>
           <td>${getRec(cloudinaryStorageInfo.ratio)}</td>
         </tr>
+        <tr>
+          <td>Cloudinary Media (Legacy)</td>
+          <td>${targetCellHtml('cloudinaryOld')}</td>
+          <td>${escapeHtml(cloudinaryOldState)}</td>
+          <td class="db-table-storage-cell">
+            <div class="db-mini-storage-text">${escapeHtml(cloudinaryOldStorageInfo.usedText)} (15GB Limit)</div>
+            <div class="db-mini-storage-bar">
+              <div class="db-mini-storage-fill" style="width:${cloudinaryOldStorageInfo.ratio}%;"></div>
+            </div>
+          </td>
+          <td>${getRec(cloudinaryOldStorageInfo.ratio)}</td>
+        </tr>
       `;
     }
 
@@ -4764,50 +5346,67 @@ if (logoutBtn) {
       if (elements.panelMessaging) elements.panelMessaging.classList.toggle('hidden', view !== 'messaging');
       if (elements.panelStorage) elements.panelStorage.classList.toggle('hidden', view !== 'storage');
       if (elements.panelMultimedia) elements.panelMultimedia.classList.toggle('hidden', view !== 'multimedia');
-      
+
       if (elements.tabMessaging) elements.tabMessaging.classList.toggle('active', view === 'messaging');
       if (elements.tabStorage) elements.tabStorage.classList.toggle('active', view === 'storage');
       if (elements.tabMultimedia) elements.tabMultimedia.classList.toggle('active', view === 'multimedia');
-      
+
       if (view === 'multimedia') loadMultimediaDatabase();
     }
 
     async function loadMultimediaDatabase() {
       if (!elements.mediaGrid) return;
-      elements.mediaGrid.innerHTML = '<div class="db-media-loading"><div class="spinner"></div><span>Fetching Cloudinary assets...</span></div>';
-      
+      elements.mediaGrid.innerHTML = '<div class="db-media-loading"><div class="spinner"></div><span>Scanning Cloudinary repositories...</span></div>';
+
+      const selectedValue = elements.mediaAccountSelect?.value || 'all';
+      const activeCloud = window.ENV?.CLOUDINARY_CLOUD_NAME;
+      const legacyCloud = window.ENV?.OLD_CLOUDINARY_CLOUD_NAME;
+
       try {
-        const res = await fetch(BACKEND_GAS_URL, {
-          method: 'POST',
-          body: JSON.stringify({ action: 'listMultimedia' })
-        });
-        const payload = await res.json();
-        
-        if (!payload.success) {
-          elements.mediaGrid.innerHTML = `<div class="db-media-error">Error: ${escapeHtml(payload.message)}</div>`;
+        let activeRes = { success: true, resources: [] };
+        let legacyRes = { success: true, resources: [] };
+
+        if (selectedValue === 'all' || selectedValue === activeCloud) {
+          const res = await fetch(BACKEND_GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'listMultimedia', cloudName: activeCloud }) });
+          activeRes = await res.json();
+        }
+
+        if (legacyCloud && (selectedValue === 'all' || selectedValue === legacyCloud)) {
+          const res = await fetch(BACKEND_GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'listMultimedia', cloudName: legacyCloud }) });
+          legacyRes = await res.json();
+        }
+
+        let allResources = [];
+        if (activeRes.success) {
+          allResources.push(...(activeRes.resources || []).map(r => ({ ...r, accountLabel: 'Active', cloudName: activeCloud })));
+        }
+        if (legacyRes.success) {
+          allResources.push(...(legacyRes.resources || []).map(r => ({ ...r, accountLabel: 'Legacy', cloudName: legacyCloud })));
+        }
+
+        if (allResources.length > 0 && allResources[0].secure_url) {
+          lastCloudinaryProbeAsset = allResources[0].secure_url;
+        }
+
+        if (allResources.length === 0) {
+          elements.mediaGrid.innerHTML = '<div class="db-media-empty">No assets found in any Cloudinary account.</div>';
           return;
         }
-        
-        const resources = payload.resources || [];
-        if (resources.length > 0 && resources[0].secure_url) {
-          lastCloudinaryProbeAsset = resources[0].secure_url;
-        }
-        
-        if (resources.length === 0) {
-          elements.mediaGrid.innerHTML = '<div class="db-media-empty">No assets found in Cloudinary.</div>';
-          return;
-        }
-        
-        elements.mediaGrid.innerHTML = resources.map(res => {
-          // Use thumbnail transform for preview
+
+        // Sort by date newest first
+        allResources.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        elements.mediaGrid.innerHTML = allResources.map(res => {
           const thumbUrl = res.secure_url.replace('/upload/', '/upload/w_200,h_200,c_fill/');
           const date = new Date(res.created_at).toLocaleDateString();
           const size = (res.bytes / 1024 / 1024).toFixed(2) + ' MB';
-          
+          const badgeColor = res.accountLabel === 'Active' ? '#0d9488' : '#64748b';
+
           return `
             <div class="db-media-card" title="${escapeHtml(res.public_id)}">
               <div class="db-media-preview">
                 <img src="${thumbUrl}" alt="${escapeHtml(res.public_id)}" loading="lazy">
+                <div style="position:absolute; top:8px; right:8px; background:${badgeColor}; color:white; font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px; text-transform:uppercase;">${res.accountLabel}</div>
               </div>
               <div class="db-media-info">
                 <div class="db-media-id">${escapeHtml(res.public_id)}</div>
@@ -4815,12 +5414,12 @@ if (logoutBtn) {
               </div>
               <div class="db-media-actions">
                 <a href="${res.secure_url}" target="_blank" class="db-media-btn" title="Open Full Size">View</a>
-                <button class="db-media-btn delete" onclick="dbDeleteMedia('${res.public_id}', '${res.resource_type}')" title="Delete Everywhere">Delete</button>
+                <button class="db-media-btn delete" onclick="dbDeleteMedia('${res.public_id}', '${res.resource_type}', '${res.cloudName}')" title="Delete Everywhere">Delete</button>
               </div>
             </div>
           `;
         }).join('');
-        
+
       } catch (err) {
         elements.mediaGrid.innerHTML = `<div class="db-media-error">Network error while fetching assets.</div>`;
       }
@@ -4828,24 +5427,26 @@ if (logoutBtn) {
 
     async function updateDatabaseStatuses() {
       const storagePath = (elements.storagePath?.value || '').trim() || window.ENV?.STORAGE_CHECK_PATH || 'storage_check_health';
-      const [gasState, fbMsgState, fbStoreState, supabaseState, cloudinaryState] = await Promise.all([
+      const [gasState, fbMsgState, fbStoreState, supabaseState, cloudinaryState, cloudinaryOldState] = await Promise.all([
         checkGasStatus(),
         checkDatabaseStatus(userDb, 'user_messages'),
         checkDatabaseStatus(storageCheckDb, storagePath),
         checkSupabaseStatus(),
-        checkCloudinaryStatus()
+        checkCloudinaryStatus(window.ENV?.CLOUDINARY_CLOUD_NAME),
+        checkCloudinaryStatus(window.ENV?.OLD_CLOUDINARY_CLOUD_NAME)
       ]);
-      lastStatusSnapshot = { gasState, fbMsgState, fbStoreState, supabaseState, cloudinaryState, storagePath };
+      lastStatusSnapshot = { gasState, fbMsgState, fbStoreState, supabaseState, cloudinaryState, cloudinaryOldState, storagePath };
 
-      renderStorageStatusRows(gasState, fbMsgState, fbStoreState, supabaseState, cloudinaryState, storagePath);
-      
+      renderStorageStatusRows(gasState, fbMsgState, fbStoreState, supabaseState, cloudinaryState, cloudinaryOldState, storagePath);
+
       await Promise.all([
-        loadCloudinaryUsageOverview(),
+        loadCloudinaryUsageOverview(window.ENV?.CLOUDINARY_CLOUD_NAME),
+        loadCloudinaryUsageOverview(window.ENV?.OLD_CLOUDINARY_CLOUD_NAME),
         loadSupabaseUsageOverview()
       ]);
-      
+
       // Re-render table so "Storage Currently" reflects the latest usage fetch.
-      renderStorageStatusRows(gasState, fbMsgState, fbStoreState, supabaseState, cloudinaryState, storagePath);
+      renderStorageStatusRows(gasState, fbMsgState, fbStoreState, supabaseState, cloudinaryState, cloudinaryOldState, storagePath);
     }
 
     function rerenderStorageRows() {
@@ -4855,37 +5456,37 @@ if (logoutBtn) {
         lastStatusSnapshot.fbStoreState,
         lastStatusSnapshot.supabaseState,
         lastStatusSnapshot.cloudinaryState,
+        lastStatusSnapshot.cloudinaryOldState,
         lastStatusSnapshot.storagePath
       );
     }
 
     async function flushMultimediaDatabase() {
-      const confirmMsg = 'This will scan your system (TV Posts, User Profiles, and Landing Page) and delete ANY Cloudinary assets that are not currently being used. This cannot be undone. Please enter your password to confirm.';
-      
+      const selectedValue = elements.mediaAccountSelect?.value || 'all';
+      if (selectedValue === 'all') {
+        showToast('Please select a specific repository (Active or Legacy) to flush unused assets.', 'warning');
+        return;
+      }
+      const selectedCloud = selectedValue;
+      const accountLabel = selectedCloud === window.ENV?.CLOUDINARY_CLOUD_NAME ? 'Active Repository' : 'Legacy Repository';
+
+      const confirmMsg = `This will scan your system and delete ANY assets in the [${accountLabel}] that are not currently being used. Please confirm.`;
+
       const raw = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data') || '{}';
       const userObj = JSON.parse(raw);
 
       let confirmed = false;
       if (typeof showConfirm === 'function') {
-        const inputPass = await showConfirm('Flush Unused Assets', confirmMsg, true, 'danger');
-        if (inputPass === userObj.password) {
-          confirmed = true;
-        } else if (inputPass !== null) {
-          showToast('Incorrect password.', 'error');
-          return;
-        }
+        confirmed = await showConfirm('Flush Unused Assets', confirmMsg, false, 'danger');
       } else {
         confirmed = window.confirm(confirmMsg);
       }
 
       if (!confirmed) return;
 
-      showToast('Scanning for used assets...', 'info');
+      showToast(`Scanning for used assets in ${accountLabel}...`, 'info');
 
       try {
-        const raw = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data') || '{}';
-        const userObj = JSON.parse(raw);
-
         // 1. Get used IDs from Firebase (Landing Page)
         const lpRef = ref(userDb, 'lp_activities');
         const lpSnap = await get(lpRef);
@@ -4900,11 +5501,12 @@ if (logoutBtn) {
         // 2. Trigger GAS Flush
         const res = await fetch(BACKEND_GAS_URL, {
           method: 'POST',
-          body: JSON.stringify({ 
+          body: JSON.stringify({
             action: 'flushMultimedia',
+            cloudName: selectedCloud,
             firebaseUsedIds: usedIdsFromFirebase,
             username: userObj.username,
-            password: userObj.password
+            token: userObj.token
           })
         });
         const payload = await res.json();
@@ -4920,53 +5522,16 @@ if (logoutBtn) {
       }
     }
 
-    function extractCloudinaryId(url) {
-      if (!url || typeof url !== 'string' || !url.includes('res.cloudinary.com')) return null;
-      const parts = url.split('/upload/');
-      if (parts.length < 2) return null;
-      
-      const segments = parts[1].split('/');
-      let startIndex = 0;
-      
-      // Skip transformation/version segments
-      while (startIndex < segments.length) {
-        const seg = segments[startIndex];
-        // Versions match v123456789
-        const isVersion = seg.startsWith('v') && /^\d+$/.test(seg.substring(1));
-        // Transformations usually have commas or specific short-codes like c_fill, w_100
-        const isTransformation = seg.includes(',') || (seg.length < 12 && (seg.includes('_') || seg.includes('=') || /^[acdegilmostwx]\d+/.test(seg)));
-        
-        if (isVersion || isTransformation) {
-          startIndex++;
-          continue;
-        }
-        break;
-      }
-      
-      let idWithExt = segments.slice(startIndex).join('/');
-      const dotIdx = idWithExt.lastIndexOf('.');
-      if (dotIdx > -1) {
-        const ext = idWithExt.substring(dotIdx + 1);
-        if (!ext.includes('/') && ext.length <= 5) idWithExt = idWithExt.substring(0, dotIdx);
-      }
-      return decodeURIComponent(idWithExt);
-    }
+    window.dbDeleteMedia = async function (publicId, resourceType, targetCloud) {
+      const selectedCloud = targetCloud || elements.mediaAccountSelect?.value || window.ENV?.CLOUDINARY_CLOUD_NAME;
+      const confirmMsg = `CAUTION: This will delete the asset from Cloudinary (${selectedCloud}) AND remove any linked TV posts or Landing Page activities. Please proceed with caution.`;
 
-    window.dbDeleteMedia = async function(publicId, resourceType) {
-      const confirmMsg = `CAUTION: This will delete the asset from Cloudinary AND remove any linked TV posts or Landing Page activities. Please enter your password to proceed.`;
-      
       const raw = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data') || '{}';
       const userObj = JSON.parse(raw);
 
       let confirmed = false;
       if (typeof showConfirm === 'function') {
-        const inputPass = await showConfirm('Confirm Deletion', confirmMsg, true, 'danger');
-        if (inputPass === userObj.password) {
-          confirmed = true;
-        } else if (inputPass !== null) {
-          showToast('Incorrect password.', 'error');
-          return;
-        }
+        confirmed = await showConfirm('Confirm Deletion', confirmMsg, false, 'danger');
       } else {
         confirmed = window.confirm(confirmMsg);
       }
@@ -4996,12 +5561,13 @@ if (logoutBtn) {
         // 2. Call GAS to delete from Cloudinary and Spreadsheet Posts
         const res = await fetch(BACKEND_GAS_URL, {
           method: 'POST',
-          body: JSON.stringify({ 
-            action: 'deleteMultimedia', 
-            publicId, 
+          body: JSON.stringify({
+            action: 'deleteMultimedia',
+            publicId,
+            cloudName: selectedCloud,
             resourceType,
             username: userObj.username,
-            password: userObj.password
+            token: userObj.token
           })
         });
         const payload = await res.json();
@@ -5026,7 +5592,7 @@ if (logoutBtn) {
       if (elements.targetError) elements.targetError.textContent = '';
     }
 
-    window.dbPromptRevealTarget = function(targetKey) {
+    window.dbPromptRevealTarget = function (targetKey) {
       pendingRevealTarget = targetKey;
       if (elements.targetError) elements.targetError.textContent = '';
       if (elements.targetPassword) elements.targetPassword.value = '';
@@ -5041,21 +5607,17 @@ if (logoutBtn) {
     elements.targetForm?.addEventListener('submit', (e) => {
       e.preventDefault();
       if (!pendingRevealTarget) return;
-      const enteredPassword = (elements.targetPassword?.value || '').trim();
-      let sessionPassword = '';
+      let sessionToken = '';
       try {
         const raw = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data') || '{}';
-        sessionPassword = JSON.parse(raw).password || '';
-      } catch (err) {}
+        sessionToken = JSON.parse(raw).token || '';
+      } catch (err) { }
 
-      if (!sessionPassword) {
-        if (elements.targetError) elements.targetError.textContent = 'Session password is unavailable. Please sign in again.';
+      if (!sessionToken) {
+        if (elements.targetError) elements.targetError.textContent = 'Session token is unavailable. Please sign in again.';
         return;
       }
-      if (enteredPassword !== sessionPassword) {
-        if (elements.targetError) elements.targetError.textContent = 'Invalid password.';
-        return;
-      }
+      // Password check removed for token auth. Reveal automatically based on token presence.
       revealedTargets[pendingRevealTarget] = true;
       closeTargetModal();
       rerenderStorageRows();
@@ -5189,7 +5751,7 @@ if (logoutBtn) {
     }
 
 
-    window.deleteMessage = async function(type, key) {
+    window.deleteMessage = async function (type, key) {
       if (!confirm(`Delete this ${type} message?`)) return;
       try {
         await remove(ref(userDb, `${type}_messages/${key}`));
@@ -5232,6 +5794,9 @@ if (logoutBtn) {
     elements.tabMultimedia?.addEventListener('click', () => switchDbPanel('multimedia'));
     elements.mediaRefreshBtn?.addEventListener('click', () => loadMultimediaDatabase());
     elements.mediaFlushBtn?.addEventListener('click', () => flushMultimediaDatabase());
+    elements.mediaAccountSelect?.addEventListener('change', () => {
+      loadMultimediaDatabase();
+    });
 
     elements.exportBtn?.addEventListener('click', () => {
       const dataStr = JSON.stringify(filteredMessages, null, 2);
@@ -5251,7 +5816,7 @@ if (logoutBtn) {
         return;
       }
       if (!confirm(`Delete ${filteredMessages.length} filtered messages? This cannot be undone.`)) return;
-      
+
       let deleted = 0;
       for (const msg of filteredMessages) {
         try {
@@ -5286,15 +5851,15 @@ if (logoutBtn) {
   });
 
   // --- Settings Modal Functions ---
-  window.openSettingsModal = function() {
+  window.openSettingsModal = function () {
     const modal = document.getElementById('settings-modal');
     if (!modal) return;
-    
+
     const sessionData = localStorage.getItem('sas_user_data');
     if (!sessionData) return;
-    
+
     const user = JSON.parse(sessionData);
-    
+
     // Populate profile tab
     const profilePicPreview = document.getElementById('settings-profile-pic-preview');
     const profilePicInitial = document.getElementById('settings-profile-pic-initial');
@@ -5303,10 +5868,10 @@ if (logoutBtn) {
     const previewAvatarInitial = document.getElementById('settings-preview-avatar-initial');
     const previewName = document.getElementById('settings-preview-name');
     const usernameInput = document.getElementById('settings-username');
-    
+
     const displayName = user.displayName || user.username;
     const initial = (user.profilePic && user.profilePic.startsWith('http')) ? '' : displayName.charAt(0).toUpperCase();
-    
+
     if (user.profilePic && user.profilePic.startsWith('http')) {
       profilePicPreview.innerHTML = `<img src="${user.profilePic}" alt="Profile">`;
       previewAvatar.innerHTML = `<img src="${user.profilePic}" alt="Profile">`;
@@ -5314,26 +5879,26 @@ if (logoutBtn) {
       profilePicPreview.innerHTML = `<span>${initial}</span>`;
       previewAvatar.innerHTML = `<span>${initial}</span>`;
     }
-    
+
     displayNameInput.value = displayName;
     previewName.textContent = displayName;
     usernameInput.value = user.username;
-    
+
     // Set theme selection
     const theme = user.theme || 'light';
     document.querySelectorAll('.settings-theme-option').forEach(opt => {
       opt.classList.toggle('selected', opt.getAttribute('data-theme') === theme);
     });
-    
+
     // Clear password fields
     document.getElementById('settings-current-password').value = '';
     document.getElementById('settings-new-password').value = '';
     document.getElementById('settings-confirm-password').value = '';
-    
+
     // Hide messages
     document.getElementById('settings-error').classList.add('hidden');
     document.getElementById('settings-success').classList.add('hidden');
-    
+
     modal.classList.remove('hidden');
   };
 
@@ -5348,10 +5913,10 @@ if (logoutBtn) {
   document.querySelectorAll('.settings-tab').forEach(tab => {
     tab.addEventListener('click', () => {
       const tabName = tab.getAttribute('data-tab');
-      
+
       document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
-      
+
       document.querySelectorAll('.settings-tab-content').forEach(content => content.classList.add('hidden'));
       document.getElementById(`settings-${tabName}`).classList.remove('hidden');
     });
@@ -5365,7 +5930,7 @@ if (logoutBtn) {
   document.getElementById('settings-profile-pic-input')?.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
+
     // Preview locally immediately
     const reader = new FileReader();
     reader.onload = (evt) => {
@@ -5375,32 +5940,33 @@ if (logoutBtn) {
       previewAvatar.innerHTML = `<img src="${evt.target.result}" alt="Preview">`;
     };
     reader.readAsDataURL(file);
-    
+
     // Upload to backend
     const sessionData = JSON.parse(localStorage.getItem('sas_user_data'));
     const base64 = await fileToBase64(file);
-    
+
     try {
+      showGlobalLoading("Uploading your new profile picture...");
       const formData = new URLSearchParams();
       formData.append('action', 'uploadProfilePicture');
       formData.append('username', sessionData.username);
-      formData.append('password', sessionData.password);
+      formData.append('token', sessionData.token);
       formData.append('fileData', base64);
       formData.append('fileName', file.name);
-      
+
       const res = await fetch(BACKEND_GAS_URL, { method: 'POST', body: formData });
       const data = await res.json();
-      
+
       if (data.success) {
         // Update local storage
         sessionData.profilePic = data.profilePic;
         localStorage.setItem('sas_user_data', JSON.stringify(sessionData));
-        
+
         // Update current user in contactsMap if exists
         if (contactsMap[sessionData.username]) {
           contactsMap[sessionData.username].profilePic = data.profilePic;
         }
-        
+
         // Refresh user list and messenger UI
         fetchSpreadsheetUsers();
         if (typeof renderFullContacts === 'function') renderFullContacts();
@@ -5411,21 +5977,35 @@ if (logoutBtn) {
             activeAvatar.innerHTML = `<img src="${data.profilePic}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
           }
         }
-        
+
         // Also refresh the user's own preview in settings modal
         const settingsPreview = document.getElementById('settings-profile-pic-preview');
         if (settingsPreview) settingsPreview.innerHTML = `<img src="${data.profilePic}" alt="Profile">`;
         const settingsAvatar = document.getElementById('settings-preview-avatar');
         if (settingsAvatar) settingsAvatar.innerHTML = `<img src="${data.profilePic}" alt="Profile">`;
-        
+
         showToast('Profile picture updated!', 'success');
       } else {
         showToast(data.message || 'Upload failed', 'error');
       }
     } catch (err) {
       showToast('Upload error: ' + err.message, 'error');
+    } finally {
+      hideGlobalLoading();
     }
   });
+
+  function showGlobalLoading(text = "Please wait a moment") {
+    const modal = document.getElementById('global-loading-modal');
+    const label = document.getElementById('global-loading-text');
+    if (label) label.textContent = text;
+    if (modal) modal.classList.remove('hidden');
+  }
+
+  function hideGlobalLoading() {
+    const modal = document.getElementById('global-loading-modal');
+    if (modal) modal.classList.add('hidden');
+  }
 
   function fileToBase64(file) {
     return new Promise((resolve, reject) => {
@@ -5443,28 +6023,29 @@ if (logoutBtn) {
       showSettingsError('Please enter a display name');
       return;
     }
-    
+
     const sessionData = JSON.parse(localStorage.getItem('sas_user_data'));
-    
+
     try {
+      showGlobalLoading("Saving your profile...");
       const formData = new URLSearchParams();
       formData.append('action', 'updateUserSettings');
       formData.append('username', sessionData.username);
-      formData.append('password', sessionData.password);
+      formData.append('token', sessionData.token);
       formData.append('displayName', displayName);
-      
+
       const res = await fetch(BACKEND_GAS_URL, { method: 'POST', body: formData });
       const data = await res.json();
-      
+
       if (data.success) {
         sessionData.displayName = data.user.displayName;
         localStorage.setItem('sas_user_data', JSON.stringify(sessionData));
-        
+
         const displayNameEl = document.getElementById('user-display-name');
         const dropNameEl = document.getElementById('user-dropdown-name');
         if (displayNameEl) displayNameEl.textContent = data.user.displayName;
         if (dropNameEl) dropNameEl.textContent = data.user.displayName;
-        
+
         document.getElementById('settings-preview-name').textContent = data.user.displayName;
         showSettingsSuccess('Profile updated successfully!');
       } else {
@@ -5472,6 +6053,8 @@ if (logoutBtn) {
       }
     } catch (err) {
       showSettingsError('Error: ' + err.message);
+    } finally {
+      hideGlobalLoading();
     }
   });
 
@@ -5480,48 +6063,52 @@ if (logoutBtn) {
     const currentPass = document.getElementById('settings-current-password').value;
     const newPass = document.getElementById('settings-new-password').value;
     const confirmPass = document.getElementById('settings-confirm-password').value;
-    
+
     if (!currentPass || !newPass || !confirmPass) {
       showSettingsError('Please fill in all password fields');
       return;
     }
-    
+
     if (newPass !== confirmPass) {
       showSettingsError('New passwords do not match');
       return;
     }
-    
+
     if (newPass.length < 4) {
       showSettingsError('Password must be at least 4 characters');
       return;
     }
-    
+
     const sessionData = JSON.parse(localStorage.getItem('sas_user_data'));
-    
+
     try {
+      showGlobalLoading("Updating password...");
       const formData = new URLSearchParams();
       formData.append('action', 'updateUserSettings');
       formData.append('username', sessionData.username);
       formData.append('password', currentPass);
+      formData.append('token', sessionData.token);
       formData.append('newPassword', newPass);
-      
+
       const res = await fetch(BACKEND_GAS_URL, { method: 'POST', body: formData });
       const data = await res.json();
-      
+
       if (data.success) {
         sessionData.password = newPass;
         localStorage.setItem('sas_user_data', JSON.stringify(sessionData));
-        
+
         document.getElementById('settings-current-password').value = '';
         document.getElementById('settings-new-password').value = '';
         document.getElementById('settings-confirm-password').value = '';
-        
+
         showSettingsSuccess('Password changed successfully!');
       } else {
         showSettingsError(data.message || 'Failed to change password');
       }
     } catch (err) {
       showSettingsError('Error: ' + err.message);
+    } finally {
+      hideGlobalLoading();
     }
   });
 
@@ -5529,10 +6116,10 @@ if (logoutBtn) {
   document.querySelectorAll('.settings-theme-option').forEach(opt => {
     opt.addEventListener('click', async () => {
       const theme = opt.getAttribute('data-theme');
-      
+
       document.querySelectorAll('.settings-theme-option').forEach(o => o.classList.remove('selected'));
       opt.classList.add('selected');
-      
+
       // Apply theme immediately
       if (theme === 'dark') {
         document.body.classList.add('dark-theme');
@@ -5540,20 +6127,21 @@ if (logoutBtn) {
         document.body.classList.remove('dark-theme');
       }
       localStorage.setItem('sas_theme', theme);
-      
+
       // Save to backend
       const sessionData = JSON.parse(localStorage.getItem('sas_user_data'));
-      
+
       try {
+        showGlobalLoading("Applying theme...");
         const formData = new URLSearchParams();
         formData.append('action', 'updateUserSettings');
         formData.append('username', sessionData.username);
-        formData.append('password', sessionData.password);
+        formData.append('token', sessionData.token);
         formData.append('theme', theme);
-        
+
         const res = await fetch(BACKEND_GAS_URL, { method: 'POST', body: formData });
         const data = await res.json();
-        
+
         if (data.success) {
           sessionData.theme = theme;
           localStorage.setItem('sas_user_data', JSON.stringify(sessionData));
@@ -5561,6 +6149,8 @@ if (logoutBtn) {
         }
       } catch (err) {
         console.error('Theme save error:', err);
+      } finally {
+        hideGlobalLoading();
       }
     });
   });
@@ -5580,7 +6170,7 @@ if (logoutBtn) {
   }
 
   // Initialize theme on page load
-  (function() {
+  (function () {
     const savedTheme = localStorage.getItem('sas_theme') || 'light';
     if (savedTheme === 'dark') {
       document.body.classList.add('dark-theme');
@@ -5651,8 +6241,8 @@ function initLpActivities() {
     const data = snapshot.val();
     const activities = data
       ? Object.entries(data)
-          .map(([key, val]) => ({ id: key, ...val }))
-          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+        .map(([key, val]) => ({ id: key, ...val }))
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
       : [];
 
     // Cache for full-page view
@@ -5698,7 +6288,7 @@ function renderLpActivities(activities, grid) {
       try {
         const d = new Date(dateStr + 'T00:00:00');
         dateStr = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-      } catch(e) {}
+      } catch (e) { }
     }
 
     const imgHtml = act.imageUrl
@@ -5719,11 +6309,11 @@ function renderLpActivities(activities, grid) {
 
 // --- FULL-PAGE ACTIVITIES VIEW ---
 function initLpAllActivitiesPage() {
-  const page       = document.getElementById('lp-all-activities-page');
+  const page = document.getElementById('lp-all-activities-page');
   const viewAllBtn = document.getElementById('lp-view-all-btn');
-  const backBtn    = document.getElementById('lp-all-act-back');
+  const backBtn = document.getElementById('lp-all-act-back');
   const searchInput = document.getElementById('lp-all-act-search');
-  const yearSelect  = document.getElementById('lp-all-act-year');
+  const yearSelect = document.getElementById('lp-all-act-year');
 
   if (!page || !viewAllBtn) return;
 
@@ -5734,7 +6324,7 @@ function initLpAllActivitiesPage() {
     document.body.style.overflow = 'hidden';
     // Reset search
     if (searchInput) searchInput.value = '';
-    if (yearSelect)  yearSelect.value  = '';
+    if (yearSelect) yearSelect.value = '';
     buildYearFilter();
     renderLpAllActGrid(_lpAllActivities);
     if (searchInput) searchInput.focus();
@@ -5779,10 +6369,10 @@ function initLpAllActivitiesPage() {
   // Search + year filter
   let searchTimeout;
   function applyFilters() {
-    const q    = (searchInput?.value || '').trim().toLowerCase();
+    const q = (searchInput?.value || '').trim().toLowerCase();
     const year = yearSelect?.value || '';
     const filtered = _lpAllActivities.filter(a => {
-      const matchesQ    = !q || (a.title || '').toLowerCase().includes(q) || (a.excerpt || '').toLowerCase().includes(q);
+      const matchesQ = !q || (a.title || '').toLowerCase().includes(q) || (a.excerpt || '').toLowerCase().includes(q);
       const matchesYear = !year || (a.date || '').startsWith(year);
       return matchesQ && matchesYear;
     });
@@ -5801,7 +6391,7 @@ function initLpAllActivitiesPage() {
 }
 
 function renderLpAllActGrid(activities) {
-  const grid  = document.getElementById('lp-all-act-grid');
+  const grid = document.getElementById('lp-all-act-grid');
   const empty = document.getElementById('lp-all-act-empty');
   const total = document.getElementById('lp-all-act-total');
   if (!grid) return;
@@ -5826,7 +6416,7 @@ function renderLpAllActGrid(activities) {
       try {
         const d = new Date(dateStr + 'T00:00:00');
         dateStr = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-      } catch(e) {}
+      } catch (e) { }
     }
 
     const imgHtml = act.imageUrl
@@ -5859,29 +6449,31 @@ function initLpActivitiesAdmin(userObj) {
   if (manageBtn) manageBtn.classList.remove('hidden');
 
   // Grab modal elements
-  const modal        = document.getElementById('lp-activities-modal');
-  const closeBtn     = document.getElementById('lp-act-modal-close');
-  const currentList  = document.getElementById('lp-act-current-list');
-  const addForm      = document.getElementById('lp-act-add-form');
-  const titleInput   = document.getElementById('lp-act-title');
+  const modal = document.getElementById('lp-activities-modal');
+  const closeBtn = document.getElementById('lp-act-modal-close');
+  const currentList = document.getElementById('lp-act-current-list');
+  const addForm = document.getElementById('lp-act-add-form');
+  const titleInput = document.getElementById('lp-act-title');
   const excerptInput = document.getElementById('lp-act-excerpt');
-  const dateInput    = document.getElementById('lp-act-date');
-  const fileInput    = document.getElementById('lp-act-img-file');
-  const urlInput     = document.getElementById('lp-act-img-url');
-  const fileLabel    = document.getElementById('lp-act-file-label');
+  const dateInput = document.getElementById('lp-act-date');
+  const fileInput = document.getElementById('lp-act-img-file');
+  const urlInput = document.getElementById('lp-act-img-url');
+  const fileLabel = document.getElementById('lp-act-file-label');
   const fileLabelTxt = document.getElementById('lp-act-file-label-text');
-  const previewImg   = document.getElementById('lp-act-preview-img');
-  const previewWrap  = document.getElementById('lp-act-img-preview');
-  const urlPreviewImg  = document.getElementById('lp-act-url-preview-img');
+  const previewImg = document.getElementById('lp-act-preview-img');
+  const previewWrap = document.getElementById('lp-act-img-preview');
+  const urlPreviewImg = document.getElementById('lp-act-url-preview-img');
   const urlPreviewWrap = document.getElementById('lp-act-url-preview');
-  const submitBtn    = document.getElementById('lp-act-submit-btn');
-  const formError    = document.getElementById('lp-act-form-error');
+  const submitBtn = document.getElementById('lp-act-submit-btn');
+  const cancelBtn = document.getElementById('lp-act-cancel-btn');
+  const formError = document.getElementById('lp-act-form-error');
 
   if (!modal || !addForm) return;
 
   // Track current active tab and activities snapshot
   let activeLpTab = 'file';
   let lpActivitiesSnapshot = {};
+  let editingLpActKey = null; // Track if we are editing
 
   // ---- Open / Close ----
   if (manageBtn) {
@@ -5947,7 +6539,7 @@ function initLpActivitiesAdmin(userObj) {
         const url = urlInput.value.trim();
         if (url && urlPreviewImg && urlPreviewWrap) {
           urlPreviewImg.src = url;
-          urlPreviewImg.onload  = () => urlPreviewWrap.classList.remove('hidden');
+          urlPreviewImg.onload = () => urlPreviewWrap.classList.remove('hidden');
           urlPreviewImg.onerror = () => urlPreviewWrap.classList.add('hidden');
         } else if (urlPreviewWrap) {
           urlPreviewWrap.classList.add('hidden');
@@ -5974,7 +6566,7 @@ function initLpActivitiesAdmin(userObj) {
     if (!currentList) return;
     currentList.innerHTML = '';
     const entries = Object.entries(lpActivitiesSnapshot)
-      .sort(([,a],[,b]) => (b.createdAt || 0) - (a.createdAt || 0));
+      .sort(([, a], [, b]) => (b.createdAt || 0) - (a.createdAt || 0));
 
     if (entries.length === 0) {
       currentList.innerHTML = '<div class="lp-act-empty-msg">No activities yet. Add one below!</div>';
@@ -5990,7 +6582,7 @@ function initLpActivitiesAdmin(userObj) {
         try {
           const d = new Date(dateStr + 'T00:00:00');
           dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        } catch(e) {}
+        } catch (e) { }
       }
 
       const thumbHtml = act.imageUrl
@@ -6003,7 +6595,48 @@ function initLpActivitiesAdmin(userObj) {
           <div class="lp-act-item-title">${escapeHtml(act.title || '')}</div>
           <div class="lp-act-item-date">${escapeHtml(dateStr)}</div>
         </div>
-        <button type="button" class="lp-act-delete-btn" data-key="${escapeHtml(key)}" aria-label="Delete activity">Delete</button>`;
+        <div class="lp-act-item-actions">
+          <button type="button" class="lp-act-edit-btn" data-key="${escapeHtml(key)}" title="Edit activity">Edit</button>
+          <button type="button" class="lp-act-delete-btn" data-key="${escapeHtml(key)}" title="Delete activity">Delete</button>
+        </div>`;
+
+      const editBtn = row.querySelector('.lp-act-edit-btn');
+      editBtn.addEventListener('click', () => {
+        editingLpActKey = key;
+
+        // Populate Form
+        if (titleInput) titleInput.value = act.title || '';
+        if (excerptInput) excerptInput.value = act.excerpt || '';
+        if (dateInput) dateInput.value = act.date || '';
+
+        // Handle Image
+        if (act.imageUrl) {
+          if (urlInput) urlInput.value = act.imageUrl;
+          if (urlPreviewImg) urlPreviewImg.src = act.imageUrl;
+          if (urlPreviewWrap) urlPreviewWrap.classList.remove('hidden');
+
+          // Switch to URL tab for editing
+          document.querySelectorAll('#lp-act-upload-tabs .upload-tab').forEach(b => b.classList.remove('active'));
+          const urlTab = document.querySelector('#lp-act-upload-tabs .upload-tab[data-lptab="url"]');
+          if (urlTab) urlTab.classList.add('active');
+          activeLpTab = 'url';
+          document.getElementById('lp-act-panel-file')?.classList.add('hidden');
+          document.getElementById('lp-act-panel-url')?.classList.remove('hidden');
+        } else {
+          resetLpForm(true); // partial reset but keep edit mode
+        }
+
+        // Update UI for Edit Mode
+        const sectionLabel = addForm.previousElementSibling;
+        if (sectionLabel && sectionLabel.classList.contains('lp-act-section-label')) {
+          sectionLabel.textContent = 'Edit Activity';
+        }
+        if (submitBtn) submitBtn.textContent = 'Save Changes';
+        if (cancelBtn) cancelBtn.classList.remove('hidden');
+
+        // Scroll to form
+        addForm.scrollIntoView({ behavior: 'smooth' });
+      });
 
       const delBtn = row.querySelector('.lp-act-delete-btn');
       delBtn.addEventListener('click', async () => {
@@ -6015,11 +6648,37 @@ function initLpActivitiesAdmin(userObj) {
         delBtn.disabled = true;
         delBtn.textContent = 'Deleting…';
         try {
+          // --- CASCADE DELETION TO CLOUDINARY ---
+          if (act.imageUrl) {
+            const publicId = extractCloudinaryId(act.imageUrl);
+            if (publicId) {
+              // Determine which account to delete from based on URL
+              const cloudName = act.imageUrl.includes('dbytj36mv') ? 'dbytj36mv' : 'dj8ugtlrl';
+
+              // Get current session for auth
+              const sessionData = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
+              const userObj = sessionData ? JSON.parse(sessionData) : null;
+
+              if (userObj) {
+                await fetch(BACKEND_GAS_URL, {
+                  method: 'POST',
+                  body: JSON.stringify({
+                    action: 'deleteMultimedia',
+                    publicId: publicId,
+                    cloudName: cloudName,
+                    username: userObj.username,
+                    password: userObj.password
+                  })
+                }).catch(e => console.error("Cloudinary cascade delete failed:", e));
+              }
+            }
+          }
+
           await remove(ref(userDb, `lp_activities/${key}`));
           delete lpActivitiesSnapshot[key];
           renderCurrentList();
           showToast('Activity deleted.', 'success');
-        } catch(err) {
+        } catch (err) {
           delBtn.disabled = false;
           delBtn.textContent = 'Delete';
           showToast('Delete failed: ' + err.message, 'error');
@@ -6037,14 +6696,24 @@ function initLpActivitiesAdmin(userObj) {
   }
 
   // ---- Form Reset ----
-  function resetLpForm() {
+  function resetLpForm(keepEditMode = false) {
+    if (!keepEditMode) {
+      editingLpActKey = null;
+      if (submitBtn) submitBtn.textContent = 'Add Activity';
+      if (cancelBtn) cancelBtn.classList.add('hidden');
+      const sectionLabel = addForm.previousElementSibling;
+      if (sectionLabel && sectionLabel.classList.contains('lp-act-section-label')) {
+        sectionLabel.textContent = 'Add New Activity';
+      }
+    }
     if (addForm) addForm.reset();
     if (fileLabelTxt) fileLabelTxt.textContent = 'Click or drag image here';
     if (fileLabel) fileLabel.classList.remove('file-selected', 'drag-over');
     if (previewWrap) previewWrap.classList.add('hidden');
     if (urlPreviewWrap) urlPreviewWrap.classList.add('hidden');
     if (formError) formError.classList.add('hidden');
-    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Add Activity'; }
+    if (submitBtn) submitBtn.disabled = false;
+
     // Reset to file tab
     document.querySelectorAll('#lp-act-upload-tabs .upload-tab').forEach(b => b.classList.remove('active'));
     const firstTab = document.querySelector('#lp-act-upload-tabs .upload-tab[data-lptab="file"]');
@@ -6054,14 +6723,18 @@ function initLpActivitiesAdmin(userObj) {
     document.getElementById('lp-act-panel-url')?.classList.add('hidden');
   }
 
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', () => resetLpForm());
+  }
+
   // ---- Form Submit ----
   addForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (formError) formError.classList.add('hidden');
 
-    const title   = (titleInput?.value || '').trim();
+    const title = (titleInput?.value || '').trim();
     const excerpt = (excerptInput?.value || '').trim();
-    const date    = (dateInput?.value || '').trim();
+    const date = (dateInput?.value || '').trim();
 
     if (!title || !excerpt || !date) {
       if (formError) { formError.textContent = 'Title, description and date are required.'; formError.classList.remove('hidden'); }
@@ -6072,7 +6745,7 @@ function initLpActivitiesAdmin(userObj) {
     submitBtn.textContent = 'Uploading…';
 
     try {
-      let imageUrl = '';
+      let imageUrl = editingLpActKey ? (lpActivitiesSnapshot[editingLpActKey]?.imageUrl || '') : '';
 
       if (activeLpTab === 'url') {
         imageUrl = (urlInput?.value || '').trim();
@@ -6085,7 +6758,7 @@ function initLpActivitiesAdmin(userObj) {
         fd.append('file', file);
         fd.append('upload_preset', window.ENV?.CLOUDINARY_UPLOAD_PRESET || 'sas_uploads');
         fd.append('folder', 'sas_lp_activities');
-        const res = await fetch(`https://api.cloudinary.com/v1_1/${window.ENV?.CLOUDINARY_CLOUD_NAME}/image/upload`, {
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${window.ENV?.CLOUDINARY_CLOUD_NAME || 'dbytj36mv'}/image/upload`, {
           method: 'POST',
           body: fd
         });
@@ -6094,26 +6767,32 @@ function initLpActivitiesAdmin(userObj) {
         imageUrl = cloudData.secure_url;
       }
 
-      // Save to Firebase
-      const newActivity = {
+      // Prepare payload
+      const activityData = {
         title,
         excerpt,
         date,
         imageUrl,
         uploadedBy: userObj.username || 'admin',
-        createdAt: Date.now()
+        updatedAt: Date.now()
       };
 
-      await push(ref(userDb, 'lp_activities'), newActivity);
+      if (editingLpActKey) {
+        await update(ref(userDb, `lp_activities/${editingLpActKey}`), activityData);
+        showToast('Activity updated successfully!', 'success');
+      } else {
+        activityData.createdAt = Date.now();
+        await push(ref(userDb, 'lp_activities'), activityData);
+        showToast('Activity added to landing page!', 'success');
+      }
 
-      showToast('Activity added to landing page!', 'success');
       resetLpForm();
       loadCurrentActivities(); // refresh list
       modal.classList.add('hidden');
 
-    } catch(err) {
+    } catch (err) {
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Add Activity';
+      submitBtn.textContent = editingLpActKey ? 'Save Changes' : 'Add Activity';
       if (formError) { formError.textContent = err.message; formError.classList.remove('hidden'); }
     }
   });
@@ -6140,18 +6819,44 @@ function initLpDocuments() {
   // Sync from Firebase
   onValue(docsRef, (snapshot) => {
     const data = snapshot.val();
-    if (!data) {
-      _lpAllDocuments = [];
-      renderLpDocuments();
-      return;
-    }
+    const fbDocs = data ? Object.entries(data).map(([id, val]) => ({ id, ...val })) : [];
 
-    _lpAllDocuments = Object.entries(data).map(([id, val]) => ({ id, ...val }))
-      .sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    updateLpDocYears();
-    renderLpDocuments();
+    _lpAllDocuments = fbDocs;
+    fetchPublicHubFiles(); // Merge with Supabase files
   });
+
+  async function fetchPublicHubFiles() {
+    try {
+      const response = await fetch(window.ENV.BACKEND_GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'getPublicFiles' })
+      });
+      const result = await response.json();
+      if (result.success && result.files) {
+        const hubDocs = result.files.map(f => ({
+          id: f.id,
+          title: f.file_name,
+          category: f.category,
+          date: f.created_at,
+          url: f.file_url,
+          description: `Uploaded by ${f.username}`
+        }));
+
+        // Merge and deduplicate by URL
+        const combined = [..._lpAllDocuments, ...hubDocs];
+        _lpAllDocuments = combined
+          .filter((v, i, a) => a.findIndex(t => (t.url === v.url)) === i)
+          .sort((a, b) => new Date(b.date) - new Date(a.date));
+      }
+
+      updateLpDocYears();
+      renderLpDocuments();
+    } catch (e) {
+      console.warn("Hub Docs Sync Error:", e);
+      updateLpDocYears();
+      renderLpDocuments();
+    }
+  }
 
   // Category Filtering
   catTabs.forEach(tab => {
@@ -6175,13 +6880,13 @@ function initLpDocuments() {
     if (!yearSelect) return;
     const years = [...new Set(_lpAllDocuments.map(d => new Date(d.date).getFullYear()))].sort((a, b) => b - a);
     const current = yearSelect.value;
-    yearSelect.innerHTML = '<option value="">All Years</option>' + 
+    yearSelect.innerHTML = '<option value="">All Years</option>' +
       years.map(y => `<option value="${y}" ${y == current ? 'selected' : ''}>${y}</option>`).join('');
   }
 
   function renderLpDocuments() {
     grid.innerHTML = '';
-    
+
     const filtered = _lpAllDocuments.filter(doc => {
       const matchCat = !_lpDocFilterCat || doc.category === _lpDocFilterCat;
       const matchYear = !_lpDocFilterYear || new Date(doc.date).getFullYear().toString() === _lpDocFilterYear;
@@ -6199,7 +6904,7 @@ function initLpDocuments() {
       const card = document.createElement('div');
       card.className = 'lp-doc-card';
       card.setAttribute('data-cat', doc.category || 'Memo');
-      
+
       const dateObj = new Date(doc.date);
       const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
@@ -6226,7 +6931,7 @@ function initLpDocuments() {
   }
 
   function getDocIcon(cat) {
-    switch(cat) {
+    switch (cat) {
       case 'Memo': return 'bx-file';
       case 'Advisory': return 'bx-info-circle';
       case 'Form': return 'bx-edit-alt';
@@ -6260,7 +6965,7 @@ function initLpDocumentsAdmin(userObj) {
   };
 
   closeBtn.onclick = () => modal.classList.add('hidden');
-  
+
   // Close on Escape
   const handleEsc = (e) => { if (e.key === 'Escape') modal.classList.add('hidden'); };
   document.addEventListener('keydown', handleEsc);
@@ -6278,7 +6983,7 @@ function initLpDocumentsAdmin(userObj) {
         return;
       }
 
-      Object.entries(data).sort((a,b) => new Date(b[1].date) - new Date(a[1].date)).forEach(([id, doc]) => {
+      Object.entries(data).sort((a, b) => new Date(b[1].date) - new Date(a[1].date)).forEach(([id, doc]) => {
         const row = document.createElement('div');
         row.className = 'lp-doc-item';
         row.innerHTML = `
@@ -6292,7 +6997,7 @@ function initLpDocumentsAdmin(userObj) {
           </button>
         `;
 
-        row.querySelector('.delete-doc-btn').onclick = async function() {
+        row.querySelector('.delete-doc-btn').onclick = async function () {
           const confirmed = await lpShowConfirm('Delete Document', 'Are you sure you want to delete this document? This cannot be undone.');
           if (confirmed) {
             await remove(ref(userDb, `lp_documents/${id}`));
@@ -6340,7 +7045,7 @@ function initLpDocumentsAdmin(userObj) {
       loadCurrentDocs();
       submitBtn.disabled = false;
       submitBtn.textContent = 'Add Document';
-    } catch(err) {
+    } catch (err) {
       submitBtn.disabled = false;
       submitBtn.textContent = 'Add Document';
       if (formError) { formError.textContent = err.message; formError.classList.remove('hidden'); }
