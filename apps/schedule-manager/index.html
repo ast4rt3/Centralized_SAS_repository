@@ -20,7 +20,7 @@
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: var(--font-sans); background: var(--nbsc-dark); color: var(--text); min-height: 100vh; overflow-x: hidden; }
-        .header { padding: 24px; background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        .header { padding: 24px 24px 24px 60px; background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
         .header-brand { display: flex; align-items: center; gap: 12px; }
         .header-logo { width: 44px; height: auto; }
         .header-text h1 { font-size: 1.2rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
@@ -74,6 +74,31 @@
         .btn-icon i { font-size: 1.1rem; }
         .action-group { display: flex; gap: 8px; }
         
+        /* New Window Button Card */
+        .add-window-btn {
+            background: rgba(255, 255, 255, 0.03);
+            border: 2px dashed rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+            min-height: 140px;
+        }
+        .add-window-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--nbsc-gold);
+            color: var(--nbsc-gold);
+            transform: translateY(-2px);
+        }
+        .add-window-btn i { font-size: 2.2rem; }
+        .add-window-btn span { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+
         .empty-state { text-align: center; padding: 48px; color: var(--text-muted); }
         .empty-state i { font-size: 3rem; margin-bottom: 16px; opacity: 0.5; }
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); display: none; justify-content: center; align-items: center; z-index: 1000; }
@@ -103,10 +128,6 @@
             <img src="../../assets/sas_logo_real.png" class="header-logo" alt="NBSC Logo">
             <div class="header-text"><h1>Scanner Schedule Manager</h1></div>
         </div>
-        <div style="display: flex; gap: 10px;">
-            <button class="btn btn-outline" onclick="openEventModal()"><i class='bx bx-folder'></i> New Event</button>
-            <button class="btn btn-primary" onclick="openWindowModal()"><i class='bx bx-plus'></i> New Window</button>
-        </div>
     </header>
 
     <div class="container">
@@ -115,6 +136,7 @@
                 <button class="btn btn-outline" onclick="loadSchedules()"><i class='bx bx-refresh'></i> Refresh</button>
                 <p id="statsText" style="color: var(--text-muted); font-size: 0.9rem; font-weight: 600;"></p>
             </div>
+            <button class="btn btn-primary" onclick="openEventModal()"><i class='bx bx-folder'></i> New Event</button>
         </div>
 
         <div id="eventsContainer" class="events-container">
@@ -206,43 +228,17 @@
     </div>
 
     <!-- Dependencies -->
-    <script src="../../env.js"></script>
+    <script type="module" src="../../src/utils/app-bridge.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <!-- Inline diagnostics -->
     <script>
-        (function() {
-            console.log('🔍 DIAGNOSTIC: Inline preload check starting...');
-            if (!window.ENV) { console.error('❌ env.js missing'); }
-            else { console.log('✅ env.js loaded', { url: window.ENV.SUPABASE_URL?.substring(0,30)+'...', keyPresent: !!window.ENV.SUPABASE_ANON_KEY }); }
-            if (!window.supabase) { console.error('❌ Supabase library not loaded'); }
-            else { console.log('✅ Supabase library present'); }
-            window.addEventListener('load', () => setTimeout(async () => {
-                if (window.supabase && window.ENV) {
-                    try {
-                        const client = window.supabase.createClient(window.ENV.SUPABASE_URL, window.ENV.SUPABASE_ANON_KEY);
-                        const { data, error } = await client.from('sas_schedules').select('count').limit(1);
-                        if (error) console.error('❌ DB test failed:', error);
-                        else console.log('✅ DB reachable, schedule count =', data);
-                    } catch(e) { console.error('❌ DB test exception:', e); }
-                }
-                console.log('🔍 POST-LOAD CHECK:', { initExists: typeof init, clientExists: typeof supabaseClient, loadingDisplay: getComputedStyle(document.getElementById('loadingOverlay')).display });
-            }, 1000));
-        })();
-    </script>
-
-    <!-- INLINED app.js — complete rewrite -->
-    <script>
-        // ========== BEGIN apps/schedule-manager/app.js ==========
         let supabaseClient;
-        let allEventsCache = []; // Cache all events for dropdown
+        let allEventsCache = [];
         const els = {
             container: document.getElementById('eventsContainer'),
             emptyState: document.getElementById('emptyState'),
-            // Forms
             eventForm: document.getElementById('eventForm'),
             windowForm: document.getElementById('windowForm'),
-            // Modals
             eventModal: document.getElementById('eventModalOverlay'),
             windowModal: document.getElementById('windowModalOverlay'),
             confirmModal: document.getElementById('confirmModalOverlay'),
@@ -250,238 +246,150 @@
             confirmMessage: document.getElementById('confirmMessage'),
             confirmOkBtn: document.getElementById('confirmOkBtn'),
             confirmCancelBtn: document.getElementById('confirmCancelBtn'),
-            // Window form fields
             windowDate: document.getElementById('windowDate'),
             windowEventSelect: document.getElementById('windowEventSelect'),
-            // Standard
             loading: document.getElementById('loadingOverlay'),
             stats: document.getElementById('statsText')
         };
 
+        // Helper to wait for window.ENV to be populated by app-bridge
+        async function waitForEnv(timeout = 5000) {
+            if (window.ENV) return window.ENV;
+            return new Promise((resolve) => {
+                const start = Date.now();
+                const interval = setInterval(() => {
+                    if (window.ENV || (Date.now() - start) > timeout) {
+                        clearInterval(interval);
+                        resolve(window.ENV);
+                    }
+                }, 100);
+            });
+        }
+
         async function init() {
-            console.log("🚀 Initializing Scanner Schedule Manager...");
-            
-            // Guard: ENV
-            if (!window.ENV?.SUPABASE_URL || !window.ENV?.SUPABASE_ANON_KEY) {
-                console.error("❌ Missing Supabase credentials");
-                showError("Supabase credentials missing in env.js");
+            const env = await waitForEnv();
+            if (!env?.SUPABASE_URL || !env?.SUPABASE_ANON_KEY) {
+                alert("Missing Supabase credentials. Ensure env.js is configured correctly.");
                 return;
             }
-            
-            // Guard: library
-            if (!window.supabase) {
-                console.error("❌ Supabase library not loaded");
-                showError("Supabase library not loaded — check internet connection");
-                return;
-            }
-            
-            // Create client
-            try {
-                supabaseClient = window.supabase.createClient(window.ENV.SUPABASE_URL, window.ENV.SUPABASE_ANON_KEY);
-                console.log("✅ Supabase client ready");
-            } catch (e) {
-                console.error("❌ Client creation failed:", e);
-                showError("Failed to create Supabase client:\n" + e.message);
-                return;
-            }
-            
-            // UI setup
-            document.getElementById('windowDate').valueAsDate = new Date();
-            document.getElementById('eventDate').valueAsDate = new Date();
+            supabaseClient = window.supabase.createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
             els.eventForm.addEventListener('submit', handleEventFormSubmit);
             els.windowForm.addEventListener('submit', handleWindowFormSubmit);
             
-            // Escape key closes modals
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') {
                     closeEventModal();
                     closeWindowModal();
-                    if (els.confirmModal && els.confirmModal.style.display === 'flex') {
-                        els.confirmCancelBtn.click();
-                    }
+                    els.confirmModal.style.display = 'none';
                 }
             });
-            
-            // Load schedules
-            try {
-                await loadSchedules();
-                console.log("✅ Schedules loaded");
-            } catch (e) {
-                console.error("❌ loadSchedules failed:", e);
-            }
-            
-            els.loading.classList.add('hidden');
-            console.log("✅ Init complete");
-        }
 
-        function showError(msg) {
-            alert(msg);
+            await loadSchedules();
             els.loading.classList.add('hidden');
         }
 
         async function loadSchedules() {
-            console.log("📡 Fetching schedules...");
             try {
-                // Step 1: Fetch ALL events and cache them FIRST
-                const { data: events, error: evErr } = await supabaseClient
-                    .from('sas_events')
-                    .select('*')
-                    .order('event_date', { ascending: false });
-
-                if (evErr) throw evErr;
+                const { data: events } = await supabaseClient.from('sas_events').select('*').order('event_date', { ascending: false });
                 allEventsCache = events || [];
                 const eventsMap = allEventsCache.reduce((acc, e) => { acc[e.id] = e; return acc; }, {});
 
-                // Step 2: Fetch raw schedules
-                const { data: schedules, error: schedErr } = await supabaseClient
-                    .from('sas_schedules')
-                    .select('*')
-                    .order('date', { ascending: false })
-                    .order('start_time', { ascending: false });
-
-                if (schedErr) throw schedErr;
-
-                // Step 3: Merge event name into each schedule
+                const { data: schedules } = await supabaseClient.from('sas_schedules').select('*').order('date', { ascending: false }).order('start_time', { ascending: false });
+                
                 const merged = (schedules || []).map(s => ({
                     ...s,
                     sas_events: s.event_id ? eventsMap[s.event_id] : null
                 }));
 
-                console.log('✅ Events loaded:', allEventsCache.length, '| Schedules loaded:', merged.length);
                 renderSchedules(merged, allEventsCache);
             } catch (err) {
-                console.error("❌ loadSchedules failed:", err);
-                showError("Failed to load schedules:\n" + err.message);
+                console.error("Load failed:", err);
             }
         }
 
         function renderSchedules(schedules, events = []) {
-            const container = els.container;
-            const emptyState = els.emptyState;
-            
+            els.container.innerHTML = '';
             els.stats.textContent = '';
             
             if (events.length === 0 && (!schedules || schedules.length === 0)) {
-                container.style.display = 'none';
-                emptyState.style.display = 'block';
-                els.stats.textContent = "0 Events";
+                els.container.style.display = 'none';
+                els.emptyState.style.display = 'block';
                 return;
             }
             
-            container.style.display = 'flex';
-            emptyState.style.display = 'none';
+            els.container.style.display = 'flex';
+            els.emptyState.style.display = 'none';
             
-            // Initialize collapsed state for each event
             const eventRows = {};
-            
-            // Pre-fill with all events so empty events show up
             events.forEach(evt => {
-                eventRows[evt.id] = {
-                    event: evt,
-                    schedules: [],
-                    collapsed: false
-                };
+                eventRows[evt.id] = { event: evt, schedules: [], collapsed: false };
             });
 
             schedules.forEach(s => {
-                const eventKey = s.event_id || 'no-event';
-                if (!eventRows[eventKey]) {
-                    eventRows[eventKey] = {
-                        event: s.sas_events || { name: 'No Event', event_date: s.date },
-                        schedules: [],
-                        collapsed: false  // Default: expanded
-                    };
+                const key = s.event_id || 'no-event';
+                if (!eventRows[key]) {
+                    eventRows[key] = { event: s.sas_events || { name: 'No Event', event_date: s.date }, schedules: [], collapsed: false };
                 }
-                eventRows[eventKey].schedules.push(s);
+                eventRows[key].schedules.push(s);
             });
             
-            // Copy existing collapse states from window.eventRowsData if available
-            if (window.eventRowsData) {
-                Object.keys(eventRows).forEach(key => {
-                    if (window.eventRowsData[key]) {
-                        eventRows[key].collapsed = window.eventRowsData[key].collapsed;
-                    }
-                });
-            }
-            window.eventRowsData = eventRows;
-            
-            let activeCount = 0;
-            container.innerHTML = '';
-            
-            // Render event groups (sorted by event date descending)
             Object.values(eventRows)
                 .sort((a, b) => new Date(b.event.event_date || 0) - new Date(a.event.event_date || 0))
                 .forEach(group => {
                 const event = group.event;
-                const scheduleCount = group.schedules.length;
-                const activeInGroup = group.schedules.filter(s => s.is_active).length;
-                activeCount += activeInGroup;
-                
-                const eventKey = event.id || 'no-event';
-                const isCollapsed = group.collapsed ? 'collapsed' : '';
-                
-                // Construct the Event Card DOM
                 const card = document.createElement('div');
-                card.className = `event-card ${isCollapsed}`;
-                card.dataset.eventKey = eventKey;
-                
+                card.className = 'event-card';
                 card.innerHTML = `
-                    <div class="event-header" onclick="toggleEvent('${eventKey}')">
+                    <div class="event-header" onclick="toggleEvent(this)">
                         <div class="event-header-left">
                             <i class='bx bxs-chevron-down event-toggle'></i>
                             <div>
                                 <h3 class="event-title">${escapeHtml(event.name || 'No Event')}</h3>
                                 <div class="event-meta">
-                                    <span title="Date"><i class='bx bx-calendar'></i> ${formatDate(event.event_date)}</span>
-                                    <span class="event-badge"><i class='bx bx-windows'></i> ${scheduleCount} Window${scheduleCount !== 1 ? 's' : ''} (${activeInGroup} Active)</span>
+                                    <span><i class='bx bx-calendar'></i> ${formatDate(event.event_date)}</span>
+                                    <span class="event-badge"><i class='bx bx-windows'></i> ${group.schedules.length} Windows</span>
                                 </div>
                             </div>
                         </div>
                         <div class="action-group">
-                            <button class="btn btn-outline btn-icon delete-event-btn" onclick="event.stopPropagation(); deleteEvent('${event.id}', '${escapeHtml(event.name).replace(/'/g, "\\'")}')" title="Delete Event" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.2);">
+                            <button class="btn btn-outline btn-icon" onclick="event.stopPropagation(); deleteEvent('${event.id}', '${escapeHtml(event.name).replace(/'/g, "\\'")}')" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.2);">
                                 <i class='bx bx-trash'></i>
                             </button>
                         </div>
                     </div>
-                    <div class="windows-list" id="windows-${eventKey}">
-                        ${group.schedules.length === 0 ? '<div style="color: var(--text-muted); font-size: 0.9rem; font-style: italic; grid-column: 1/-1;">No windows defined for this event.</div>' : ''}
+                    <div class="windows-list">
+                        ${group.schedules.map(sched => `
+                            <div class="window-item ${sched.is_active ? 'is-active' : ''}">
+                                <div class="window-header">
+                                    <div class="window-name">${escapeHtml(sched.label)}</div>
+                                    <span class="status-pill ${sched.is_active ? 'active' : 'inactive'}">${sched.is_active ? 'Active' : 'Archived'}</span>
+                                </div>
+                                <div class="window-details">
+                                    <p><i class='bx bx-time-five'></i> ${formatTime(sched.start_time)} – ${formatTime(sched.end_time)}</p>
+                                </div>
+                                <div class="window-actions">
+                                    <button class="btn btn-outline" onclick="toggleStatus('${sched.id}', ${sched.is_active})">
+                                        ${sched.is_active ? 'Deactivate' : 'Activate'}
+                                    </button>
+                                    <button class="btn btn-outline btn-icon" onclick="deleteSchedule('${sched.id}')" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.2);">
+                                        <i class='bx bx-trash'></i>
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')}
+                        <div class="add-window-btn" onclick="openWindowModal('${event.id}', '${event.event_date}')">
+                            <i class='bx bx-plus-circle'></i>
+                            <span>New Window</span>
+                        </div>
                     </div>
                 `;
-                container.appendChild(card);
-                
-                const windowsList = card.querySelector('.windows-list');
-                
-                // Render schedule windows
-                group.schedules.forEach(sched => {
-                    const statusClass = sched.is_active ? 'active' : 'inactive';
-                    const statusLabel = sched.is_active ? 'Active' : 'Archived';
-                    const activeStateClass = sched.is_active ? 'is-active' : '';
-                    
-                    const windowItem = document.createElement('div');
-                    windowItem.className = `window-item ${activeStateClass}`;
-                    windowItem.innerHTML = `
-                        <div class="window-header">
-                            <div class="window-name">${escapeHtml(sched.label)}</div>
-                            <span class="status-pill ${statusClass}"><i class='bx ${sched.is_active ? 'bx-check-circle' : 'bx-archive'}'></i> ${statusLabel}</span>
-                        </div>
-                        <div class="window-details">
-                            <p><i class='bx bx-time-five'></i> ${formatTime(sched.start_time)} – ${formatTime(sched.end_time)}</p>
-                        </div>
-                        <div class="window-actions">
-                            <button class="btn btn-outline" onclick="toggleStatus('${sched.id}', ${sched.is_active})" style="padding: 4px 10px; font-size: 0.75rem;">
-                                <i class='bx ${sched.is_active ? 'bx-archive-in' : 'bx-play-circle'}'></i>
-                                ${sched.is_active ? 'Deactivate' : 'Activate'}
-                            </button>
-                            <button class="btn btn-outline btn-icon" onclick="deleteSchedule('${sched.id}')" title="Delete Window" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.2);">
-                                <i class='bx bx-trash'></i>
-                            </button>
-                        </div>
-                    `;
-                    windowsList.appendChild(windowItem);
-                });
+                els.container.appendChild(card);
             });
-            
-            els.stats.textContent = `${events.length} Event${events.length !== 1 ? 's' : ''}`;
+            els.stats.textContent = `${events.length} Events`;
+        }
+
+        function toggleEvent(el) {
+            el.parentElement.classList.toggle('collapsed');
         }
 
         async function handleWindowFormSubmit(e) {
@@ -490,218 +398,90 @@
             const date = document.getElementById('windowDate').value;
             const start_time = document.getElementById('startTime').value;
             const end_time = document.getElementById('endTime').value;
-            const eventSelect = document.getElementById('windowEventSelect');
-            const selectedEventId = eventSelect.value;
-
-            console.log("🚀 Saving window:", { label, date, start_time, end_time, selectedEventId });
+            const event_id = els.windowEventSelect.value;
 
             try {
-                let event_id;
-                
-                if (selectedEventId === '__new__' || !selectedEventId) {
-                    // Create new event for this date
-                    const eventName = 'Event on ' + date;
-                    const { data: newEvent, error: createErr } = await supabaseClient
-                        .from('sas_events')
-                        .insert([{
-                            event_date: date,
-                            name: eventName,
-                            description: 'Auto-created from window creation',
-                            created_by: 'system'
-                        }])
-                        .select('id')
-                        .single();
-
-                    if (createErr) throw createErr;
-                    event_id = newEvent.id;
-                    console.log("➕ Created new event:", event_id);
-                } else {
-                    // Use existing event
-                    event_id = selectedEventId;
-                    console.log("📅 Using selected event:", event_id);
+                let target_event_id = event_id;
+                if (event_id === '__new__' || !event_id) {
+                    const { data: newEvt, error: evErr } = await supabaseClient.from('sas_events').insert([{
+                        name: 'Event on ' + date,
+                        event_date: date,
+                        created_by: 'system'
+                    }]).select('id').single();
+                    if (evErr) throw evErr;
+                    target_event_id = newEvt.id;
                 }
 
-                // Insert schedule with event_id
-                const { error } = await supabaseClient
-                    .from('sas_schedules')
-                    .insert([{
-                        label,
-                        date,
-                        start_time,
-                        end_time,
-                        is_active: true,
-                        event_id
-                    }]);
+                const { error } = await supabaseClient.from('sas_schedules').insert([{
+                    label, date, start_time, end_time, is_active: true, event_id: target_event_id
+                }]);
 
-                if (error) {
-                    console.error("❌ Insert error:", error);
-                    alert("Error saving: " + error.message + "\n\nSee console for details.");
-                } else {
-                    closeWindowModal();
-                    loadSchedules();
-                }
+                if (error) throw error;
+                closeWindowModal();
+                loadSchedules();
             } catch (err) {
-                console.error("❌ Save failed:", err);
-                alert("Failed to save schedule: " + err.message);
+                alert("Save failed: " + err.message);
             }
-        }
-
-        async function toggleStatus(id, currentStatus) {
-            const { error } = await supabaseClient
-                .from('sas_schedules')
-                .update({ is_active: !currentStatus })
-                .eq('id', id);
-
-            if (error) alert("Error: " + error.message);
-            else loadSchedules();
-        }
-
-        function confirmAction(message, title = "Are you sure?") {
-            return new Promise((resolve) => {
-                els.confirmTitle.textContent = title;
-                els.confirmMessage.textContent = message;
-                els.confirmModal.style.display = 'flex';
-
-                const handleConfirm = () => { cleanup(); resolve(true); };
-                const handleCancel = () => { cleanup(); resolve(false); };
-
-                const cleanup = () => {
-                    els.confirmModal.style.display = 'none';
-                    els.confirmOkBtn.removeEventListener('click', handleConfirm);
-                    els.confirmCancelBtn.removeEventListener('click', handleCancel);
-                };
-
-                els.confirmOkBtn.addEventListener('click', handleConfirm);
-                els.confirmCancelBtn.addEventListener('click', handleCancel);
-            });
-        }
-
-        async function deleteSchedule(id) {
-            const confirmed = await confirmAction("Are you sure you want to delete this window and ALL associated attendance logs?", "Delete Window");
-            if (!confirmed) return;
-
-            const { error } = await supabaseClient
-                .from('sas_schedules')
-                .delete()
-                .eq('id', id);
-
-            if (error) alert("Error: " + error.message);
-            else loadSchedules();
         }
 
         async function handleEventFormSubmit(e) {
             e.preventDefault();
             const name = document.getElementById('eventName').value;
             const event_date = document.getElementById('eventDate').value;
-            const description = document.getElementById('eventDesc').value || null;
-
-            console.log("🚀 Creating event:", { name, event_date, description });
+            const description = document.getElementById('eventDesc').value;
 
             try {
-                const { error } = await supabaseClient
-                    .from('sas_events')
-                    .insert([{
-                        event_date,
-                        name,
-                        description,
-                        created_by: 'system'
-                    }]);
-
-                if (error) {
-                    console.error("❌ Event insert error:", error);
-                    alert("Error saving event: " + error.message + "\n\nSee console for details.");
-                } else {
-                    closeEventModal();
-                    loadSchedules();
-                }
-            } catch (err) {
-                console.error("❌ Save event failed:", err);
-                alert("Failed to save event: " + err.message);
-            }
-        }
-
-        function toggleEvent(eventKey) {
-            const eventCard = document.querySelector(`.event-card[data-event-key="${eventKey}"]`);
-            if (!eventCard) return;
-            
-            eventCard.classList.toggle('collapsed');
-            if (window.eventRowsData && window.eventRowsData[eventKey]) {
-                window.eventRowsData[eventKey].collapsed = eventCard.classList.contains('collapsed');
-            }
-        }
-        async function deleteEvent(eventId, eventName) {
-            const confirmed = await confirmAction(`Delete event "${eventName}" and ALL its windows? This cannot be undone.`, "Delete Event");
-            if (!confirmed) return;
-
-            try {
-                const { error } = await supabaseClient
-                    .from('sas_events')
-                    .delete()
-                    .eq('id', eventId);
-
+                const { error } = await supabaseClient.from('sas_events').insert([{ name, event_date, description, created_by: 'system' }]);
                 if (error) throw error;
+                closeEventModal();
                 loadSchedules();
             } catch (err) {
-                alert("Failed to delete event: " + err.message);
+                alert("Save failed: " + err.message);
             }
         }
 
-        // Modal operations
-        function openEventModal() { 
-            document.getElementById('eventDate').valueAsDate = new Date();
-            els.eventModal.style.display = 'flex'; 
+        async function toggleStatus(id, current) {
+            await supabaseClient.from('sas_schedules').update({ is_active: !current }).eq('id', id);
+            loadSchedules();
         }
-        function closeEventModal() { 
-            els.eventModal.style.display = 'none'; 
-            els.eventForm.reset(); 
-            document.getElementById('eventDate').valueAsDate = new Date();
+
+        async function deleteSchedule(id) {
+            if (confirm("Delete this window?")) {
+                await supabaseClient.from('sas_schedules').delete().eq('id', id);
+                loadSchedules();
+            }
         }
+
+        async function deleteEvent(id, name) {
+            if (confirm(`Delete event "${name}" and all its windows?`)) {
+                await supabaseClient.from('sas_events').delete().eq('id', id);
+                loadSchedules();
+            }
+        }
+
+        function openEventModal() { els.eventModal.style.display = 'flex'; }
+        function closeEventModal() { els.eventModal.style.display = 'none'; els.eventForm.reset(); }
         
-        function openWindowModal() { 
-            const today = new Date().toISOString().split('T')[0];
-            els.windowDate.value = today;
-            els.windowModal.style.display = 'flex'; 
-            loadEventsForDate(); // Populate dropdown for today's date
-        }
-        function closeWindowModal() { 
-            els.windowModal.style.display = 'none'; 
-            els.windowForm.reset(); 
+        async function openWindowModal(eventId = null, eventDate = null) {
+            if (eventDate) els.windowDate.value = eventDate;
+            else els.windowDate.value = new Date().toISOString().split('T')[0];
+            
+            els.windowModal.style.display = 'flex';
+            await loadEventsForDate();
+            if (eventId) els.windowEventSelect.value = eventId;
         }
 
-        // Load events for the selected date into the dropdown
+        function closeWindowModal() { els.windowModal.style.display = 'none'; els.windowForm.reset(); }
+
         async function loadEventsForDate() {
-            const selectedDate = els.windowDate.value;
-            if (!selectedDate) return;
-            
-            // If cache empty, fetch all events first
-            if (allEventsCache.length === 0) {
-                try {
-                    const { data: allEvents, error } = await supabaseClient
-                        .from('sas_events')
-                        .select('*')
-                        .order('event_date', { ascending: false });
-                    if (!error && allEvents) {
-                        allEventsCache = allEvents;
-                        console.log('📅 Events cached for dropdown:', allEvents.length);
-                    }
-                } catch (e) {
-                    console.warn('Failed to pre-cache events:', e);
-                }
-            }
-            
-            // Find matching events from cache
-            const matchingEvents = allEventsCache.filter(e => e.event_date === selectedDate);
-            
-            // Build options
-            let options = '<option value="" disabled selected>-- Select an Event --</option>';
-            if (matchingEvents.length === 0) {
-                options = `<option value="__new__" selected>✦ Create new event for ${selectedDate}</option>`;
+            const date = els.windowDate.value;
+            const filtered = allEventsCache.filter(e => e.event_date === date);
+            let options = '<option value="" disabled selected>-- Select Event --</option>';
+            if (filtered.length === 0) {
+                options = `<option value="__new__" selected>✦ Create new event for ${date}</option>`;
             } else {
-                matchingEvents.forEach(e => {
-                    options += `<option value="${e.id}">${escapeHtml(e.name)}</option>`;
-                });
-                options += `<option disabled>────────────────────</option>`;
-                options += `<option value="__new__">✦ Create new event (Auto-populated)</option>`;
+                filtered.forEach(e => options += `<option value="${e.id}">${escapeHtml(e.name)}</option>`);
+                options += `<option value="__new__">✦ Create new event</option>`;
             }
             els.windowEventSelect.innerHTML = options;
         }
@@ -724,36 +504,7 @@
             return div.innerHTML;
         }
 
-        function formatDate(dateStr) {
-            return new Date(dateStr).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-        }
-
-        function formatTime(timeStr) {
-            const [h, m] = timeStr.split(':');
-            const hour = parseInt(h);
-            const ampm = hour >= 12 ? 'PM' : 'AM';
-            const h12 = hour % 12 || 12;
-            return `${h12}:${m} ${ampm}`;
-        }
-
-        // Run init when DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', init);
-        } else {
-            init();
-        }
-        // ========== END apps/schedule-manager/app.js ==========
-    </script>
-
-    <!-- Global error handler -->
-    <script>
-        window.addEventListener('error', (event) => {
-            console.error('❌ GLOBAL ERROR:', event.error || event.message);
-            const overlay = document.getElementById('loadingOverlay');
-            if (overlay) {
-                overlay.innerHTML = `<div style="color:#ef4444;text-align:center;max-width:600px;padding:20px;"><h2>❌ Startup Error</h2><p><strong>${event.message}</strong></p><p style="font-size:0.8rem;color:#94a3b8;margin-top:12px;">Check console (F12) for full stack trace.</p><button onclick="location.reload()" style="margin-top:16px;padding:8px 16px;background:#004a99;color:white;border:none;border-radius:6px;cursor:pointer;">Retry</button></div>`;
-            }
-        });
+        document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>

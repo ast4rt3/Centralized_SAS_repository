@@ -32,31 +32,36 @@ html {
 
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
   --shadow-soft: 0 4px 15px rgba(0, 0, 0, 0.08);
+
+  /* Missing variable used in several components */
+  --border-color: var(--border);
 }
 
-/* Custom Scrollbar Styling */
+/* Custom Scrollbar Styling - Global */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 14px !important;
+  height: 14px !important;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--sb-track);
+  background: transparent !important;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--sb-thumb);
-  border-radius: 10px;
+  background-color: var(--nbsc-gold) !important;
+  border-radius: 20px !important;
+  border: 4px solid transparent !important;
+  background-clip: content-box !important;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--sb-thumb-hover);
+  background-color: #e6911c !important; /* Slightly darker gold */
 }
 
 /* Firefox Support */
 * {
-  scrollbar-width: thin;
-  scrollbar-color: var(--sb-thumb) var(--sb-track);
+  scrollbar-width: auto !important;
+  scrollbar-color: var(--nbsc-gold) transparent !important;
 }
 
 @keyframes pulse-live {
@@ -76,6 +81,7 @@ html {
 html,
 body {
   height: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -109,6 +115,12 @@ body {
 }
 
 .nav-toggle[aria-expanded="true"] {
+  display: none !important;
+}
+
+body.lp-mode .nav-toggle,
+body.lp-mode .sidebar,
+body.lp-mode .nav-overlay {
   display: none !important;
 }
 
@@ -1189,23 +1201,39 @@ body.system-mode .content {
 .add-post-btn {
   background: var(--nbsc-gold);
   color: var(--nbsc-dark);
-  border: none;
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-weight: 800;
+  border: 1.5px solid transparent;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-weight: 700;
   font-family: var(--font-sans);
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   text-transform: uppercase;
+  letter-spacing: 0.03em;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 6px;
-  transition: transform 0.1s, filter 0.2s;
+  transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+
+.add-post-btn .plus-icon {
+  font-size: 1rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
 }
 
 .add-post-btn:hover {
-  filter: brightness(1.1);
+  filter: brightness(1.12);
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+
+.add-post-btn:active {
+  transform: translateY(0);
+  filter: brightness(0.95);
 }
 
 .add-post-btn.hidden {
@@ -3602,39 +3630,19 @@ body.role-scanner .nav-toggle {
   background: #f8fafc;
 }
 
-#messages .contact-card {
-    border-bottom: 1px solid #f1f5f9 !important;
-    margin: 0 !important;
-    border-radius: 0 !important;
-}
-
-#messages .contact-card:hover {
-    background: #f1f5f9 !important;
-}
-
-#messages .contact-card.active {
-    background: #e0f2fe !important;
-}
-
 #messages .messenger-chat-view {
     height: 100% !important;
     display: flex !important;
     flex-direction: column !important;
+    background: transparent !important;
 }
 
 #messages .messenger-messages {
-    background: #fcfcfc !important;
+    background: transparent !important;
 }
 
 #messages .messenger-empty {
-    background: #f8fafc !important;
-    color: #64748b !important;
-}
-
-#messages .loading-contacts {
-    padding: 20px !important;
-    text-align: center !important;
-    color: #94a3b8 !important;
+    background: transparent !important;
 }
 
 
@@ -3730,6 +3738,15 @@ body.dark-theme {
   --text: #f1f5f9;
   --text-muted: #94a3b8;
   --bg-sidebar: linear-gradient(180deg, #0f172a 0%, #020617 100%);
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+body.dark-theme::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+body.dark-theme::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
 }
 
 body.dark-theme .sidebar {
@@ -4604,7 +4621,35 @@ body.lp-mode {
   height: auto !important;
   min-height: 100vh !important;
   overflow-y: auto !important;
+  overflow-x: hidden !important;
   display: block !important;
+  scrollbar-width: auto !important;
+  scrollbar-color: var(--nbsc-gold) transparent !important;
+}
+
+body.lp-mode.scrolled {
+  scrollbar-color: var(--lp-primary) transparent !important;
+}
+
+body.lp-mode::-webkit-scrollbar-thumb {
+  background-color: var(--nbsc-gold) !important;
+  border-radius: 20px !important;
+  border: 4px solid transparent !important;
+  background-clip: content-box !important;
+}
+
+body.lp-mode::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 51, 102, 0.5) !important;
+}
+
+/* Scrolled state for landing page scrollbar */
+body.lp-mode.scrolled::-webkit-scrollbar-thumb {
+  background-color: var(--lp-primary) !important;
+  background-clip: content-box !important;
+}
+
+body.lp-mode.scrolled::-webkit-scrollbar-thumb:hover {
+  background-color: var(--lp-primary-light) !important;
 }
 
 body.lp-mode .main-wrapper {
@@ -4924,6 +4969,7 @@ body.lp-mode .main-wrapper {
   color: var(--lp-text-muted);
   font-size: 1rem;
   line-height: 1.7;
+  margin-bottom: 15px;
 }
 
 /* --- Activities Feed --- */
@@ -5054,8 +5100,36 @@ body.lp-mode .main-wrapper {
 @media (max-width: 991px) {
   .lp-nav-links, .lp-nav-actions {
     display: none;
+    position: absolute;
+    left: 0;
+    width: 100%;
+    background: #001a33;
+    flex-direction: column;
+    text-align: center;
+    padding: 15px 0;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+    z-index: 999;
   }
   
+  .lp-nav-links {
+    top: 70px;
+  }
+  
+  .lp-nav-actions {
+    top: 310px; /* Positions right below the links */
+    padding-bottom: 25px;
+    align-items: center;
+  }
+
+  .lp-nav-links.active, 
+  .lp-nav-links.active ~ .lp-nav-actions {
+    display: flex;
+  }
+
+  .lp-nav-links li {
+    margin: 12px 0;
+  }
+
   .lp-mobile-toggle {
     display: block;
   }
@@ -5243,6 +5317,28 @@ body.lp-mode .main-wrapper {
   font-size: 0.75rem;
   color: #94a3b8;
   margin-top: 2px;
+}
+
+.lp-act-item-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.lp-act-edit-btn {
+  background: #e0f2fe;
+  color: #0284c7;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.lp-act-edit-btn:hover {
+  background: #bae6fd;
 }
 
 .lp-act-delete-btn {

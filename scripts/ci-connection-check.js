@@ -30,6 +30,7 @@ async function runAudit() {
     const configs = {
         "Google Apps Script (Main)": process.env.BACKEND_GAS_URL,
         "Google Apps Script (Scanner)": process.env.SCANNER_GAS_URL,
+        "Supabase API": process.env.SUPABASE_URL,
         "Firebase Runtime": "https://centralized-messaging-storage.firebaseapp.com",
         "Firebase Database": "https://centralized-messaging-storage-default-rtdb.firebaseio.com/.json",
         "Cloudinary API": "https://api.cloudinary.com/v1_1"
