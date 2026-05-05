@@ -6,9 +6,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#003366">
   <title>SAS Portal</title>
-  
+
   <!-- Security Headers -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https: wss:;">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https: wss:;">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
 
@@ -19,10 +20,12 @@
   <meta name="apple-mobile-web-app-title" content="SAS Portal">
   <link rel="apple-touch-icon" href="assets/sas_logo_real.png?v=2">
   <link rel="icon" type="image/png" href="assets/sas_logo_real.png?v=3">
-  
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&family=Outfit:wght@400;600;800&display=swap"
+    rel="stylesheet">
   <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
   <link rel="stylesheet" href="styles.css?v=23.0">
   <script>
@@ -42,9 +45,9 @@
 
   <!-- FAILSAFE (KILL SWITCH) INTERCEPTOR -->
   <script>
-    (function() {
+    (function () {
       const originalFetch = window.fetch;
-      window.fetch = async function(...args) {
+      window.fetch = async function (...args) {
         try {
           const response = await originalFetch.apply(this, args);
           const clone = response.clone();
@@ -59,11 +62,11 @@
         }
       };
 
-      window.triggerEmergencyLockdown = function() {
+      window.triggerEmergencyLockdown = function () {
         console.error("SYSTEM COMPROMISED - INITIATING LOCKDOWN");
         localStorage.clear();
         sessionStorage.clear();
-        
+
         let screen = document.getElementById('lockdown-screen');
         if (!screen) {
           screen = document.createElement('div');
@@ -82,13 +85,13 @@
           });
           document.body.appendChild(screen);
         }
-        
+
         // Hide main app elements
         const app = document.getElementById('app-container');
         if (app) app.style.display = 'none';
         const landing = document.getElementById('landing-page');
         if (landing) landing.style.display = 'none';
-        
+
         // Push state to prevent back navigation (optional)
         history.pushState(null, null, location.href);
       };
@@ -102,580 +105,600 @@
 
 
 
-<style>
-  #offline-banner {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 10000;
-    background: #0f172a;
-    color: #fff;
-    font-size: 0.7rem;
-    font-weight: 800;
-    text-align: center;
-    padding: 10px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    border-bottom: 3px solid #f59e0b;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-  }
-
-  #offline-banner i {
-    font-size: 1.1rem;
-    color: #f59e0b;
-  }
-
-#messages.active { 
-    padding: 0 !important; 
-    background: radial-gradient(circle at 50% -20%, #1e3a8a 0%, #0f172a 80%) !important; 
-    height: 100% !important;
-    min-height: 100vh !important;
-    overflow: hidden !important;
-    display: flex !important;
-    flex-direction: column !important;
-    position: relative !important;
-}
-
-/* Force parent containers to match when messenger is active */
-body.messenger-active,
-.content.messenger-active,
-.page-content.messenger-active {
-    background: #0f172a !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    height: 100vh !important;
-    overflow: hidden !important;
-}
-
-#messages .messenger-container {
-    display: flex;
-    width: 100% !important;
-    max-width: 100% !important;
-    flex: 1 !important;
-    height: 100% !important;
-    background: rgba(15, 23, 42, 0.1) !important;
-    backdrop-filter: blur(40px) !important;
-    -webkit-backdrop-filter: blur(40px) !important;
-    border-radius: 0 !important;
-    margin: 0 !important;
-    overflow: hidden !important;
-    border: none !important;
-    box-shadow: none !important;
-}
-
-
-
-
-/* Sidebar Styling (Frosted Glass) */
-#messages .messenger-sidebar {
-    width: 320px !important;
-    min-width: 320px !important;
-    border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
-    display: flex !important;
-    flex-direction: column !important;
-    background: rgba(30, 41, 59, 0.4) !important;
-    position: relative !important; /* For FAB positioning */
-}
-
-#messages .messenger-fab {
-    position: absolute !important;
-    bottom: 25px !important;
-    left: 20px !important;
-    width: 56px !important;
-    height: 56px !important;
-    background: #ffd700 !important;
-    color: #003366 !important;
-    border-radius: 18px !important;
-    border: none !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    cursor: pointer !important;
-    box-shadow: 0 10px 25px rgba(255, 215, 0, 0.3) !important;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
-    z-index: 100 !important;
-}
-
-#messages .messenger-fab:hover {
-    transform: scale(1.1) rotate(90deg) !important;
-    box-shadow: 0 15px 35px rgba(255, 215, 0, 0.4) !important;
-}
-
-
-#messages .messenger-sidebar-header {
-    padding: 25px !important;
-    background: transparent !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-}
-
-#messages .messenger-sidebar-header h3 {
-    font-size: 1.4rem !important;
-    font-weight: 800 !important;
-    color: white !important;
-    margin: 0 !important;
-    font-family: 'Outfit', sans-serif;
-}
-
-#messages .messenger-contacts {
-    flex: 1 !important;
-    overflow-y: auto !important;
-    padding: 15px 10px !important;
-}
-
-#messages .contact-card {
-    display: flex !important;
-    align-items: center !important;
-    gap: 12px !important;
-    padding: 12px 16px !important;
-    margin-bottom: 8px !important;
-    border-radius: 16px !important;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border: 1px solid transparent;
-    background: rgba(255, 255, 255, 0.03);
-}
-
-#messages .contact-card:hover { 
-    background: rgba(255, 255, 255, 0.08) !important; 
-    transform: translateY(-1px);
-}
-
-#messages .contact-card.active { 
-    background: rgba(255, 215, 0, 0.12) !important; 
-    border-color: rgba(255, 215, 0, 0.4) !important;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-}
-
-#messages .contact-avatar {
-    width: 52px; height: 52px;
-    background: linear-gradient(135deg, #1e40af, #1e3a8a);
-    color: white; border-radius: 16px;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 800; font-size: 1.2rem;
-    position: relative; flex-shrink: 0;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-}
-
-#messages .contact-info {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0; /* Critical for ellipsis */
-}
-
-#messages .contact-name {
-    font-weight: 700;
-    color: white;
-    font-size: 0.95rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-#messages .contact-preview {
-    font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.5);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* Main Chat Area Overhaul */
-#messages .messenger-main {
-    flex: 1 !important;
-    display: flex !important;
-    flex-direction: column !important;
-    background: transparent !important;
-    height: 100% !important;
-}
-
-#messages .messenger-chat-header {
-    height: 80px !important;
-    padding: 0 30px !important;
-    background: rgba(15, 23, 42, 0.4) !important;
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
-    display: flex !important;
-    align-items: center !important;
-    gap: 15px !important;
-}
-
-#messages .messenger-empty {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    color: rgba(255, 255, 255, 0.2);
-    text-align: center;
-}
-
-#messages .messenger-empty.hidden,
-#messages .messenger-chat-view.hidden {
-    display: none !important;
-}
-
-
-#messages .active-user-avatar {
-    width: 46px; height: 46px;
-    background: #ffd700; color: #003366;
-    border-radius: 14px; display: flex; align-items: center; justify-content: center;
-    font-weight: 800; font-size: 1.1rem;
-    box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
-}
-
-#messages .active-user-info h4 { 
-    margin: 0 !important; 
-    font-size: 1.1rem !important; 
-    font-weight: 800 !important; 
-    color: white !important; 
-}
-
-#messages .active-user-info span { 
-    font-size: 0.8rem !important; 
-    font-weight: 600 !important; 
-    color: rgba(255,255,255,0.6) !important;
-}
-
-#messages .status-online { color: #10b981 !important; }
-#messages .status-offline { color: rgba(255,255,255,0.4) !important; }
-
-
-#messages .messenger-messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 30px;
-    background: transparent;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-/* Premium Chat Bubbles */
-#messages .msg-bubble {
-    max-width: 65% !important;
-    padding: 14px 20px !important;
-    border-radius: 22px !important;
-    font-size: 0.95rem !important;
-    line-height: 1.5 !important;
-    backdrop-filter: blur(10px);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.2) !important;
-}
-
-#messages .msg-bubble-me {
-    background: linear-gradient(135deg, #ffd700 0%, #f59e0b 100%) !important;
-    color: #001a33 !important;
-    align-self: flex-end !important;
-    border-bottom-right-radius: 4px !important;
-    font-weight: 600;
-    box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2) !important;
-}
-
-#messages .msg-bubble-other {
-    background: rgba(255, 255, 255, 0.05) !important;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    color: white !important;
-    align-self: flex-start !important;
-    border-bottom-left-radius: 4px !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-}
-
-#messages .msg-time {
-    font-size: 0.65rem !important;
-    margin-top: 8px !important;
-    opacity: 0.5 !important;
-    display: block !important;
-    text-align: right !important;
-}
-
-/* Floating Glass Input bar */
-#messages .messenger-form {
-    padding: 25px 30px !important;
-    background: transparent !important;
-    display: flex !important;
-    gap: 15px !important;
-}
-
-#messages .messenger-form input {
-    flex: 1 !important;
-    background: rgba(255, 255, 255, 0.05) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    padding: 16px 25px !important;
-    border-radius: 20px !important;
-    outline: none !important;
-    font-size: 1rem !important;
-    color: white !important;
-    transition: all 0.3s;
-}
-
-#messages .messenger-form input:focus {
-    background: rgba(255, 255, 255, 0.1) !important;
-    border-color: #ffd700 !important;
-    box-shadow: 0 0 20px rgba(255, 215, 0, 0.1);
-}
-
-#messages .send-btn {
-    width: 54px; height: 54px;
-    border-radius: 18px !important;
-    background: #ffd700 !important;
-    color: #003366 !important;
-    border: none !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    cursor: pointer !important;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
-    box-shadow: 0 10px 20px rgba(255, 215, 0, 0.2);
-}
-
-#messages .send-btn:hover { 
-    transform: scale(1.1) rotate(5deg) !important; 
-    filter: brightness(1.1);
-}
-
-
-/* --- SETTINGS MODAL STYLES --- */
-.settings-modal-card {
-  width: 100%;
-  max-width: 480px;
-  max-height: 90vh;
-  overflow-y: auto;
-  background: white;
-  border-radius: 16px;
-  padding: 0;
-}
-
-.settings-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.settings-modal-header h3 {
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 800;
-  color: #003366;
-}
-
-.settings-tabs {
-  display: flex;
-  border-bottom: 1px solid #e2e8f0;
-  padding: 0 24px;
-}
-
-.settings-tab {
-  flex: 1;
-  padding: 14px 16px;
-  background: none;
-  border: none;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #64748b;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: all 0.2s;
-}
-
-.settings-tab:hover {
-  color: #003366;
-}
-
-.settings-tab.active {
-  color: #003366;
-  border-bottom-color: #003366;
-}
-
-.settings-content {
-  padding: 24px;
-}
-
-.settings-tab-content {
-  display: block;
-}
-
-.settings-profile-pic-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.settings-profile-pic {
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  background: #003366;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 2.5rem;
-  font-weight: 800;
-  margin-bottom: 12px;
-  overflow: hidden;
-  border: 4px solid #f1f5f9;
-}
-
-.settings-profile-pic img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.settings-preview {
-  margin-top: 20px;
-}
-
-.settings-preview label {
-  display: block;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #64748b;
-  margin-bottom: 10px;
-}
-
-.settings-preview-chat {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background: #f8fafc;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-}
-
-.settings-preview-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: #003366;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 1.1rem;
-  flex-shrink: 0;
-  overflow: hidden;
-}
-
-.settings-preview-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.settings-preview-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.settings-preview-name {
-  font-weight: 700;
-  font-size: 0.95rem;
-  color: #1e293b;
-}
-
-.settings-preview-msg {
-  font-size: 0.75rem;
-  color: #94a3b8;
-}
-
-.settings-theme-toggle {
-  display: flex;
-  gap: 16px;
-  justify-content: center;
-}
-
-.settings-theme-option {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  padding: 12px;
-  border-radius: 12px;
-  border: 2px solid #e2e8f0;
-  transition: all 0.2s;
-}
-
-.settings-theme-option:hover {
-  border-color: #003366;
-}
-
-.settings-theme-option.selected {
-  border-color: #003366;
-  background: #f0f7ff;
-}
-
-.settings-theme-preview {
-  width: 120px;
-  height: 80px;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid #e2e8f0;
-}
-
-.light-preview {
-  background: #ffffff;
-}
-
-.light-preview .theme-preview-header {
-  height: 20px;
-  background: #003366;
-}
-
-.light-preview .theme-preview-content {
-  height: 60px;
-  background: #f1f5f9;
-}
-
-.dark-preview {
-  background: #1e293b;
-}
-
-.dark-preview .theme-preview-header {
-  height: 20px;
-  background: #0f172a;
-}
-
-.dark-preview .theme-preview-content {
-  height: 60px;
-  background: #334155;
-}
-
-.settings-theme-option span {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #64748b;
-}
-
-.settings-theme-option.selected span {
-  color: #003366;
-}
-
-.login-success {
-  padding: 10px 16px;
-  background: #ecfdf5;
-  color: #065f46;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-</style>
+  <style>
+    #offline-banner {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 10000;
+      background: #0f172a;
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 800;
+      text-align: center;
+      padding: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      border-bottom: 3px solid #f59e0b;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    #offline-banner i {
+      font-size: 1.1rem;
+      color: #f59e0b;
+    }
+
+    #messages.active {
+      padding: 0 !important;
+      background: radial-gradient(circle at 50% -20%, #1e3a8a 0%, #0f172a 80%) !important;
+      height: 100% !important;
+      min-height: 100vh !important;
+      overflow: hidden !important;
+      display: flex !important;
+      flex-direction: column !important;
+      position: relative !important;
+    }
+
+    /* Force parent containers to match when messenger is active */
+    body.messenger-active,
+    .content.messenger-active,
+    .page-content.messenger-active {
+      background: #0f172a !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      height: 100vh !important;
+      overflow: hidden !important;
+    }
+
+    #messages .messenger-container {
+      display: flex;
+      width: 100% !important;
+      max-width: 100% !important;
+      flex: 1 !important;
+      height: 100% !important;
+      background: rgba(15, 23, 42, 0.1) !important;
+      backdrop-filter: blur(40px) !important;
+      -webkit-backdrop-filter: blur(40px) !important;
+      border-radius: 0 !important;
+      margin: 0 !important;
+      overflow: hidden !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+
+
+
+
+    /* Sidebar Styling (Frosted Glass) */
+    #messages .messenger-sidebar {
+      width: 320px !important;
+      min-width: 320px !important;
+      border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+      display: flex !important;
+      flex-direction: column !important;
+      background: rgba(30, 41, 59, 0.4) !important;
+      position: relative !important;
+      /* For FAB positioning */
+    }
+
+    #messages .messenger-fab {
+      position: absolute !important;
+      bottom: 25px !important;
+      left: 20px !important;
+      width: 56px !important;
+      height: 56px !important;
+      background: #ffd700 !important;
+      color: #003366 !important;
+      border-radius: 18px !important;
+      border: none !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      cursor: pointer !important;
+      box-shadow: 0 10px 25px rgba(255, 215, 0, 0.3) !important;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+      z-index: 100 !important;
+    }
+
+    #messages .messenger-fab:hover {
+      transform: scale(1.1) rotate(90deg) !important;
+      box-shadow: 0 15px 35px rgba(255, 215, 0, 0.4) !important;
+    }
+
+
+    #messages .messenger-sidebar-header {
+      padding: 25px !important;
+      background: transparent !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+      display: flex !important;
+      justify-content: space-between !important;
+      align-items: center !important;
+    }
+
+    #messages .messenger-sidebar-header h3 {
+      font-size: 1.4rem !important;
+      font-weight: 800 !important;
+      color: white !important;
+      margin: 0 !important;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    #messages .messenger-contacts {
+      flex: 1 !important;
+      overflow-y: auto !important;
+      padding: 15px 10px !important;
+    }
+
+    #messages .contact-card {
+      display: flex !important;
+      align-items: center !important;
+      gap: 12px !important;
+      padding: 12px 16px !important;
+      margin-bottom: 8px !important;
+      border-radius: 16px !important;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    #messages .contact-card:hover {
+      background: rgba(255, 255, 255, 0.08) !important;
+      transform: translateY(-1px);
+    }
+
+    #messages .contact-card.active {
+      background: rgba(255, 215, 0, 0.12) !important;
+      border-color: rgba(255, 215, 0, 0.4) !important;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    #messages .contact-avatar {
+      width: 52px;
+      height: 52px;
+      background: linear-gradient(135deg, #1e40af, #1e3a8a);
+      color: white;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.2rem;
+      position: relative;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    #messages .contact-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+      /* Critical for ellipsis */
+    }
+
+    #messages .contact-name {
+      font-weight: 700;
+      color: white;
+      font-size: 0.95rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #messages .contact-preview {
+      font-size: 0.75rem;
+      color: rgba(255, 255, 255, 0.5);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Main Chat Area Overhaul */
+    #messages .messenger-main {
+      flex: 1 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      background: transparent !important;
+      height: 100% !important;
+    }
+
+    #messages .messenger-chat-header {
+      height: 80px !important;
+      padding: 0 30px !important;
+      background: rgba(15, 23, 42, 0.4) !important;
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 15px !important;
+    }
+
+    #messages .messenger-empty {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.2);
+      text-align: center;
+    }
+
+    #messages .messenger-empty.hidden,
+    #messages .messenger-chat-view.hidden {
+      display: none !important;
+    }
+
+
+    #messages .active-user-avatar {
+      width: 46px;
+      height: 46px;
+      background: #ffd700;
+      color: #003366;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.1rem;
+      box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+    }
+
+    #messages .active-user-info h4 {
+      margin: 0 !important;
+      font-size: 1.1rem !important;
+      font-weight: 800 !important;
+      color: white !important;
+    }
+
+    #messages .active-user-info span {
+      font-size: 0.8rem !important;
+      font-weight: 600 !important;
+      color: rgba(255, 255, 255, 0.6) !important;
+    }
+
+    #messages .status-online {
+      color: #10b981 !important;
+    }
+
+    #messages .status-offline {
+      color: rgba(255, 255, 255, 0.4) !important;
+    }
+
+
+    #messages .messenger-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 30px;
+      background: transparent;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    /* Premium Chat Bubbles */
+    #messages .msg-bubble {
+      max-width: 65% !important;
+      padding: 14px 20px !important;
+      border-radius: 22px !important;
+      font-size: 0.95rem !important;
+      line-height: 1.5 !important;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2) !important;
+    }
+
+    #messages .msg-bubble-me {
+      background: linear-gradient(135deg, #ffd700 0%, #f59e0b 100%) !important;
+      color: #001a33 !important;
+      align-self: flex-end !important;
+      border-bottom-right-radius: 4px !important;
+      font-weight: 600;
+      box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2) !important;
+    }
+
+    #messages .msg-bubble-other {
+      background: rgba(255, 255, 255, 0.05) !important;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      color: white !important;
+      align-self: flex-start !important;
+      border-bottom-left-radius: 4px !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+
+    #messages .msg-time {
+      font-size: 0.65rem !important;
+      margin-top: 8px !important;
+      opacity: 0.5 !important;
+      display: block !important;
+      text-align: right !important;
+    }
+
+    /* Floating Glass Input bar */
+    #messages .messenger-form {
+      padding: 25px 30px !important;
+      background: transparent !important;
+      display: flex !important;
+      gap: 15px !important;
+    }
+
+    #messages .messenger-form input {
+      flex: 1 !important;
+      background: rgba(255, 255, 255, 0.05) !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      padding: 16px 25px !important;
+      border-radius: 20px !important;
+      outline: none !important;
+      font-size: 1rem !important;
+      color: white !important;
+      transition: all 0.3s;
+    }
+
+    #messages .messenger-form input:focus {
+      background: rgba(255, 255, 255, 0.1) !important;
+      border-color: #ffd700 !important;
+      box-shadow: 0 0 20px rgba(255, 215, 0, 0.1);
+    }
+
+    #messages .send-btn {
+      width: 54px;
+      height: 54px;
+      border-radius: 18px !important;
+      background: #ffd700 !important;
+      color: #003366 !important;
+      border: none !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      cursor: pointer !important;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+      box-shadow: 0 10px 20px rgba(255, 215, 0, 0.2);
+    }
+
+    #messages .send-btn:hover {
+      transform: scale(1.1) rotate(5deg) !important;
+      filter: brightness(1.1);
+    }
+
+
+    /* --- SETTINGS MODAL STYLES --- */
+    .settings-modal-card {
+      width: 100%;
+      max-width: 480px;
+      max-height: 90vh;
+      overflow-y: auto;
+      background: white;
+      border-radius: 16px;
+      padding: 0;
+    }
+
+    .settings-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 24px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .settings-modal-header h3 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: #003366;
+    }
+
+    .settings-tabs {
+      display: flex;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 0 24px;
+    }
+
+    .settings-tab {
+      flex: 1;
+      padding: 14px 16px;
+      background: none;
+      border: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #64748b;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .settings-tab:hover {
+      color: #003366;
+    }
+
+    .settings-tab.active {
+      color: #003366;
+      border-bottom-color: #003366;
+    }
+
+    .settings-content {
+      padding: 24px;
+    }
+
+    .settings-tab-content {
+      display: block;
+    }
+
+    .settings-profile-pic-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .settings-profile-pic {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background: #003366;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      font-weight: 800;
+      margin-bottom: 12px;
+      overflow: hidden;
+      border: 4px solid #f1f5f9;
+    }
+
+    .settings-profile-pic img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .settings-preview {
+      margin-top: 20px;
+    }
+
+    .settings-preview label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #64748b;
+      margin-bottom: 10px;
+    }
+
+    .settings-preview-chat {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: #f8fafc;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .settings-preview-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #003366;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .settings-preview-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .settings-preview-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .settings-preview-name {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #1e293b;
+    }
+
+    .settings-preview-msg {
+      font-size: 0.75rem;
+      color: #94a3b8;
+    }
+
+    .settings-theme-toggle {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+    }
+
+    .settings-theme-option {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      padding: 12px;
+      border-radius: 12px;
+      border: 2px solid #e2e8f0;
+      transition: all 0.2s;
+    }
+
+    .settings-theme-option:hover {
+      border-color: #003366;
+    }
+
+    .settings-theme-option.selected {
+      border-color: #003366;
+      background: #f0f7ff;
+    }
+
+    .settings-theme-preview {
+      width: 120px;
+      height: 80px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+    }
+
+    .light-preview {
+      background: #ffffff;
+    }
+
+    .light-preview .theme-preview-header {
+      height: 20px;
+      background: #003366;
+    }
+
+    .light-preview .theme-preview-content {
+      height: 60px;
+      background: #f1f5f9;
+    }
+
+    .dark-preview {
+      background: #1e293b;
+    }
+
+    .dark-preview .theme-preview-header {
+      height: 20px;
+      background: #0f172a;
+    }
+
+    .dark-preview .theme-preview-content {
+      height: 60px;
+      background: #334155;
+    }
+
+    .settings-theme-option span {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #64748b;
+    }
+
+    .settings-theme-option.selected span {
+      color: #003366;
+    }
+
+    .login-success {
+      padding: 10px 16px;
+      background: #ecfdf5;
+      color: #065f46;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+  </style>
 
 
 </head>
@@ -695,7 +718,7 @@ body.messenger-active,
         <div class="lp-logo">
           <img src="assets/sas_logo.png" alt="NBSC Logo" class="lp-logo-img">
         </div>
-        
+
         <button class="lp-mobile-toggle" id="lp-mobile-toggle">
           <i class='bx bx-menu'></i>
         </button>
@@ -707,7 +730,7 @@ body.messenger-active,
           <li><a href="#lp-documents">Documents</a></li>
           <li><a href="#lp-activities">Recent Activities</a></li>
         </ul>
-        
+
         <div class="lp-nav-actions">
           <button class="lp-btn-login" id="lp-login-btn">
             <i class='bx bx-log-in-circle'></i> Log in
@@ -722,7 +745,8 @@ body.messenger-active,
       <div class="lp-hero-content">
         <h1 class="lp-hero-headline">Student Affairs &amp; Services</h1>
         <p class="lp-hero-subtext">
-          The Student Affairs &amp; Services and Development Division of Northern Bukidnon State College (SASDD-NBSC) &mdash; serving students with holistic programs, welfare support, and development opportunities.
+          The Student Affairs &amp; Services and Development Division of Northern Bukidnon State College (SASDD-NBSC)
+          &mdash; serving students with holistic programs, welfare support, and development opportunities.
         </p>
         <div class="lp-hero-actions">
           <a href="#lp-about" class="lp-btn-primary">Learn More</a>
@@ -735,21 +759,35 @@ body.messenger-active,
       <div class="lp-container">
         <div class="lp-section-header">
           <h2>Our Objective</h2>
-          <p>The SASDD-NBSC serves as the implementing unit of the rules, policies, and regulations of the college and of those of CHED in relation to student-related concerns.</p>
+          <p>The SASDD-NBSC serves as the implementing unit of the rules, policies, and regulations of the college and
+            of those of CHED in relation to student-related concerns.</p>
         </div>
         <div class="lp-objective-grid">
-          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Assists students in transition to college life</span></div>
-          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Help students to explore and clarify their values</span></div>
-          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Encourages the development of relationships of friendship and a sense of belonging to a campus community</span></div>
-          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Assists in identifying financial aid resources for further education</span></div>
-          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Creates opportunities to expand the cultural and aesthetic horizons of students</span></div>
-          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Teaches students how to solve personal and group conflicts</span></div>
-          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Provides special programs and services for students who have learning difficulties</span></div>
-          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Contributes to the understanding and appreciation of ethnic differences, racial or otherwise</span></div>
-          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Creates opportunities for leadership development</span></div>
-          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Establishes programs that encourage a healthy lifestyle and reduce misbehavior</span></div>
-          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Provides opportunities for recreation and leisure</span></div>
-          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Provides counseling and career guidance, helping to clarify professional goals, and exploring options for further study or employment</span></div>
+          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Assists students in transition to
+              college life</span></div>
+          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Help students to explore and clarify
+              their values</span></div>
+          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Encourages the development of
+              relationships of friendship and a sense of belonging to a campus community</span></div>
+          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Assists in identifying financial aid
+              resources for further education</span></div>
+          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Creates opportunities to expand the
+              cultural and aesthetic horizons of students</span></div>
+          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Teaches students how to solve personal
+              and group conflicts</span></div>
+          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Provides special programs and services
+              for students who have learning difficulties</span></div>
+          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Contributes to the understanding and
+              appreciation of ethnic differences, racial or otherwise</span></div>
+          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Creates opportunities for leadership
+              development</span></div>
+          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Establishes programs that encourage a
+              healthy lifestyle and reduce misbehavior</span></div>
+          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Provides opportunities for recreation
+              and leisure</span></div>
+          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Provides counseling and career
+              guidance, helping to clarify professional goals, and exploring options for further study or
+              employment</span></div>
         </div>
       </div>
     </section>
@@ -798,7 +836,8 @@ body.messenger-active,
             <div class="lp-service-icon"><i class='bx bx-shield-quarter'></i></div>
             <h3 class="lp-service-title">Leadership &amp; Advocacy</h3>
             <p class="lp-service-desc">
-              Cultivating student leaders through training programs, organizational management, and institutional advocacy aligned with CHED mandates.
+              Cultivating student leaders through training programs, organizational management, and institutional
+              advocacy aligned with CHED mandates.
             </p>
           </div>
 
@@ -855,16 +894,41 @@ body.messenger-active,
 
         <div class="lp-activities-grid" id="lp-activities-grid">
           <!-- Skeleton loading state -->
-          <div class="lp-activity-skeleton"><div class="lp-skeleton-img"></div><div class="lp-skeleton-body"><div class="lp-skeleton-line short"></div><div class="lp-skeleton-line"></div><div class="lp-skeleton-line medium"></div></div></div>
-          <div class="lp-activity-skeleton"><div class="lp-skeleton-img"></div><div class="lp-skeleton-body"><div class="lp-skeleton-line short"></div><div class="lp-skeleton-line"></div><div class="lp-skeleton-line medium"></div></div></div>
-          <div class="lp-activity-skeleton"><div class="lp-skeleton-img"></div><div class="lp-skeleton-body"><div class="lp-skeleton-line short"></div><div class="lp-skeleton-line"></div><div class="lp-skeleton-line medium"></div></div></div>
+          <div class="lp-activity-skeleton">
+            <div class="lp-skeleton-img"></div>
+            <div class="lp-skeleton-body">
+              <div class="lp-skeleton-line short"></div>
+              <div class="lp-skeleton-line"></div>
+              <div class="lp-skeleton-line medium"></div>
+            </div>
+          </div>
+          <div class="lp-activity-skeleton">
+            <div class="lp-skeleton-img"></div>
+            <div class="lp-skeleton-body">
+              <div class="lp-skeleton-line short"></div>
+              <div class="lp-skeleton-line"></div>
+              <div class="lp-skeleton-line medium"></div>
+            </div>
+          </div>
+          <div class="lp-activity-skeleton">
+            <div class="lp-skeleton-img"></div>
+            <div class="lp-skeleton-body">
+              <div class="lp-skeleton-line short"></div>
+              <div class="lp-skeleton-line"></div>
+              <div class="lp-skeleton-line medium"></div>
+            </div>
+          </div>
         </div>
 
         <!-- See More button — always visible, opens full-page activities view -->
         <div class="lp-view-all-wrap" id="lp-view-all-wrap" style="display:none;">
           <button id="lp-view-all-btn" class="lp-view-all-btn">
             See More Activities
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+              stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
           </button>
         </div>
       </div>
@@ -884,7 +948,11 @@ body.messenger-active,
     <!-- Sticky Header -->
     <header class="lp-all-act-header">
       <button id="lp-all-act-back" class="lp-all-act-back" aria-label="Back to landing page">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+          stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
         Back
       </button>
       <div class="lp-all-act-title">
@@ -921,8 +989,7 @@ body.messenger-active,
   <!-- Recommit for redeployment -->
   <div id="login-overlay" class="login-overlay hidden">
     <div class="login-card">
-      <img src="assets/sas_logo_real.png" alt="NBSC Logo"
-        class="login-logo">
+      <img src="assets/sas_logo_real.png" alt="NBSC Logo" class="login-logo">
       <h2 class="login-title">NBSC SAS</h2>
       <p class="login-subtitle">SAS Portal Hub</p>
 
@@ -944,8 +1011,10 @@ body.messenger-active,
 
         <div style="margin-top: 20px; text-align: center; border-top: 1px solid #f1f5f9; padding-top: 16px;">
           <p style="font-size: 0.85rem; color: #64748b; margin: 0;">
-            Don't have an account? 
-            <a href="#" id="show-register-btn" style="color: var(--nbsc-blue); font-weight: 700; text-decoration: none; margin-left: 4px;">Register here</a>
+            Don't have an account?
+            <a href="#" id="show-register-btn"
+              style="color: var(--nbsc-blue); font-weight: 700; text-decoration: none; margin-left: 4px;">Register
+              here</a>
           </p>
         </div>
       </form>
@@ -970,7 +1039,8 @@ body.messenger-active,
         </div>
         <div class="login-input-group">
           <label for="register-role">Wanted Role</label>
-          <select id="register-role" required style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e2e8f0; background: #f8fafc; font-weight: 600; color: #1e293b; appearance: none; cursor: pointer;">
+          <select id="register-role" required
+            style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e2e8f0; background: #f8fafc; font-weight: 600; color: #1e293b; appearance: none; cursor: pointer;">
             <option value="user">User</option>
             <option value="scanner">Scanner</option>
             <option value="admin">Admin</option>
@@ -983,8 +1053,9 @@ body.messenger-active,
         <button type="submit" class="login-btn">
           Register
         </button>
-        
-        <button type="button" id="back-to-login-btn" class="secondary-btn" style="width: 100%; margin-top: 12px; padding: 12px; border: none; background: #f1f5f9; color: #64748b; font-weight: 700; border-radius: 8px; cursor: pointer;">
+
+        <button type="button" id="back-to-login-btn" class="secondary-btn"
+          style="width: 100%; margin-top: 12px; padding: 12px; border: none; background: #f1f5f9; color: #64748b; font-weight: 700; border-radius: 8px; cursor: pointer;">
           Back to Login
         </button>
       </form>
@@ -999,8 +1070,10 @@ body.messenger-active,
 
   <aside class="sidebar hidden">
     <div class="sidebar-header">
-      <div class="sidebar-header-main" style="display: flex; align-items: center; justify-content: center; width: 100%;">
-        <img src="assets/sas_logo.png" alt="SAS Brand" style="width: 75%; max-width: 150px; height: auto; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3));">
+      <div class="sidebar-header-main"
+        style="display: flex; align-items: center; justify-content: center; width: 100%;">
+        <img src="assets/sas_logo.png" alt="SAS Brand"
+          style="width: 75%; max-width: 150px; height: auto; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3));">
       </div>
       <button id="sidebar-toggle" class="sidebar-toggle-btn hidden" title="Collapse Sidebar">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
@@ -1016,13 +1089,21 @@ body.messenger-active,
       </a>
       <a href="#messages" id="nav-messages" class="nav-item hidden" data-page="messages" style="display: none;">
         <span class="nav-icon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
         </span>
         <span class="nav-label">Messages</span>
       </a>
       <a href="#database" id="nav-database" class="nav-item hidden" data-page="database" style="display: none;">
         <span class="nav-icon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+          </svg>
         </span>
         <span class="nav-label">Database</span>
       </a>
@@ -1049,12 +1130,11 @@ body.messenger-active,
         <iframe id="system-frame" class="system-frame" title="System"></iframe>
       </section>
       <!-- Home content -->
-        <section id="home" class="page active">
-          <div id="tv-blurred-bg" class="tv-blurred-bg"></div>
+      <section id="home" class="page active">
+        <div id="tv-blurred-bg" class="tv-blurred-bg"></div>
         <header class="home-header">
           <div class="home-header-brand">
-            <img src="assets/sas_logo_real.png" id="sidebar-logo"
-              class="home-header-logo" alt="NBSC Logo">
+            <img src="assets/sas_logo_real.png" id="sidebar-logo" class="home-header-logo" alt="NBSC Logo">
             <div class="home-header-text">
               <h1 class="home-header-title">NBSC SAS</h1>
               <p class="home-header-subtitle">SAS Portal Hub</p>
@@ -1070,10 +1150,18 @@ body.messenger-active,
           <!-- Immersive TV Mode Controls -->
           <div class="tv-settings" id="tv-settings">
             <button id="btn-tv-audio" class="tv-setting-btn" title="Toggle Audio">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              </svg>
             </button>
             <button id="btn-tv-theater" class="tv-setting-btn" title="Toggle Fullscreen">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="3" y1="9" x2="21" y2="9"></line>
+                <line x1="9" y1="21" x2="9" y2="9"></line>
+              </svg>
             </button>
             <button id="btn-tv-header-toggle" class="tv-setting-btn" title="Show/Hide Sidebar">
               <i class='bx bx-dots-vertical-rounded'></i>
@@ -1130,51 +1218,101 @@ body.messenger-active,
               <div class="view-menu" id="view-menu">
                 <button class="view-menu-btn" id="view-menu-btn" aria-haspopup="true" aria-expanded="false">
                   <span class="view-menu-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                      stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="3" width="7" height="7"></rect>
+                      <rect x="14" y="3" width="7" height="7"></rect>
+                      <rect x="14" y="14" width="7" height="7"></rect>
+                      <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
                   </span>
                   <span class="view-menu-label" id="view-menu-label">View</span>
                   <span style="font-size: 0.6rem; margin-top: 2px;">▼</span>
                 </button>
                 <div class="view-menu-dropdown" id="view-menu-dropdown" style="display: none;">
                   <button class="view-option" data-view="xl">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                      stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                      <line x1="8" y1="21" x2="16" y2="21"></line>
+                      <line x1="12" y1="17" x2="12" y2="21"></line>
+                    </svg>
                     Extra large icons
                   </button>
                   <button class="view-option" data-view="lg">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                      stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                      <line x1="8" y1="21" x2="16" y2="21"></line>
+                      <line x1="12" y1="17" x2="12" y2="21"></line>
+                    </svg>
                     Large icons
                   </button>
                   <button class="view-option" data-view="md">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                      stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                      <line x1="8" y1="21" x2="16" y2="21"></line>
+                      <line x1="12" y1="17" x2="12" y2="21"></line>
+                    </svg>
                     Medium icons
                   </button>
                   <button class="view-option" data-view="sm">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                      stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="3" width="7" height="7"></rect>
+                      <rect x="14" y="3" width="7" height="7"></rect>
+                      <rect x="14" y="14" width="7" height="7"></rect>
+                      <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
                     Small icons
                   </button>
                 </div>
               </div>
-              <button id="clear-cache-btn" class="add-post-btn hidden" style="background:#dc2626; color:#fff;" aria-label="Clear System Data">
+              <button id="clear-cache-btn" class="add-post-btn hidden" style="background:#dc2626; color:#fff;"
+                aria-label="Clear System Data">
                 <span class="plus-icon">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4h6v2"></path></svg>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6l-1 14H6L5 6"></path>
+                    <path d="M10 11v6"></path>
+                    <path d="M14 11v6"></path>
+                    <path d="M9 6V4h6v2"></path>
+                  </svg>
                 </span>
                 Clear Data
               </button>
-              <button id="manage-lp-docs-btn" class="add-post-btn hidden" style="background:#7c3aed; color:#fff;" aria-label="Manage Documents">
+              <button id="manage-lp-docs-btn" class="add-post-btn hidden" style="background:#7c3aed; color:#fff;"
+                aria-label="Manage Documents">
                 <span class="plus-icon">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                  </svg>
                 </span>
                 Documents
               </button>
-              <button id="manage-lp-activities-btn" class="add-post-btn hidden" style="background:#0d9488; color:#fff;" aria-label="Manage Landing Page Activities">
+              <button id="manage-lp-activities-btn" class="add-post-btn hidden" style="background:#0d9488; color:#fff;"
+                aria-label="Manage Landing Page Activities">
                 <span class="plus-icon">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <path d="M3 9h18" />
+                    <path d="M9 21V9" />
+                  </svg>
                 </span>
                 Activities
               </button>
               <button id="add-post-btn" class="add-post-btn hidden" aria-label="Add New Post">
                 <span class="plus-icon">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
                 </span>
                 Add Post
               </button>
@@ -1201,18 +1339,28 @@ body.messenger-active,
         <div class="messenger-container">
           <!-- Sidebar: Contacts List -->
           <aside class="messenger-sidebar">
-            
-            
+
+
             <header class="messenger-sidebar-header">
               <h3>Messenger</h3>
               <div style="display:flex; align-items:center; gap:8px;">
-                <button onclick="fetchSpreadsheetUsers();" class="icon-btn" title="Refresh" style="width:32px; height:32px; color:rgba(255,255,255,0.7); display:flex; align-items:center; justify-content:center; background:transparent; border:none; cursor:pointer;">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                <button onclick="fetchSpreadsheetUsers();" class="icon-btn" title="Refresh"
+                  style="width:32px; height:32px; color:rgba(255,255,255,0.7); display:flex; align-items:center; justify-content:center; background:transparent; border:none; cursor:pointer;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                  </svg>
                 </button>
 
 
-                <button onclick="if(confirm('Logout from SAS?')) window.appLogout();" class="icon-btn" title="Logout" style="width:32px; height:32px; color:#ef4444; display:flex; align-items:center; justify-content:center; margin-left:5px;">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                <button onclick="if(confirm('Logout from SAS?')) window.appLogout();" class="icon-btn" title="Logout"
+                  style="width:32px; height:32px; color:#ef4444; display:flex; align-items:center; justify-content:center; margin-left:5px;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                  </svg>
                 </button>
                 <div class="active-users-badge">
                   <span class="pulse-dot"></span>
@@ -1224,10 +1372,13 @@ body.messenger-active,
               <!-- Dynamically loaded contacts -->
               <div class="loading-contacts">Loading contacts...</div>
             </div>
-            
+
             <!-- Floating New Message Button -->
             <button onclick="openNewMessageModal()" class="messenger-fab" title="New Message">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
             </button>
 
           </aside>
@@ -1237,17 +1388,25 @@ body.messenger-active,
             <!-- Empty state when no chat is selected -->
             <div id="messenger-empty" class="messenger-empty">
               <div class="empty-placeholder">
-                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.2;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                  stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.2;">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
                 <p>Select a conversation to start messaging</p>
               </div>
             </div>
 
             <!-- Active Conversation -->
             <div id="messenger-chat-view" class="messenger-chat-view hidden">
-              
+
               <header class="messenger-chat-header">
-                <button class="messenger-back-btn" onclick="toggleMessengerMobile(false)" style="display:none; padding:8px; margin-left:-10px; background:transparent; border:0; color:#64748b; cursor:pointer;">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                <button class="messenger-back-btn" onclick="toggleMessengerMobile(false)"
+                  style="display:none; padding:8px; margin-left:-10px; background:transparent; border:0; color:#64748b; cursor:pointer;">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                  </svg>
                 </button>
                 <div class="active-user-avatar" id="active-avatar">?</div>
                 <div class="active-user-info">
@@ -1261,7 +1420,11 @@ body.messenger-active,
               <form id="messenger-form" class="messenger-form">
                 <input type="text" id="messenger-input" placeholder="Type a message..." required autocomplete="off">
                 <button type="submit" class="send-btn">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                  </svg>
                 </button>
               </form>
             </div>
@@ -1269,7 +1432,8 @@ body.messenger-active,
         </div>
       </section>
 
-      <section id="database" class="page" style="background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); padding: 20px; min-height: 100vh;">
+      <section id="database" class="page"
+        style="background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); padding: 20px; min-height: 100vh;">
         <div class="page-header">
           <h2>Database Management</h2>
         </div>
@@ -1391,13 +1555,15 @@ body.messenger-active,
               <input id="db-media-search" type="text" placeholder="Search by public ID or format...">
             </div>
             <div class="db-actions">
-              <select id="db-media-account-select" class="db-select" style="min-width:160px; height:36px; padding:0 12px; border-radius:6px; background:#1e293b; border:1px solid #334155; color:#f1f5f9; cursor:pointer;">
+              <select id="db-media-account-select" class="db-select"
+                style="min-width:160px; height:36px; padding:0 12px; border-radius:6px; background:#1e293b; border:1px solid #334155; color:#f1f5f9; cursor:pointer;">
                 <option value="all" selected>All Repositories</option>
                 <option value="dbytj36mv">Active Repository (dbytj36mv)</option>
                 <option value="dj8ugtlrl">Legacy Repository (dj8ugtlrl)</option>
               </select>
               <button id="db-media-refresh-btn" class="btn btn-primary">Refresh Assets</button>
-              <button id="db-media-flush-btn" class="btn btn-secondary" style="border-color:#ef4444; color:#ef4444;">Flush Unused</button>
+              <button id="db-media-flush-btn" class="btn btn-secondary"
+                style="border-color:#ef4444; color:#ef4444;">Flush Unused</button>
             </div>
           </div>
           <div id="db-media-grid" class="db-media-grid">
@@ -1444,7 +1610,7 @@ body.messenger-active,
               <label for="post-desc">Description</label>
               <textarea id="post-desc" rows="4" required placeholder="Write your update here..."></textarea>
             </div>
-            
+
             <div class="modal-section" id="post-schedule-section">
               <div class="modal-section-title">Visibility Schedule (Optional)</div>
               <div class="post-schedule-fields">
@@ -1466,8 +1632,10 @@ body.messenger-active,
                   <label for="post-display-duration" style="margin-bottom: 0;">Timer (Seconds)</label>
                   <span id="post-display-duration-val" style="font-weight: 600; color: var(--nbsc-gold);">25s</span>
                 </div>
-                <input type="range" id="post-display-duration" min="5" max="60" step="1" value="25" style="width: 100%; cursor: pointer;">
-                <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 4px;">Controls how long this post stays on screen before switching.</span>
+                <input type="range" id="post-display-duration" min="5" max="60" step="1" value="25"
+                  style="width: 100%; cursor: pointer;">
+                <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 4px;">Controls
+                  how long this post stays on screen before switching.</span>
               </div>
             </div>
 
@@ -1476,19 +1644,36 @@ body.messenger-active,
               <label>Image / Video</label>
               <div class="upload-tabs" id="upload-tabs">
                 <button type="button" class="upload-tab active" data-tab="upload">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                  </svg>
                   Single Media
                 </button>
                 <button type="button" class="upload-tab" data-tab="multi">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
                   Multiple Images
                 </button>
                 <button type="button" class="upload-tab" data-tab="url">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                  </svg>
                   Use URL
                 </button>
                 <button type="button" class="upload-tab" data-tab="live">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3" fill="currentColor"></circle></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <circle cx="12" cy="12" r="3" fill="currentColor"></circle>
+                  </svg>
                   Live Video
                 </button>
               </div>
@@ -1496,14 +1681,18 @@ body.messenger-active,
               <div id="upload-tab-upload" class="upload-panel">
                 <label for="post-file" class="file-upload-label" id="file-upload-label">
                   <div class="upload-icon-wrapper">
-                    <svg class="camera-icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                    <svg class="camera-icon" width="40" height="40" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z">
+                      </path>
                       <circle cx="12" cy="13" r="4"></circle>
                     </svg>
                   </div>
                   <div class="upload-text-content">
                     <span id="file-label-text">Click or drag image/video here</span>
-                    <span id="file-count-badge" class="hidden" style="margin-top: 4px; padding: 2px 8px; background: var(--nbsc-gold); color: var(--nbsc-dark); border-radius: 99px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase;">0 Files Selected</span>
+                    <span id="file-count-badge" class="hidden"
+                      style="margin-top: 4px; padding: 2px 8px; background: var(--nbsc-gold); color: var(--nbsc-dark); border-radius: 99px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase;">0
+                      Files Selected</span>
                     <span class="upload-hint">JPG, PNG, GIF, MP4 (Max 100MB)</span>
                   </div>
                   <div class="upload-button-wrapper">
@@ -1514,148 +1703,205 @@ body.messenger-active,
 
                 <!-- Tab-Specific Preview -->
                 <div class="input-group hidden" id="upload-img-preview-group">
-                  <label>Upload Preview <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">(Drag to pan, use slider to zoom)</span></label>
-                  <div id="upload-preview-container" style="position: relative; width: 100%; aspect-ratio: 16 / 9; border: 2px dashed #ccc; border-radius: 8px; overflow: hidden; background: #e2e8f0; cursor: grab; user-select: none;">
-                    <div id="upload-preview-transform-wrapper" style="width: 100%; height: 100%; transform-origin: center center; transform: scale(1) translate(0px, 0px);">
-                      <img id="upload-preview-img" src="" alt="Preview" draggable="false" style="width: 100%; height: 100%; object-fit: contain; object-position: center; pointer-events: none;">
+                  <label>Upload Preview <span
+                      style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">(Drag to pan, use slider
+                      to zoom)</span></label>
+                  <div id="upload-preview-container"
+                    style="position: relative; width: 100%; aspect-ratio: 16 / 9; border: 2px dashed #ccc; border-radius: 8px; overflow: hidden; background: #e2e8f0; cursor: grab; user-select: none;">
+                    <div id="upload-preview-transform-wrapper"
+                      style="width: 100%; height: 100%; transform-origin: center center; transform: scale(1) translate(0px, 0px);">
+                      <img id="upload-preview-img" src="" alt="Preview" draggable="false"
+                        style="width: 100%; height: 100%; object-fit: contain; object-position: center; pointer-events: none;">
                     </div>
                   </div>
-                  <div id="upload-thumbnails-container" class="hidden" style="display: flex; gap: 8px; overflow-x: auto; padding: 8px 0; margin-top: 8px; border-top: 1px solid #e2e8f0; scrollbar-width: thin;"></div>
-                  
-                  <div id="multi-add-container" class="hidden" style="margin-top: 10px; margin-bottom: 15px; text-align: center;">
-                    <button type="button" id="multi-add-btn" class="secondary-btn" style="padding: 6px 16px; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; margin: 0 auto; border: 2px solid var(--nbsc-gold); background: transparent; color: var(--nbsc-dark); font-weight: 700; border-radius: 6px; transition: all 0.2s;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                        Add Another Image
+                  <div id="upload-thumbnails-container" class="hidden"
+                    style="display: flex; gap: 8px; overflow-x: auto; padding: 8px 0; margin-top: 8px; border-top: 1px solid #e2e8f0; scrollbar-width: thin;">
+                  </div>
+
+                  <div id="multi-add-container" class="hidden"
+                    style="margin-top: 10px; margin-bottom: 15px; text-align: center;">
+                    <button type="button" id="multi-add-btn" class="secondary-btn"
+                      style="padding: 6px 16px; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; margin: 0 auto; border: 2px solid var(--nbsc-gold); background: transparent; color: var(--nbsc-dark); font-weight: 700; border-radius: 6px; transition: all 0.2s;">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                      </svg>
+                      Add Another Image
                     </button>
                   </div>
 
                   <!-- Batch Settings -->
-                  <div id="multi-settings-group" class="hidden" style="margin-top: 15px; border-top: 2px dashed #e2e8f0; padding-top: 15px;">
-                      <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                          <div style="display: flex; align-items: center; justify-content: space-between;">
-                              <div style="display: flex; align-items: center; gap: 10px;">
-                                  <div style="background: var(--nbsc-gold); color: var(--nbsc-dark); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                                  </div>
-                                  <div>
-                                      <label style="margin: 0; font-size: 0.9rem; font-weight: 700; color: var(--nbsc-dark);">Transition Speed</label>
-                                      <p style="margin: 0; font-size: 0.75rem; color: var(--text-muted);">Seconds per image</p>
-                                  </div>
-                              </div>
-                              <div style="display: flex; align-items: center; gap: 8px;">
-                                  <input type="number" id="multi-interval" value="5" min="2" max="30" style="width: 60px; padding: 6px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 700; text-align: center; color: var(--nbsc-dark);">
-                                  <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">SEC</span>
-                              </div>
+                  <div id="multi-settings-group" class="hidden"
+                    style="margin-top: 15px; border-top: 2px dashed #e2e8f0; padding-top: 15px;">
+                    <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                      <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                          <div
+                            style="background: var(--nbsc-gold); color: var(--nbsc-dark); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <circle cx="12" cy="12" r="10"></circle>
+                              <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
                           </div>
+                          <div>
+                            <label
+                              style="margin: 0; font-size: 0.9rem; font-weight: 700; color: var(--nbsc-dark);">Transition
+                              Speed</label>
+                            <p style="margin: 0; font-size: 0.75rem; color: var(--text-muted);">Seconds per image</p>
+                          </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                          <input type="number" id="multi-interval" value="5" min="2" max="30"
+                            style="width: 60px; padding: 6px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 700; text-align: center; color: var(--nbsc-dark);">
+                          <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">SEC</span>
+                        </div>
                       </div>
+                    </div>
                   </div>
 
                   <div id="upload-img-controls" style="display: block;">
                     <div style="display: flex; align-items: center; gap: 10px; margin-top: 12px;">
-                      <label style="font-size: 0.85rem; font-weight: 600; white-space: nowrap; margin-bottom: 0;">Zoom:</label>
-                      <input type="range" id="upload-img-zoom" min="0.1" max="5" step="0.05" value="1" style="flex-grow: 1; cursor: pointer;">
-                      <span id="upload-preview-zoom-val" style="font-size: 0.85rem; font-weight: 600; min-width: 40px; text-align: right;">1.0x</span>
+                      <label
+                        style="font-size: 0.85rem; font-weight: 600; white-space: nowrap; margin-bottom: 0;">Zoom:</label>
+                      <input type="range" id="upload-img-zoom" min="0.1" max="5" step="0.05" value="1"
+                        style="flex-grow: 1; cursor: pointer;">
+                      <span id="upload-preview-zoom-val"
+                        style="font-size: 0.85rem; font-weight: 600; min-width: 40px; text-align: right;">1.0x</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
-                      <button type="button" id="upload-preview-reset-btn" class="secondary-btn" style="padding: 4px 8px; font-size: 0.75rem;">Reset View</button>
-                      <div style="font-size: 0.8rem; color: var(--text-muted); text-align: right;">Position: <span id="upload-preview-coords">0px, 0px</span></div>
+                      <button type="button" id="upload-preview-reset-btn" class="secondary-btn"
+                        style="padding: 4px 8px; font-size: 0.75rem;">Reset View</button>
+                      <div style="font-size: 0.8rem; color: var(--text-muted); text-align: right;">Position: <span
+                          id="upload-preview-coords">0px, 0px</span></div>
                     </div>
                   </div>
                   <input type="hidden" id="upload-img-pos" value="0 0">
                   <input type="hidden" id="upload-img-size-val" value="1">
                 </div>
 
-                <div class="input-group" id="upload-video-settings-group" style="display: none; margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+                <div class="input-group" id="upload-video-settings-group"
+                  style="display: none; margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
                   <label>Video Playback Range</label>
-                  <div id="upload-video-preview-wrapper" style="width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 8px; overflow: hidden; position: relative; margin-bottom: 12px; display: flex; align-items: center; justify-content: center;">
-                     <video id="upload-video-preview-player" style="width: 100%; height: 100%; object-fit: contain; display: none;" controls preload="metadata"></video>
-                     <div id="upload-video-preview-iframe-wrapper" style="width: 100%; height: 100%; display: none;"></div>
+                  <div id="upload-video-preview-wrapper"
+                    style="width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 8px; overflow: hidden; position: relative; margin-bottom: 12px; display: flex; align-items: center; justify-content: center;">
+                    <video id="upload-video-preview-player"
+                      style="width: 100%; height: 100%; object-fit: contain; display: none;" controls
+                      preload="metadata"></video>
+                    <div id="upload-video-preview-iframe-wrapper" style="width: 100%; height: 100%; display: none;">
+                    </div>
                   </div>
-                  <div class="video-range-container" style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
-                     <div style="display: flex; flex-direction: column; gap: 4px;">
-                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600;">
-                           <span>Start Time</span>
-                           <span id="upload-video-start-display" style="color: var(--nbsc-gold);">00:00</span>
-                        </div>
-                        <input type="range" id="upload-video-slider-start" min="0" max="100" value="0" step="1" style="width: 100%; cursor: pointer;">
-                     </div>
-                     <div style="display: flex; flex-direction: column; gap: 4px;">
-                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600;">
-                           <span>End Time</span>
-                           <span id="upload-video-duration-display" style="color: var(--nbsc-gold);">00:00</span>
-                        </div>
-                        <input type="range" id="upload-video-slider-end" min="0" max="100" value="100" step="1" style="width: 100%; cursor: pointer;">
-                     </div>
-                     <input type="hidden" id="upload-video-start">
-                     <input type="hidden" id="upload-video-end">
+                  <div class="video-range-container"
+                    style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                      <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600;">
+                        <span>Start Time</span>
+                        <span id="upload-video-start-display" style="color: var(--nbsc-gold);">00:00</span>
+                      </div>
+                      <input type="range" id="upload-video-slider-start" min="0" max="100" value="0" step="1"
+                        style="width: 100%; cursor: pointer;">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                      <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600;">
+                        <span>End Time</span>
+                        <span id="upload-video-duration-display" style="color: var(--nbsc-gold);">00:00</span>
+                      </div>
+                      <input type="range" id="upload-video-slider-end" min="0" max="100" value="100" step="1"
+                        style="width: 100%; cursor: pointer;">
+                    </div>
+                    <input type="hidden" id="upload-video-start">
+                    <input type="hidden" id="upload-video-end">
                   </div>
                 </div>
               </div>
               <!-- URL Tab -->
               <div id="upload-tab-url" class="upload-panel hidden">
                 <input type="url" id="post-img" placeholder="https://example.com/image.png or YouTube link">
-                <span class="upload-hint" style="display:block; margin-top:8px; font-size:0.75rem; color: var(--text-muted);">Please note: URL embeds may eventually expire or be removed by the source.</span>
+                <span class="upload-hint"
+                  style="display:block; margin-top:8px; font-size:0.75rem; color: var(--text-muted);">Please note: URL
+                  embeds may eventually expire or be removed by the source.</span>
 
                 <!-- Tab-Specific Preview -->
                 <div class="input-group hidden" id="url-img-preview-group">
                   <label>URL Image Preview</label>
-                  <div id="url-preview-container" style="position: relative; width: 100%; aspect-ratio: 16 / 9; border: 2px dashed #ccc; border-radius: 8px; overflow: hidden; background: #e2e8f0; cursor: grab; user-select: none;">
-                    <div id="url-preview-transform-wrapper" style="width: 100%; height: 100%; transform-origin: center center; transform: scale(1) translate(0px, 0px);">
-                      <img id="url-preview-img" src="" alt="Preview" draggable="false" style="width: 100%; height: 100%; object-fit: contain; object-position: center; pointer-events: none;">
+                  <div id="url-preview-container"
+                    style="position: relative; width: 100%; aspect-ratio: 16 / 9; border: 2px dashed #ccc; border-radius: 8px; overflow: hidden; background: #e2e8f0; cursor: grab; user-select: none;">
+                    <div id="url-preview-transform-wrapper"
+                      style="width: 100%; height: 100%; transform-origin: center center; transform: scale(1) translate(0px, 0px);">
+                      <img id="url-preview-img" src="" alt="Preview" draggable="false"
+                        style="width: 100%; height: 100%; object-fit: contain; object-position: center; pointer-events: none;">
                     </div>
                   </div>
-                  <div id="url-thumbnails-container" class="hidden" style="display: flex; gap: 8px; overflow-x: auto; padding: 8px 0; margin-top: 8px; border-top: 1px solid #e2e8f0; scrollbar-width: thin;"></div>
+                  <div id="url-thumbnails-container" class="hidden"
+                    style="display: flex; gap: 8px; overflow-x: auto; padding: 8px 0; margin-top: 8px; border-top: 1px solid #e2e8f0; scrollbar-width: thin;">
+                  </div>
                   <div id="url-img-controls" style="display: block;">
                     <div style="display: flex; align-items: center; gap: 10px; margin-top: 12px;">
-                      <label style="font-size: 0.85rem; font-weight: 600; white-space: nowrap; margin-bottom: 0;">Zoom:</label>
-                      <input type="range" id="url-img-zoom" min="0.1" max="5" step="0.05" value="1" style="flex-grow: 1; cursor: pointer;">
-                      <span id="url-preview-zoom-val" style="font-size: 0.85rem; font-weight: 600; min-width: 40px; text-align: right;">1.0x</span>
+                      <label
+                        style="font-size: 0.85rem; font-weight: 600; white-space: nowrap; margin-bottom: 0;">Zoom:</label>
+                      <input type="range" id="url-img-zoom" min="0.1" max="5" step="0.05" value="1"
+                        style="flex-grow: 1; cursor: pointer;">
+                      <span id="url-preview-zoom-val"
+                        style="font-size: 0.85rem; font-weight: 600; min-width: 40px; text-align: right;">1.0x</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
-                      <button type="button" id="url-preview-reset-btn" class="secondary-btn" style="padding: 4px 8px; font-size: 0.75rem;">Reset View</button>
-                      <div style="font-size: 0.8rem; color: var(--text-muted); text-align: right;">Position: <span id="url-preview-coords">0px, 0px</span></div>
+                      <button type="button" id="url-preview-reset-btn" class="secondary-btn"
+                        style="padding: 4px 8px; font-size: 0.75rem;">Reset View</button>
+                      <div style="font-size: 0.8rem; color: var(--text-muted); text-align: right;">Position: <span
+                          id="url-preview-coords">0px, 0px</span></div>
                     </div>
                   </div>
                   <input type="hidden" id="url-img-pos" value="0 0">
                   <input type="hidden" id="url-img-size-val" value="1">
                 </div>
 
-                <div class="input-group" id="url-video-settings-group" style="display: none; margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+                <div class="input-group" id="url-video-settings-group"
+                  style="display: none; margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
                   <label>Video Playback Range</label>
-                  <div id="url-video-preview-wrapper" style="width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 8px; overflow: hidden; position: relative; margin-bottom: 12px; display: flex; align-items: center; justify-content: center;">
-                     <video id="url-video-preview-player" style="width: 100%; height: 100%; object-fit: contain; display: none;" controls preload="metadata"></video>
-                     <div id="url-video-preview-iframe-wrapper" style="width: 100%; height: 100%; display: none;"></div>
+                  <div id="url-video-preview-wrapper"
+                    style="width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 8px; overflow: hidden; position: relative; margin-bottom: 12px; display: flex; align-items: center; justify-content: center;">
+                    <video id="url-video-preview-player"
+                      style="width: 100%; height: 100%; object-fit: contain; display: none;" controls
+                      preload="metadata"></video>
+                    <div id="url-video-preview-iframe-wrapper" style="width: 100%; height: 100%; display: none;"></div>
                   </div>
-                  <div class="video-range-container" style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
-                     <div style="display: flex; flex-direction: column; gap: 4px;">
-                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600;">
-                           <span>Start Time</span>
-                           <span id="url-video-start-display" style="color: var(--nbsc-gold);">00:00</span>
-                        </div>
-                        <input type="range" id="url-video-slider-start" min="0" max="100" value="0" step="1" style="width: 100%; cursor: pointer;">
-                     </div>
-                     <div style="display: flex; flex-direction: column; gap: 4px;">
-                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600;">
-                           <span>End Time</span>
-                           <span id="url-video-duration-display" style="color: var(--nbsc-gold);">00:00</span>
-                        </div>
-                        <input type="range" id="url-video-slider-end" min="0" max="100" value="100" step="1" style="width: 100%; cursor: pointer;">
-                     </div>
-                     <input type="hidden" id="url-video-start">
-                     <input type="hidden" id="url-video-end">
+                  <div class="video-range-container"
+                    style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                      <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600;">
+                        <span>Start Time</span>
+                        <span id="url-video-start-display" style="color: var(--nbsc-gold);">00:00</span>
+                      </div>
+                      <input type="range" id="url-video-slider-start" min="0" max="100" value="0" step="1"
+                        style="width: 100%; cursor: pointer;">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                      <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600;">
+                        <span>End Time</span>
+                        <span id="url-video-duration-display" style="color: var(--nbsc-gold);">00:00</span>
+                      </div>
+                      <input type="range" id="url-video-slider-end" min="0" max="100" value="100" step="1"
+                        style="width: 100%; cursor: pointer;">
+                    </div>
+                    <input type="hidden" id="url-video-start">
+                    <input type="hidden" id="url-video-end">
                   </div>
                 </div>
               </div>
               <!-- Live Tab -->
               <div id="upload-tab-live" class="upload-panel hidden">
                 <input type="url" id="post-live-url" placeholder="https://youtube.com/live/link or FB Live link">
-                <span class="upload-hint" style="display:block; margin-top:8px; font-size:0.75rem;">This post will be marked as <b>LIVE</b> and automatically hidden when the stream ends.</span>
+                <span class="upload-hint" style="display:block; margin-top:8px; font-size:0.75rem;">This post will be
+                  marked as <b>LIVE</b> and automatically hidden when the stream ends.</span>
 
                 <!-- Tab-Specific Preview (Minimal for Live) -->
-                <div class="input-group" id="live-video-settings-group" style="display: none; margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+                <div class="input-group" id="live-video-settings-group"
+                  style="display: none; margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
                   <label>Live Stream Preview</label>
-                  <div id="live-video-preview-wrapper" style="width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 8px; overflow: hidden; position: relative; margin-bottom: 12px; display: flex; align-items: center; justify-content: center;">
-                     <div id="live-video-preview-iframe-wrapper" style="width: 100%; height: 100%;"></div>
+                  <div id="live-video-preview-wrapper"
+                    style="width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 8px; overflow: hidden; position: relative; margin-bottom: 12px; display: flex; align-items: center; justify-content: center;">
+                    <div id="live-video-preview-iframe-wrapper" style="width: 100%; height: 100%;"></div>
                   </div>
                 </div>
               </div>
@@ -1709,37 +1955,49 @@ body.messenger-active,
 
   <div id="toast-container" class="toast-container"></div>
 
-  <button id="admin-exit-tv" class="admin-exit-tv-btn hidden" aria-label="Exit TV View" title="Exit TV View (Return to Dashboard)">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+  <button id="admin-exit-tv" class="admin-exit-tv-btn hidden" aria-label="Exit TV View"
+    title="Exit TV View (Return to Dashboard)">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+      stroke-linecap="round" stroke-linejoin="round">
       <path d="M11 17l-5-5 5-5M18 12H6"></path>
     </svg>
     <span>Exit TV View</span>
   </button>
-  
+
   <!-- Floating User Chat Widget -->
   <div id="fb-chat-widget" class="fb-chat-widget hidden">
     <div id="fb-chat-header" class="fb-chat-header">
       <div style="display:flex; align-items:center; gap:8px;">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
         <span>Messaging</span>
       </div>
       <div style="display:flex; align-items:center; gap:8px;">
         <span id="fb-chat-unread" class="fb-chat-unread hidden">0</span>
         <button id="fb-chat-toggle-btn" class="icon-btn" style="color:white; padding:0;">
-          <svg id="fb-chat-toggle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+          <svg id="fb-chat-toggle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="18 15 12 9 6 15"></polyline>
+          </svg>
         </button>
       </div>
     </div>
-    
+
     <div id="fb-chat-body" class="fb-chat-body hidden">
       <div id="fb-chat-contacts" class="fb-chat-contacts">
         <!-- Contacts dynamically injected here -->
       </div>
-      
+
       <div id="fb-chat-conversation" class="fb-chat-conversation hidden">
         <div id="fb-chat-conv-header" class="fb-chat-conv-header">
           <button id="fb-chat-back-btn" class="icon-btn" style="color:var(--nbsc-blue); padding:0;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
           </button>
           <span id="fb-chat-active-user" style="font-weight:700; color:var(--nbsc-blue);">User</span>
         </div>
@@ -1749,32 +2007,44 @@ body.messenger-active,
         <form id="fb-chat-form" class="fb-chat-form">
           <input type="text" id="fb-chat-input" placeholder="Type a message..." required autocomplete="off">
           <button type="submit" class="fb-chat-send-btn" aria-label="Send Message">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
           </button>
         </form>
       </div>
     </div>
   </div>
-  
+
 
   <!-- Global Loading Modal -->
   <div id="loading-modal" class="modal-overlay hidden">
-    <div class="modal-card" style="max-width: 320px; padding: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;">
+    <div class="modal-card"
+      style="max-width: 320px; padding: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;">
       <div class="spinner" style="border-top-color: var(--nbsc-blue); margin: 0;"></div>
-      <h3 id="loading-modal-message" style="margin: 0; font-size: 1.2rem; font-weight: 800; color: var(--nbsc-dark); text-align: center;">Processing...</h3>
+      <h3 id="loading-modal-message"
+        style="margin: 0; font-size: 1.2rem; font-weight: 800; color: var(--nbsc-dark); text-align: center;">
+        Processing...</h3>
       <p style="margin: 0; font-size: 0.9rem; color: var(--text-muted); text-align: center;">Please wait a moment.</p>
     </div>
   </div>
 
-<!-- New Message Modal -->
-  <div id="new-message-modal" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:2000; align-items:center; justify-content:center;">
-    <div class="modal-card" style="width: 100%; max-width: 400px; background:white; border-radius:12px; overflow:hidden;">
-      <header style="padding:15px 20px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+  <!-- New Message Modal -->
+  <div id="new-message-modal" class="modal-overlay"
+    style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:2000; align-items:center; justify-content:center;">
+    <div class="modal-card"
+      style="width: 100%; max-width: 400px; background:white; border-radius:12px; overflow:hidden;">
+      <header
+        style="padding:15px 20px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
         <h4 style="margin:0; font-weight:800; color:#003366;">New Message</h4>
-        <button onclick="closeNewMessageModal()" style="border:none; background:none; font-size:1.5rem; color:#94a3b8; cursor:pointer;">&times;</button>
+        <button onclick="closeNewMessageModal()"
+          style="border:none; background:none; font-size:1.5rem; color:#94a3b8; cursor:pointer;">&times;</button>
       </header>
       <div style="padding:15px 20px; background:#f8fafc;">
-        <input type="text" id="user-search-input" placeholder="Search users..." style="width:100%; padding:10px 15px; border-radius:8px; border:1px solid #e2e8f0; outline:none; font-size:0.9rem;">
+        <input type="text" id="user-search-input" placeholder="Search users..."
+          style="width:100%; padding:10px 15px; border-radius:8px; border:1px solid #e2e8f0; outline:none; font-size:0.9rem;">
       </div>
       <div id="all-users-list" style="max-height:300px; overflow-y:auto; padding:10px;">
         <!-- Full user list injected here -->
@@ -1787,7 +2057,8 @@ body.messenger-active,
     <div class="modal-card settings-modal-card">
       <div class="settings-modal-header">
         <h3>Settings</h3>
-        <button id="settings-close-btn" class="icon-btn" style="color:#64748b; font-size:1.5rem; background:none; border:none; cursor:pointer;">&times;</button>
+        <button id="settings-close-btn" class="icon-btn"
+          style="color:#64748b; font-size:1.5rem; background:none; border:none; cursor:pointer;">&times;</button>
       </div>
       <div class="settings-tabs">
         <button class="settings-tab active" data-tab="profile">Profile</button>
@@ -1820,7 +2091,8 @@ body.messenger-active,
               </div>
             </div>
           </div>
-          <button type="button" id="settings-save-profile" class="zz-button" style="width:100%; margin-top:15px;">Save Profile</button>
+          <button type="button" id="settings-save-profile" class="zz-button" style="width:100%; margin-top:15px;">Save
+            Profile</button>
         </div>
         <!-- Account Tab -->
         <div class="settings-tab-content hidden" id="settings-account">
@@ -1840,7 +2112,8 @@ body.messenger-active,
             <label for="settings-confirm-password">Confirm New Password</label>
             <input type="password" id="settings-confirm-password" placeholder="Confirm new password">
           </div>
-          <button type="button" id="settings-save-password" class="zz-button" style="width:100%; margin-top:15px;">Change Password</button>
+          <button type="button" id="settings-save-password" class="zz-button"
+            style="width:100%; margin-top:15px;">Change Password</button>
         </div>
         <!-- Preferences Tab -->
         <div class="settings-tab-content hidden" id="settings-preferences">
@@ -1873,14 +2146,17 @@ body.messenger-active,
     <div class="modal-card lp-act-modal-card">
       <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center;">
         <h3 class="modal-title">Manage Landing Page Activities</h3>
-        <button id="lp-act-modal-close" class="icon-btn" style="color:#64748b; font-size:1.5rem; background:none; border:none; cursor:pointer;">&times;</button>
+        <button id="lp-act-modal-close" class="icon-btn"
+          style="color:#64748b; font-size:1.5rem; background:none; border:none; cursor:pointer;">&times;</button>
       </div>
 
       <!-- Current Activities List -->
       <div class="lp-act-modal-section">
         <div class="lp-act-section-label">Current Activities</div>
         <div id="lp-act-current-list" class="lp-act-current-list">
-          <div class="lp-act-loading"><div class="spinner" style="width:24px;height:24px;"></div><span>Loading…</span></div>
+          <div class="lp-act-loading">
+            <div class="spinner" style="width:24px;height:24px;"></div><span>Loading…</span>
+          </div>
         </div>
       </div>
 
@@ -1906,11 +2182,20 @@ body.messenger-active,
             <label>Activity Image</label>
             <div class="upload-tabs" id="lp-act-upload-tabs">
               <button type="button" class="upload-tab active" data-lptab="file">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
                 Upload File
               </button>
               <button type="button" class="upload-tab" data-lptab="url">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                </svg>
                 Use URL
               </button>
             </div>
@@ -1918,7 +2203,11 @@ body.messenger-active,
             <div id="lp-act-panel-file" class="lp-act-upload-panel">
               <label for="lp-act-img-file" class="file-upload-label" id="lp-act-file-label" style="min-height:80px;">
                 <div class="upload-icon-wrapper">
-                  <svg class="camera-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                  <svg class="camera-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                    <circle cx="12" cy="13" r="4"></circle>
+                  </svg>
                 </div>
                 <div class="upload-text-content">
                   <span id="lp-act-file-label-text">Click or drag image here</span>
@@ -1954,14 +2243,17 @@ body.messenger-active,
     <div class="modal-card lp-act-modal-card">
       <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center;">
         <h3 class="modal-title">Manage Official Documents</h3>
-        <button id="lp-docs-modal-close" class="icon-btn" style="color:#64748b; font-size:1.5rem; background:none; border:none; cursor:pointer;">&times;</button>
+        <button id="lp-docs-modal-close" class="icon-btn"
+          style="color:#64748b; font-size:1.5rem; background:none; border:none; cursor:pointer;">&times;</button>
       </div>
 
       <!-- Current Documents List -->
       <div class="lp-act-modal-section">
         <div class="lp-act-section-label">Current Documents</div>
         <div id="lp-docs-current-list" class="lp-act-current-list">
-          <div class="lp-act-loading"><div class="spinner" style="width:24px;height:24px;"></div><span>Loading&hellip;</span></div>
+          <div class="lp-act-loading">
+            <div class="spinner" style="width:24px;height:24px;"></div><span>Loading&hellip;</span>
+          </div>
         </div>
       </div>
 
@@ -1993,15 +2285,18 @@ body.messenger-active,
           <div class="input-group">
             <label for="lp-doc-url">Document URL <span style="color:#ef4444;">*</span></label>
             <input type="url" id="lp-doc-url" required placeholder="https://drive.google.com/file/d/...">
-            <span style="font-size:0.75rem; color:#94a3b8; margin-top:4px; display:block;">Paste a Google Drive share link or any public PDF link. Viewers will open it in a new browser tab.</span>
+            <span style="font-size:0.75rem; color:#94a3b8; margin-top:4px; display:block;">Paste a Google Drive share
+              link or any public PDF link. Viewers will open it in a new browser tab.</span>
           </div>
           <div class="input-group">
-            <label for="lp-doc-desc">Short Description <span style="font-size:0.8rem; font-weight:400; color:#94a3b8;">(optional)</span></label>
+            <label for="lp-doc-desc">Short Description <span
+                style="font-size:0.8rem; font-weight:400; color:#94a3b8;">(optional)</span></label>
             <textarea id="lp-doc-desc" rows="2" placeholder="Brief note about this document&hellip;"></textarea>
           </div>
           <div id="lp-docs-form-error" class="login-error hidden"></div>
           <div class="modal-actions" style="margin-top:16px;">
-            <button type="submit" id="lp-docs-submit-btn" class="primary-btn" style="width:100%; background:#6d28d9;">Add Document</button>
+            <button type="submit" id="lp-docs-submit-btn" class="primary-btn"
+              style="width:100%; background:#6d28d9;">Add Document</button>
           </div>
         </form>
       </div>
@@ -2011,16 +2306,28 @@ body.messenger-active,
   <!-- Global Loading Modal -->
   <div id="global-loading-modal" class="modal-overlay hidden" style="z-index: 20000;">
     <div class="modal-card" style="max-width: 300px; text-align: center; padding: 40px; border-radius: 20px;">
-      <div class="spinner" style="margin: 0 auto 20px auto; width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--nbsc-blue); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+      <div class="spinner"
+        style="margin: 0 auto 20px auto; width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--nbsc-blue); border-radius: 50%; animation: spin 1s linear infinite;">
+      </div>
       <h3 style="margin: 0; font-size: 1.1rem; color: var(--nbsc-dark);">Processing...</h3>
-      <p id="global-loading-text" style="margin: 10px 0 0 0; font-size: 0.85rem; color: var(--text-muted);">Please wait a moment</p>
+      <p id="global-loading-text" style="margin: 10px 0 0 0; font-size: 0.85rem; color: var(--text-muted);">Please wait
+        a moment</p>
     </div>
   </div>
 
   <style>
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
   </style>
 
   <script src="env.js" type="module"></script>
   <script src="src/main.js" type="module"></script>
+
 </html>
