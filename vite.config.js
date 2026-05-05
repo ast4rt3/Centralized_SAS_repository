@@ -30,7 +30,7 @@ export default defineConfig({
         { src: 'env.js', dest: '.' },
         { src: 'assets/*', dest: 'assets' },
         { src: 'src/utils', dest: '.' },
-        { src: 'apps', dest: '.' }
+        { src: ['apps/**/*', '!apps/**/index.html'], dest: '.' }
       ]
     }),
     obfuscator({
