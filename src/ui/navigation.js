@@ -59,9 +59,9 @@ export function syncFromHash(systems) {
   const systemsData = systems || [];
 
   // 1. Handle special non-system pages
-  if (pageId === 'home' || pageId === 'messages' || pageId === 'database' || pageId === 'loading') {
+  if (pageId === 'home' || pageId === 'messages' || pageId === 'database' || pageId === 'loading' || pageId === 'service-viewer') {
     document.body.classList.remove('system-mode');
-    setActiveNav(pageId);
+    if (pageId !== 'service-viewer') setActiveNav(pageId);
     
     // Only show app UI if authenticated
     const session = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
@@ -72,6 +72,22 @@ export function syncFromHash(systems) {
       if (lp) {
         lp.classList.remove('hidden');
         document.body.classList.add('lp-mode');
+        
+        // Handle Landing Page internal routing
+        const mainContent = document.getElementById('lp-main-content');
+        const explorerView = document.getElementById('lp-service-explorer-view');
+        
+        if (pageId === 'service-viewer' && explorerView && mainContent) {
+          mainContent.style.display = 'none';
+          explorerView.style.display = 'block';
+          // Ensure we scroll to top
+          window.scrollTo(0, 0);
+          // Trigger the explorer load script
+          if (window.loadServiceCategory) window.loadServiceCategory();
+        } else if (mainContent && explorerView) {
+          mainContent.style.display = 'block';
+          explorerView.style.display = 'none';
+        }
       }
       return;
     }
@@ -79,6 +95,25 @@ export function syncFromHash(systems) {
     if (session) {
       showPage(pageId === 'loading' ? 'home' : pageId);
       ensureAppVisible();
+      
+      // If an authenticated user wants to view the service explorer natively
+      if (pageId === 'service-viewer') {
+        const lp = document.getElementById('landing-page');
+        if (lp) {
+          showPage('landing-page'); // We need to show the landing page div, but hide its main content
+          lp.classList.remove('hidden');
+          document.body.classList.add('lp-mode');
+          
+          const mainContent = document.getElementById('lp-main-content');
+          const explorerView = document.getElementById('lp-service-explorer-view');
+          if (mainContent && explorerView) {
+            mainContent.style.display = 'none';
+            explorerView.style.display = 'block';
+            window.scrollTo(0, 0);
+            if (window.loadServiceCategory) window.loadServiceCategory();
+          }
+        }
+      }
     }
 
     const systemFrame = document.getElementById('system-frame');

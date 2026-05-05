@@ -740,7 +740,8 @@
     </nav>
 
     <!-- Hero Section -->
-    <header id="lp-hero" class="lp-hero">
+    <div id="lp-main-content">
+      <header id="lp-hero" class="lp-hero">
       <div class="lp-hero-overlay"></div>
       <div class="lp-hero-content">
         <h1 class="lp-hero-headline">Student Affairs &amp; Services</h1>
@@ -803,7 +804,7 @@
         <div class="lp-services-grid">
 
           <!-- Student Welfare Services -->
-          <div class="lp-service-card">
+          <div class="lp-service-card lp-service-clickable" onclick="openServiceCategory('Student Welfare Services')">
             <div class="lp-service-icon"><i class='bx bx-heart'></i></div>
             <h3 class="lp-service-title">Student Welfare Services</h3>
             <p class="lp-service-desc">These ensure students’ basic needs and well-being:</p>
@@ -814,10 +815,11 @@
               <li><i class='bx bx-check'></i> Economic Enterprise Development (e.g., student employment)</li>
               <li><i class='bx bx-check'></i> Student Handbook Development</li>
             </ul>
+            <div class="lp-service-action"><i class='bx bx-right-arrow-alt'></i> View Offices</div>
           </div>
 
           <!-- Student Development Services -->
-          <div class="lp-service-card">
+          <div class="lp-service-card lp-service-clickable" onclick="openServiceCategory('Student Development Services')">
             <div class="lp-service-icon"><i class='bx bx-group'></i></div>
             <h3 class="lp-service-title">Student Development Services</h3>
             <p class="lp-service-desc">These focus on enhancing skills and engagement:</p>
@@ -829,10 +831,11 @@
               <li><i class='bx bx-check'></i> Sports Development</li>
               <li><i class='bx bx-check'></i> Cultural and Arts Programs</li>
             </ul>
+            <div class="lp-service-action"><i class='bx bx-right-arrow-alt'></i> View Offices</div>
           </div>
 
           <!-- Institutional Student Programs and Services -->
-          <div class="lp-service-card">
+          <div class="lp-service-card lp-service-clickable" onclick="openServiceCategory('Institutional Student Programs and Services')">
             <div class="lp-service-icon"><i class='bx bx-building-house'></i></div>
             <h3 class="lp-service-title">Institutional Student Programs and Services</h3>
             <p class="lp-service-desc">These are required support services provided by the institution:</p>
@@ -844,9 +847,17 @@
               <li><i class='bx bx-check'></i> Safety and Security Services</li>
               <li><i class='bx bx-check'></i> Services for Students with Special Needs (e.g., PWDs, IPs)</li>
             </ul>
+            <div class="lp-service-action"><i class='bx bx-right-arrow-alt'></i> View Offices</div>
           </div>
 
         </div>
+        
+        <script>
+          function openServiceCategory(categoryName) {
+            localStorage.setItem('sas_selected_service_category', categoryName);
+            window.location.hash = 'service-viewer';
+          }
+        </script>
       </div>
     </section>
 
@@ -938,6 +949,238 @@
         </div>
       </div>
     </section>
+    </div> <!-- /lp-main-content -->
+
+    <!-- Service Explorer View -->
+    <div id="lp-service-explorer-view" style="display:none; padding-top: 100px; min-height: 100vh; background: var(--lp-bg-alt);">
+      <div class="lp-container">
+        
+        <div class="lp-se-nav-bar" id="se-nav-bar" style="display:none; background:#fff; border-bottom:1px solid rgba(0,0,0,0.05); padding:12px 24px; align-items:center; gap:15px; border-radius:10px 10px 0 0;">
+          <button class="lp-se-btn-back" id="se-btn-back" style="background:none; border:none; color:var(--lp-primary); font-weight:700; font-size:.9rem; cursor:pointer; display:flex; align-items:center; gap:5px;"><i class='bx bx-left-arrow-alt'></i> Back to Categories</button>
+          <div class="lp-se-breadcrumb" id="se-breadcrumb" style="font-size:.9rem; font-weight:600; color:#64748b;">Category</div>
+        </div>
+
+        <div class="lp-se-content" style="padding: 30px 0;">
+          <div class="lp-se-loading-state" id="se-loading-state" style="display:flex; align-items:center; justify-content:center; padding:60px;">
+            <div style="width:32px; height:32px; border:3px solid #e2e8f0; border-top-color:var(--lp-primary); border-radius:50%; animation:spin 1s linear infinite;"></div>
+          </div>
+
+          <!-- Category View: List of Offices -->
+          <div class="lp-se-category-view" id="se-category-view" style="display:none;">
+            <div class="lp-se-category-header" style="margin-bottom:25px;">
+              <h2 id="se-category-title" style="font-size:2rem; font-weight:800; color:var(--lp-primary);">Services</h2>
+            </div>
+            <div class="lp-se-offices-grid" id="se-offices-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:20px;"></div>
+          </div>
+
+          <!-- Office Details View -->
+          <div class="lp-se-office-view" id="se-office-view" style="display:none; flex-direction:column; gap:25px;">
+            <div class="lp-se-office-info-card" style="background:linear-gradient(135deg, #fff, #f8fafc); border-radius:20px; padding:30px; box-shadow:var(--lp-shadow); border:1px solid rgba(0,0,0,0.03);">
+              <h2 class="lp-se-office-title" id="se-office-title" style="font-size:2.2rem; font-weight:800; color:var(--lp-primary); margin-bottom:10px;">Office Name</h2>
+              <div class="lp-se-office-info" id="se-office-info" style="font-size:1rem; color:#475569; line-height:1.6;">Information overview...</div>
+            </div>
+
+            <div class="lp-se-office-body-card" style="background:#fff; border-radius:16px; padding:30px; box-shadow:var(--lp-shadow); border:1px solid rgba(0,0,0,0.03);">
+              <h3 style="font-size:1.3rem; font-weight:800; color:#1e293b; margin-bottom:15px; display:flex; align-items:center; gap:8px;"><i class='bx bx-info-circle'></i> About Us</h3>
+              <div id="se-office-body" style="font-size:1rem; color:#334155; line-height:1.7; white-space:pre-wrap;">Detailed description goes here.</div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:25px;">
+              <div class="lp-se-office-body-card" style="background:#fff; border-radius:16px; padding:30px; box-shadow:var(--lp-shadow); border:1px solid rgba(0,0,0,0.03);">
+                <h3 style="font-size:1.3rem; font-weight:800; color:#1e293b; margin-bottom:15px; display:flex; align-items:center; gap:8px;"><i class='bx bx-folder-open'></i> Public Documents</h3>
+                <div id="se-docs-list" style="display:flex; flex-direction:column; gap:10px;"></div>
+              </div>
+
+              <div class="lp-se-export-card" style="background:#fff; border-radius:16px; padding:25px; box-shadow:var(--lp-shadow); border:1px solid rgba(0,0,0,0.03); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:15px;">
+                <h3 style="font-size:1.3rem; font-weight:800; color:#1e293b; margin:0;"><i class='bx bx-bar-chart-alt-2'></i> Analytics</h3>
+                <p style="font-size:.9rem; color:#64748b;">Download engagement and visitor reports for this office.</p>
+                <button id="se-btn-export" style="background:var(--lp-primary); color:#fff; padding:10px 20px; border-radius:10px; border:none; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px; transition:0.2s;"><i class='bx bxs-download'></i> Export Data (CSV)</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const BACKEND_GAS_URL = window.ENV?.BACKEND_GAS_URL || 'https://script.google.com/macros/s/AKfycbyNmsUvDndrM5L2v_E3gJvM2jHqI1o30Tz8X-aI2H9vX-xYjZ0/exec';
+
+      async function sasFetch(action, params = {}) {
+        if (!BACKEND_GAS_URL) {
+          console.warn("Backend URL missing!");
+          return { success: false, message: "Backend URL missing" };
+        }
+        try {
+          const url = new URL(BACKEND_GAS_URL);
+          url.searchParams.append('action', action);
+          for (const [key, value] of Object.entries(params)) {
+            url.searchParams.append(key, value);
+          }
+          const r = await fetch(url.toString());
+          return await r.json();
+        } catch (e) {
+          console.error("SAS Fetch Error:", e);
+          return { success: false, message: e.message };
+        }
+      }
+
+      let seCurrentCategoryName = 'Services';
+      let seCurrentOfficeId = null;
+
+      window.loadServiceCategory = async function() {
+        const loadingState = document.getElementById('se-loading-state');
+        const categoryView = document.getElementById('se-category-view');
+        const officeView = document.getElementById('se-office-view');
+        const navBar = document.getElementById('se-nav-bar');
+        const breadcrumb = document.getElementById('se-breadcrumb');
+
+        seCurrentCategoryName = localStorage.getItem('sas_selected_service_category') || 'Services';
+        
+        document.getElementById('se-category-title').textContent = seCurrentCategoryName;
+        breadcrumb.textContent = seCurrentCategoryName;
+
+        loadingState.style.display = 'flex';
+        categoryView.style.display = 'none';
+        officeView.style.display = 'none';
+        navBar.style.display = 'none';
+
+        try {
+          const res = await sasFetch('getOfficesByCategory', { categoryName: seCurrentCategoryName });
+          
+          loadingState.style.display = 'none';
+          if (res.success) {
+            renderOffices(res.offices);
+            categoryView.style.display = 'block';
+            navBar.style.display = 'flex';
+          } else {
+            document.getElementById('se-offices-grid').innerHTML = `<p style="color:red;">Error: ${res.message}</p>`;
+            categoryView.style.display = 'block';
+            navBar.style.display = 'flex';
+          }
+        } catch (err) {
+          loadingState.style.display = 'none';
+          document.getElementById('se-offices-grid').innerHTML = `<p style="color:red;">Network Error.</p>`;
+          categoryView.style.display = 'block';
+          navBar.style.display = 'flex';
+        }
+      };
+
+      function renderOffices(offices) {
+        const grid = document.getElementById('se-offices-grid');
+        if (!offices || offices.length === 0) {
+          grid.innerHTML = '<p style="color:#64748b;">No offices found in this category.</p>';
+          return;
+        }
+
+        grid.innerHTML = offices.map(o => `
+          <div class="lp-se-office-card" data-id="${o.id}" data-name="${o.name}" style="background:#fff; border-radius:16px; border:1px solid #e2e8f0; padding:24px; box-shadow:var(--lp-shadow); cursor:pointer; transition:0.2s;">
+            <h3 style="font-size:1.2rem; font-weight:800; color:var(--lp-dark); margin-bottom:8px;">${o.name}</h3>
+            <p style="font-size:.9rem; color:#64748b; display:-webkit-box; -webkit-line-clamp:3; line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">${o.info || 'No information available.'}</p>
+          </div>
+        `).join('');
+
+        grid.querySelectorAll('.lp-se-office-card').forEach(card => {
+          card.addEventListener('mouseover', () => {
+            card.style.transform = 'translateY(-4px)';
+            card.style.borderColor = 'var(--lp-accent)';
+            card.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
+          });
+          card.addEventListener('mouseout', () => {
+            card.style.transform = 'none';
+            card.style.borderColor = '#e2e8f0';
+            card.style.boxShadow = 'var(--lp-shadow)';
+          });
+          card.addEventListener('click', () => {
+            loadOfficeDetails(card.getAttribute('data-id'), card.getAttribute('data-name'));
+          });
+        });
+      }
+
+      async function loadOfficeDetails(officeId, officeName) {
+        seCurrentOfficeId = officeId;
+        const categoryView = document.getElementById('se-category-view');
+        const loadingState = document.getElementById('se-loading-state');
+        const navBar = document.getElementById('se-nav-bar');
+        const officeView = document.getElementById('se-office-view');
+        const breadcrumb = document.getElementById('se-breadcrumb');
+        
+        categoryView.style.display = 'none';
+        loadingState.style.display = 'flex';
+        navBar.style.display = 'flex';
+        breadcrumb.textContent = `${seCurrentCategoryName} / ${officeName}`;
+
+        try {
+          const res = await sasFetch('getOfficeDetails', { officeId });
+          loadingState.style.display = 'none';
+
+          if (res.success) {
+            document.getElementById('se-office-title').textContent = res.office.name;
+            document.getElementById('se-office-info').textContent = res.office.info || 'No info provided.';
+            document.getElementById('se-office-body').textContent = res.office.office_body || 'No detailed description available.';
+
+            const docsList = document.getElementById('se-docs-list');
+            if (!res.docs || res.docs.length === 0) {
+              docsList.innerHTML = '<div style="color:#64748b; font-size:.9rem;">No documents available.</div>';
+            } else {
+              docsList.innerHTML = res.docs.map(d => `
+                <a href="${d.url}" target="_blank" style="display:flex; align-items:center; gap:12px; padding:12px 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; text-decoration:none; color:var(--lp-dark); font-weight:600; font-size:.95rem;">
+                  <i class='bx bxs-file-pdf' style="color:#dc2626; font-size:1.4rem;"></i>
+                  <span>${d.title}</span>
+                </a>
+              `).join('');
+            }
+            officeView.style.display = 'flex';
+          } else {
+            alert("Failed to load office details: " + res.message);
+            window.loadServiceCategory();
+          }
+        } catch (err) {
+          loadingState.style.display = 'none';
+          alert("Network Error.");
+          window.loadServiceCategory();
+        }
+      }
+
+      document.getElementById('se-btn-export').addEventListener('click', async () => {
+        if (!seCurrentOfficeId) return;
+        const btn = document.getElementById('se-btn-export');
+        const origText = btn.innerHTML;
+        btn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Exporting...';
+        btn.disabled = true;
+
+        try {
+          const res = await sasFetch('exportOfficeAnalytics', { officeId: seCurrentOfficeId });
+          if (res.success && res.analytics && res.analytics.exportData) {
+            const blob = new Blob([res.analytics.exportData], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `office_analytics_${seCurrentOfficeId}.csv`);
+            a.click();
+            window.URL.revokeObjectURL(url);
+          } else {
+            alert("Failed to generate export: " + (res.message || "No data."));
+          }
+        } catch (e) {
+          alert("Export failed.");
+        } finally {
+          btn.innerHTML = origText;
+          btn.disabled = false;
+        }
+      });
+
+      document.getElementById('se-btn-back').addEventListener('click', () => {
+        const officeView = document.getElementById('se-office-view');
+        if (officeView.style.display === 'flex') {
+          // If in office view, go back to category list
+          officeView.style.display = 'none';
+          window.loadServiceCategory();
+        } else {
+          // If in category view, go back to landing page home
+          window.location.hash = '#home';
+        }
+      });
+    </script>
 
     <!-- Footer -->
     <footer class="lp-footer">
