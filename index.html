@@ -908,6 +908,7 @@
       transition: all 0.3s ease;
       border: 1px solid #e2e8f0;
       flex-shrink: 0;
+      cursor: pointer;
       width: 100%; /* Ensure pill takes full container width */
     }
 
@@ -1101,14 +1102,14 @@
                     ? `<div class="lp-service-sub-container">
                          <div class="lp-service-sub-list" id="ticker-${idx}">
                            ${offices.map(off => `
-                             <div class="lp-service-sub-item">
+                             <div class="lp-service-sub-item" onclick="openServiceOffice('${off.id}', '${off.name.replace(/'/g, "\\'")}', event)">
                                <i class='bx bx-check-circle'></i>
                                <span>${off.name}</span>
                              </div>
                            `).join('')}
                            <!-- Copy first item for seamless loop -->
                            ${offices.length > 0 ? `
-                             <div class="lp-service-sub-item">
+                             <div class="lp-service-sub-item" onclick="openServiceOffice('${offices[0].id}', '${offices[0].name.replace(/'/g, "\\'")}', event)">
                                <i class='bx bx-check-circle'></i>
                                <span>${offices[0].name}</span>
                              </div>
@@ -1170,6 +1171,13 @@
 
           function openServiceCategory(categoryName) {
             localStorage.setItem('sas_selected_service_category', categoryName);
+            window.location.hash = 'service-viewer';
+          }
+
+          function openServiceOffice(officeId, officeName, event) {
+            if (event) event.stopPropagation(); // Prevent card click
+            localStorage.setItem('sas_selected_office_id', officeId);
+            localStorage.setItem('sas_selected_office_name', officeName);
             window.location.hash = 'service-viewer';
           }
 
