@@ -740,6 +740,7 @@
     .lp-se-office-title {
       background: linear-gradient(135deg, var(--lp-primary), #1e40af);
       -webkit-background-clip: text;
+      background-clip: text;
       -webkit-text-fill-color: transparent;
       letter-spacing: -1px;
     }
@@ -793,6 +794,114 @@
       color: #1e293b;
     }
 
+    /* --- Vertical Services Carousel --- */
+    .lp-service-card {
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 25px !important;
+      background: rgba(255, 255, 255, 0.95) !important;
+      border: 1px solid rgba(255, 255, 255, 0.5) !important;
+      backdrop-filter: blur(15px);
+      border-radius: 28px !important;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    }
+
+    .lp-service-title {
+      font-size: 1.2rem !important;
+      font-weight: 800 !important;
+      color: #0f172a !important;
+      background: linear-gradient(135deg, #003366, #1e40af);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 5px !important;
+    }
+
+    .lp-service-sub-container {
+      height: 50px; /* Focused on one item at a time */
+      overflow: hidden;
+      position: relative;
+      margin-top: 5px;
+      border-top: 1px solid rgba(0, 51, 102, 0.1);
+      padding-top: 10px;
+      /* Sharper In/Out Fade for Single Item */
+      -webkit-mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);
+      mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);
+    }
+
+    .lp-service-sub-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0; /* No gap for precise stepping */
+      transition: transform 0.6s cubic-bezier(0.85, 0, 0.15, 1);
+      will-change: transform;
+    }
+
+    .lp-service-sub-list:hover {
+      animation-play-state: paused;
+    }
+
+    @keyframes vertical-scroll {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(-50%); }
+    }
+
+    .lp-service-sub-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 40px; /* Fixed height for ticker */
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #1e3a8a;
+      padding: 0 14px;
+      background: rgba(30, 58, 138, 0.05);
+      border-radius: 12px;
+      white-space: nowrap;
+      transition: all 0.3s ease;
+      border: 1px solid transparent;
+      flex-shrink: 0;
+    }
+
+    .lp-service-sub-item:hover {
+      background: var(--lp-primary);
+      color: white;
+      transform: scale(1.02) translateX(5px);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .lp-service-sub-item i {
+      color: var(--lp-primary);
+      font-size: 1rem;
+    }
+    
+    .lp-service-sub-item:hover i {
+      color: white;
+    }
+
+    .lp-service-card .lp-service-action {
+      margin-top: auto;
+      font-weight: 800;
+      color: var(--lp-primary);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.9rem;
+      transition: gap 0.3s;
+    }
+
+    .lp-service-card:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 20px 40px rgba(0, 51, 102, 0.1) !important;
+      border-color: var(--lp-primary) !important;
+    }
+
+    .lp-service-card:hover .lp-service-action {
+      gap: 10px;
+    }
     .lp-se-export-btn {
       background: var(--lp-primary) !important;
       color: #fff !important;
@@ -928,20 +1037,77 @@
               const res = await sasFetch('getServiceCategories');
               const categories = res.categories || res.data || [];
               if (res.success && categories.length > 0) {
-                grid.innerHTML = categories.map(cat => `
-                  <div class="lp-service-card lp-service-clickable" onclick="openServiceCategory('${cat.name.replace(/'/g, "\\'")}')">
-                    <div class="lp-service-icon"><i class='bx ${cat.icon_class || 'bx-folder'}'></i></div>
-                    <h3 class="lp-service-title">${cat.name}</h3>
-                    <p class="lp-service-desc">${cat.description || 'Comprehensive support services for students.'}</p>
-                    <div class="lp-service-action"><i class='bx bx-right-arrow-alt'></i> View Offices</div>
-                  </div>
-                `).join('');
+                grid.innerHTML = categories.map((cat, idx) => {
+                  const offices = cat.offices || [];
+                  const subItemsHtml = offices.length > 0 
+                    ? `<div class="lp-service-sub-container">
+                         <div class="lp-service-sub-list" id="ticker-${idx}">
+                           ${offices.map(off => `
+                             <div class="lp-service-sub-item">
+                               <i class='bx bx-check-circle'></i>
+                               <span>${off.name}</span>
+                             </div>
+                           `).join('')}
+                           <!-- Copy first item for seamless loop -->
+                           ${offices.length > 0 ? `
+                             <div class="lp-service-sub-item">
+                               <i class='bx bx-check-circle'></i>
+                               <span>${offices[0].name}</span>
+                             </div>
+                           ` : ''}
+                         </div>
+                       </div>`
+                    : `<p class="lp-service-desc">${cat.description || 'Comprehensive support services for students.'}</p>`;
+
+                  return `
+                    <div class="lp-service-card lp-service-clickable" onclick="openServiceCategory('${cat.name.replace(/'/g, "\\'")}')">
+                      <div class="lp-service-icon"><i class='bx ${cat.icon_class || 'bx-folder'}'></i></div>
+                      <h3 class="lp-service-title">${cat.name}</h3>
+                      ${subItemsHtml}
+                      <div class="lp-service-action">Explore All <i class='bx bx-right-arrow-alt'></i></div>
+                    </div>
+                  `;
+                }).join('');
+
+                // Start Tickers
+                categories.forEach((cat, idx) => {
+                  if (cat.offices && cat.offices.length > 1) {
+                    initServiceTicker(idx, cat.offices.length);
+                  }
+                });
               } else {
                 grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:#ef4444;">Error loading services.</p>';
               }
             } catch (e) {
               grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:#ef4444;">Connection error.</p>';
             }
+          }
+
+          function initServiceTicker(idx, count) {
+            const list = document.getElementById(`ticker-${idx}`);
+            if (!list) return;
+            
+            let current = 0;
+            const itemHeight = 40; // Matches CSS
+            
+            setInterval(() => {
+              // Pause if hovering on parent card
+              if (list.closest('.lp-service-card').matches(':hover')) return;
+
+              current++;
+              list.style.transform = `translateY(-${current * itemHeight}px)`;
+              
+              if (current >= count) {
+                setTimeout(() => {
+                  list.style.transition = 'none';
+                  current = 0;
+                  list.style.transform = `translateY(0)`;
+                  setTimeout(() => {
+                    list.style.transition = 'transform 0.6s cubic-bezier(0.85, 0, 0.15, 1)';
+                  }, 50);
+                }, 600); // Wait for transition to end
+              }
+            }, 3000); // 3 second pause
           }
 
           function openServiceCategory(categoryName) {
