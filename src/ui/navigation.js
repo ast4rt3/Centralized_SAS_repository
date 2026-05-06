@@ -58,6 +58,41 @@ export function syncFromHash(systems) {
   
   const systemsData = systems || [];
 
+  // 0. Handle Landing Page internal anchors (e.g. #lp-about, #lp-services)
+  // We handle this FIRST to allow smooth transitions from any view back to the landing page sections
+  if (pageId.startsWith('lp-')) {
+    const lp = document.getElementById('landing-page');
+    if (lp) {
+      lp.classList.remove('hidden');
+      document.body.classList.add('lp-mode');
+      
+      const mainContent = document.getElementById('lp-main-content');
+      const explorerView = document.getElementById('lp-service-explorer-view');
+      
+      // If we're coming from the Service Viewer or elsewhere, ensure main landing content is shown
+      if (mainContent && explorerView) {
+        mainContent.style.display = 'block';
+        explorerView.style.display = 'none';
+        
+        // Remove 'scrolled' class only if we're at the very top
+        const navbar = document.querySelector('.lp-navbar');
+        if (navbar && window.scrollY < 40) {
+          navbar.classList.remove('scrolled');
+        }
+
+        // Manually trigger scroll to the target element since browser might have failed
+        // if it was display:none during the initial hash change
+        setTimeout(() => {
+          const target = document.getElementById(pageId);
+          if (target) {
+            target.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 50);
+      }
+    }
+    return;
+  }
+
   // 1. Handle special non-system pages
   if (pageId === 'home' || pageId === 'messages' || pageId === 'database' || pageId === 'loading' || pageId === 'service-viewer') {
     document.body.classList.remove('system-mode');
@@ -120,6 +155,7 @@ export function syncFromHash(systems) {
     if (systemFrame) systemFrame.src = 'about:blank';
     return;
   }
+
 
   // 2. Resolve System
   const sys = systemsData.find(s => s.id === pageId);

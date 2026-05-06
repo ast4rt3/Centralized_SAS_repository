@@ -1244,12 +1244,9 @@ document.addEventListener('DOMContentLoaded', () => {
       link.addEventListener('click', (e) => {
         const href = link.getAttribute('href');
         if (href.startsWith('#lp-')) {
-          e.preventDefault();
-          const target = document.querySelector(href);
-          if (target) {
-            target.scrollIntoView({ behavior: 'smooth' });
-            lpNavLinks.classList.remove('active');
-          }
+          // We let the default behavior happen so hashchange event fires, 
+          // allowing syncFromHash to handle the view transitions and scrolling.
+          lpNavLinks.classList.remove('active');
         }
       });
     });
@@ -1326,7 +1323,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const navbar = document.querySelector('.lp-navbar');
     const scrollPos = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
     if (navbar && document.body.classList.contains('lp-mode')) {
-      if (scrollPos > 40) {
+      const explorerView = document.getElementById('lp-service-explorer-view');
+      const isExplorerVisible = explorerView && explorerView.style.display === 'block';
+
+      if (scrollPos > 40 || isExplorerVisible) {
         navbar.classList.add('scrolled');
         document.body.classList.add('scrolled');
       } else {
