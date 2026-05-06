@@ -1051,6 +1051,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const js = document.createElement('script');
       js.id = 'facebook-jssdk';
       js.src = 'https://connect.facebook.net/en_US/sdk.js';
+      js.crossOrigin = "anonymous";
       document.head.appendChild(js);
     });
 
@@ -1060,21 +1061,32 @@ document.addEventListener('DOMContentLoaded', () => {
   function getFacebookVideoUrl(url) {
     if (!url) return null;
     const urlLower = url.toLowerCase();
-    // Support full URLs, mobile URLs, IDs, and paths
-    if (urlLower.includes('facebook.com') || urlLower.includes('fb.watch') || urlLower.includes('fb.com') || urlLower.includes('/videos/') || urlLower.includes('watch?v=')) {
+    
+    // 1. Check for pure numeric ID (Facebook IDs are typically 10-18 digits)
+    if (/^\d{10,18}$/.test(url)) {
+      return `https://www.facebook.com/video.php?v=${url}`;
+    }
+
+    // 2. Check for standard FB domains and patterns
+    if (urlLower.includes('facebook.com') || urlLower.includes('fb.watch') || urlLower.includes('fb.com') || urlLower.includes('/videos/') || urlLower.includes('/reel/') || urlLower.includes('watch?v=')) {
       let fbHref = url;
 
       // Try to normalize to a very standard format if possible
-      const vMatch = url.match(/[?&]v=([^&#]+)/) || url.match(/\/videos\/([^/?#]+)/) || url.match(/\/reel\/([^/?#]+)/);
+      const vMatch = url.match(/[?&]v=([^&#]+)/) || url.match(/\/videos\/([^/?#]+)/) || url.match(/\/reel\/([^/?#]+)/) || url.match(/\/posts\/([^/?#]+)/);
       if (vMatch) {
-        fbHref = `https://www.facebook.com/video.php?v=${vMatch[1]}`;
+        // If it's a numeric ID in the match, use the PHP format which is very reliable for the SDK
+        if (/^\d+$/.test(vMatch[1])) {
+          fbHref = `https://www.facebook.com/video.php?v=${vMatch[1]}`;
+        } else {
+          fbHref = url; // Keep original if it's a vanity URL or non-numeric
+        }
       } else if (url.startsWith('/')) {
         fbHref = 'https://www.facebook.com' + url;
       } else if (!url.includes('://')) {
         fbHref = 'https://www.facebook.com/' + url;
       }
 
-      return fbHref; // Return raw URL for FB SDK
+      return fbHref;
     }
     return null;
   }
@@ -3588,23 +3600,52 @@ document.addEventListener('DOMContentLoaded', () => {
           if (isEdit) payload.timestamp = editTimestamp;
 
           zzProgress.update(90);
-          const r = await fetch(BACKEND_GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
-          const responseData = await r.json();
+          console.log(`[Diagnostic] Sending ${payload.action} to GAS...`, { ...payload, token: 'REDACTED' });
+          
+          let responseData;
+          try {
+            const r = await fetch(BACKEND_GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+            responseData = await r.json();
+          } catch (fetchErr) {
+            console.warn(`[Diagnostic] ${payload.action} fetch error:`, fetchErr);
+            // Special handling for GAS "Failed to fetch" (often a CORS redirect issue on success)
+            if (fetchErr.message === "Failed to fetch" || fetchErr.name === "TypeError") {
+              console.log("[Diagnostic] Potential GAS redirect success masked as error. Verifying...");
+              zzProgress.update(95);
+              await new Promise(res => setTimeout(res, 2000)); // Wait for GAS to finish
+              const freshData = await fetchPosts();
+              const postExists = freshData && freshData.posts && freshData.posts.some(p => 
+                p.title === title && (p.description === desc || p.imageUrl === cloudinaryUrl)
+              );
+
+              if (postExists) {
+                console.log("[Diagnostic] Post verified in database! Recovery successful.");
+                responseData = { success: true, message: "Sync successful (recovered from network delay)." };
+              } else {
+                throw fetchErr;
+              }
+            } else {
+              throw fetchErr;
+            }
+          }
+
+          console.log(`[Diagnostic] GAS Response for ${payload.action}:`, responseData);
           zzProgress.update(100);
 
-          if (responseData.success) {
+          if (responseData && responseData.success) {
             await zzProgress.done();
             modal.classList.add('hidden');
             window.resetAddPostForm();
             showToast(responseData.message || "Success!", 'success');
             fetchPosts();
           } else {
-            throw new Error(responseData.message || "Failed to post.");
+            throw new Error(responseData?.message || "Failed to post.");
           }
         } catch (err) {
           zzProgress.reset();
+          console.error("[Diagnostic] Final submission error:", err);
           if (errorMsg) {
-            errorMsg.textContent = err.message;
+            errorMsg.textContent = err.message || "An unexpected error occurred during submission.";
             errorMsg.classList.remove('hidden');
           }
         }
@@ -3703,11 +3744,13 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         empty.classList.remove('hidden');
       }
+      return data;
     } catch (err) {
       loading.classList.add('hidden');
       empty.innerHTML = "<p>Error loading posts. Please try again later.</p>";
       empty.classList.remove('hidden');
       console.error("Fetch Posts Error:", err);
+      return null;
     }
   }
 
@@ -4053,6 +4096,11 @@ document.addEventListener('DOMContentLoaded', () => {
       container.appendChild(globalTicker);
 
       initCarousel(container);
+
+      // Trigger Facebook SDK to parse any newly added video placeholders
+      if (window.FB && window.FB.XFBML) {
+        try { window.FB.XFBML.parse(container); } catch (e) { }
+      }
     } else {
       // Build Standard Vertical Card Feed for Admins & Users
       posts.forEach(post => {
@@ -4405,8 +4453,10 @@ document.addEventListener('DOMContentLoaded', () => {
               showLoading("Deleting post...");
               try {
                 const payload = { action: "deletePost", username: userObj.username, token: userObj.token, timestamp: post.timestamp, imageUrl: post.imageUrl };
+                console.log("[Diagnostic] Sending deletePost to GAS...", { ...payload, token: 'REDACTED' });
                 const r = await fetch(BACKEND_GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
                 const res = await r.json();
+                console.log("[Diagnostic] GAS Response for deletePost:", res);
                 if (res.success) { showToast(res.message, 'success'); fetchPosts(); }
                 else { showToast(res.message || "Failed to delete.", 'error'); }
               } catch (e) { showToast("Network error.", 'error'); }
@@ -4765,8 +4815,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (!videoEl.paused && videoEl.currentTime === lastTime) {
               stalledCount++;
-              if (stalledCount > 15) { // 15 seconds of no progress while playing
-                console.log("Live native video stalled! Expiring...");
+              if (stalledCount > 30) { // Increased to 30 seconds to be less aggressive
+                console.warn(`Live native video stalled for 30s at ${videoEl.currentTime}. Triggering auto-expiry...`);
                 clearInterval(liveHeartbeat);
                 expirePostOnBackend(timestamp);
               }
@@ -4803,8 +4853,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (state === 1) { // Playing
                   if (currentTime === lastTime) {
                     stalledCount++;
-                    if (stalledCount > 20) { // 20s stall
-                      console.log("YouTube Live stalled! Expiring...");
+                    if (stalledCount > 30) {
+                      console.warn(`YouTube Live stalled for 30s at ${currentTime}. Triggering auto-expiry...`);
                       clearInterval(checkInterval);
                       expirePostOnBackend(timestamp);
                     }
@@ -4938,8 +4988,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (isLive) {
                       if (pos === lastPos) {
                         stalledCount++;
-                        if (stalledCount > 20) {
-                          console.log("Facebook Live stalled! Expiring...");
+                        if (stalledCount > 30) {
+                          console.warn(`Facebook Live stalled for 30s at ${pos}. Triggering auto-expiry...`);
                           clearInterval(fbPoll);
                           expirePostOnBackend(timestamp);
                         }
