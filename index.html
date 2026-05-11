@@ -1304,11 +1304,6 @@
       <header id="lp-hero" class="lp-hero">
       <div class="lp-hero-overlay"></div>
       <div class="lp-hero-content">
-        <h1 class="lp-hero-headline">Student Affairs &amp; Services</h1>
-        <p class="lp-hero-subtext">
-          The Student Affairs &amp; Services and Development Division of Northern Bukidnon State College (SASDD-NBSC)
-          &mdash; serving students with holistic programs, welfare support, and development opportunities.
-        </p>
         <div class="lp-hero-actions">
           <a href="#lp-about" class="lp-btn-primary">Learn More</a>
         </div>
@@ -1426,7 +1421,7 @@
             if (!list) return;
             
             let current = 0;
-            const itemHeight = 50; // Matches new CSS
+            const itemHeight = 44; // Sync with new compact CSS
             
             setInterval(() => {
               // Pause if hovering on parent card
@@ -1447,6 +1442,78 @@
               }
             }, 3000); // 3 second pause
           }
+
+          function initObjectiveCarousel() {
+            const grid = document.querySelector('.lp-objective-grid');
+            if (!grid) return;
+            
+            // Clone items for a seamless infinite loop
+            const items = Array.from(grid.children);
+            items.forEach(item => grid.appendChild(item.cloneNode(true)));
+
+            let isPaused = false;
+            let currentScroll = 0;
+            let scrollSpeed = 0.6; // Linear pixels per frame
+            
+            function step() {
+              if (!isPaused && window.innerWidth <= 991) {
+                currentScroll += scrollSpeed;
+                
+                // Seamless reset: jump back to start once the first set is scrolled
+                if (currentScroll >= grid.scrollWidth / 2) {
+                  currentScroll = 0;
+                }
+                grid.scrollLeft = currentScroll;
+              }
+              requestAnimationFrame(step);
+            }
+            
+            grid.addEventListener('touchstart', () => isPaused = true);
+            grid.addEventListener('touchend', () => {
+              isPaused = false;
+              currentScroll = grid.scrollLeft;
+            });
+            
+            step();
+          }
+
+          function initServiceCarousel() {
+            const grid = document.getElementById('lp-services-grid');
+            if (!grid) return;
+            
+            let currentIndex = 0;
+            let isPaused = false;
+            
+            setInterval(() => {
+              if (isPaused || window.innerWidth > 991) return;
+              
+              const cards = grid.querySelectorAll('.lp-service-card');
+              if (cards.length <= 1) return;
+              
+              currentIndex = (currentIndex + 1) % cards.length;
+              const cardWidth = cards[0].offsetWidth + 15; // Card + gap
+              
+              grid.scrollTo({
+                left: currentIndex * cardWidth,
+                behavior: 'smooth'
+              });
+            }, 5000); // 5 second per slide
+            
+            grid.addEventListener('touchstart', () => isPaused = true);
+            grid.addEventListener('touchend', () => {
+              setTimeout(() => {
+                const cardWidth = grid.querySelector('.lp-service-card')?.offsetWidth + 15;
+                if (cardWidth) currentIndex = Math.round(grid.scrollLeft / cardWidth);
+                isPaused = false;
+              }, 600);
+            });
+          }
+
+          document.addEventListener('DOMContentLoaded', async () => {
+            await loadLPServices();
+            initObjectiveCarousel();
+            initServiceCarousel();
+          });
 
           function openServiceCategory(categoryName) {
             localStorage.setItem('sas_selected_service_category', categoryName);

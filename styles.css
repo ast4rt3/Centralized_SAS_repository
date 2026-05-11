@@ -4841,25 +4841,23 @@ body.lp-mode .main-wrapper {
 
 /* --- Hero Section --- */
 .lp-hero {
-  width: 100%;
-  height: 100vh;
-  min-height: 600px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   position: relative;
   text-align: center;
   color: var(--lp-white);
-  padding-top: 80px;
+  padding: 120px 0;
   background: #001a33;
   overflow: hidden;
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .lp-hero-overlay {
   position: absolute;
   top: 0; left: 0; width: 100%; height: 100%;
-  background: url('https://images.unsplash.com/photo-1541339907198-e08756ebafe3?auto=format&fit=crop&w=1920&q=80') center/cover no-repeat;
-  opacity: 0.3;
+  background: url('assets/SAS_landing_page_header.jpg') center/cover no-repeat;
+  opacity: 0.6;
   z-index: 1;
 }
 
@@ -4876,14 +4874,13 @@ body.lp-mode .main-wrapper {
   line-height: 1.1;
   margin-bottom: 25px;
   letter-spacing: -2px;
+  opacity: 0; /* Hidden to show image text */
 }
 
 .lp-hero-subtext {
-  font-size: clamp(1rem, 3vw, 1.35rem);
+  font-size: 1.2rem;
   margin-bottom: 40px;
-  opacity: 0.9;
-  max-width: 700px;
-  margin-inline: auto;
+  opacity: 0; /* Hidden to show image text */
 }
 
 .lp-btn-primary {
@@ -5023,16 +5020,30 @@ body.lp-mode .main-wrapper {
   gap: 16px;
 }
 
+/* Horizontal scroll indicator for mobile */
+.lp-scroll-hint {
+  display: none;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--lp-text-muted);
+  margin-top: 10px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
 .lp-objective-item {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
   background: var(--lp-white);
   border: 1px solid rgba(0, 51, 102, 0.08);
   border-radius: 12px;
-  padding: 16px 18px;
+  padding: 14px 18px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.05);
   transition: transform 0.2s, box-shadow 0.2s;
+  height: auto; /* Fit to content */
+  align-self: center;
 }
 
 .lp-objective-item:hover {
@@ -5196,6 +5207,99 @@ body.lp-mode .main-wrapper {
 
   .lp-nav-links li {
     margin: 12px 0;
+  }
+
+  /* UX Optimization: Mobile-friendly Hero Banner */
+  .lp-hero {
+    min-height: 40vh; /* Shorter for mobile to match banner aspect ratio */
+    padding: 40px 0;
+  }
+
+  .lp-hero-overlay {
+    background-size: contain; /* Ensure text is NOT cut off */
+    background-position: center;
+    opacity: 0.9; /* Slightly higher for mobile clarity */
+  }
+
+  /* UX Optimization: Horizontal scroll for long lists on mobile */
+  .lp-objective-grid {
+    display: flex !important;
+    overflow-x: auto;
+    gap: 12px;
+    padding: 5px 20px 20px;
+    margin: 0 -20px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    scroll-snap-type: none; /* Disable snapping for smooth linear movement */
+  }
+  
+  .lp-objective-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .lp-objective-item {
+    flex: 0 0 85%;
+    scroll-snap-align: none;
+  }
+
+  .lp-scroll-hint {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin-top: 10px;
+  }
+
+  .lp-scroll-hint i {
+    font-size: 1.8rem;
+    color: var(--lp-primary);
+    background: rgba(0, 51, 102, 0.06);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.6;
+  }
+
+  /* UX Optimization: Horizontal scroll for main services on mobile */
+  .lp-services-grid {
+    display: flex !important;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 15px;
+    padding: 10px 20px 25px;
+    margin: 0 -20px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .lp-services-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .lp-service-card {
+    flex: 0 0 85%;
+    scroll-snap-align: center;
+    padding: 30px 20px;
+    border-radius: 16px;
+    height: auto;
+  }
+
+  .lp-service-icon {
+    width: 55px;
+    height: 55px;
+    font-size: 1.8rem;
+    margin-bottom: 15px;
+  }
+
+  .lp-service-title {
+    font-size: 1.25rem;
+  }
+
+  .lp-service-sub-item {
+    height: 44px; /* Slightly more compact ticker */
+    font-size: 0.85rem;
   }
 
   .lp-mobile-toggle {
