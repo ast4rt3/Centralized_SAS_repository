@@ -920,6 +920,17 @@ body.system-mode .content {
   background: rgba(249, 168, 38, 0.1);
 }
 
+.lp-nav-menu {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+}
+
+.lp-nav-actions {
+  display: flex;
+  align-items: center;
+}
+
 .header-actions {
   display: flex;
   align-items: center;
@@ -4802,13 +4813,12 @@ body.lp-mode .main-wrapper {
   gap: 10px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   font-size: 0.9rem;
-  box-shadow: 0 4px 15px rgba(240, 173, 78, 0.3);
+  /* Removed raised shadow and transform as per user request */
 }
 
 .lp-btn-login:hover {
   background: #e6911c;
-  transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 8px 25px rgba(240, 173, 78, 0.45);
+  filter: brightness(1.1);
 }
 
 .lp-nav-actions {
@@ -5127,30 +5137,61 @@ body.lp-mode .main-wrapper {
 @media (max-width: 991px) {
   .lp-nav-links, .lp-nav-actions {
     display: none;
+  }
+
+  .lp-nav-menu {
+    display: none;
     position: absolute;
+    top: 70px;
     left: 0;
     width: 100%;
     background: #001a33;
     flex-direction: column;
     text-align: center;
-    padding: 15px 0;
+    padding: 25px 0;
     box-shadow: 0 10px 20px rgba(0,0,0,0.5);
     z-index: 10001;
-  }
-  
-  .lp-nav-links {
-    top: 70px;
-  }
-  
-  .lp-nav-actions {
-    top: 310px; /* Positions right below the links */
-    padding-bottom: 25px;
-    align-items: center;
+    transition: all 0.3s ease;
   }
 
-  .lp-nav-links.active, 
-  .lp-nav-links.active ~ .lp-nav-actions {
+  .lp-nav-menu.active {
     display: flex;
+  }
+  
+  .lp-nav-menu .lp-nav-links {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 15px;
+    background: transparent !important;
+    padding: 0;
+    margin-bottom: 20px;
+  }
+
+  .lp-nav-menu .lp-nav-actions {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    background: transparent !important;
+    padding: 0;
+    margin-top: 10px;
+  }
+
+  /* Fix: Navigation text visibility and background matching navbar state */
+  .lp-navbar.scrolled .lp-nav-menu {
+    background: #fff;
+    box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+    border-top: 1px solid #f1f5f9;
+  }
+
+  /* Scrolled state (Bright Area) mobile menu text */
+  .lp-navbar.scrolled .lp-nav-links a {
+    color: var(--lp-primary) !important;
+  }
+
+  /* Default/Dark state mobile menu text */
+  .lp-nav-links a {
+    color: #fff !important;
   }
 
   .lp-nav-links li {

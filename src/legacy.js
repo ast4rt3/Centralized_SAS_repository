@@ -1088,9 +1088,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const landingPage = document.getElementById('landing-page');
   const lpLoginBtn = document.getElementById('lp-login-btn');
   const lpMobileToggle = document.getElementById('lp-mobile-toggle');
-  const lpNavLinks = document.getElementById('lp-nav-links');
-
-  // Landing Page variables moved to appropriate scopes or hoisted functions
+  const lpNavMenu = document.getElementById('lp-nav-menu');
 
   // Initialize Landing Page UI
   if (landingPage) {
@@ -1100,17 +1098,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     lpMobileToggle?.addEventListener('click', () => {
-      lpNavLinks?.classList.toggle('active');
+      lpNavMenu?.classList.toggle('active');
     });
 
     // Smooth scroll for LP links
-    lpNavLinks?.querySelectorAll('a').forEach(link => {
+    lpNavMenu?.querySelectorAll('a').forEach(link => {
       link.addEventListener('click', (e) => {
         const href = link.getAttribute('href');
         if (href.startsWith('#lp-')) {
-          // We let the default behavior happen so hashchange event fires, 
-          // allowing syncFromHash to handle the view transitions and scrolling.
-          lpNavLinks.classList.remove('active');
+          lpNavMenu.classList.remove('active');
         }
       });
     });

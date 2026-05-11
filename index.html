@@ -690,79 +690,276 @@
       color: #003366;
     }
 
-    /* --- Service Explorer Premium Styles (Modern Minimalist) --- */
+    /* --- Service Explorer Redesign (Mobile-First & Dynamic) --- */
     #lp-service-explorer-view {
       background: #f8fafc !important;
-      padding-top: 140px !important; /* Safely clear the fixed main navbar */
+      padding-top: clamp(80px, 15vh, 140px) !important;
       min-height: 100vh !important;
+      transition: opacity 0.4s ease;
     }
 
     .lp-se-nav-bar {
-      background: rgba(255, 255, 255, 0.8) !important;
-      backdrop-filter: blur(15px) !important;
-      -webkit-backdrop-filter: blur(15px) !important;
-      border: 1px solid rgba(226, 232, 240, 0.5) !important;
-      box-shadow: 0 8px 32px rgba(0, 51, 102, 0.05);
-      margin-bottom: 30px;
-      border-radius: 20px !important;
-      padding: 15px 25px !important;
+      background: rgba(255, 255, 255, 0.85) !important;
+      backdrop-filter: blur(20px) !important;
+      -webkit-backdrop-filter: blur(20px) !important;
+      border: 1px solid rgba(226, 232, 240, 0.6) !important;
+      box-shadow: 0 10px 40px rgba(0, 51, 102, 0.06);
+      margin-bottom: clamp(15px, 4vw, 30px);
+      border-radius: clamp(12px, 3vw, 24px) !important;
+      padding: clamp(10px, 2vw, 15px) clamp(15px, 3vw, 25px) !important;
       position: sticky;
-      top: 100px;
+      top: clamp(70px, 10vh, 100px);
       z-index: 100;
-    }
-
-    .lp-se-office-info-card {
-      background: white !important;
-      border: 1px solid #e2e8f0 !important;
-      border-top: 4px solid var(--lp-primary) !important;
-      border-radius: 24px !important;
-      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
-      color: #1e293b !important;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02) !important;
-    }
-
-    .lp-se-office-info-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 20px 40px rgba(0, 51, 102, 0.08) !important;
-      border-color: var(--lp-primary) !important;
-    }
-
-    .lp-se-office-body-card {
-      background: #f8fafc !important;
-      border: 1px solid #e2e8f0 !important;
-      border-radius: 20px !important;
-      transition: all 0.3s ease;
-      color: #475569 !important;
-    }
-
-    .lp-se-office-body-card h4, .lp-se-office-body-card h5 {
-      color: #0f172a !important;
-      font-weight: 800;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
     }
 
     .lp-se-btn-back {
       background: #f1f5f9 !important;
       color: #1e293b !important;
       font-weight: 800 !important;
-      padding: 10px 20px !important;
-      border-radius: 14px !important;
-      transition: all 0.3s ease;
+      padding: clamp(8px, 1.5vw, 12px) clamp(14px, 2.5vw, 20px) !important;
+      border-radius: 12px !important;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       border: 1px solid #e2e8f0 !important;
+      font-size: clamp(0.8rem, 2vw, 0.95rem);
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
     .lp-se-btn-back:hover {
       background: var(--lp-primary) !important;
       color: white !important;
-      transform: translateX(-5px);
+      transform: translateX(-4px);
+    }
+
+    .lp-se-btn-back:active {
+      transform: scale(0.95) translateX(-4px);
+    }
+
+    .lp-se-breadcrumb {
+      font-size: clamp(0.75rem, 1.8vw, 0.9rem);
+      font-weight: 700;
+      color: #64748b;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .lp-se-office-title {
       color: #003366 !important;
-      letter-spacing: -1px !important;
+      letter-spacing: -0.03em !important;
       font-family: 'Outfit', sans-serif !important;
       font-weight: 800 !important;
-      background: none !important;
-      -webkit-text-fill-color: initial !important;
+      font-size: clamp(1.8rem, 6vw, 2.8rem) !important;
+      line-height: 1.1;
+      margin-bottom: 0.5em;
+    }
+
+    .lp-se-offices-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(clamp(280px, 45%, 340px), 1fr));
+      gap: clamp(15px, 3vw, 25px);
+    }
+
+    .lp-se-office-card {
+      background: #fff;
+      border-radius: 24px;
+      border: 1px solid #e2e8f0;
+      padding: clamp(20px, 4vw, 30px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+      cursor: pointer;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .lp-se-office-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: var(--lp-primary);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.4s ease;
+    }
+
+    .lp-se-office-card:hover {
+      transform: translateY(-8px) scale(1.02);
+      border-color: var(--lp-accent);
+      box-shadow: 0 20px 40px rgba(0, 51, 102, 0.1);
+    }
+
+    .lp-se-office-card:hover::after {
+      transform: scaleX(1);
+    }
+
+    .lp-se-office-card:active {
+      transform: scale(0.98);
+    }
+
+    .lp-se-office-card-title {
+      font-size: clamp(1.15rem, 2.5vw, 1.4rem) !important;
+      font-weight: 800 !important;
+      color: var(--lp-primary) !important;
+      margin: 0 !important;
+      line-height: 1.25;
+      display: flex;
+      align-items: center;
+    }
+
+    .lp-se-office-card-info {
+      font-size: clamp(0.85rem, 1.8vw, 0.95rem) !important;
+      color: #64748b !important;
+      line-height: 1.6;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin: 0 !important;
+      flex-grow: 1;
+    }
+
+    .lp-se-card-action {
+      margin-top: 10px;
+      color: var(--lp-accent);
+      font-weight: 700;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: gap 0.3s ease;
+    }
+
+    .lp-se-office-card:hover .lp-se-card-action {
+      gap: 10px;
+    }
+
+    .lp-se-activity-date {
+      font-size: 0.75rem;
+      color: var(--lp-primary);
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+
+    .lp-se-activity-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #1e293b;
+      margin-bottom: 4px;
+    }
+
+    .lp-se-activity-desc {
+      font-size: 0.85rem;
+      color: #64748b;
+      line-height: 1.5;
+    }
+
+    /* Office Details View Enhancements */
+    .lp-se-office-view {
+      display: none;
+      flex-direction: column;
+      gap: clamp(20px, 4vw, 30px);
+      animation: slideUpFade 0.6s cubic-bezier(0.23, 1, 0.32, 1) both;
+    }
+
+    .lp-se-office-info-card {
+      background: white !important;
+      border: 1px solid #e2e8f0 !important;
+      border-radius: clamp(20px, 4vw, 32px) !important;
+      padding: clamp(20px, 5vw, 40px) !important;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04) !important;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .lp-se-office-info-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 8px;
+      height: 100%;
+      background: var(--lp-primary);
+    }
+
+    .lp-se-office-body-card {
+      background: white !important;
+      border: 1px solid #e2e8f0 !important;
+      border-radius: clamp(16px, 3vw, 24px) !important;
+      padding: clamp(20px, 4vw, 30px) !important;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02) !important;
+      transition: transform 0.3s ease;
+    }
+
+    .lp-se-section-title {
+      font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+      font-weight: 800;
+      color: #1e293b;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .lp-se-section-title i {
+      color: var(--lp-primary);
+    }
+
+    .lp-se-section-title.centered {
+      justify-content: center;
+    }
+
+    .lp-se-body-text {
+      font-size: clamp(0.95rem, 2vw, 1.05rem);
+      color: #334155;
+      line-height: 1.7;
+      white-space: pre-wrap;
+    }
+
+    .lp-se-list-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .lp-se-analytics-card {
+      text-align: center;
+      background: linear-gradient(to bottom, #ffffff, #f8fafc) !important;
+    }
+
+    .lp-se-card-desc {
+      font-size: 0.9rem;
+      color: #64748b;
+      margin-bottom: 20px;
+    }
+
+    .lp-se-office-grid-layout {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(clamp(280px, 100%, 450px), 1fr));
+      gap: clamp(20px, 4vw, 30px);
+    }
+
+    .lp-se-loader {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #e2e8f0;
+      border-top-color: var(--lp-primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
     }
 
     .lp-se-doc-item {
@@ -770,44 +967,124 @@
       align-items: center;
       gap: 12px;
       padding: 14px 18px;
-      background: white;
+      background: #f8fafc;
       border-radius: 15px;
       border: 1px solid #e2e8f0;
       text-decoration: none;
       color: #1e293b;
       font-weight: 600;
-      transition: all 0.3s ease;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .lp-se-doc-item:hover {
+      background: white;
       border-color: var(--lp-primary);
       color: var(--lp-primary);
-      transform: translateX(5px);
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+      transform: translateX(8px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     }
-    
+
     .lp-se-activity-mini {
-      padding: 15px;
-      border-left: 3px solid #e2e8f0;
-      background: white;
-      border-radius: 0 12px 12px 0;
+      padding: clamp(15px, 3vw, 20px);
+      border-left: 4px solid #e2e8f0;
+      background: #f8fafc;
+      border-radius: 0 16px 16px 0;
       margin-bottom: 12px;
       transition: all 0.3s ease;
     }
-    
+
     .lp-se-activity-mini:hover {
       border-left-color: var(--lp-primary);
-      background: #f8fafc;
+      background: white;
       transform: translateX(5px);
     }
 
-    .lp-se-activity-date {
-      color: #64748b !important;
-      font-weight: 800;
+    @keyframes slideUpFade {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
-    .lp-se-activity-title {
-      color: #1e293b !important;
+    /* Mobile specific tweaks */
+    @media (max-width: 768px) {
+      #lp-service-explorer-view {
+        padding-top: 90px !important;
+      }
+      
+      .lp-se-nav-bar {
+        border-radius: 16px !important;
+        margin-bottom: 20px;
+      }
+
+      .lp-se-office-grid-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .lp-se-btn-back span {
+        display: none; /* Hide text on very small screens, keep icon */
+      }
+      
+      .lp-se-btn-back::after {
+        content: 'Back';
+        display: inline-block;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .lp-se-nav-bar {
+        padding: 10px 15px !important;
+      }
+      
+      .lp-se-office-title {
+        font-size: 1.8rem !important;
+      }
+
+      .lp-se-btn-back::after {
+        content: 'Back';
+      }
+    }
+
+    @keyframes slideUpFade {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Mobile specific tweaks */
+    @media (max-width: 768px) {
+      #lp-service-explorer-view {
+        padding-top: 90px !important;
+      }
+      
+      .lp-se-nav-bar {
+        border-radius: 16px !important;
+        margin-bottom: 20px;
+      }
+
+      .lp-se-office-grid-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .lp-se-btn-back span {
+        display: none; /* Hide text on very small screens, keep icon */
+      }
+      
+      .lp-se-btn-back::after {
+        content: 'Back';
+        display: inline-block;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .lp-se-nav-bar {
+        padding: 10px 15px !important;
+      }
+      
+      .lp-se-office-title {
+        font-size: 1.8rem !important;
+      }
+
+      .lp-se-btn-back::after {
+        content: 'Back';
+      }
     }
 
     .lp-service-icon {
@@ -1004,18 +1281,20 @@
           <i class='bx bx-menu'></i>
         </button>
 
-        <ul class="lp-nav-links" id="lp-nav-links">
-          <li><a href="#lp-hero" class="active">Home</a></li>
-          <li><a href="#lp-about">About</a></li>
-          <li><a href="#lp-services">Our Services</a></li>
-          <li><a href="#lp-documents">Documents</a></li>
-          <li><a href="#lp-activities">Recent Activities</a></li>
-        </ul>
+        <div class="lp-nav-menu" id="lp-nav-menu">
+          <ul class="lp-nav-links" id="lp-nav-links">
+            <li><a href="#lp-hero" class="active">Home</a></li>
+            <li><a href="#lp-about">About</a></li>
+            <li><a href="#lp-services">Our Services</a></li>
+            <li><a href="#lp-documents">Documents</a></li>
+            <li><a href="#lp-activities">Recent Activities</a></li>
+          </ul>
 
-        <div class="lp-nav-actions">
-          <button class="lp-btn-login" id="lp-login-btn">
-            <i class='bx bx-log-in-circle'></i> Log in
-          </button>
+          <div class="lp-nav-actions">
+            <button class="lp-btn-login" id="lp-login-btn">
+              <i class='bx bx-log-in-circle'></i> Log in
+            </button>
+          </div>
         </div>
       </div>
     </nav>
@@ -1303,57 +1582,58 @@
         </div>
       </div>
     </section>
-    </div> <!-- /lp-main-content -->
-
-    <!-- Service Explorer View -->
-    <div id="lp-service-explorer-view" style="display:none; padding-top: 100px; min-height: 100vh; background: var(--lp-bg-alt);">
+    </div> <!-- /lp-main-content -->    <!-- Service Explorer View -->
+    <div id="lp-service-explorer-view" style="display:none;">
       <div class="lp-container">
         
-        <div class="lp-se-nav-bar" id="se-nav-bar" style="display:none; align-items:center; gap:15px; border-radius:10px 10px 0 0;">
-          <button class="lp-se-btn-back" id="se-btn-back"><i class='bx bx-left-arrow-alt'></i> Back to Categories</button>
-          <div class="lp-se-breadcrumb" id="se-breadcrumb" style="font-size:.9rem; font-weight:600; color:#64748b;">Category</div>
+        <div class="lp-se-nav-bar" id="se-nav-bar" style="display:none;">
+          <button class="lp-se-btn-back" id="se-btn-back">
+            <i class='bx bx-left-arrow-alt'></i>
+            <span>Back to Categories</span>
+          </button>
+          <div class="lp-se-breadcrumb" id="se-breadcrumb">Category</div>
         </div>
-
-        <div class="lp-se-content" style="padding: 30px 0;">
-          <div class="lp-se-loading-state" id="se-loading-state" style="display:flex; align-items:center; justify-content:center; padding:60px;">
-            <div style="width:32px; height:32px; border:3px solid #e2e8f0; border-top-color:var(--lp-primary); border-radius:50%; animation:spin 1s linear infinite;"></div>
+        
+        <div class="lp-se-content">
+          <div class="lp-se-loading-state" id="se-loading-state" style="display:flex;">
+            <div class="lp-se-loader"></div>
           </div>
 
           <!-- Category View: List of Offices -->
           <div class="lp-se-category-view" id="se-category-view" style="display:none;">
-            <div class="lp-se-category-header" style="margin-bottom:25px;">
-              <h2 id="se-category-title" class="lp-se-office-title" style="font-size:2.2rem; font-weight:800;">Services</h2>
+            <div class="lp-se-category-header">
+              <h2 id="se-category-title" class="lp-se-office-title">Services</h2>
             </div>
-            <div class="lp-se-offices-grid" id="se-offices-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:20px;"></div>
+            <div class="lp-se-offices-grid" id="se-offices-grid"></div>
           </div>
 
           <!-- Office Details View -->
-          <div class="lp-se-office-view" id="se-office-view" style="display:none; flex-direction:column; gap:25px;">
-            <div class="lp-se-office-info-card" style="border-radius:20px; padding:30px; box-shadow:var(--lp-shadow);">
-              <h2 class="lp-se-office-title" id="se-office-title" style="font-size:2.5rem; font-weight:800; margin-bottom:10px;">Office Name</h2>
-              <div class="lp-se-office-info" id="se-office-info" style="font-size:1.1rem; color:#475569; line-height:1.6; font-weight:600;">Information overview...</div>
+          <div class="lp-se-office-view" id="se-office-view">
+            <div class="lp-se-office-info-card">
+              <h2 class="lp-se-office-title" id="se-office-title">Office Name</h2>
+              <div class="lp-se-office-info" id="se-office-info">Information overview...</div>
             </div>
 
-            <div class="lp-se-office-body-card" style="border-radius:16px; padding:30px; box-shadow:var(--lp-shadow);">
-              <h3 style="font-size:1.3rem; font-weight:800; color:#1e293b; margin-bottom:15px; display:flex; align-items:center; gap:8px;"><i class='bx bx-info-circle' style="color:var(--lp-primary)"></i> About Us</h3>
-              <div id="se-office-body" style="font-size:1rem; color:#334155; line-height:1.7; white-space:pre-wrap;">Detailed description goes here.</div>
+            <div class="lp-se-office-body-card">
+              <h3 class="lp-se-section-title"><i class='bx bx-info-circle'></i> About Us</h3>
+              <div id="se-office-body" class="lp-se-body-text">Detailed description goes here.</div>
             </div>
 
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:25px;">
-              <div class="lp-se-office-body-card" style="border-radius:16px; padding:30px; box-shadow:var(--lp-shadow);">
-                <h3 style="font-size:1.3rem; font-weight:800; color:#1e293b; margin-bottom:15px; display:flex; align-items:center; gap:8px;"><i class='bx bx-folder-open' style="color:var(--lp-primary)"></i> Public Documents</h3>
-                <div id="se-docs-list" style="display:flex; flex-direction:column; gap:10px;"></div>
+            <div class="lp-se-office-grid-layout">
+              <div class="lp-se-office-body-card">
+                <h3 class="lp-se-section-title"><i class='bx bx-folder-open'></i> Public Documents</h3>
+                <div id="se-docs-list" class="lp-se-list-container"></div>
               </div>
 
-              <div class="lp-se-office-body-card" style="border-radius:16px; padding:30px; box-shadow:var(--lp-shadow);">
-                <h3 style="font-size:1.3rem; font-weight:800; color:#1e293b; margin-bottom:15px; display:flex; align-items:center; gap:8px;"><i class='bx bx-time-five' style="color:var(--lp-primary)"></i> Recent Activities</h3>
-                <div id="se-activities-list" style="display:flex; flex-direction:column; gap:5px;"></div>
+              <div class="lp-se-office-body-card">
+                <h3 class="lp-se-section-title"><i class='bx bx-time-five'></i> Recent Activities</h3>
+                <div id="se-activities-list" class="lp-se-list-container"></div>
               </div>
             </div>
 
-            <div class="lp-se-office-body-card" style="border-radius:16px; padding:30px; box-shadow:var(--lp-shadow); text-align:center; background:linear-gradient(to bottom, #fff, #f1f5f9);">
-              <h3 style="font-size:1.3rem; font-weight:800; color:#1e293b; margin-bottom:10px; display:flex; align-items:center; justify-content:center; gap:8px;"><i class='bx bx-bar-chart-alt-2' style="color:var(--lp-primary)"></i> Analytics</h3>
-              <p style="font-size:0.9rem; color:#64748b; margin-bottom:20px;">Download engagement and visitor reports for this office.</p>
+            <div class="lp-se-office-body-card lp-se-analytics-card">
+              <h3 class="lp-se-section-title centered"><i class='bx bx-bar-chart-alt-2'></i> Analytics</h3>
+              <p class="lp-se-card-desc">Download engagement and visitor reports for this office.</p>
               <button class="lp-se-export-btn" id="se-export-btn">
                 <i class='bx bx-download'></i> Export Data (CSV)
               </button>
@@ -1445,29 +1725,20 @@
       function renderOffices(offices) {
         const grid = document.getElementById('se-offices-grid');
         if (!offices || offices.length === 0) {
-          grid.innerHTML = '<p style="color:#64748b;">No offices found in this category.</p>';
+          grid.innerHTML = '<p style="color:#64748b; padding:20px;">No offices found in this category.</p>';
           return;
         }
 
-        grid.innerHTML = offices.map(o => `
-          <div class="lp-se-office-card" data-id="${o.id}" data-name="${o.name}" style="background:#fff; border-radius:24px; border:1px solid #e2e8f0; padding:30px; box-shadow:var(--lp-shadow); cursor:pointer; transition:all 0.3s ease; display:flex; flex-direction:column; gap:15px; height:100%;">
-            <h3 style="font-size:1.3rem; font-weight:800; color:var(--lp-primary); margin:0; min-height:3.6rem; display:flex; align-items:center;">${o.name}</h3>
-            <p style="font-size:.95rem; color:#64748b; line-height:1.6; display:-webkit-box; -webkit-line-clamp:3; line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; margin:0; flex-grow:1;">${o.info || 'No information available.'}</p>
-            <div style="margin-top:10px; color:var(--lp-accent); font-weight:700; font-size:0.9rem; display:flex; align-items:center; gap:5px;">Learn More <i class='bx bx-right-arrow-alt'></i></div>
+        grid.innerHTML = offices.map((o, idx) => `
+          <div class="lp-se-office-card" data-id="${o.id}" data-name="${o.name}" 
+               style="animation: slideUpFade 0.6s cubic-bezier(0.23, 1, 0.32, 1) both ${idx * 0.05}s;">
+            <h3 class="lp-se-office-card-title">${o.name}</h3>
+            <p class="lp-se-office-card-info">${o.info || 'No information available.'}</p>
+            <div class="lp-se-card-action">Learn More <i class='bx bx-right-arrow-alt'></i></div>
           </div>
         `).join('');
 
         grid.querySelectorAll('.lp-se-office-card').forEach(card => {
-          card.addEventListener('mouseover', () => {
-            card.style.transform = 'translateY(-4px)';
-            card.style.borderColor = 'var(--lp-accent)';
-            card.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
-          });
-          card.addEventListener('mouseout', () => {
-            card.style.transform = 'none';
-            card.style.borderColor = '#e2e8f0';
-            card.style.boxShadow = 'var(--lp-shadow)';
-          });
           card.addEventListener('click', () => {
             loadOfficeDetails(card.getAttribute('data-id'), card.getAttribute('data-name'));
           });
@@ -1505,10 +1776,10 @@
 
             const docsList = document.getElementById('se-docs-list');
             if (!res.docs || res.docs.length === 0) {
-              docsList.innerHTML = '<div style="color:#64748b; font-size:.9rem;">No documents available.</div>';
+              docsList.innerHTML = '<div style="color:#64748b; font-size:.9rem; padding:10px;">No documents available.</div>';
             } else {
               docsList.innerHTML = res.docs.map(d => `
-                <a href="${d.url}" target="_blank" style="display:flex; align-items:center; gap:12px; padding:12px 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; text-decoration:none; color:var(--lp-dark); font-weight:600; font-size:.95rem;">
+                <a href="${d.url}" target="_blank" class="lp-se-doc-item">
                   <i class='bx bxs-file-pdf' style="color:#dc2626; font-size:1.4rem;"></i>
                   <span>${d.title}</span>
                 </a>
@@ -1517,13 +1788,13 @@
 
             const actList = document.getElementById('se-activities-list');
             if (!res.activities || res.activities.length === 0) {
-              actList.innerHTML = '<div style="color:#64748b; font-size:.9rem;">No recent activities logged.</div>';
+              actList.innerHTML = '<div style="color:#64748b; font-size:.9rem; padding:10px;">No recent activities logged.</div>';
             } else {
               actList.innerHTML = res.activities.map(a => `
-                <div style="padding:15px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px;">
-                  <div style="font-size:0.75rem; color:var(--lp-primary); font-weight:700; margin-bottom:5px;">${new Date(a.activity_date).toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'})}</div>
-                  <div style="font-weight:700; font-size:0.95rem; color:var(--lp-dark); margin-bottom:4px;">${a.title}</div>
-                  <div style="font-size:0.85rem; color:#64748b; line-height:1.5;">${a.description || ''}</div>
+                <div class="lp-se-activity-mini">
+                  <div class="lp-se-activity-date">${new Date(a.activity_date).toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'})}</div>
+                  <div class="lp-se-activity-title">${a.title}</div>
+                  <div class="lp-se-activity-desc">${a.description || ''}</div>
                 </div>
               `).join('');
             }
