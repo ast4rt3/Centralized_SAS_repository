@@ -1,6 +1,7 @@
 import "./legacy.js";
 import { performImmediateAuthCheck, getMyUsername } from "./core/auth.js";
 import { initSharedMessaging } from "./features/messaging/logic_supabase.js";
+import "./features/messaging/ui.js";
 import { updateClock, updateWeather } from "./features/tv/clock.js";
 import { syncFromHash } from "./ui/navigation.js";
 

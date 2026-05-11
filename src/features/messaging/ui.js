@@ -54,11 +54,11 @@ export function updateUnreadBadges() {
   style.textContent = `
     .fb-chat-notifications {
       position: fixed;
-      top: 20px;
+      bottom: 20px;
       right: 20px;
       z-index: 999999;
       display: flex;
-      flex-direction: column;
+      flex-direction: column-reverse;
       gap: 10px;
       pointer-events: none;
     }

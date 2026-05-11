@@ -6132,7 +6132,7 @@ let _lpAllActivities = [];
 
 // --- PUBLIC: load & render activities on landing page ---
 function initLpActivities() {
-  if (!userDb) return;
+  if (!supabase) return;
   const grid = document.getElementById('lp-activities-grid');
 
   // ---- LP Nav Active State Management ----
@@ -6764,23 +6764,27 @@ let _lpDocFilterCat = '';
 let _lpDocFilterYear = '';
 
 function initLpDocuments() {
-  if (!userDb) return;
+  if (!supabase) return;
   const grid = document.getElementById('lp-docs-grid');
   const emptyState = document.getElementById('lp-docs-empty');
   const catTabs = document.querySelectorAll('.lp-docs-tab');
   const yearSelect = document.getElementById('lp-docs-year');
   if (!grid) return;
 
-  const docsRef = ref(userDb, 'lp_documents');
-
-  // Sync from Firebase
-  onValue(docsRef, (snapshot) => {
-    const data = snapshot.val();
-    const fbDocs = data ? Object.entries(data).map(([id, val]) => ({ id, ...val })) : [];
-
-    _lpAllDocuments = fbDocs;
-    fetchPublicHubFiles(); // Merge with Supabase files
-  });
+  // Sync from Supabase (formerly Firebase)
+  const fetchLpDocs = async () => {
+    const { data } = await supabase.from('sas_documents').select('*');
+    if (data) {
+       _lpAllDocuments = data;
+       fetchPublicHubFiles();
+    }
+  };
+  
+  fetchLpDocs();
+  
+  supabase.channel('lp-documents').on('postgres_changes', { event: '*', schema: 'public', table: 'sas_documents' }, () => {
+    fetchLpDocs();
+  }).subscribe();
 
   async function fetchPublicHubFiles() {
     try {
