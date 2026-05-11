@@ -11,7 +11,23 @@ export function updateUnreadBadges() {
   const totalUnread = Object.values(contactsMap).reduce((sum, contact) => sum + (contact.unread || 0), 0);
   state.unreadCount = totalUnread;
 
-  // Update badges
+  // 1. Update Legacy Contact Cards in Sidebar
+  Object.keys(contactsMap).forEach(username => {
+    if (typeof window.renderContact === 'function') {
+      const isOnline = contactsMap[username].isOnline || false;
+      window.renderContact(username, isOnline);
+    }
+  });
+
+  // 2. Update Messenger Page Sidebar
+  if (typeof window.refreshFullMessengerUI === 'function') {
+    const messagesPage = document.getElementById('messages');
+    if (messagesPage && (messagesPage.classList.contains('active') || messagesPage.style.display !== 'none')) {
+       window.refreshFullMessengerUI();
+    }
+  }
+
+  // 3. Update Badge Elements
   const unreadBadge = getEl('fb-chat-unread');
   if (unreadBadge) {
     unreadBadge.textContent = totalUnread;
@@ -78,3 +94,16 @@ export function createMessageBubble(data, isMe) {
   
   return bubble;
 }
+/**
+ * Refresh the legacy Messenger UI
+ */
+export function refreshFullMessengerUI() {
+  if (typeof window.renderFullContacts === 'function') {
+    window.renderFullContacts();
+  }
+}
+
+// Expose to window for legacy compatibility
+window.updateUnreadBadges = updateUnreadBadges;
+window.showNotification = showNotification;
+window.refreshFullMessengerUI = refreshFullMessengerUI;

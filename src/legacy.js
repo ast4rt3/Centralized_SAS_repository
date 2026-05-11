@@ -152,7 +152,8 @@ if (window.ENV && window.ENV.STORAGE_CHECK_FIREBASE_CONFIG) {
   storageCheckDb = userDb;
 }
 
-let contactsMap = {};
+window.contactsMap = window.contactsMap || {};
+let contactsMap = window.contactsMap;
 
 async function fetchSpreadsheetUsers() {
   try {
@@ -175,8 +176,8 @@ async function fetchSpreadsheetUsers() {
             displayName: userObj.displayName || username
           };
         } else {
-          contactsMap[username].profilePic = userObj.profilePic || "";
-          contactsMap[username].displayName = userObj.displayName || username;
+          contactsMap[username].profilePic = contactsMap[username].profilePic || userObj.profilePic || "";
+          contactsMap[username].displayName = contactsMap[username].displayName || userObj.displayName || username;
         }
       }
     });
@@ -204,98 +205,18 @@ let activeChatUser = null;
 let activeMessengerUser = null;
 const pageLoadTime = Date.now();
 
-function updateUnreadBadges() {
-  // Re-calculate unreadCount from individual contact counts to prevent desync
-  unreadCount = Object.values(contactsMap).reduce((sum, contact) => sum + (contact.unread || 0), 0);
+// Legacy updateUnreadBadges replaced by modular ui.js version
+// function updateUnreadBadges() { ... }
 
-  // Update individual contact cards in sidebar if they are rendered
-  Object.keys(contactsMap).forEach(username => {
-    if (typeof window.renderContact === 'function') {
-      const isOnline = contactsMap[username].isOnline || false;
-      window.renderContact(username, isOnline);
-    }
-  });
-
-  const unreadBadge = document.getElementById('fb-chat-unread');
-  if (unreadBadge) {
-    unreadBadge.textContent = unreadCount;
-    unreadBadge.classList.toggle('hidden', unreadCount === 0);
-  }
-
-  const headerBadge = document.getElementById('header-unread-badge');
-  if (headerBadge) {
-    headerBadge.textContent = unreadCount;
-    headerBadge.classList.toggle('hidden', unreadCount === 0);
-  }
-
-  if (typeof renderFullContacts === 'function') {
-    const messagesPage = document.getElementById('messages');
-    if (messagesPage && (messagesPage.classList.contains('active') || messagesPage.style.display !== 'none')) {
-      renderFullContacts();
-    }
-  }
-}
-
-function showNotification(sender, text) {
-  let container = document.getElementById('fb-chat-notifications');
-  if (!container) {
-    container = document.createElement('div');
-    container.id = 'fb-chat-notifications';
-    container.className = 'fb-chat-notifications';
-    document.body.appendChild(container);
-  }
-
-  const toast = document.createElement('div');
-  toast.className = 'fb-chat-toast';
-  toast.onclick = () => {
-    // If widget exists, open it. Otherwise show warning or redirect.
-    if (typeof openConversation === 'function') {
-      openConversation(sender);
-    } else {
-      window.location.hash = 'messages';
-    }
-    toast.remove();
-  };
-
-  const displaySender = document.createElement('span');
-  displaySender.className = 'fb-chat-toast-sender';
-  displaySender.textContent = sender;
-
-  const displayText = document.createElement('p');
-  displayText.className = 'fb-chat-toast-text';
-  displayText.textContent = text;
-
-  toast.appendChild(displaySender);
-  toast.appendChild(displayText);
-  container.appendChild(toast);
-
-  setTimeout(() => { if (toast.parentNode) toast.remove(); }, 8000);
-}
+// Legacy showNotification replaced by modular ui.js version
+// function showNotification(sender, text) { ... }
 
 function markMessagesAsRead(otherUser) {
-  if (!userDb || !myUsername || !otherUser) return;
-  const history = contactsMap[otherUser] ? (contactsMap[otherUser].history || []) : [];
-  const updates = {};
-
-  history.forEach(msg => {
-    if (msg.receiver === myUsername && !msg.read && msg.id) {
-      updates[`user_messages/${msg.id}/read`] = true;
-      msg.read = true; // Update local state immediately
-    }
-  });
-
-  if (Object.keys(updates).length > 0) {
-    console.log(`[Messaging] Marking ${Object.keys(updates).length} messages from ${otherUser} as read.`);
-    update(ref(userDb), updates).catch(err => console.error("Failed to update read status:", err));
-
-    // Optimistically clear counts locally to ensure UI updates instantly
-    if (contactsMap[otherUser]) {
-      contactsMap[otherUser].unread = 0;
-    }
-
-    // Update global counter via re-calculating from all users to ensure accuracy
-    updateUnreadBadges();
+  if (typeof window.markMessagesAsRead === 'function' && window.markMessagesAsRead !== markMessagesAsRead) {
+    return window.markMessagesAsRead(otherUser);
   }
+  // Fallback or legacy logic (if Supabase not loaded)
+  console.log("[Legacy] markMessagesAsRead called but Supabase version not available.");
 }
 
 // Mark all conversations as read
@@ -307,93 +228,21 @@ function markAllMessagesAsRead() {
 
 // Duplicate syncUnreadCountFromDb removed - now handled by src/features/messaging/logic.js
 
+/* 
+// LEGACY FIREBASE MESSAGING DISABLED - Migrated to Supabase
 function initSharedMessaging() {
   if (!userDb || !myUsername || myUsername === 'Unknown' || sharedMessagingInitialized) return;
   sharedMessagingInitialized = true;
   const baseRef = ref(userDb, 'user_messages');
 
   onChildAdded(baseRef, (snapshot) => {
-    const data = snapshot.val();
-    if (!data || !data.sender || !data.receiver) return;
-
-    if (data.sender === myUsername || data.receiver === myUsername) {
-      const otherUser = data.sender === myUsername ? data.receiver : data.sender;
-
-      if (!contactsMap[otherUser]) {
-        contactsMap[otherUser] = { unread: 0, el: null, history: [], isOnline: false };
-        if (typeof renderContact === 'function') renderContact(otherUser, false);
-      }
-
-      const msgObj = { ...data, id: snapshot.key };
-      contactsMap[otherUser].history.push(msgObj);
-
-      const isWidgetOpen = !document.getElementById('fb-chat-body')?.classList.contains('hidden');
-      const isWidgetConvOpen = !document.getElementById('fb-chat-conversation')?.classList.contains('hidden');
-      const isMessengerPage = window.location.hash === '#messages';
-
-      // Only suppress notifications if the specific conversation is actually VISIBLE on screen
-      const isChatOpen = (activeChatUser === otherUser && isWidgetOpen && isWidgetConvOpen) ||
-        (activeMessengerUser === otherUser && isMessengerPage) ||
-        (window.activeMessengerUser === otherUser && isMessengerPage);
-
-      if (data.sender === otherUser && !isChatOpen && !data.read) {
-        contactsMap[otherUser].unread++;
-        unreadCount++;
-        console.log(`[Messaging] Real-time unread increment: ${unreadCount} (from ${otherUser})`);
-        updateUnreadBadges();
-
-        if (typeof showNotification === 'function') {
-          const msgTime = data.timestamp ? new Date(data.timestamp).getTime() : 0;
-          // Only show pop-up notification if it's a NEW message sent after page load
-          if (msgTime > pageLoadTime) {
-            showNotification(otherUser, data.text);
-          }
-        }
-      }
-
-      if (activeChatUser === otherUser && typeof renderMessage === 'function') {
-        renderMessage(msgObj, data.sender === myUsername);
-      }
-
-      if ((activeMessengerUser === otherUser || window.activeMessengerUser === otherUser) && typeof window.refreshFullMessengerUI === 'function') {
-        window.refreshFullMessengerUI();
-      }
-    }
+    // ... logic ...
   });
-
-  onChildChanged(baseRef, (snapshot) => {
-    const data = snapshot.val();
-    if (!data || !data.sender || !data.receiver) return;
-
-    const otherUser = data.sender === myUsername ? data.receiver : data.sender;
-    if (contactsMap[otherUser]) {
-      const history = contactsMap[otherUser].history;
-      const msgIdx = history.findIndex(m => m.id === snapshot.key);
-
-      if (msgIdx !== -1) {
-        const oldRead = history[msgIdx].read;
-        const newRead = data.read;
-
-        // Update local object
-        history[msgIdx] = { ...data, id: snapshot.key };
-
-        // If message was marked as read remotely, update local counts
-        if (!oldRead && newRead && data.receiver === myUsername) {
-          if (contactsMap[otherUser].unread > 0) {
-            contactsMap[otherUser].unread--;
-            unreadCount = Math.max(0, unreadCount - 1);
-            console.log(`[Messaging] Message marked read remotely. New unreadCount: ${unreadCount}`);
-            updateUnreadBadges();
-          }
-        }
-      }
-    }
-  });
-
-  // Start background fallback poll (every 2 minutes)
-  setInterval(syncUnreadCountFromDb, 120000);
-  // Perform initial sync on startup
-  setTimeout(syncUnreadCountFromDb, 5000);
+  // ...
+}
+*/
+function initSharedMessaging() {
+  console.log("[Legacy] Firebase messaging disabled. Using Supabase.");
 }
 
 function initUserMessaging() {
@@ -444,42 +293,13 @@ function initUserMessaging() {
   // 1. Fetch Users From Spreadsheet GAS
   fetchSpreadsheetUsers();
 
-  // 2. Presence System Overlay
+  // 2. Presence System (Legacy Firebase Disabled)
+  console.log("[Legacy] Firebase presence disabled.");
+  /*
   const connectedRef = ref(userDb, '.info/connected');
   const myPresenceRef = ref(userDb, `presence/${myUsername}`);
-
-  onValue(connectedRef, (snap) => {
-    if (snap.val() === true) {
-      onDisconnect(myPresenceRef).remove();
-      set(myPresenceRef, { status: 'online', timestamp: serverTimestamp() });
-    }
-  });
-
-  // Listen for online status updates
-  const presenceRef = ref(userDb, 'presence');
-  onValue(presenceRef, (snapshot) => {
-    const data = snapshot.val() || {};
-
-    // Read online users
-    for (const [user, info] of Object.entries(data)) {
-      if (user !== myUsername && info.status === 'online') {
-        if (!contactsMap[user]) {
-          contactsMap[user] = { unread: 0, el: null, history: [], isOnline: true };
-        } else {
-          contactsMap[user].isOnline = true;
-        }
-        renderContact(user, true); // Mark online
-      }
-    }
-
-    // Update users who went offline
-    for (const user in contactsMap) {
-      if (!data[user] || data[user].status !== 'online') {
-        contactsMap[user].isOnline = false;
-        renderContact(user, false); // Mark offline but KEEP in UI list
-      }
-    }
-  });
+  ...
+  */
 
   header.addEventListener('click', (e) => {
     if (e.target.closest('#fb-chat-toggle-btn') || e.target === header || header.contains(e.target)) {
@@ -547,6 +367,7 @@ function initUserMessaging() {
 
   function openConversation(username) {
     activeChatUser = username;
+    window.activeChatUser = username;
     activeUserEl.textContent = username;
     contactsList.classList.add('hidden');
     conversation.classList.remove('hidden');
@@ -566,6 +387,7 @@ function initUserMessaging() {
   }
 
   function renderMessage(data, isMe) {
+    window.renderMessage = renderMessage;
     const bubble = document.createElement('div');
     bubble.className = `fb-chat-bubble ${isMe ? 'fb-chat-bubble-me' : 'fb-chat-bubble-other'}`;
 
@@ -590,14 +412,15 @@ function initUserMessaging() {
     e.preventDefault();
     const text = input.value.trim();
     if (text && activeChatUser) {
-      push(baseRef, {
-        sender: myUsername,
-        receiver: activeChatUser,
-        text: text,
-        timestamp: serverTimestamp(),
-        read: false
-      }).catch(err => console.error("Send failed:", err));
-      input.value = '';
+      if (typeof window.sendMessage === 'function') {
+        window.sendMessage(activeChatUser, text)
+          .then(() => {
+            input.value = '';
+          })
+          .catch(err => console.error("Send failed:", err));
+      } else {
+        console.error("Supabase sendMessage not available.");
+      }
     }
   });
 }
@@ -710,6 +533,7 @@ function initFullMessenger() {
 
     sorted.forEach(user => {
       const info = contactsMap[user];
+      console.log(`[Messenger] Rendering ${user}:`, info);
       const card = document.createElement('div');
       card.className = `contact-card ${activeMessengerUser === user ? 'active' : ''}`;
       card.onclick = () => selectContact(user);
@@ -724,9 +548,9 @@ function initFullMessenger() {
       const unread = info.unread || 0;
 
       card.innerHTML = `
-        <div class="contact-avatar">
+        <div class="contact-avatar" style="width:48px; height:48px; background:linear-gradient(135deg, #1e40af, #1e3a8a); color:white; border-radius:12px; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.1rem; position:relative; flex-shrink:0;">
           ${profilePicHtml}
-          <span class="contact-status-dot ${info.isOnline ? 'online' : ''}"></span>
+          <span class="contact-status-dot ${info.isOnline ? 'online' : ''}" style="position:absolute; bottom:-2px; right:-2px; width:12px; height:12px; border-radius:50%; border:2px solid #0f172a; background:#94a3b8;"></span>
         </div>
         <div class="contact-info">
           <span class="contact-name">${displayName}</span>
@@ -814,16 +638,16 @@ function initFullMessenger() {
         console.warn('[Messenger] Cannot send: identity unknown.');
         return;
       }
-      const baseRef = ref(userDb, 'user_messages');
-      push(baseRef, {
-        sender: myUsername,
-        receiver: activeMessengerUser,
-        text: text,
-        timestamp: serverTimestamp(),
-        read: false
-      });
-      input.value = '';
-      setTimeout(renderFullMessages, 100);
+      if (typeof window.sendMessage === 'function') {
+        window.sendMessage(activeMessengerUser, text)
+          .then(() => {
+            input.value = '';
+            setTimeout(renderFullMessages, 100);
+          })
+          .catch(err => console.error("Send failed:", err));
+      } else {
+        console.error("Supabase sendMessage not available.");
+      }
     }
   });
 
@@ -836,19 +660,55 @@ function initFullMessenger() {
     if (!modal || !list) return;
     modal.style.display = 'flex';
     list.innerHTML = '<div style="padding:20px; text-align:center; color:#64748b;">Loading users...</div>';
-    await fetchSpreadsheetUsers();
+    
+    console.log("[Modal] Fetching users...");
+    // Use Supabase fetch for better reliability/speed
+    const users = typeof window.fetchAllUsers === 'function' 
+      ? await window.fetchAllUsers() 
+      : [];
+
+    console.log("[Modal] Supabase users found:", users ? users.length : 0);
+
+    if (users && users.length > 0) {
+      users.forEach(u => {
+        if (!contactsMap[u.username]) {
+          contactsMap[u.username] = {
+            unread: 0,
+            history: [],
+            isOnline: false,
+            displayName: u.display_name || u.username,
+            profilePic: u.profile_pic || ""
+          };
+        } else {
+          contactsMap[u.username].displayName = contactsMap[u.username].displayName || u.display_name || u.username;
+          contactsMap[u.username].profilePic = contactsMap[u.username].profilePic || u.profile_pic || "";
+        }
+      });
+    } else {
+      console.log("[Modal] Falling back to GAS fetch...");
+      await fetchSpreadsheetUsers();
+      console.log("[Modal] ContactsMap size after GAS fallback:", Object.keys(contactsMap).length);
+    }
 
     const renderModalList = (filter = '') => {
       list.innerHTML = '';
-      Object.keys(contactsMap).sort().forEach(user => {
+      const sortedUsers = Object.keys(contactsMap).sort();
+      
+      if (sortedUsers.length === 0) {
+        list.innerHTML = '<div style="padding:20px; text-align:center; color:#94a3b8;">No users found.</div>';
+        return;
+      }
+
+      sortedUsers.forEach(user => {
         if (user === myUsername) return;
         if (filter && !user.toLowerCase().includes(filter.toLowerCase())) return;
 
+        const info = contactsMap[user];
         const item = document.createElement('div');
         item.style.cssText = "padding:12px 15px; cursor:pointer; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; gap:12px;";
         item.onmouseover = () => item.style.background = "#f8fafc";
         item.onmouseout = () => item.style.background = "transparent";
-        const info = contactsMap[user];
+        
         const displayName = info.displayName || user;
         const initial = displayName.charAt(0).toUpperCase();
         const avatarHtml = info.profilePic && info.profilePic.startsWith('http')
@@ -2396,6 +2256,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (displayName) displayName.innerHTML = displayStr;
     if (dropName) dropName.innerHTML = `${displayStr} ${roleBadge}`;
+
+    // Update Header Avatar
+    const avatarSpan = document.querySelector('.user-menu-avatar');
+    if (avatarSpan && userObj.profilePic && userObj.profilePic.startsWith('http')) {
+      avatarSpan.innerHTML = `<img src="${userObj.profilePic}" style="width:24px; height:24px; border-radius:50%; object-fit:cover; border: 1px solid rgba(255,255,255,0.2);">`;
+    } else if (avatarSpan) {
+       const initial = (userObj.displayName || userObj.username || "?").charAt(0).toUpperCase();
+       avatarSpan.innerHTML = `<div style="width:24px; height:24px; border-radius:50%; background:var(--nbsc-gold); color:var(--nbsc-blue); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800;">${initial}</div>`;
+    }
 
     const userMenu = userMenuDropdown;
     const userBtn = userMenuBtn;
@@ -5676,33 +5545,41 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadMessages() {
       try {
         await updateDatabaseStatuses();
-        const userSnap = await get(ref(userDb, 'user_messages'));
-        const adminSnap = await get(ref(userDb, 'admin_messages'));
-
-        const userData = userSnap.val() || {};
-        const adminData = adminSnap.val() || {};
+        
+        // Fetch from Supabase
+        const userData = await window.supabaseFetch('/rest/v1/user_messages?select=*&order=timestamp.desc');
+        // If admin_messages table exists, fetch it too. Otherwise fallback to empty.
+        let adminData = [];
+        try {
+           adminData = await window.supabaseFetch('/rest/v1/admin_messages?select=*&order=timestamp.desc');
+           if (adminData.error) adminData = []; // Likely table doesn't exist yet
+        } catch (e) { adminData = []; }
 
         allMessages = [];
         uniqueUsers = new Set();
 
-        Object.entries(userData).forEach(([key, msg]) => {
-          allMessages.push({ ...msg, _key: key, _type: 'user' });
-          if (msg.sender) uniqueUsers.add(msg.sender);
-          if (msg.receiver) uniqueUsers.add(msg.receiver);
-        });
+        if (Array.isArray(userData)) {
+          userData.forEach(msg => {
+            allMessages.push({ ...msg, _key: msg.id, _type: 'user' });
+            if (msg.sender) uniqueUsers.add(msg.sender);
+            if (msg.receiver) uniqueUsers.add(msg.receiver);
+          });
+        }
 
-        Object.entries(adminData).forEach(([key, msg]) => {
-          allMessages.push({ ...msg, _key: key, _type: 'admin' });
-          if (msg.sender) uniqueUsers.add(msg.sender);
-          if (msg.receiver) uniqueUsers.add(msg.receiver);
-        });
+        if (Array.isArray(adminData)) {
+          adminData.forEach(msg => {
+            allMessages.push({ ...msg, _key: msg.id, _type: 'admin' });
+            if (msg.sender) uniqueUsers.add(msg.sender);
+            if (msg.receiver) uniqueUsers.add(msg.receiver);
+          });
+        }
 
-        allMessages.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        allMessages.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
 
         updateUserFilter();
         applyFilters();
         updateStats();
-        showToast('Messages loaded', 'success');
+        showToast('Messages loaded from Supabase', 'success');
       } catch (err) {
         console.error("Failed to load messages:", err);
         await updateDatabaseStatuses();
@@ -5804,7 +5681,8 @@ document.addEventListener('DOMContentLoaded', () => {
     window.deleteMessage = async function (type, key) {
       if (!confirm(`Delete this ${type} message?`)) return;
       try {
-        await remove(ref(userDb, `${type}_messages/${key}`));
+        const res = await window.supabaseFetch(`/rest/v1/${type}_messages?id=eq.${key}`, { method: 'DELETE' });
+        if (res && res.error) throw new Error(res.error);
         showToast('Message deleted', 'success');
         loadMessages();
       } catch (err) {
@@ -5870,22 +5748,29 @@ document.addEventListener('DOMContentLoaded', () => {
       let deleted = 0;
       for (const msg of filteredMessages) {
         try {
-          await remove(ref(userDb, `${msg._type}_messages/${msg._key}`));
-          deleted++;
+          const res = await window.supabaseFetch(`/rest/v1/${msg._type}_messages?id=eq.${msg._key}`, { method: 'DELETE' });
+          if (!res || !res.error) deleted++;
         } catch (e) { console.error('Delete error:', e); }
       }
-      showToast(`Deleted ${deleted} messages`, 'success');
+      showToast(`Deleted ${deleted} messages from Supabase`, 'success');
       loadMessages();
     });
 
     elements.clearAllBtn?.addEventListener('click', async () => {
       if (!confirm('DELETE ALL MESSAGES? This cannot be undone!')) return;
       try {
-        await remove(ref(userDb, 'user_messages'));
-        await remove(ref(userDb, 'admin_messages'));
-        showToast('All messages cleared', 'success');
+        showGlobalLoading("Deleting all messages...");
+        // Delete from Supabase
+        await window.supabaseFetch('/rest/v1/user_messages?sender=not.is.null', { method: 'DELETE' });
+        try {
+          await window.supabaseFetch('/rest/v1/admin_messages?sender=not.is.null', { method: 'DELETE' });
+        } catch (e) {}
+        
+        hideGlobalLoading();
+        showToast('All messages cleared from Supabase', 'success');
         loadMessages();
       } catch (err) {
+        hideGlobalLoading();
         showToast('Clear failed: ' + err.message, 'error');
       }
     });
@@ -5993,7 +5878,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Upload to backend
     const sessionData = JSON.parse(localStorage.getItem('sas_user_data'));
-    const base64 = await fileToBase64(file);
+    let base64 = await fileToBase64(file);
+    // Strip "data:image/png;base64," etc.
+    if (base64.includes(',')) {
+      base64 = base64.split(',')[1];
+    }
 
     try {
       showGlobalLoading("Uploading your new profile picture...");
