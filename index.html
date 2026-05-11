@@ -690,13 +690,294 @@
       color: #003366;
     }
 
-    .login-success {
-      padding: 10px 16px;
-      background: #ecfdf5;
-      color: #065f46;
-      border-radius: 8px;
-      font-size: 0.85rem;
+    /* --- Service Explorer Premium Styles (Modern Minimalist) --- */
+    #lp-service-explorer-view {
+      background: #f8fafc !important;
+      padding-top: 140px !important; /* Safely clear the fixed main navbar */
+      min-height: 100vh !important;
+    }
+
+    .lp-se-nav-bar {
+      background: rgba(255, 255, 255, 0.8) !important;
+      backdrop-filter: blur(15px) !important;
+      -webkit-backdrop-filter: blur(15px) !important;
+      border: 1px solid rgba(226, 232, 240, 0.5) !important;
+      box-shadow: 0 8px 32px rgba(0, 51, 102, 0.05);
+      margin-bottom: 30px;
+      border-radius: 20px !important;
+      padding: 15px 25px !important;
+      position: sticky;
+      top: 100px;
+      z-index: 100;
+    }
+
+    .lp-se-office-info-card {
+      background: white !important;
+      border: 1px solid #e2e8f0 !important;
+      border-top: 4px solid var(--lp-primary) !important;
+      border-radius: 24px !important;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+      color: #1e293b !important;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02) !important;
+    }
+
+    .lp-se-office-info-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 20px 40px rgba(0, 51, 102, 0.08) !important;
+      border-color: var(--lp-primary) !important;
+    }
+
+    .lp-se-office-body-card {
+      background: #f8fafc !important;
+      border: 1px solid #e2e8f0 !important;
+      border-radius: 20px !important;
+      transition: all 0.3s ease;
+      color: #475569 !important;
+    }
+
+    .lp-se-office-body-card h4, .lp-se-office-body-card h5 {
+      color: #0f172a !important;
+      font-weight: 800;
+    }
+
+    .lp-se-btn-back {
+      background: #f1f5f9 !important;
+      color: #1e293b !important;
+      font-weight: 800 !important;
+      padding: 10px 20px !important;
+      border-radius: 14px !important;
+      transition: all 0.3s ease;
+      border: 1px solid #e2e8f0 !important;
+    }
+
+    .lp-se-btn-back:hover {
+      background: var(--lp-primary) !important;
+      color: white !important;
+      transform: translateX(-5px);
+    }
+
+    .lp-se-office-title {
+      color: #003366 !important;
+      letter-spacing: -1px !important;
+      font-family: 'Outfit', sans-serif !important;
+      font-weight: 800 !important;
+      background: none !important;
+      -webkit-text-fill-color: initial !important;
+    }
+
+    .lp-se-doc-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      background: white;
+      border-radius: 15px;
+      border: 1px solid #e2e8f0;
+      text-decoration: none;
+      color: #1e293b;
       font-weight: 600;
+      transition: all 0.3s ease;
+    }
+
+    .lp-se-doc-item:hover {
+      border-color: var(--lp-primary);
+      color: var(--lp-primary);
+      transform: translateX(5px);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    }
+    
+    .lp-se-activity-mini {
+      padding: 15px;
+      border-left: 3px solid #e2e8f0;
+      background: white;
+      border-radius: 0 12px 12px 0;
+      margin-bottom: 12px;
+      transition: all 0.3s ease;
+    }
+    
+    .lp-se-activity-mini:hover {
+      border-left-color: var(--lp-primary);
+      background: #f8fafc;
+      transform: translateX(5px);
+    }
+
+    .lp-se-activity-date {
+      color: #64748b !important;
+      font-weight: 800;
+    }
+
+    .lp-se-activity-title {
+      color: #1e293b !important;
+    }
+
+    .lp-service-icon {
+      width: 70px;
+      height: 70px;
+      background: #f1f5f9;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      color: var(--lp-accent); /* Synchronized with portal accent */
+      margin-bottom: 15px;
+      flex-shrink: 0;
+    }
+
+    .lp-service-card {
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center; /* Force horizontal centering */
+      text-align: center;
+      gap: 12px;
+      padding: 30px !important;
+      background: white !important;
+      border: 1px solid #e2e8f0 !important;
+      border-radius: 32px !important;
+      transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+      height: 100%; /* Ensure all cards in grid have same height */
+    }
+
+    .lp-service-card:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 20px 40px rgba(0, 51, 102, 0.08) !important;
+      border-color: var(--lp-primary) !important;
+    }
+
+    .lp-service-title {
+      font-size: 1.25rem !important;
+      font-weight: 800 !important;
+      color: #003366 !important;
+      margin-bottom: 12px !important;
+      font-family: 'Outfit', sans-serif;
+      min-height: 4.8rem; /* Further standardized to ensure symmetry across all card titles */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1.25;
+      width: 100%;
+      text-transform: capitalize;
+    }
+
+    .lp-service-sub-container {
+      height: 50px; /* Exact match to item height to prevent ghosting */
+      width: 100%;
+      overflow: hidden;
+      position: relative;
+      margin-top: 8px;
+      border-top: 1px solid rgba(0, 51, 102, 0.08);
+      padding-top: 0; /* Removed padding to align perfectly with scroll steps */
+      -webkit-mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
+      mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
+    }
+    
+    .lp-service-sub-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      transition: transform 0.6s cubic-bezier(0.85, 0, 0.15, 1);
+      will-change: transform;
+    }
+
+    .lp-service-sub-list:hover {
+      animation-play-state: paused;
+    }
+
+    @keyframes vertical-scroll {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(-50%); }
+    }
+
+    .lp-service-sub-item {
+      display: flex;
+      align-items: center;
+      justify-content: center; /* Center text inside pill */
+      gap: 12px;
+      height: 50px; 
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #003366;
+      padding: 0 20px;
+      background: #f1f5f9;
+      border-radius: 12px;
+      white-space: normal;
+      line-height: 1.2;
+      transition: all 0.3s ease;
+      border: 1px solid #e2e8f0;
+      flex-shrink: 0;
+      cursor: pointer;
+      width: 100%; /* Ensure pill takes full container width */
+    }
+
+    .lp-service-sub-item:hover {
+      background: var(--lp-primary);
+      color: white;
+      border-color: var(--lp-primary);
+      transform: scale(1.02);
+    }
+
+    .lp-service-sub-item i {
+      color: #f59e0b; /* Matching Amber/Gold */
+      font-size: 1rem;
+    }
+    
+    .lp-service-sub-item:hover i {
+      color: white;
+    }
+
+    .lp-service-card .lp-service-action {
+      margin-top: auto;
+      font-weight: 800;
+      color: var(--lp-primary);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.9rem;
+      transition: gap 0.3s;
+    }
+
+    .lp-service-card:hover {
+      transform: translateY(-12px) scale(1.02);
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5) !important;
+      border-color: var(--lp-primary) !important;
+    }
+
+    .lp-service-card:hover .lp-service-action {
+      gap: 10px;
+    }
+    .lp-se-export-btn {
+      background: var(--lp-primary) !important;
+      color: #fff !important;
+      font-weight: 800 !important;
+      border-radius: 12px !important;
+      padding: 14px 24px !important;
+      box-shadow: 0 8px 20px rgba(0, 51, 102, 0.2) !important;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    }
+
+    .lp-se-export-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 25px rgba(0, 51, 102, 0.3) !important;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    #lp-services {
+      background: #f1f5f9 !important;
+      padding: 100px 0 !important;
+    }
+    
+    #lp-services .lp-section-header h2 {
+      color: #003366 !important;
+    }
+    
+    #lp-services .lp-section-header p {
+      color: #64748b !important;
     }
   </style>
 
@@ -716,7 +997,7 @@
     <nav class="lp-navbar">
       <div class="lp-container">
         <div class="lp-logo">
-          <img src="assets/sas_logo.png" alt="NBSC Logo" class="lp-logo-img">
+          <a href="#lp-hero"><img src="assets/sas_logo.png" alt="NBSC Logo" class="lp-logo-img"></a>
         </div>
 
         <button class="lp-mobile-toggle" id="lp-mobile-toggle">
@@ -740,7 +1021,8 @@
     </nav>
 
     <!-- Hero Section -->
-    <header id="lp-hero" class="lp-hero">
+    <div id="lp-main-content">
+      <header id="lp-hero" class="lp-hero">
       <div class="lp-hero-overlay"></div>
       <div class="lp-hero-content">
         <h1 class="lp-hero-headline">Student Affairs &amp; Services</h1>
@@ -799,54 +1081,137 @@
           <h2>Our Services</h2>
           <p>Comprehensive programs designed to support student welfare and foster holistic development.</p>
         </div>
-
-        <div class="lp-services-grid">
-
-          <!-- Student Welfare Services -->
-          <div class="lp-service-card">
-            <div class="lp-service-icon"><i class='bx bx-heart'></i></div>
-            <h3 class="lp-service-title">Student Welfare Services</h3>
-            <p class="lp-service-desc">These ensure students’ basic needs and well-being:</p>
-            <ul class="lp-service-list">
-              <li><i class='bx bx-check'></i> Information and Orientation Services</li>
-              <li><i class='bx bx-check'></i> Guidance and Counseling</li>
-              <li><i class='bx bx-check'></i> Career and Placement Services</li>
-              <li><i class='bx bx-check'></i> Economic Enterprise Development (e.g., student employment)</li>
-              <li><i class='bx bx-check'></i> Student Handbook Development</li>
-            </ul>
+        <div class="lp-services-grid" id="lp-services-grid">
+          <!-- Dynamically populated from Supabase -->
+          <div style="grid-column:1/-1; text-align:center; padding:40px;">
+            <i class='bx bx-loader-alt bx-spin' style="font-size:2rem; color:var(--lp-primary);"></i>
+            <p style="margin-top:10px; color:#64748b;">Loading services...</p>
           </div>
-
-          <!-- Student Development Services -->
-          <div class="lp-service-card">
-            <div class="lp-service-icon"><i class='bx bx-group'></i></div>
-            <h3 class="lp-service-title">Student Development Services</h3>
-            <p class="lp-service-desc">These focus on enhancing skills and engagement:</p>
-            <ul class="lp-service-list">
-              <li><i class='bx bx-check'></i> Student Organizations and Activities</li>
-              <li><i class='bx bx-check'></i> Leadership Training</li>
-              <li><i class='bx bx-check'></i> Student Council/Government</li>
-              <li><i class='bx bx-check'></i> Campus Journalism (Student Publication)</li>
-              <li><i class='bx bx-check'></i> Sports Development</li>
-              <li><i class='bx bx-check'></i> Cultural and Arts Programs</li>
-            </ul>
-          </div>
-
-          <!-- Institutional Student Programs and Services -->
-          <div class="lp-service-card">
-            <div class="lp-service-icon"><i class='bx bx-building-house'></i></div>
-            <h3 class="lp-service-title">Institutional Student Programs and Services</h3>
-            <p class="lp-service-desc">These are required support services provided by the institution:</p>
-            <ul class="lp-service-list">
-              <li><i class='bx bx-check'></i> Admission Services</li>
-              <li><i class='bx bx-check'></i> Scholarship and Financial Assistance</li>
-              <li><i class='bx bx-check'></i> Health Services</li>
-              <li><i class='bx bx-check'></i> Food Services</li>
-              <li><i class='bx bx-check'></i> Safety and Security Services</li>
-              <li><i class='bx bx-check'></i> Services for Students with Special Needs (e.g., PWDs, IPs)</li>
-            </ul>
-          </div>
-
         </div>
+        
+        <script>
+          async function loadLPServices() {
+            const grid = document.getElementById('lp-services-grid');
+            try {
+              const res = await sasFetch('getServiceCategories');
+              const categories = res.categories || res.data || [];
+              if (res.success && categories.length > 0) {
+                grid.innerHTML = categories.map((cat, idx) => {
+                  const offices = cat.offices || [];
+                  const subItemsHtml = offices.length > 0 
+                    ? `<div class="lp-service-sub-container">
+                         <div class="lp-service-sub-list" id="ticker-${idx}">
+                           ${offices.map(off => `
+                             <div class="lp-service-sub-item" onclick="openServiceOffice('${off.id}', '${off.name.replace(/'/g, "\\'")}', event)">
+                               <i class='bx bx-check-circle'></i>
+                               <span>${off.name}</span>
+                             </div>
+                           `).join('')}
+                           <!-- Copy first item for seamless loop -->
+                           ${offices.length > 0 ? `
+                             <div class="lp-service-sub-item" onclick="openServiceOffice('${offices[0].id}', '${offices[0].name.replace(/'/g, "\\'")}', event)">
+                               <i class='bx bx-check-circle'></i>
+                               <span>${offices[0].name}</span>
+                             </div>
+                           ` : ''}
+                         </div>
+                       </div>`
+                    : `<p class="lp-service-desc">${cat.description || 'Comprehensive support services for students.'}</p>`;
+
+                  return `
+                    <div class="lp-service-card lp-service-clickable" onclick="openServiceCategory('${cat.name.replace(/'/g, "\\'")}')">
+                      <div class="lp-service-icon"><i class='bx ${cat.icon_class || 'bx-folder'}'></i></div>
+                      <h3 class="lp-service-title">${cat.name}</h3>
+                      ${subItemsHtml}
+                      <div class="lp-service-action">Explore All <i class='bx bx-right-arrow-alt'></i></div>
+                    </div>
+                  `;
+                }).join('');
+
+                // Start Tickers
+                categories.forEach((cat, idx) => {
+                  if (cat.offices && cat.offices.length > 1) {
+                    initServiceTicker(idx, cat.offices.length);
+                  }
+                });
+              } else {
+                grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:#ef4444;">Error loading services.</p>';
+              }
+            } catch (e) {
+              grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:#ef4444;">Connection error.</p>';
+            }
+          }
+
+          function initServiceTicker(idx, count) {
+            const list = document.getElementById(`ticker-${idx}`);
+            if (!list) return;
+            
+            let current = 0;
+            const itemHeight = 50; // Matches new CSS
+            
+            setInterval(() => {
+              // Pause if hovering on parent card
+              if (list.closest('.lp-service-card').matches(':hover')) return;
+
+              current++;
+              list.style.transform = `translateY(-${current * itemHeight}px)`;
+              
+              if (current >= count) {
+                setTimeout(() => {
+                  list.style.transition = 'none';
+                  current = 0;
+                  list.style.transform = `translateY(0)`;
+                  setTimeout(() => {
+                    list.style.transition = 'transform 0.6s cubic-bezier(0.85, 0, 0.15, 1)';
+                  }, 50);
+                }, 600); // Wait for transition to end
+              }
+            }, 3000); // 3 second pause
+          }
+
+          function openServiceCategory(categoryName) {
+            localStorage.setItem('sas_selected_service_category', categoryName);
+            window.location.hash = 'service-viewer';
+          }
+
+          function openServiceOffice(officeId, officeName, event) {
+            if (event) event.stopPropagation(); // Prevent card click
+            localStorage.setItem('sas_selected_office_id', officeId);
+            localStorage.setItem('sas_selected_office_name', officeName);
+            window.location.hash = 'service-viewer';
+          }
+
+          async function loadLPActivities() {
+            const grid = document.getElementById('lp-activities-grid');
+            try {
+              const res = await sasFetch('getAllRecentActivities');
+              if (res.success && res.data) {
+                if (res.data.length === 0) {
+                  grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:#64748b; padding:40px;">No recent activities logged yet.</p>';
+                  return;
+                }
+                grid.innerHTML = res.data.map(act => `
+                  <div class="lp-activity-card">
+                    <div class="lp-activity-info">
+                      <div class="lp-activity-meta">
+                        <span class="lp-activity-date">${new Date(act.activity_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                        <span class="lp-activity-office">${act.sas_offices?.name || 'SAS Office'}</span>
+                      </div>
+                      <h3 class="lp-activity-title">${act.title}</h3>
+                      <p class="lp-activity-snippet">${act.description || ''}</p>
+                    </div>
+                  </div>
+                `).join('');
+              }
+            } catch (e) { console.error("Activities error:", e); }
+          }
+
+          // Initial load
+          document.addEventListener('DOMContentLoaded', () => {
+            loadLPServices();
+            loadLPActivities();
+          });
+        </script>
       </div>
     </section>
 
@@ -938,6 +1303,282 @@
         </div>
       </div>
     </section>
+    </div> <!-- /lp-main-content -->
+
+    <!-- Service Explorer View -->
+    <div id="lp-service-explorer-view" style="display:none; padding-top: 100px; min-height: 100vh; background: var(--lp-bg-alt);">
+      <div class="lp-container">
+        
+        <div class="lp-se-nav-bar" id="se-nav-bar" style="display:none; align-items:center; gap:15px; border-radius:10px 10px 0 0;">
+          <button class="lp-se-btn-back" id="se-btn-back"><i class='bx bx-left-arrow-alt'></i> Back to Categories</button>
+          <div class="lp-se-breadcrumb" id="se-breadcrumb" style="font-size:.9rem; font-weight:600; color:#64748b;">Category</div>
+        </div>
+
+        <div class="lp-se-content" style="padding: 30px 0;">
+          <div class="lp-se-loading-state" id="se-loading-state" style="display:flex; align-items:center; justify-content:center; padding:60px;">
+            <div style="width:32px; height:32px; border:3px solid #e2e8f0; border-top-color:var(--lp-primary); border-radius:50%; animation:spin 1s linear infinite;"></div>
+          </div>
+
+          <!-- Category View: List of Offices -->
+          <div class="lp-se-category-view" id="se-category-view" style="display:none;">
+            <div class="lp-se-category-header" style="margin-bottom:25px;">
+              <h2 id="se-category-title" class="lp-se-office-title" style="font-size:2.2rem; font-weight:800;">Services</h2>
+            </div>
+            <div class="lp-se-offices-grid" id="se-offices-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:20px;"></div>
+          </div>
+
+          <!-- Office Details View -->
+          <div class="lp-se-office-view" id="se-office-view" style="display:none; flex-direction:column; gap:25px;">
+            <div class="lp-se-office-info-card" style="border-radius:20px; padding:30px; box-shadow:var(--lp-shadow);">
+              <h2 class="lp-se-office-title" id="se-office-title" style="font-size:2.5rem; font-weight:800; margin-bottom:10px;">Office Name</h2>
+              <div class="lp-se-office-info" id="se-office-info" style="font-size:1.1rem; color:#475569; line-height:1.6; font-weight:600;">Information overview...</div>
+            </div>
+
+            <div class="lp-se-office-body-card" style="border-radius:16px; padding:30px; box-shadow:var(--lp-shadow);">
+              <h3 style="font-size:1.3rem; font-weight:800; color:#1e293b; margin-bottom:15px; display:flex; align-items:center; gap:8px;"><i class='bx bx-info-circle' style="color:var(--lp-primary)"></i> About Us</h3>
+              <div id="se-office-body" style="font-size:1rem; color:#334155; line-height:1.7; white-space:pre-wrap;">Detailed description goes here.</div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:25px;">
+              <div class="lp-se-office-body-card" style="border-radius:16px; padding:30px; box-shadow:var(--lp-shadow);">
+                <h3 style="font-size:1.3rem; font-weight:800; color:#1e293b; margin-bottom:15px; display:flex; align-items:center; gap:8px;"><i class='bx bx-folder-open' style="color:var(--lp-primary)"></i> Public Documents</h3>
+                <div id="se-docs-list" style="display:flex; flex-direction:column; gap:10px;"></div>
+              </div>
+
+              <div class="lp-se-office-body-card" style="border-radius:16px; padding:30px; box-shadow:var(--lp-shadow);">
+                <h3 style="font-size:1.3rem; font-weight:800; color:#1e293b; margin-bottom:15px; display:flex; align-items:center; gap:8px;"><i class='bx bx-time-five' style="color:var(--lp-primary)"></i> Recent Activities</h3>
+                <div id="se-activities-list" style="display:flex; flex-direction:column; gap:5px;"></div>
+              </div>
+            </div>
+
+            <div class="lp-se-office-body-card" style="border-radius:16px; padding:30px; box-shadow:var(--lp-shadow); text-align:center; background:linear-gradient(to bottom, #fff, #f1f5f9);">
+              <h3 style="font-size:1.3rem; font-weight:800; color:#1e293b; margin-bottom:10px; display:flex; align-items:center; justify-content:center; gap:8px;"><i class='bx bx-bar-chart-alt-2' style="color:var(--lp-primary)"></i> Analytics</h3>
+              <p style="font-size:0.9rem; color:#64748b; margin-bottom:20px;">Download engagement and visitor reports for this office.</p>
+              <button class="lp-se-export-btn" id="se-export-btn">
+                <i class='bx bx-download'></i> Export Data (CSV)
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      async function sasFetch(action, params = {}) {
+        const urlString = window.ENV?.BACKEND_GAS_URL || 'https://script.google.com/macros/s/AKfycbyNmsUvDndrM5L2v_E3gJvM2jHqI1o30Tz8X-aI2H9vX-xYjZ0/exec';
+        if (!urlString) {
+          console.warn("Backend URL missing!");
+          return { success: false, message: "Backend URL missing" };
+        }
+        try {
+          const url = new URL(urlString);
+          url.searchParams.append('action', action);
+          for (const [key, value] of Object.entries(params)) {
+            url.searchParams.append(key, value);
+          }
+          const finalUrl = url.toString();
+          console.log("sasFetch: Fetching", finalUrl);
+          const r = await fetch(finalUrl);
+          return await r.json();
+        } catch (e) {
+          console.error("SAS Fetch Error:", e);
+          return { success: false, message: e.message };
+        }
+      }
+
+      let seCurrentCategoryName = 'Services';
+      let seCurrentOfficeId = null;
+
+      window.loadServiceCategory = async () => {
+        const categoryView = document.getElementById('se-category-view');
+        const loadingState = document.getElementById('se-loading-state');
+        const officeView = document.getElementById('se-office-view');
+        const navBar = document.getElementById('se-nav-bar');
+        const breadcrumb = document.getElementById('se-breadcrumb');
+
+        // Check for direct office preview request
+        const previewOfficeId = localStorage.getItem('sas_selected_office_id');
+        const previewOfficeName = localStorage.getItem('sas_selected_office_name');
+        
+        if (previewOfficeId && previewOfficeName) {
+            localStorage.removeItem('sas_selected_office_id');
+            localStorage.removeItem('sas_selected_office_name');
+            await loadOfficeDetails(previewOfficeId, previewOfficeName);
+            return;
+        }
+
+        seCurrentCategoryName = localStorage.getItem('sas_selected_service_category') || 'Services';
+        
+        document.getElementById('se-category-title').textContent = seCurrentCategoryName;
+        breadcrumb.textContent = seCurrentCategoryName;
+
+        // Force main navbar visibility
+        const mainNavbar = document.querySelector('.lp-navbar');
+        if (mainNavbar) mainNavbar.classList.add('scrolled');
+
+        loadingState.style.display = 'flex';
+        categoryView.style.display = 'none';
+        officeView.style.display = 'none';
+        navBar.style.display = 'none';
+
+        try {
+          const res = await sasFetch('getOfficesByCategory', { categoryName: seCurrentCategoryName });
+          
+          loadingState.style.display = 'none';
+          if (res.success) {
+            renderOffices(res.offices);
+            categoryView.style.display = 'block';
+            navBar.style.display = 'flex';
+          } else {
+            document.getElementById('se-offices-grid').innerHTML = `<p style="color:red;">Error: ${res.message}</p>`;
+            categoryView.style.display = 'block';
+            navBar.style.display = 'flex';
+          }
+        } catch (err) {
+          loadingState.style.display = 'none';
+          document.getElementById('se-offices-grid').innerHTML = `<p style="color:red;">Network Error.</p>`;
+          categoryView.style.display = 'block';
+          navBar.style.display = 'flex';
+        }
+      };
+
+      function renderOffices(offices) {
+        const grid = document.getElementById('se-offices-grid');
+        if (!offices || offices.length === 0) {
+          grid.innerHTML = '<p style="color:#64748b;">No offices found in this category.</p>';
+          return;
+        }
+
+        grid.innerHTML = offices.map(o => `
+          <div class="lp-se-office-card" data-id="${o.id}" data-name="${o.name}" style="background:#fff; border-radius:24px; border:1px solid #e2e8f0; padding:30px; box-shadow:var(--lp-shadow); cursor:pointer; transition:all 0.3s ease; display:flex; flex-direction:column; gap:15px; height:100%;">
+            <h3 style="font-size:1.3rem; font-weight:800; color:var(--lp-primary); margin:0; min-height:3.6rem; display:flex; align-items:center;">${o.name}</h3>
+            <p style="font-size:.95rem; color:#64748b; line-height:1.6; display:-webkit-box; -webkit-line-clamp:3; line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; margin:0; flex-grow:1;">${o.info || 'No information available.'}</p>
+            <div style="margin-top:10px; color:var(--lp-accent); font-weight:700; font-size:0.9rem; display:flex; align-items:center; gap:5px;">Learn More <i class='bx bx-right-arrow-alt'></i></div>
+          </div>
+        `).join('');
+
+        grid.querySelectorAll('.lp-se-office-card').forEach(card => {
+          card.addEventListener('mouseover', () => {
+            card.style.transform = 'translateY(-4px)';
+            card.style.borderColor = 'var(--lp-accent)';
+            card.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
+          });
+          card.addEventListener('mouseout', () => {
+            card.style.transform = 'none';
+            card.style.borderColor = '#e2e8f0';
+            card.style.boxShadow = 'var(--lp-shadow)';
+          });
+          card.addEventListener('click', () => {
+            loadOfficeDetails(card.getAttribute('data-id'), card.getAttribute('data-name'));
+          });
+        });
+      }
+
+      async function loadOfficeDetails(officeId, officeName) {
+        console.log("Loading details for office:", officeId, officeName);
+        if (!officeId) {
+          console.error("loadOfficeDetails: Missing officeId!");
+          alert("Error: Missing office ID.");
+          return;
+        }
+        seCurrentOfficeId = officeId;
+        const categoryView = document.getElementById('se-category-view');
+        const loadingState = document.getElementById('se-loading-state');
+        const navBar = document.getElementById('se-nav-bar');
+        const officeView = document.getElementById('se-office-view');
+        const breadcrumb = document.getElementById('se-breadcrumb');
+        
+        categoryView.style.display = 'none';
+        loadingState.style.display = 'flex';
+        navBar.style.display = 'flex';
+        breadcrumb.textContent = `${seCurrentCategoryName} / ${officeName}`;
+
+        try {
+          const res = await sasFetch('getOfficeDetails', { officeId });
+          console.log("Office details response:", res);
+          loadingState.style.display = 'none';
+
+          if (res.success) {
+            document.getElementById('se-office-title').textContent = res.office.name;
+            document.getElementById('se-office-info').textContent = res.office.info || 'No info provided.';
+            document.getElementById('se-office-body').textContent = res.office.office_body || 'No detailed description available.';
+
+            const docsList = document.getElementById('se-docs-list');
+            if (!res.docs || res.docs.length === 0) {
+              docsList.innerHTML = '<div style="color:#64748b; font-size:.9rem;">No documents available.</div>';
+            } else {
+              docsList.innerHTML = res.docs.map(d => `
+                <a href="${d.url}" target="_blank" style="display:flex; align-items:center; gap:12px; padding:12px 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; text-decoration:none; color:var(--lp-dark); font-weight:600; font-size:.95rem;">
+                  <i class='bx bxs-file-pdf' style="color:#dc2626; font-size:1.4rem;"></i>
+                  <span>${d.title}</span>
+                </a>
+              `).join('');
+            }
+
+            const actList = document.getElementById('se-activities-list');
+            if (!res.activities || res.activities.length === 0) {
+              actList.innerHTML = '<div style="color:#64748b; font-size:.9rem;">No recent activities logged.</div>';
+            } else {
+              actList.innerHTML = res.activities.map(a => `
+                <div style="padding:15px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px;">
+                  <div style="font-size:0.75rem; color:var(--lp-primary); font-weight:700; margin-bottom:5px;">${new Date(a.activity_date).toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'})}</div>
+                  <div style="font-weight:700; font-size:0.95rem; color:var(--lp-dark); margin-bottom:4px;">${a.title}</div>
+                  <div style="font-size:0.85rem; color:#64748b; line-height:1.5;">${a.description || ''}</div>
+                </div>
+              `).join('');
+            }
+            officeView.style.display = 'flex';
+          } else {
+            alert("Failed to load office details: " + res.message);
+            window.loadServiceCategory();
+          }
+        } catch (err) {
+          loadingState.style.display = 'none';
+          alert("Network Error.");
+          window.loadServiceCategory();
+        }
+      }
+
+      document.getElementById('se-export-btn').addEventListener('click', async () => {
+        if (!seCurrentOfficeId) return;
+        const btn = document.getElementById('se-export-btn');
+        const origText = btn.innerHTML;
+        btn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Exporting...';
+        btn.disabled = true;
+
+        try {
+          const res = await sasFetch('exportOfficeAnalytics', { officeId: seCurrentOfficeId });
+          if (res.success && res.analytics && res.analytics.exportData) {
+            const blob = new Blob([res.analytics.exportData], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `office_analytics_${seCurrentOfficeId}.csv`);
+            a.click();
+            window.URL.revokeObjectURL(url);
+          } else {
+            alert("Failed to generate export: " + (res.message || "No data."));
+          }
+        } catch (e) {
+          alert("Export failed.");
+        } finally {
+          btn.innerHTML = origText;
+          btn.disabled = false;
+        }
+      });
+
+      document.getElementById('se-btn-back').addEventListener('click', () => {
+        const officeView = document.getElementById('se-office-view');
+        if (officeView.style.display === 'flex') {
+          // If in office view, go back to category list
+          officeView.style.display = 'none';
+          window.loadServiceCategory();
+        } else {
+          // If in category view, go back to landing page home
+          window.location.hash = '#home';
+        }
+      });
+    </script>
 
     <!-- Footer -->
     <footer class="lp-footer">
