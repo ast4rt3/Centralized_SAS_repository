@@ -1,3 +1,9 @@
+/**
+ * @deprecated
+ * Firebase Realtime Database is DEPRECATED.
+ * All real-time features (Messaging, TV Config, Activities) have been migrated to Supabase.
+ * This file is kept temporarily for backward compatibility with external apps.
+ */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
 import { getDatabase } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
 

@@ -103,10 +103,14 @@ export async function initSharedMessaging(onMessageReceived) {
     })
     .subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
-        await presenceChannel.track({
-          online_at: new Date().toISOString(),
-          user: myUsername
-        });
+        try {
+          await presenceChannel.track({
+            online_at: new Date().toISOString(),
+            user: myUsername
+          });
+        } catch (e) {
+          console.warn("[Presence] Tracking failed:", e);
+        }
       }
     });
 
@@ -191,21 +195,11 @@ function handleIncomingMessage(data, onMessageReceived, notify = true) {
   if (contactsMap[otherUser].history.some(m => m.id === data.id)) return;
 
   contactsMap[otherUser].history.push(data);
-  
-  // Update legacy window.contactsMap
-  if (window.contactsMap && window.contactsMap[otherUser]) {
-    if (!window.contactsMap[otherUser].history) window.contactsMap[otherUser].history = [];
-    if (!window.contactsMap[otherUser].history.some(m => m.id === data.id)) {
-      window.contactsMap[otherUser].history.push(data);
-    }
-  }
 
   if (data.sender === otherUser && !data.read) {
     contactsMap[otherUser].unread++;
-    if (window.contactsMap && window.contactsMap[otherUser]) {
-      window.contactsMap[otherUser].unread++;
-    }
-    if (notify) {
+  }
+  if (notify) {
       if (onMessageReceived) {
         onMessageReceived(otherUser, data);
       } else if (typeof window.showNotification === 'function') {
@@ -218,7 +212,6 @@ function handleIncomingMessage(data, onMessageReceived, notify = true) {
              }
           });
         }
-      }
     }
   }
 

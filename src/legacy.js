@@ -1,5 +1,4 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
-import { getDatabase, ref, push, onChildAdded, onChildChanged, onValue, onDisconnect, set, remove, get, update, serverTimestamp, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
+import { supabase } from "./core/supabase.js";
 
 // IMMEDIATE AUTH CHECK - Run BEFORE any UI is shown to prevent flash of unauthorized content
 // IMMEDIATE AUTH CHECK - Show landing page or dashboard depending on session
@@ -49,26 +48,11 @@ function extractCloudinaryId(url) {
   return idWithExt.split('.')[0];
 }
 
-// Initialize Firebase Realtime Database
-let db;
-let userDb;
+// DB state
 let chatInitialized = false;
 
-if (window.ENV && window.ENV.FIREBASE_CONFIG) {
-  try {
-    const app = initializeApp(window.ENV.FIREBASE_CONFIG);
-    db = getDatabase(app);
-    
-    // Also initialize the messaging-specific app instance used by the listeners
-    const userApp = initializeApp(window.ENV.FIREBASE_CONFIG, "userMessagingAppLegacy");
-    userDb = getDatabase(userApp);
-  } catch (err) {
-    console.error("Firebase initialization failed:", err);
-  }
-}
-
-function initAdminChat() {
-  if (!userDb || chatInitialized) return;
+async function initAdminChat() {
+  if (!supabase || chatInitialized) return;
   
   const chatMessages = document.getElementById('chat-messages');
   const chatForm = document.getElementById('chat-form');
@@ -76,7 +60,6 @@ function initAdminChat() {
   if (!chatMessages || !chatForm || !chatInput) return;
 
   chatInitialized = true;
-  const messagesRef = ref(userDb, 'admin_messages');
   
   const sessionData = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
   let myUsername = 'Admin';
@@ -84,25 +67,47 @@ function initAdminChat() {
     try { myUsername = JSON.parse(sessionData).username || 'Admin'; } catch(e) {}
   }
 
-  onChildAdded(messagesRef, (snapshot) => {
-    const data = snapshot.val();
-    if (typeof displayMessage === 'function') {
-      displayMessage(data, data.sender === myUsername);
-    }
-  });
+  // 1. Initial Load
+  const { data: initialMessages, error: loadError } = await supabase
+    .from('admin_messages')
+    .select('*')
+    .order('timestamp', { ascending: true })
+    .limit(100);
+
+  if (initialMessages) {
+    initialMessages.forEach(msg => displayMessage(msg, msg.sender === myUsername));
+  }
+
+  // 2. Realtime Listener
+  supabase
+    .channel('admin-chat')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'admin_messages' }, payload => {
+      const data = payload.new;
+      if (data.sender !== myUsername) {
+        displayMessage(data, false);
+      }
+    })
+    .subscribe();
   
-  chatForm.addEventListener('submit', (e) => {
+  chatForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const text = chatInput.value.trim();
     if (text) {
-      push(messagesRef, {
-        sender: myUsername,
-        text: text,
-        timestamp: serverTimestamp()
-      }).catch(err => {
-        console.error("Failed to send message:", err);
-      });
-      chatInput.value = '';
+      const { data, error } = await supabase
+        .from('admin_messages')
+        .insert([{
+          sender: myUsername,
+          text: text
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Failed to send admin message:", error);
+      } else {
+        displayMessage(data, true);
+        chatInput.value = '';
+      }
     }
   });
 }
@@ -138,19 +143,8 @@ function displayMessage(data, isMe) {
 // userDb and initialization moved to the top of the file
 let userChatInitialized = false;
 
-// Optional second database used by superadmin database health checks.
+// Optional second database (Legacy fallback removed)
 let storageCheckDb = null;
-if (window.ENV && window.ENV.STORAGE_CHECK_FIREBASE_CONFIG) {
-  try {
-    const storageApp = initializeApp(window.ENV.STORAGE_CHECK_FIREBASE_CONFIG, "storageCheckApp");
-    storageCheckDb = getDatabase(storageApp);
-  } catch (e) {
-    console.error("Storage check firebase init failed:", e);
-  }
-} else if (userDb) {
-  // Fallback to main messaging database for storage health probes if not specifically defined
-  storageCheckDb = userDb;
-}
 
 window.contactsMap = window.contactsMap || {};
 let contactsMap = window.contactsMap;
@@ -246,7 +240,7 @@ function initSharedMessaging() {
 }
 
 function initUserMessaging() {
-  if (!userDb || userChatInitialized) return;
+  if (!supabase || userChatInitialized) return;
 
   const widget = document.getElementById('fb-chat-widget');
   if (!widget) return;
@@ -430,7 +424,7 @@ function initUserMessaging() {
 window.addEventListener('DOMContentLoaded', () => {
   initUserMessaging();
   initSharedMessaging(); // Initialize the universal listener
-  setTimeout(initFullMessenger, 2000); // Give Firebase a moment to sync
+  setTimeout(initFullMessenger, 1000); // Give Supabase a moment to sync
   initLpActivities(); // Load dynamic landing page activities (public)
   initLpDocuments();  // Load dynamic landing page documents (public)
 });
@@ -451,7 +445,7 @@ function initFullMessenger() {
   };
 
   const container = document.querySelector('.messenger-container');
-  if (!container || !userDb) return;
+  if (!container || !supabase) return;
 
   const contactsList = document.getElementById('messenger-contacts');
   const chatView = document.getElementById('messenger-chat-view');
@@ -1227,30 +1221,41 @@ document.addEventListener('DOMContentLoaded', () => {
     sidebar.classList.add('collapsed');
   }
 
-  // Global TV Permanent URL & Duration Sync (via Firebase)
+  // Global TV Permanent URL & Duration Sync (via Supabase)
   window.tvPermanentUrl = "";
   window.tvPermanentDuration = 60; // Default 60s
-  if (userDb) {
-    const permUrlRef = ref(userDb, 'config/tv_permanent_url');
-    onValue(permUrlRef, (snapshot) => {
-      const globalUrl = snapshot.val();
-      if (globalUrl !== window.tvPermanentUrl) {
-        window.tvPermanentUrl = globalUrl || "";
-        console.log("Global TV URL Updated:", window.tvPermanentUrl);
-        // Force a re-render if we are in a state that shows posts
-        if (typeof fetchPosts === 'function') fetchPosts();
-      }
-    });
+  
+  if (supabase) {
+    // 1. Initial Load
+    (async () => {
+       try {
+         const { data } = await supabase.from('sas_config').select('*');
+         if (data) {
+           const urlObj = data.find(c => c.key === 'tv_permanent_url');
+           const durObj = data.find(c => c.key === 'tv_permanent_duration');
+           if (urlObj) window.tvPermanentUrl = urlObj.value;
+           if (durObj) window.tvPermanentDuration = parseInt(durObj.value) || 60;
+           if (urlObj || durObj) {
+             if (typeof fetchPosts === 'function') fetchPosts();
+           }
+         }
+       } catch (e) {}
+    })();
 
-    const permDurRef = ref(userDb, 'config/tv_permanent_duration');
-    onValue(permDurRef, (snapshot) => {
-      const globalDur = snapshot.val();
-      if (globalDur !== null && globalDur !== window.tvPermanentDuration) {
-        window.tvPermanentDuration = parseInt(globalDur) || 60;
-        console.log("Global TV Duration Updated:", window.tvPermanentDuration);
-        if (typeof fetchPosts === 'function') fetchPosts();
-      }
-    });
+    // 2. Realtime Listener
+    supabase
+      .channel('tv-config')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sas_config' }, payload => {
+         const { key, value } = payload.new;
+         if (key === 'tv_permanent_url') {
+           window.tvPermanentUrl = value;
+           if (typeof fetchPosts === 'function') fetchPosts();
+         } else if (key === 'tv_permanent_duration') {
+           window.tvPermanentDuration = parseInt(value) || 60;
+           if (typeof fetchPosts === 'function') fetchPosts();
+         }
+      })
+      .subscribe();
   }
 
   // --- Smart Cursor Logic (TV Mode) ---
@@ -4352,12 +4357,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const originalHtml = portalSave.innerHTML;
                 portalSave.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> Syncing...";
                 try {
-                  const permUrlRef = ref(userDb, 'config/tv_permanent_url');
-                  const permDurRef = ref(userDb, 'config/tv_permanent_duration');
-                  await set(permUrlRef, newUrl);
-                  await set(permDurRef, newDuration);
+                  const { error: err1 } = await supabase.from('sas_config').upsert({ key: 'tv_permanent_url', value: newUrl });
+                  const { error: err2 } = await supabase.from('sas_config').upsert({ key: 'tv_permanent_duration', value: String(newDuration) });
+                  
+                  if (err1 || err2) throw new Error("Supabase sync failed");
                   showToast("Portal settings updated globally!", "success");
                 } catch (e) {
+                  console.error("TV Sync error:", e);
                   showToast("Sync failed. Check connection.", "error");
                 } finally {
                   portalSave.disabled = false;
@@ -4909,7 +4915,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- DATABASE MANAGEMENT (Superadmin Only) ---
   async function initDatabaseManagement() {
-    if (!userDb) return;
+    if (!supabase) return;
     try {
       const raw = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data') || '{}';
       const role = (JSON.parse(raw).role || '').toLowerCase();
@@ -4919,7 +4925,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const refreshBtn = document.getElementById('db-refresh-btn');
-    if (!refreshBtn || !userDb) return;
+    if (!refreshBtn || !supabase) return;
     const dbSection = document.getElementById('database');
     if (dbSection?.dataset.initialized === 'true') return;
     if (dbSection) dbSection.dataset.initialized = 'true';
@@ -4988,13 +4994,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function checkDatabaseStatus(dbInstance, probePath) {
-      if (!dbInstance) return 'Optional / Not Linked';
-      try {
-        const snap = await get(ref(dbInstance, probePath));
-        return snap.exists() ? 'Online' : 'Online (Empty)';
-      } catch (err) {
-        return `Error (${err.code || 'Forbidden'})`;
+      if (probePath === 'user_messages' || probePath === 'admin_messages') {
+        try {
+          const { data, error } = await supabase.from(probePath).select('count').limit(1);
+          return error ? `Error (${error.code})` : 'Online';
+        } catch (e) { return 'Offline'; }
       }
+      return 'Optional / Not Linked';
     }
 
     async function checkSupabaseStatus() {
@@ -5348,7 +5354,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const storagePath = (elements.storagePath?.value || '').trim() || window.ENV?.STORAGE_CHECK_PATH || 'storage_check_health';
       const [gasState, fbMsgState, fbStoreState, supabaseState, cloudinaryState, cloudinaryOldState] = await Promise.all([
         checkGasStatus(),
-        checkDatabaseStatus(userDb, 'user_messages'),
+        checkDatabaseStatus(null, 'user_messages'),
         checkDatabaseStatus(storageCheckDb, storagePath),
         checkSupabaseStatus(),
         checkCloudinaryStatus(window.ENV?.CLOUDINARY_CLOUD_NAME),
@@ -5406,16 +5412,16 @@ document.addEventListener('DOMContentLoaded', () => {
       showToast(`Scanning for used assets in ${accountLabel}...`, 'info');
 
       try {
-        // 1. Get used IDs from Firebase (Landing Page)
-        const lpRef = ref(userDb, 'lp_activities');
-        const lpSnap = await get(lpRef);
-        const lpData = lpSnap.val() || {};
+        // 1. Get used IDs from Supabase (Landing Page)
+        const { data: lpData } = await supabase.from('sas_activities').select('image_url');
         const usedIdsFromFirebase = [];
 
-        Object.values(lpData).forEach(act => {
-          const id = extractCloudinaryId(act.imageUrl);
-          if (id) usedIdsFromFirebase.push(id);
-        });
+        if (lpData) {
+          lpData.forEach(act => {
+            const id = extractCloudinaryId(act.image_url);
+            if (id) usedIdsFromFirebase.push(id);
+          });
+        }
 
         // 2. Trigger GAS Flush
         const res = await fetch(BACKEND_GAS_URL, {
@@ -5463,17 +5469,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const raw = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data') || '{}';
         const userObj = JSON.parse(raw);
 
-        // 1. Cascading delete from Firebase Landing Page Activities
-        const lpRef = ref(userDb, 'lp_activities');
-        const lpSnap = await get(lpRef);
-        const lpData = lpSnap.val() || {};
+        // 1. Cascading delete from Supabase Landing Page Activities
+        const { data: lpData } = await supabase.from('sas_activities').select('id, image_url');
         let deletedLpCount = 0;
 
-        for (const [key, act] of Object.entries(lpData)) {
-          // Check if the activity uses this Cloudinary asset
-          if (act.imageUrl && act.imageUrl.includes(publicId)) {
-            await remove(ref(userDb, `lp_activities/${key}`));
-            deletedLpCount++;
+        if (lpData) {
+          for (const act of lpData) {
+            // Check if the activity uses this Cloudinary asset
+            if (act.image_url && act.image_url.includes(publicId)) {
+              await supabase.from('sas_activities').delete().eq('id', act.id);
+              deletedLpCount++;
+            }
           }
         }
 
@@ -6175,30 +6181,42 @@ function initLpActivities() {
   // ---- Firebase activities listener ----
   if (!grid) return;
 
-  const lpRef = ref(userDb, 'lp_activities');
-  onValue(lpRef, (snapshot) => {
-    const data = snapshot.val();
-    const activities = data
-      ? Object.entries(data)
-        .map(([key, val]) => ({ id: key, ...val }))
-        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
-      : [];
+  // ---- Supabase activities listener ----
+  if (!grid) return;
 
-    // Cache for full-page view
-    _lpAllActivities = activities;
+  const fetchActivities = async () => {
+    const { data, error } = await supabase
+      .from('sas_activities')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-    // Teaser: show latest 6
-    renderLpActivities(activities.slice(0, 6), grid);
+    if (data) {
+      const activities = data.map(act => ({
+         ...act,
+         imageUrl: act.image_url, // map snake_case to camelCase
+         createdAt: new Date(act.created_at).getTime()
+      }));
+      
+      _lpAllActivities = activities;
+      renderLpActivities(activities.slice(0, 6), grid);
 
-    // Always show "See More" button
-    const viewAllWrap = document.getElementById('lp-view-all-wrap');
-    if (viewAllWrap) viewAllWrap.style.display = 'block';
+      const viewAllWrap = document.getElementById('lp-view-all-wrap');
+      if (viewAllWrap) viewAllWrap.style.display = 'block';
 
-    // Keep full-page grid in sync if it's open
-    if (document.getElementById('lp-all-activities-page')?.classList.contains('lp-all-act-open')) {
-      renderLpAllActGrid(_lpAllActivities);
+      if (document.getElementById('lp-all-activities-page')?.classList.contains('lp-all-act-open')) {
+        renderLpAllActGrid(_lpAllActivities);
+      }
     }
-  });
+  };
+
+  fetchActivities();
+
+  supabase
+    .channel('lp-activities')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'sas_activities' }, payload => {
+      fetchActivities();
+    })
+    .subscribe();
 
   // Wire up the full-page
   initLpAllActivitiesPage();
@@ -6379,7 +6397,7 @@ function renderLpAllActGrid(activities) {
 
 // --- ADMIN: modal for managing LP activities ---
 function initLpActivitiesAdmin(userObj) {
-  if (!userObj || !userDb) return;
+  if (!userObj || !supabase) return;
   const role = (userObj.role || '').toLowerCase();
   if (role !== 'admin' && role !== 'superadmin') return;
 
@@ -6487,25 +6505,30 @@ function initLpActivitiesAdmin(userObj) {
     });
   }
 
-  // ---- Load current activities into list ----
-  function loadCurrentActivities() {
-    if (!currentList) return;
+  async function loadCurrentActivities() {
     currentList.innerHTML = '<div class="lp-act-loading"><div class="spinner" style="width:24px;height:24px;"></div><span>Loading…</span></div>';
+    
+    const { data, error } = await supabase
+      .from('sas_activities')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-    const lpRef = ref(userDb, 'lp_activities');
-    get(lpRef).then((snapshot) => {
-      lpActivitiesSnapshot = snapshot.val() || {};
-      renderCurrentList();
-    }).catch(() => {
+    if (error) {
       currentList.innerHTML = '<div class="lp-act-empty-msg">Could not load activities.</div>';
-    });
+    } else {
+      lpActivitiesSnapshot = (data || []).reduce((acc, act) => {
+        acc[act.id] = act;
+        return acc;
+      }, {});
+      renderCurrentList();
+    }
   }
 
   function renderCurrentList() {
     if (!currentList) return;
     currentList.innerHTML = '';
     const entries = Object.entries(lpActivitiesSnapshot)
-      .sort(([, a], [, b]) => (b.createdAt || 0) - (a.createdAt || 0));
+      .sort(([, a], [, b]) => (new Date(b.created_at || 0) - new Date(a.created_at || 0)));
 
     if (entries.length === 0) {
       currentList.innerHTML = '<div class="lp-act-empty-msg">No activities yet. Add one below!</div>';
@@ -6591,29 +6614,24 @@ function initLpActivitiesAdmin(userObj) {
           if (act.imageUrl) {
             const publicId = extractCloudinaryId(act.imageUrl);
             if (publicId) {
-              // Determine which account to delete from based on URL
               const cloudName = act.imageUrl.includes('dbytj36mv') ? 'dbytj36mv' : 'dj8ugtlrl';
-
-              // Get current session for auth
               const sessionData = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
               const userObj = sessionData ? JSON.parse(sessionData) : null;
-
               if (userObj) {
                 await fetch(BACKEND_GAS_URL, {
                   method: 'POST',
                   body: JSON.stringify({
                     action: 'deleteMultimedia',
                     publicId: publicId,
-                    cloudName: cloudName,
-                    username: userObj.username,
-                    password: userObj.password
+                    cloudName: cloudName
                   })
-                }).catch(e => console.error("Cloudinary cascade delete failed:", e));
+                });
               }
             }
           }
-
-          await remove(ref(userDb, `lp_activities/${key}`));
+          const { error } = await supabase.from('sas_activities').delete().eq('id', key);
+          if (error) throw error;
+          
           delete lpActivitiesSnapshot[key];
           renderCurrentList();
           showToast('Activity deleted.', 'success');
@@ -6712,16 +6730,16 @@ function initLpActivitiesAdmin(userObj) {
         excerpt,
         date,
         imageUrl,
-        uploadedBy: userObj.username || 'admin',
-        updatedAt: Date.now()
+        uploadedBy: userObj.username || 'admin'
       };
 
       if (editingLpActKey) {
-        await update(ref(userDb, `lp_activities/${editingLpActKey}`), activityData);
+        const { error } = await supabase.from('sas_activities').update(activityData).eq('id', editingLpActKey);
+        if (error) throw error;
         showToast('Activity updated successfully!', 'success');
       } else {
-        activityData.createdAt = Date.now();
-        await push(ref(userDb, 'lp_activities'), activityData);
+        const { error } = await supabase.from('sas_activities').insert([activityData]);
+        if (error) throw error;
         showToast('Activity added to landing page!', 'success');
       }
 
@@ -6883,7 +6901,7 @@ function initLpDocuments() {
 
 // ---- ADMIN: Manage Documents ----
 function initLpDocumentsAdmin(userObj) {
-  if (!userDb || !userObj) return;
+  if (!supabase || !userObj) return;
   const role = userObj.role?.toLowerCase();
   if (role !== 'admin' && role !== 'superadmin') return;
 
@@ -6913,16 +6931,14 @@ function initLpDocumentsAdmin(userObj) {
     if (!currentList) return;
     currentList.innerHTML = '<div class="lp-act-loading"><div class="spinner" style="width:24px;height:24px;"></div><span>Loading&hellip;</span></div>';
 
-    const docsRef = ref(userDb, 'lp_documents');
-    get(docsRef).then(snapshot => {
-      const data = snapshot.val();
+    supabase.from('sas_documents').select('*').order('created_at', { ascending: false }).then(({ data, error }) => {
       currentList.innerHTML = '';
-      if (!data) {
+      if (error || !data || data.length === 0) {
         currentList.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8;font-size:0.85rem;">No documents found.</div>';
         return;
       }
 
-      Object.entries(data).sort((a, b) => new Date(b[1].date) - new Date(a[1].date)).forEach(([id, doc]) => {
+      data.forEach(doc => {
         const row = document.createElement('div');
         row.className = 'lp-doc-item';
         row.innerHTML = `
@@ -6931,17 +6947,21 @@ function initLpDocumentsAdmin(userObj) {
             <div class="lp-doc-item-title">${escapeHtml(doc.title)}</div>
             <div class="lp-doc-item-date">${doc.date}</div>
           </div>
-          <button class="icon-btn delete-doc-btn" data-id="${id}" title="Delete Document" style="color:#ef4444; background:none; border:none; cursor:pointer; font-size:1.1rem;">
+          <button class="icon-btn delete-doc-btn" data-id="${doc.id}" title="Delete Document" style="color:#ef4444; background:none; border:none; cursor:pointer; font-size:1.1rem;">
             <i class='bx bx-trash'></i>
           </button>
         `;
 
         row.querySelector('.delete-doc-btn').onclick = async function () {
-          const confirmed = await lpShowConfirm('Delete Document', 'Are you sure you want to delete this document? This cannot be undone.');
-          if (confirmed) {
-            await remove(ref(userDb, `lp_documents/${id}`));
-            showToast('Document deleted', 'info');
-            loadCurrentDocs();
+          if (confirm('Delete this document?')) {
+            const { error } = await supabase.from('sas_documents').delete().eq('id', doc.id);
+            if (error) {
+              console.error("Delete failed:", error);
+              showToast('Delete failed', 'error');
+            } else {
+              showToast('Document deleted', 'info');
+              loadCurrentDocs();
+            }
           }
         };
 
@@ -6978,7 +6998,8 @@ function initLpDocumentsAdmin(userObj) {
         createdAt: serverTimestamp()
       };
 
-      await push(ref(userDb, 'lp_documents'), newDoc);
+      const { error } = await supabase.from('sas_documents').insert([newDoc]);
+      if (error) throw error;
       showToast('Document added successfully!', 'success');
       addForm.reset();
       loadCurrentDocs();

@@ -9,6 +9,7 @@ export function updateUnreadBadges() {
   
   // Re-calculate unreadCount from individual contact counts
   const totalUnread = Object.values(contactsMap).reduce((sum, contact) => sum + (contact.unread || 0), 0);
+  console.log(`[Messaging] Total Unread Count: ${totalUnread}`);
   state.unreadCount = totalUnread;
 
   // 1. Update Legacy Contact Cards in Sidebar
@@ -28,18 +29,81 @@ export function updateUnreadBadges() {
   }
 
   // 3. Update Badge Elements
-  const unreadBadge = getEl('fb-chat-unread');
-  if (unreadBadge) {
-    unreadBadge.textContent = totalUnread;
-    unreadBadge.classList.toggle('hidden', totalUnread === 0);
-  }
-
-  const headerBadge = getEl('header-unread-badge');
-  if (headerBadge) {
-    headerBadge.textContent = totalUnread;
-    headerBadge.classList.toggle('hidden', totalUnread === 0);
-  }
+  const badges = ['fb-chat-unread', 'header-unread-badge', 'messenger-badge'];
+  badges.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.textContent = totalUnread;
+      if (totalUnread > 0) {
+        el.style.display = 'flex';
+        el.classList.remove('hidden');
+      } else {
+        el.style.display = 'none';
+        el.classList.add('hidden');
+      }
+    }
+  });
 }
+
+// Inject Notification Styles
+(function injectStyles() {
+  const styleId = 'messaging-ui-styles';
+  if (document.getElementById(styleId)) return;
+  const style = document.createElement('style');
+  style.id = styleId;
+  style.textContent = `
+    .fb-chat-notifications {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 999999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+    .fb-chat-toast {
+      pointer-events: auto;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-left: 4px solid #7c3aed;
+      color: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      cursor: pointer;
+      min-width: 250px;
+      max-width: 350px;
+      animation: fb-toast-in 0.3s ease-out;
+      transition: all 0.2s;
+    }
+    .fb-chat-toast:hover {
+      transform: translateX(-5px);
+      background: rgba(30, 41, 59, 1);
+    }
+    .fb-chat-toast-sender {
+      font-weight: 800;
+      font-size: 0.85rem;
+      margin-bottom: 4px;
+      color: #a78bfa;
+      display: block;
+    }
+    .fb-chat-toast-text {
+      font-size: 0.9rem;
+      color: #e2e8f0;
+      display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    @keyframes fb-toast-in {
+      from { opacity: 0; transform: translateX(30px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+  `;
+  document.head.appendChild(style);
+})();
 
 /**
  * Show a toast notification for new messages
