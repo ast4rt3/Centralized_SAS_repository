@@ -11,6 +11,7 @@
     "@modelcontextprotocol/sdk": "^1.29.0",
     "acorn": "^8.16.0",
     "basic-ftp": "^5.3.1",
+    "fast-uri": "^3.1.2",
     "jsdom": "^29.0.2",
     "puppeteer": "^24.40.0",
     "zod": "^3.23.8"
