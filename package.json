@@ -3,13 +3,17 @@
     "dev": "node scripts/dev-setup.js && vite",
     "dev:quick": "vite",
     "build": "vite build",
-    "ci": "node scripts/ci-syntax-check.js"
+    "ci": "node scripts/ci-syntax-check.js",
+    "mcp:serve": "node scripts/mcp-sas-server.js",
+    "mcp:inspect": "npx @modelcontextprotocol/inspector node scripts/mcp-sas-server.js"
   },
   "dependencies": {
     "acorn": "^8.16.0",
     "basic-ftp": "^5.3.0",
     "jsdom": "^29.0.2",
-    "puppeteer": "^24.40.0"
+    "puppeteer": "^24.40.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "gitnexus": "^1.6.2",
