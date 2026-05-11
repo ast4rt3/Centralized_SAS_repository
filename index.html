@@ -771,16 +771,42 @@
       background: #fff;
       border-radius: 24px;
       border: 1px solid #e2e8f0;
-      padding: clamp(20px, 4vw, 30px);
+      padding: 0; /* Changed to 0 to allow cover photo to be flush */
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
       cursor: pointer;
       transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       display: flex;
       flex-direction: column;
-      gap: 15px;
       height: 100%;
       position: relative;
       overflow: hidden;
+    }
+
+    .lp-se-office-card-cover {
+      width: 100%;
+      height: 160px;
+      overflow: hidden;
+      background: #f1f5f9;
+      position: relative;
+    }
+
+    .lp-se-office-card-cover img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.6s ease;
+    }
+
+    .lp-se-office-card:hover .lp-se-office-card-cover img {
+      transform: scale(1.1);
+    }
+
+    .lp-se-office-card-body {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      flex-grow: 1;
     }
 
     .lp-se-office-card::after {
@@ -1256,6 +1282,12 @@
     #lp-services .lp-section-header p {
       color: #64748b !important;
     }
+
+    @media (max-width: 768px) {
+      .lp-se-nav-bar {
+        display: none !important;
+      }
+    }
   </style>
 
 
@@ -1729,11 +1761,23 @@
 
     <script>
       async function sasFetch(action, params = {}) {
-        const urlString = window.ENV?.BACKEND_GAS_URL || 'https://script.google.com/macros/s/AKfycbyNmsUvDndrM5L2v_E3gJvM2jHqI1o30Tz8X-aI2H9vX-xYjZ0/exec';
+        // Priority: 1. localStorage override, 2. window.ENV, 3. hardcoded production fallback
+        const productionUrl = 'https://script.google.com/macros/s/AKfycbwXAyuE63HcK0maq2bmDtr3Bfvh1QjC1mqOcqGgClq8cj8t2jj9hbQIix66pYkT2d59Ag/exec';
+        const urlString = localStorage.getItem('sas_backend_url') || (window.ENV && window.ENV.BACKEND_GAS_URL) || productionUrl;
+        
         if (!urlString) {
           console.warn("Backend URL missing!");
           return { success: false, message: "Backend URL missing" };
         }
+
+        // Cache implementation
+        const cacheKey = `sas_cache_${action}_${JSON.stringify(params)}`;
+        const cachedResponse = sessionStorage.getItem(cacheKey);
+        if (cachedResponse) {
+          console.log("sasFetch: Serving from cache", action);
+          return JSON.parse(cachedResponse);
+        }
+
         try {
           const url = new URL(urlString);
           url.searchParams.append('action', action);
@@ -1743,7 +1787,12 @@
           const finalUrl = url.toString();
           console.log("sasFetch: Fetching", finalUrl);
           const r = await fetch(finalUrl);
-          return await r.json();
+          const data = await r.json();
+          
+          if (data && data.success) {
+            sessionStorage.setItem(cacheKey, JSON.stringify(data));
+          }
+          return data;
         } catch (e) {
           console.error("SAS Fetch Error:", e);
           return { success: false, message: e.message };
@@ -1816,9 +1865,14 @@
         grid.innerHTML = offices.map((o, idx) => `
           <div class="lp-se-office-card" data-id="${o.id}" data-name="${o.name}" 
                style="animation: slideUpFade 0.6s cubic-bezier(0.23, 1, 0.32, 1) both ${idx * 0.05}s;">
-            <h3 class="lp-se-office-card-title">${o.name}</h3>
-            <p class="lp-se-office-card-info">${o.info || 'No information available.'}</p>
-            <div class="lp-se-card-action">Learn More <i class='bx bx-right-arrow-alt'></i></div>
+            <div class="lp-se-office-card-cover">
+              <img src="assets/SAS_landing_page_header.jpg" alt="${o.name}">
+            </div>
+            <div class="lp-se-office-card-body">
+              <h3 class="lp-se-office-card-title">${o.name}</h3>
+              <p class="lp-se-office-card-info">${o.info || 'No information available.'}</p>
+              <div class="lp-se-card-action">Learn More <i class='bx bx-right-arrow-alt'></i></div>
+            </div>
           </div>
         `).join('');
 
