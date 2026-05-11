@@ -11,32 +11,32 @@ performImmediateAuthCheck();
 // 2. Global State & Initialization
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('--- SAS APP INITIALIZING (Modular) ---');
-  
+
   // Initialize UI State
   const systems = await fetchSystems();
   if (window.ENV) window.ENV.systems = systems; // Sync back to global ENV for legacy.js compatibility
   syncFromHash(systems);
-  
+
   const sessionData = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
   if (sessionData) {
     import("./ui/navigation.js").then(m => m.ensureAppVisible());
   }
-  
+
   window.addEventListener('hashchange', () => syncFromHash(systems));
 
-  
+
   // Initialize Messaging
   const myUsername = getMyUsername();
   if (myUsername !== 'Unknown') {
     initSharedMessaging();
   }
-  
+
   // Initialize TV Features
   updateClock();
   updateWeather();
   setInterval(updateClock, 1000);
   setInterval(updateWeather, 1800000); // 30 mins
-  
+
   // Version Check
   setInterval(checkForUpdates, 3600000); // 1 hour
 });
@@ -63,5 +63,5 @@ async function checkForUpdates() {
       localStorage.setItem('sas_app_version', data.version);
       setTimeout(() => window.location.reload(true), 1000);
     }
-  } catch (err) {}
+  } catch (err) { }
 }

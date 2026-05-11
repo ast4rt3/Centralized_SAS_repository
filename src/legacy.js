@@ -222,22 +222,7 @@ function markAllMessagesAsRead() {
 
 // Duplicate syncUnreadCountFromDb removed - now handled by src/features/messaging/logic.js
 
-/* 
-// LEGACY FIREBASE MESSAGING DISABLED - Migrated to Supabase
-function initSharedMessaging() {
-  if (!userDb || !myUsername || myUsername === 'Unknown' || sharedMessagingInitialized) return;
-  sharedMessagingInitialized = true;
-  const baseRef = ref(userDb, 'user_messages');
-
-  onChildAdded(baseRef, (snapshot) => {
-    // ... logic ...
-  });
-  // ...
-}
-*/
-function initSharedMessaging() {
-  console.log("[Legacy] Firebase messaging disabled. Using Supabase.");
-}
+// Supabase messaging initialization handled in main.js
 
 function initUserMessaging() {
   if (!supabase || userChatInitialized) return;
@@ -318,6 +303,8 @@ function initUserMessaging() {
 
   function renderContact(username, isOnline = true) {
     window.renderContact = renderContact;
+    const { contactsMap } = state;
+    if (!contactsMap[username]) return;
 
     let div = contactsMap[username].el;
     if (!div) {
@@ -336,14 +323,19 @@ function initUserMessaging() {
     const user = contactsMap[username];
     const displayName = user.displayName || username;
     const initial = displayName.charAt(0).toUpperCase();
-    const profilePicHtml = user.profilePic && user.profilePic.startsWith('http')
-      ? `<img src="${user.profilePic}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`
-      : `<span>${initial}</span>`;
+    
+    // Improved avatar logic
+    const hasProfilePic = user.profilePic && user.profilePic.length > 5;
+    const profilePicHtml = hasProfilePic
+      ? `<img src="${user.profilePic}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`
+      : "";
+    const fallbackHtml = `<span style="display:${hasProfilePic ? 'none' : 'flex'}; align-items:center; justify-content:center; width:100%; height:100%;">${initial}</span>`;
 
     div.innerHTML = `
       <div style="display:flex; align-items:center; gap:8px;">
-         <div style="width:32px; height:32px; border-radius:50%; background:#003366; color:white; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.9rem; flex-shrink:0; overflow:hidden;">
+         <div style="width:32px; height:32px; border-radius:50%; background:#003366; color:white; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.9rem; flex-shrink:0; overflow:hidden; position:relative;">
            ${profilePicHtml}
+           ${fallbackHtml}
          </div>
          ${statusIndicator}
          <div class="fb-chat-contact-name">${escapeHtml(displayName)}</div>

@@ -37,21 +37,8 @@ async function syncUserMetadata() {
           isOnline: false
         };
       }
-      state.contactsMap[user.username].displayName = user.display_name;
-      state.contactsMap[user.username].profilePic = user.profile_pic;
-      
-      // Ensure window.contactsMap is also updated
-      if (window.contactsMap) {
-        if (!window.contactsMap[user.username]) {
-          window.contactsMap[user.username] = {
-            unread: 0,
-            history: [],
-            isOnline: false
-          };
-        }
-        window.contactsMap[user.username].displayName = user.display_name;
-        window.contactsMap[user.username].profilePic = user.profile_pic;
-      }
+      contactsMap[user.username].displayName = user.display_name;
+      contactsMap[user.username].profilePic = user.profile_pic;
     });
     
     // Refresh UI if necessary
@@ -200,19 +187,26 @@ function handleIncomingMessage(data, onMessageReceived, notify = true) {
     contactsMap[otherUser].unread++;
   }
   if (notify) {
+      console.log(`[Messaging] Notify triggered for message from ${data.sender}. receiver=${data.receiver}`);
       if (onMessageReceived) {
         onMessageReceived(otherUser, data);
       } else if (typeof window.showNotification === 'function') {
         // Only show toast if chat is not active
         const currentChat = window.activeChatUser || window.activeMessengerUser;
+        console.log(`[Messaging] Checking notify: currentChat=${currentChat}, otherUser=${otherUser}, sender=${data.sender}`);
         if (currentChat !== otherUser && data.sender === otherUser) {
+          console.log(`[Messaging] SUCCESS: Triggering notification for ${otherUser}`);
           window.showNotification(otherUser, data.text, (sender) => {
              if (typeof window.selectContact === 'function') {
                window.selectContact(sender);
              }
           });
+        } else {
+          console.log(`[Messaging] Skip notify: currentChat matches otherUser or sender is NOT otherUser`);
         }
-    }
+      } else {
+        console.warn("[Messaging] window.showNotification is NOT a function!");
+      }
   }
 
   // UI Triggers for Legacy Compatibility
@@ -244,18 +238,8 @@ function handleMessageUpdate(data) {
       const wasRead = history[msgIdx].read;
       history[msgIdx] = data;
       
-      // Sync legacy
-      if (window.contactsMap && window.contactsMap[otherUser]) {
-        const legacyHistory = window.contactsMap[otherUser].history || [];
-        const lIdx = legacyHistory.findIndex(m => m.id === data.id);
-        if (lIdx !== -1) legacyHistory[lIdx] = data;
-      }
-
       if (!wasRead && data.read && data.receiver === myUsername) {
         if (contactsMap[otherUser].unread > 0) contactsMap[otherUser].unread--;
-        if (window.contactsMap && window.contactsMap[otherUser] && window.contactsMap[otherUser].unread > 0) {
-          window.contactsMap[otherUser].unread--;
-        }
       }
       updateUnreadBadges();
 
@@ -292,11 +276,9 @@ export async function syncUnreadCountFromDb(myUsername) {
 
     // Reset current unreads before update
     Object.keys(contactsMap).forEach(k => contactsMap[k].unread = 0);
-    if (window.contactsMap) Object.keys(window.contactsMap).forEach(k => window.contactsMap[k].unread = 0);
 
     Object.keys(unreadCounts).forEach(sender => {
       if (contactsMap[sender]) contactsMap[sender].unread = unreadCounts[sender];
-      if (window.contactsMap && window.contactsMap[sender]) window.contactsMap[sender].unread = unreadCounts[sender];
     });
 
     updateUnreadBadges();
@@ -425,14 +407,6 @@ function updatePresence(presenceState) {
         contactsMap[user] = { unread: 0, history: [], isOnline: true };
       } else {
         contactsMap[user].isOnline = true;
-      }
-      
-      if (window.contactsMap) {
-        if (!window.contactsMap[user]) {
-          window.contactsMap[user] = { unread: 0, history: [], isOnline: true };
-        } else {
-          window.contactsMap[user].isOnline = true;
-        }
       }
     }
   });
