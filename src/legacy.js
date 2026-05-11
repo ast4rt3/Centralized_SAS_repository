@@ -272,13 +272,8 @@ function initUserMessaging() {
   // 1. Fetch Users From Spreadsheet GAS
   fetchSpreadsheetUsers();
 
-  // 2. Presence System (Legacy Firebase Disabled)
-  console.log("[Legacy] Firebase presence disabled.");
-  /*
-  const connectedRef = ref(userDb, '.info/connected');
-  const myPresenceRef = ref(userDb, `presence/${myUsername}`);
-  ...
-  */
+   // 2. Presence System (Legacy Firebase Disabled)
+   console.log("[Legacy] Firebase presence disabled.");
 
   header.addEventListener('click', (e) => {
     if (e.target.closest('#fb-chat-toggle-btn') || e.target === header || header.contains(e.target)) {
@@ -294,6 +289,7 @@ function initUserMessaging() {
 
   backBtn.addEventListener('click', () => {
     activeChatUser = null;
+    window.activeChatUser = null;
     conversation.classList.add('hidden');
     contactsList.classList.remove('hidden');
   });
@@ -431,8 +427,18 @@ function initFullMessenger() {
   window.toggleMessengerMobile = function (active) {
     const container = document.querySelector('.messenger-container');
     if (container) {
-      if (active) container.classList.add('chat-active');
-      else container.classList.remove('chat-active');
+      if (active) {
+        container.classList.add('chat-active');
+      } else {
+        container.classList.remove('chat-active');
+        // Reset active user and UI to contacts list
+        activeMessengerUser = null;
+        window.activeMessengerUser = null;
+        const chatView = document.getElementById('messenger-chat-view');
+        const emptyView = document.getElementById('messenger-empty');
+        if (chatView) chatView.classList.add('hidden');
+        if (emptyView) emptyView.classList.remove('hidden');
+      }
     }
   };
 
@@ -1231,7 +1237,9 @@ document.addEventListener('DOMContentLoaded', () => {
              if (typeof fetchPosts === 'function') fetchPosts();
            }
          }
-       } catch (e) {}
+        } catch (e) {
+          console.error('[Config] Failed to load sas_config:', e);
+        }
     })();
 
     // 2. Realtime Listener
@@ -1301,6 +1309,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (pageId !== 'messages') {
       activeMessengerUser = null;
       window.activeMessengerUser = null;
+      activeChatUser = null;
+      window.activeChatUser = null;
     }
 
     // Manage body class for special layouts (like messenger)
@@ -5156,7 +5166,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const targetValues = {
         gas: BACKEND_GAS_URL || 'Not Configured',
         fbMsg: window.ENV?.FIREBASE_CONFIG?.databaseURL || 'Not Configured',
-        fbStore: window.ENV?.STORAGE_CHECK_FIREBASE_CONFIG?.databaseURL || (storageCheckDb && storageCheckDb === userDb ? (window.ENV?.FIREBASE_CONFIG?.databaseURL || 'Not Configured') : 'Not Configured'),
+        fbStore: window.ENV?.STORAGE_CHECK_FIREBASE_CONFIG?.databaseURL || 'Not Configured',
         supabase: window.ENV?.SUPABASE_URL || 'Not Configured',
         cloudinary: window.ENV?.CLOUDINARY_CLOUD_NAME || 'Not Configured',
         cloudinaryOld: window.ENV?.OLD_CLOUDINARY_CLOUD_NAME || 'Not Configured'
@@ -5762,7 +5772,9 @@ document.addEventListener('DOMContentLoaded', () => {
         await window.supabaseFetch('/rest/v1/user_messages?sender=not.is.null', { method: 'DELETE' });
         try {
           await window.supabaseFetch('/rest/v1/admin_messages?sender=not.is.null', { method: 'DELETE' });
-        } catch (e) {}
+        } catch (e) {
+          console.error('[Config] Failed to load sas_config:', e);
+        }
         
         hideGlobalLoading();
         showToast('All messages cleared from Supabase', 'success');
@@ -6176,21 +6188,25 @@ function initLpActivities() {
   // ---- Supabase activities listener ----
   if (!grid) return;
 
-  const fetchActivities = async () => {
-    const { data, error } = await supabase
-      .from('sas_activities')
-      .select('*')
-      .order('created_at', { ascending: false });
+   const fetchActivities = async () => {
+     console.log('[LP Activities] Fetching from sas_activities...');
+     const { data, error } = await supabase
+       .from('sas_activities')
+       .select('*')
+       .order('created_at', { ascending: false });
 
-    if (data) {
-      const activities = data.map(act => ({
-         ...act,
-         imageUrl: act.image_url, // map snake_case to camelCase
-         createdAt: new Date(act.created_at).getTime()
-      }));
-      
-      _lpAllActivities = activities;
-      renderLpActivities(activities.slice(0, 6), grid);
+     if (error) {
+       console.error('[LP Activities] Fetch failed:', error.message, error.details || error);
+     }
+     if (data) {
+       const activities = data.map(act => ({
+          ...act,
+          imageUrl: act.image_url, // map snake_case to camelCase
+          createdAt: new Date(act.created_at).getTime()
+       }));
+       
+       _lpAllActivities = activities;
+       renderLpActivities(activities.slice(0, 6), grid);
 
       const viewAllWrap = document.getElementById('lp-view-all-wrap');
       if (viewAllWrap) viewAllWrap.style.display = 'block';
@@ -6717,13 +6733,13 @@ function initLpActivitiesAdmin(userObj) {
       }
 
       // Prepare payload
-      const activityData = {
-        title,
-        excerpt,
-        date,
-        imageUrl,
-        uploadedBy: userObj.username || 'admin'
-      };
+       const activityData = {
+         title,
+         excerpt,
+         date,
+         image_url: imageUrl,
+         uploaded_by: userObj.username || 'admin'
+       };
 
       if (editingLpActKey) {
         const { error } = await supabase.from('sas_activities').update(activityData).eq('id', editingLpActKey);
@@ -6763,14 +6779,18 @@ function initLpDocuments() {
   const yearSelect = document.getElementById('lp-docs-year');
   if (!grid) return;
 
-  // Sync from Supabase (formerly Firebase)
-  const fetchLpDocs = async () => {
-    const { data } = await supabase.from('sas_documents').select('*');
-    if (data) {
-       _lpAllDocuments = data;
-       fetchPublicHubFiles();
-    }
-  };
+   // Sync from Supabase (formerly Firebase)
+   const fetchLpDocs = async () => {
+     console.log('[LP Docs] Fetching from sas_documents...');
+     const { data, error } = await supabase.from('sas_documents').select('*');
+     if (error) {
+       console.error('[LP Docs] Fetch failed:', error.message, error.details || error);
+     }
+     if (data) {
+        _lpAllDocuments = data;
+        fetchPublicHubFiles();
+     }
+   };
   
   fetchLpDocs();
   
@@ -6991,7 +7011,7 @@ function initLpDocumentsAdmin(userObj) {
         date,
         url,
         description,
-        createdAt: serverTimestamp()
+        created_at: new Date().toISOString()
       };
 
       const { error } = await supabase.from('sas_documents').insert([newDoc]);
