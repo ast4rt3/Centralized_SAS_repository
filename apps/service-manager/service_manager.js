@@ -90,7 +90,6 @@ window.seedInitialCategories = async () => {
         { name: 'Institutional Student Programs and Services', icon_class: 'bx-building-house', description: 'Required support services provided by the institution.' }
     ];
     
-    // Refresh local list first
     const refreshRes = await api('getServiceCategories');
     const existingNames = (refreshRes.categories || refreshRes.data || []).map(c => c.name);
     
@@ -107,13 +106,13 @@ function renderCategoryList() {
     if (!list) return;
     
     list.innerHTML = (categories || []).map(c => `
-        <div class="nav-item-wrapper" style="position:relative; margin-bottom:5px;">
+        <div class="nav-item-wrapper">
             <div class="nav-item ${currentCategoryId === c.id ? 'active' : ''}" onclick="selectCategory('${c.id}')">
                 <i class='bx ${c.icon_class || 'bx-folder'}'></i>
                 <span>${c.name}</span>
             </div>
             <div class="cat-delete-btn" onclick="deleteCategory(event, '${c.id}', '${c.name.replace(/'/g, "\\'")}')" title="Delete Category">
-                <i class='bx bx-x'></i>
+                <i class='bx bx-trash'></i>
             </div>
         </div>
     `).join('');
@@ -122,12 +121,10 @@ function renderCategoryList() {
 window.deleteCategory = async (e, id, name) => {
     e.stopPropagation();
     
-    // Check if it has offices (local check first if currently selected)
     let hasOffices = false;
     if (currentCategoryId === id && offices.length > 0) {
         hasOffices = true;
     } else {
-        // Quick API check
         const res = await api('getOfficesByCategory', { categoryName: name });
         if (res.success && res.offices && res.offices.length > 0) {
             hasOffices = true;
@@ -135,7 +132,7 @@ window.deleteCategory = async (e, id, name) => {
     }
     
     const warnMsg = hasOffices ? 
-        `WARNING: This category "${name}" contains ${offices.length} offices. Deleting it will NOT delete the offices (they will become orphaned), but the category will be gone. Continue?` : 
+        `WARNING: This category "${name}" contains offices. Deleting it will NOT delete the offices (they will become orphaned), but the category will be gone. Continue?` : 
         `Are you sure you want to delete the category "${name}"?`;
         
     if (!confirm(warnMsg)) return;
@@ -198,14 +195,17 @@ function renderOfficeGrid() {
     
     grid.innerHTML = offices.map(off => `
         <div class="office-card" onclick="previewOffice('${off.id}', '${off.name}')">
-            <div class="office-actions">
+            ${off.cover_url ? `<div style="position:absolute; top:0; left:0; width:100%; height:80px; background:url('${off.cover_url}') center/cover; opacity:0.3; z-index:0;"></div>` : ''}
+            <div class="office-actions" style="z-index:1;">
                 <div class="action-btn" onclick="event.stopPropagation(); editOffice('${off.id}')"><i class='bx bx-edit-alt'></i></div>
                 <div class="action-btn delete" onclick="event.stopPropagation(); deleteOffice('${off.id}')"><i class='bx bx-trash'></i></div>
             </div>
-            <h3>${off.name}</h3>
-            <p>${off.info || 'No info provided.'}</p>
-            <div style="margin-top:15px; font-size:0.7rem; font-weight:700; color:var(--nbsc-blue); text-transform:uppercase; letter-spacing:1px; display:flex; align-items:center; gap:4px;">
-                <i class='bx bx-show'></i> Click to Preview
+            <div style="position:relative; z-index:1;">
+                <h3>${off.name}</h3>
+                <p>${off.info || 'No info provided.'}</p>
+                <div style="margin-top:20px; font-size:0.75rem; font-weight:800; color:var(--nbsc-blue); text-transform:uppercase; letter-spacing:1px; display:flex; align-items:center; gap:6px;">
+                    <i class='bx bx-show'></i> Click to Preview
+                </div>
             </div>
         </div>
     `).join('');
@@ -235,17 +235,17 @@ window.previewOffice = async (id, name) => {
         document.getElementById('prev-body').innerText = res.office.office_body || '';
         
         document.getElementById('prev-docs').innerHTML = res.docs.map(d => `
-            <a href="${d.url}" target="_blank" style="display:flex; align-items:center; gap:12px; padding:12px 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; text-decoration:none; color:var(--text); font-weight:600; font-size:.9rem;">
+            <a href="${d.url}" target="_blank" style="display:flex; align-items:center; gap:12px; padding:12px 16px; background:#f8fafc; border:1px solid var(--border); border-radius:12px; text-decoration:none; color:var(--text-primary); font-weight:600; font-size:.9rem; transition:0.2s;">
                 <i class='bx bxs-file-pdf' style="color:#ef4444; font-size:1.3rem;"></i>
                 <span>${d.title}</span>
             </a>
         `).join('') || '<p style="color:var(--text-muted); font-size:.9rem;">No documents.</p>';
 
         document.getElementById('prev-activities').innerHTML = res.activities.map(a => `
-            <div style="padding:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px;">
-                <div style="font-size:0.7rem; color:var(--nbsc-blue); font-weight:700; margin-bottom:4px;">${a.activity_date}</div>
-                <div style="font-weight:700; font-size:0.9rem; color:var(--text);">${a.title}</div>
-                <div style="font-size:0.8rem; color:var(--text-muted);">${a.description || ''}</div>
+            <div style="padding:15px; background:#f8fafc; border:1px solid var(--border); border-radius:12px;">
+                <div style="font-size:0.75rem; color:var(--nbsc-orange); font-weight:800; margin-bottom:4px; text-transform:uppercase;">${a.activity_date}</div>
+                <div style="font-weight:700; font-size:1rem; color:var(--nbsc-blue); margin-bottom:4px;">${a.title}</div>
+                <div style="font-size:0.9rem; color:var(--text-secondary); line-height:1.5;">${a.description || ''}</div>
             </div>
         `).join('') || '<p style="color:var(--text-muted); font-size:.9rem;">No recent activities.</p>';
     }
@@ -302,33 +302,101 @@ window.openOfficeModal = () => {
     document.getElementById('off-modal-title').innerText = "New Office";
     document.getElementById('office-form').reset();
     document.getElementById('off-id').value = "";
+    document.getElementById('off-cover-url').value = "";
+    
+    const trigger = document.getElementById('cover-upload-trigger');
+    const preview = document.getElementById('cover-preview');
+    const placeholder = document.getElementById('cover-placeholder');
+    
+    trigger.classList.remove('has-image');
+    preview.src = "";
+    preview.classList.add('hidden');
+    placeholder.classList.remove('hidden');
+    
     document.getElementById('office-modal').classList.add('active');
+    switchOfficeTab('info');
 };
 
 window.editOffice = async (id) => {
     const off = offices.find(o => o.id === id);
     if (!off) return;
     
-    document.getElementById('off-modal-title').innerText = "Edit Office: " + off.name;
+    document.getElementById('off-modal-title').innerText = "Edit Office";
     document.getElementById('off-id').value = off.id;
     document.getElementById('off-name').value = off.name;
     document.getElementById('off-info').value = off.info;
     document.getElementById('off-body').value = off.office_body;
     
-    // Switch to first tab and show modal
+    // Cover Preview
+    const coverUrl = off.cover_url || "";
+    document.getElementById('off-cover-url').value = coverUrl;
+    const trigger = document.getElementById('cover-upload-trigger');
+    const preview = document.getElementById('cover-preview');
+    const placeholder = document.getElementById('cover-placeholder');
+
+    if (coverUrl) {
+        trigger.classList.add('has-image');
+        preview.src = coverUrl;
+        preview.classList.remove('hidden');
+        placeholder.classList.add('hidden');
+    } else {
+        trigger.classList.remove('has-image');
+        preview.src = "";
+        preview.classList.add('hidden');
+        placeholder.classList.remove('hidden');
+    }
+    
     switchOfficeTab('info');
     document.getElementById('office-modal').classList.add('active');
-    
-    // Load existing docs and activities
     await loadOfficeContent(id);
+};
+
+// Cloudinary Image Upload
+window.handleCoverSelection = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const placeholder = document.getElementById('cover-placeholder');
+    const originalContent = placeholder.innerHTML;
+    placeholder.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i><p>Uploading to Cloudinary...</p>`;
+    
+    try {
+        const cloudName = window.parent.ENV?.CLOUDINARY_CLOUD_NAME || "dbytj36mv";
+        const uploadPreset = window.parent.ENV?.CLOUDINARY_UPLOAD_PRESET || "sas_uploads";
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', uploadPreset);
+
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await res.json();
+        
+        if (data.secure_url) {
+            document.getElementById('off-cover-url').value = data.secure_url;
+            const preview = document.getElementById('cover-preview');
+            preview.src = data.secure_url;
+            preview.classList.remove('hidden');
+            placeholder.classList.add('hidden');
+            document.getElementById('cover-upload-trigger').classList.add('has-image');
+        } else {
+            alert("Upload failed. Please try again.");
+            placeholder.innerHTML = originalContent;
+        }
+    } catch (err) {
+        console.error("Cloudinary Error:", err);
+        alert("Error connecting to Cloudinary.");
+        placeholder.innerHTML = originalContent;
+    }
 };
 
 // Tab Management
 window.switchOfficeTab = (tabId) => {
     document.querySelectorAll('.modal-tab').forEach(t => {
         t.classList.toggle('active', t.dataset.tab === tabId);
-        t.style.color = t.dataset.tab === tabId ? 'var(--nbsc-blue)' : 'var(--text-muted)';
-        t.style.borderBottom = t.dataset.tab === tabId ? '2px solid var(--nbsc-blue)' : 'none';
     });
     document.querySelectorAll('.office-tab-content').forEach(c => {
         c.classList.toggle('hidden', c.dataset.tab !== tabId);
@@ -351,12 +419,12 @@ function renderModalDocs(docs) {
         return;
     }
     list.innerHTML = docs.map(d => `
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:#fff; border:1px solid var(--border); border-radius:10px; margin-bottom:8px;">
-            <div style="display:flex; align-items:center; gap:12px;">
-                <i class='bx bxs-file-pdf' style="color:#ef4444; font-size:1.5rem;"></i>
-                <span style="font-weight:600;">${d.title}</span>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 20px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:14px; margin-bottom:10px;">
+            <div style="display:flex; align-items:center; gap:15px;">
+                <i class='bx bxs-file-pdf' style="color:#ef4444; font-size:1.8rem;"></i>
+                <span style="font-weight:700; color:#fff;">${d.title}</span>
             </div>
-            <div style="display:flex; gap:8px;">
+            <div style="display:flex; gap:10px;">
                 <a href="${d.url}" target="_blank" class="action-btn"><i class='bx bx-link-external'></i></a>
                 <div class="action-btn delete" onclick="deleteOfficeDoc('${d.id}')"><i class='bx bx-trash'></i></div>
             </div>
@@ -371,13 +439,13 @@ function renderModalActivities(acts) {
         return;
     }
     list.innerHTML = acts.map(a => `
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; padding:15px; background:#fff; border:1px solid var(--border); border-radius:10px; margin-bottom:12px;">
-            <div>
-                <div style="font-size:0.75rem; color:var(--nbsc-blue); font-weight:700;">${a.activity_date}</div>
-                <div style="font-weight:700; margin:4px 0;">${a.title}</div>
-                <div style="font-size:0.85rem; color:var(--text-muted);">${a.description || ''}</div>
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; padding:18px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:14px; margin-bottom:12px;">
+            <div style="flex:1;">
+                <div style="font-size:0.75rem; color:var(--lp-primary); font-weight:800; text-transform:uppercase; margin-bottom:5px;">${a.activity_date}</div>
+                <div style="font-weight:700; color:#fff; font-size:1rem; margin-bottom:5px;">${a.title}</div>
+                <div style="font-size:0.9rem; color:var(--text-muted); line-height:1.5;">${a.description || ''}</div>
             </div>
-            <div class="action-btn delete" onclick="deleteOfficeActivity('${a.id}')"><i class='bx bx-trash'></i></div>
+            <div class="action-btn delete" onclick="deleteOfficeActivity('${a.id}')" style="margin-left:15px;"><i class='bx bx-trash'></i></div>
         </div>
     `).join('');
 }
@@ -392,14 +460,13 @@ window.uploadOfficeDoc = async () => {
     
     const btn = document.getElementById('btn-upload-doc');
     btn.disabled = true;
-    btn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i>";
+    btn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> Uploading...";
     
     try {
         const file = fileInput.files[0];
         const reader = new FileReader();
         reader.onload = async (e) => {
             const fileData = e.target.result;
-            // 1. Upload to Drive
             const uploadRes = await api('uploadFileToDrive', { 
                 fileData, 
                 fileName: file.name,
@@ -407,7 +474,6 @@ window.uploadOfficeDoc = async () => {
             });
             
             if (uploadRes.success) {
-                // 2. Save metadata to Office Docs
                 const saveRes = await api('addOfficeDoc', {
                     office_id: officeId,
                     title: title,
@@ -425,13 +491,13 @@ window.uploadOfficeDoc = async () => {
                 alert("Upload failed: " + uploadRes.message);
             }
             btn.disabled = false;
-            btn.innerText = "Upload";
+            btn.innerHTML = "<i class='bx bx-upload'></i> Upload Document";
         };
         reader.readAsDataURL(file);
     } catch (e) {
         alert("Upload Error: " + e.message);
         btn.disabled = false;
-        btn.innerText = "Upload";
+        btn.innerHTML = "<i class='bx bx-upload'></i> Upload Document";
     }
 };
 
@@ -479,11 +545,16 @@ window.deleteOfficeActivity = async (id) => {
 async function handleOfficeSubmit(e) {
     e.preventDefault();
     const id = document.getElementById('off-id').value;
+    const btn = document.getElementById('btn-save-office');
+    btn.disabled = true;
+    btn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> Saving...`;
+
     const payload = {
         category_id: currentCategoryId,
         name: document.getElementById('off-name').value,
         info: document.getElementById('off-info').value,
-        office_body: document.getElementById('off-body').value
+        office_body: document.getElementById('off-body').value,
+        cover_url: document.getElementById('off-cover-url').value
     };
     
     const action = id ? 'updateOffice' : 'addOffice';
@@ -491,11 +562,13 @@ async function handleOfficeSubmit(e) {
     
     const res = await api(action, payload);
     if (res.success) {
-        if (!id) closeModals(); // Close only if it's a new office
+        closeModals();
         await loadOffices(currentCategoryId);
     } else {
         alert("Error: " + res.message);
     }
+    btn.disabled = false;
+    btn.innerHTML = "Save Changes";
 }
 
 window.deleteOffice = async (id) => {
@@ -511,4 +584,3 @@ window.deleteOffice = async (id) => {
 window.closeModals = () => {
     document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
 };
-

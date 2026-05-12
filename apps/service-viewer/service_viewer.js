@@ -67,9 +67,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     grid.innerHTML = offices.map(o => `
-      <div class="office-card" data-id="${o.id}" data-name="${o.name}">
-        <h3>${o.name}</h3>
-        <p>${o.info || 'No information available.'}</p>
+      <div class="office-card" data-id="${o.id}" data-name="${o.name}" style="position:relative; overflow:hidden;">
+        ${o.cover_url ? `<div style="position:absolute; top:0; left:0; width:100%; height:60px; background:url('${o.cover_url}') center/cover; opacity:0.2; z-index:0;"></div>` : ''}
+        <div style="position:relative; z-index:1;">
+          <h3>${o.name}</h3>
+          <p>${o.info || 'No information available.'}</p>
+        </div>
       </div>
     `).join('');
 
@@ -108,6 +111,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function renderOfficeDetails(office, docs) {
+    const coverImg = document.getElementById('office-cover-img');
+    if (office.cover_url) {
+      coverImg.src = office.cover_url;
+    } else {
+      coverImg.src = "../../assets/SAS_landing_page_header.jpg";
+    }
+
     document.getElementById('office-title').textContent = office.name;
     document.getElementById('office-info').textContent = office.info || 'No info provided.';
     document.getElementById('office-body').textContent = office.office_body || 'No detailed description available.';

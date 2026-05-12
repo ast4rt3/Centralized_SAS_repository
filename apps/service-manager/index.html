@@ -14,23 +14,25 @@
       }
     })();
   </script>
-  <title>Service Portal Manager</title>
+  <title>Service Portal Manager — NBSC SAS</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
   <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
   <style>
     :root {
-      --nbsc-blue: #004a99;
+      --nbsc-blue: #003366;
       --nbsc-dark: #001a33;
-      --nbsc-mid: #003366;
-      --nbsc-gold: #f0ad4e;
-      --bg-main: #f8fafc;
+      --nbsc-gold: #ffd700;
+      --nbsc-orange: #f59e0b;
+      --bg-main: #f1f5f9;
+      --bg-sidebar: #003366;
       --bg-card: #ffffff;
+      --text-primary: #001a33;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
       --border: #e2e8f0;
-      --text: #0f172a;
-      --text-muted: #64748b;
-      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
       --font-sans: 'Outfit', 'Montserrat', sans-serif;
+      --shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+      --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
     }
 
     * { box-sizing: border-box; }
@@ -39,10 +41,16 @@
       margin: 0;
       font-family: var(--font-sans);
       background: var(--bg-main);
-      color: var(--text);
+      color: var(--text-primary);
       height: 100vh;
       overflow: hidden;
     }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(0, 51, 102, 0.1); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--nbsc-blue); }
 
     .app-container {
       display: grid;
@@ -52,82 +60,87 @@
 
     /* Sidebar */
     .sidebar {
-      background: var(--nbsc-dark);
+      background: linear-gradient(180deg, var(--nbsc-blue) 0%, var(--nbsc-dark) 100%);
       color: #fff;
       display: flex;
       flex-direction: column;
-      border-right: 1px solid rgba(255,255,255,0.1);
+      box-shadow: 4px 0 20px rgba(0,0,0,0.1);
+      z-index: 100;
     }
 
     .sidebar-header {
-      padding: 24px;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding: 35px 24px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
       display: flex;
       align-items: center;
       gap: 12px;
     }
 
     .sidebar-header i {
-      font-size: 1.5rem;
+      font-size: 1.8rem;
       color: var(--nbsc-gold);
     }
 
     .sidebar-header h2 {
       margin: 0;
-      font-size: 1rem;
+      font-size: 1.1rem;
       font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 1px;
+      color: #fff;
     }
 
     .category-list {
       flex: 1;
       overflow-y: auto;
-      padding: 16px;
+      padding: 20px 15px;
     }
 
     .nav-item-wrapper {
       position: relative;
-      display: flex;
-      align-items: center;
+      margin-bottom: 6px;
     }
 
     .nav-item {
-      flex: 1;
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 12px 16px;
-      color: #94a3b8;
+      gap: 14px;
+      padding: 14px 18px;
+      color: rgba(255, 255, 255, 0.65);
       text-decoration: none;
-      font-weight: 500;
-      border-radius: 10px;
-      transition: all 0.2s;
+      font-weight: 600;
+      border-radius: 12px;
+      transition: all 0.2s ease;
       cursor: pointer;
     }
 
     .nav-item:hover {
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.08);
       color: #fff;
     }
 
     .nav-item.active {
-      background: var(--nbsc-blue);
-      color: #fff;
-      box-shadow: 0 4px 12px rgba(0, 51, 102, 0.3);
+      background: var(--nbsc-gold);
+      color: var(--nbsc-blue);
+      box-shadow: 0 4px 15px rgba(255, 215, 0, 0.25);
+    }
+
+    .nav-item.active i {
+      color: var(--nbsc-blue);
     }
 
     .cat-delete-btn {
       position: absolute;
       right: 10px;
-      width: 24px;
-      height: 24px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 28px;
+      height: 28px;
       display: flex;
       align-items: center;
       justify-content: center;
-      border-radius: 50%;
-      background: rgba(239, 68, 68, 0.1);
-      color: #ef4444;
+      border-radius: 8px;
+      color: #f87171;
       opacity: 0;
       transition: all 0.2s;
       cursor: pointer;
@@ -138,52 +151,63 @@
     }
 
     .cat-delete-btn:hover {
-      background: #ef4444;
-      color: #fff;
+      background: rgba(248, 113, 113, 0.1);
     }
 
-    .category-item i { font-size: 1.2rem; }
-
     .add-btn {
-      background: rgba(255,255,255,0.1);
-      border: 1px dashed rgba(255,255,255,0.3);
-      color: #fff;
+      background: rgba(255, 215, 0, 0.1);
+      border: 1px dashed rgba(255, 215, 0, 0.4);
+      color: var(--nbsc-gold);
       width: 100%;
-      padding: 12px;
-      border-radius: 10px;
+      padding: 14px;
+      border-radius: 12px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      margin-top: 16px;
-      transition: all 0.2s;
+      gap: 10px;
+      transition: all 0.2s ease;
+      font-weight: 700;
+      font-size: 0.9rem;
     }
 
     .add-btn:hover {
-      background: rgba(255,255,255,0.15);
-      border-color: var(--nbsc-gold);
+      background: var(--nbsc-gold);
+      color: var(--nbsc-blue);
+      border-style: solid;
     }
 
     /* Main Content */
     .main-content {
       overflow-y: auto;
-      padding: 40px;
-      background: #f8fafc;
+      background: var(--bg-main);
+      display: flex;
+      flex-direction: column;
     }
 
     .view-header {
+      padding: 40px 60px;
+      background: #fff;
+      border-bottom: 1px solid var(--border);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 32px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
     }
 
     .view-header h1 {
       margin: 0;
-      font-size: 1.75rem;
+      font-size: 2rem;
       font-weight: 800;
-      color: var(--nbsc-dark);
+      color: var(--nbsc-blue);
+    }
+
+    .view-subtitle {
+      margin-top: 5px;
+      color: var(--text-secondary);
+      font-weight: 500;
     }
 
     .actions-bar {
@@ -192,60 +216,76 @@
     }
 
     .btn {
-      padding: 10px 20px;
-      border-radius: 8px;
-      font-weight: 600;
+      padding: 12px 22px;
+      border-radius: 10px;
+      font-weight: 700;
       cursor: pointer;
       display: flex;
       align-items: center;
       gap: 8px;
       border: none;
-      transition: all 0.2s;
+      transition: 0.2s;
       font-family: inherit;
+      font-size: 0.9rem;
     }
 
-    .btn-primary { background: var(--nbsc-blue); color: #fff; }
-    .btn-primary:hover { background: var(--nbsc-mid); transform: translateY(-1px); }
+    .btn-primary { 
+      background: var(--nbsc-blue);
+      color: #fff;
+    }
+    .btn-primary:hover { 
+      background: var(--nbsc-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 51, 102, 0.2);
+    }
 
-    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
-    .btn-outline:hover { background: #f1f5f9; }
-
-    .btn-danger { background: #fee2e2; color: #ef4444; }
-    .btn-danger:hover { background: #fecaca; }
+    .btn-outline { 
+      background: #fff; 
+      border: 1px solid var(--border); 
+      color: var(--nbsc-blue); 
+    }
+    .btn-outline:hover { 
+      background: var(--bg-main);
+      border-color: var(--nbsc-blue);
+    }
 
     /* Office Cards */
     .office-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-      gap: 24px;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 25px;
+      padding: 40px 60px;
     }
 
     .office-card {
-      background: #fff;
-      border-radius: 16px;
-      padding: 24px;
+      background: var(--bg-card);
+      border-radius: 20px;
+      padding: 30px;
       border: 1px solid var(--border);
-      transition: all 0.2s;
+      transition: all 0.3s ease;
       position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow);
     }
 
     .office-card:hover {
-      transform: translateY(-4px);
+      transform: translateY(-6px);
       box-shadow: var(--shadow-lg);
+      border-color: var(--nbsc-gold);
     }
 
     .office-card h3 {
       margin: 0 0 12px 0;
-      font-size: 1.15rem;
-      color: var(--nbsc-dark);
-      padding-right: 60px;
+      font-size: 1.25rem;
+      color: var(--nbsc-blue);
+      font-weight: 800;
     }
 
     .office-card p {
       margin: 0;
-      font-size: 0.9rem;
-      color: var(--text-muted);
-      line-height: 1.5;
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       line-clamp: 2;
@@ -255,101 +295,213 @@
 
     .office-actions {
       position: absolute;
-      top: 24px;
-      right: 24px;
+      top: 25px;
+      right: 25px;
       display: flex;
       gap: 8px;
+      opacity: 0;
+      transition: 0.2s;
+    }
+
+    .office-card:hover .office-actions {
+      opacity: 1;
     }
 
     .action-btn {
-      width: 32px;
-      height: 32px;
-      border-radius: 6px;
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      background: #f1f5f9;
-      color: var(--text-muted);
-      transition: all 0.2s;
+      background: #fff;
+      color: var(--nbsc-blue);
+      transition: 0.2s;
+      border: 1px solid var(--border);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }
 
-    .action-btn:hover { background: var(--nbsc-blue); color: #fff; }
-    .action-btn.delete:hover { background: #ef4444; color: #fff; }
+    .action-btn:hover { 
+      background: var(--nbsc-blue); 
+      color: #fff; 
+      border-color: var(--nbsc-blue);
+    }
+    .action-btn.delete:hover { background: #fee2e2; color: #ef4444; border-color: #fee2e2; }
 
     /* Modals */
     .modal-overlay {
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
+      top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(0, 26, 51, 0.6);
-      backdrop-filter: blur(4px);
-      display: flex;
+      backdrop-filter: blur(8px);
+      display: none;
       align-items: center;
       justify-content: center;
       z-index: 1000;
-      opacity: 0;
-      visibility: hidden;
-      transition: all 0.3s;
+      padding: 20px;
     }
 
-    .modal-overlay.active {
-      opacity: 1;
-      visibility: visible;
-    }
+    .modal-overlay.active { display: flex; }
 
     .modal-card {
       background: #fff;
       width: 100%;
-      max-width: 600px;
-      border-radius: 20px;
-      box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
-      padding: 32px;
-      transform: translateY(20px);
-      transition: all 0.3s;
+      max-width: 800px;
+      border-radius: 24px;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+      max-height: 95vh;
+      display: flex;
+      flex-direction: column;
     }
 
-    .modal-overlay.active .modal-card { transform: translateY(0); }
+    .modal-header { 
+      padding: 30px 40px; 
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
 
-    .modal-header { margin-bottom: 24px; }
-    .modal-header h2 { margin: 0; font-size: 1.5rem; font-weight: 800; }
+    .modal-header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
 
-    .form-group { margin-bottom: 20px; }
+    .modal-header h2 { margin: 0; font-size: 1.6rem; font-weight: 800; color: var(--nbsc-blue); }
+
+    .modal-tabs {
+      display: flex;
+      gap: 30px;
+    }
+
+    .modal-tab {
+      padding-bottom: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--text-muted);
+      position: relative;
+      transition: 0.2s;
+      font-size: 0.95rem;
+      border-bottom: 3px solid transparent;
+    }
+
+    .modal-tab:hover { color: var(--nbsc-blue); }
+    .modal-tab.active { color: var(--nbsc-blue); border-bottom-color: var(--nbsc-blue); }
+
+    .modal-body {
+      padding: 40px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .form-group { margin-bottom: 24px; }
     .form-group label {
       display: block;
-      margin-bottom: 8px;
-      font-weight: 600;
-      font-size: 0.9rem;
+      margin-bottom: 10px;
+      font-weight: 800;
+      font-size: 0.85rem;
+      color: var(--nbsc-blue);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .form-group input, .form-group textarea, .form-group select {
       width: 100%;
-      padding: 12px;
-      border-radius: 8px;
+      padding: 14px 18px;
+      border-radius: 10px;
       border: 1px solid var(--border);
+      background: var(--bg-main);
+      color: var(--text-primary);
       font-family: inherit;
       font-size: 1rem;
+      transition: 0.2s;
     }
 
-    .form-group textarea { resize: vertical; min-height: 100px; }
+    .form-group input:focus, .form-group textarea:focus {
+      outline: none;
+      border-color: var(--nbsc-blue);
+      background: #fff;
+      box-shadow: 0 0 0 4px rgba(0, 51, 102, 0.05);
+    }
 
     .modal-footer {
+      padding: 25px 40px;
       display: flex;
       justify-content: flex-end;
-      gap: 12px;
-      margin-top: 32px;
+      gap: 15px;
+      border-top: 1px solid var(--border);
+      background: var(--bg-main);
+    }
+
+    /* Cover Photo */
+    .cover-upload-area {
+      width: 100%;
+      height: 200px;
+      border-radius: 15px;
+      background: var(--bg-main);
+      border: 2px dashed var(--border);
+      margin-bottom: 10px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .cover-upload-area:hover {
+      border-color: var(--nbsc-blue);
+      background: #fff;
+    }
+
+    .cover-upload-area img {
+      width: 100%; height: 100%; object-fit: cover;
+      position: absolute; top: 0; left: 0; z-index: 1;
+    }
+
+    .cover-placeholder {
+      position: relative; z-index: 2; text-align: center; color: var(--text-muted);
+    }
+
+    .cover-placeholder i { font-size: 2.5rem; color: var(--nbsc-blue); margin-bottom: 8px; }
+
+    /* Previews */
+    .preview-view { padding: 40px 60px; max-width: 1000px; margin: 0 auto; width: 100%; }
+    .preview-hero { 
+      width: 100%; height: 300px; border-radius: 25px; 
+      background: var(--nbsc-dark); margin-bottom: 30px; 
+      position: relative; overflow: hidden; box-shadow: var(--shadow-lg);
+    }
+    .preview-hero img { width: 100%; height: 100%; object-fit: cover; opacity: 0.7; }
+    .preview-hero-content {
+      position: absolute; bottom: 0; left: 0; width: 100%; padding: 40px;
+      background: linear-gradient(0deg, rgba(0,26,51,0.9) 0%, transparent 100%);
+      color: #fff;
+    }
+    .preview-hero-content h1 { font-size: 2.5rem; font-weight: 800; margin: 0; }
+
+    .preview-card {
+      background: #fff; border-radius: 20px; padding: 35px;
+      box-shadow: var(--shadow); border: 1px solid var(--border); margin-bottom: 25px;
     }
 
     /* Utilities */
     .hidden { display: none !important; }
-    .empty-state {
-      text-align: center;
-      padding: 80px 40px;
-      color: var(--text-muted);
+    .empty-state { text-align: center; padding: 100px 40px; color: var(--text-muted); }
+    .empty-state i { font-size: 4rem; color: var(--border); margin-bottom: 15px; }
+
+    @media (max-width: 768px) {
+      .app-container { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .view-header, .office-grid, .preview-view { padding: 30px 20px; }
     }
-    .empty-state i { font-size: 4rem; margin-bottom: 20px; opacity: 0.2; }
   </style>
 </head>
 
@@ -357,13 +509,13 @@
   <div class="app-container">
     <aside class="sidebar">
       <div class="sidebar-header">
-        <i class='bx bxs-dashboard'></i>
+        <i class='bx bxs-shield-alt2'></i>
         <h2>Portal Manager</h2>
       </div>
       <div class="category-list" id="category-list">
         <!-- Categories injected here -->
       </div>
-      <div style="padding: 16px; border-top: 1px solid rgba(255,255,255,0.1);">
+      <div style="padding: 20px; border-top: 1px solid rgba(255,255,255,0.08);">
         <button class="add-btn" onclick="openCategoryModal()">
           <i class='bx bx-plus'></i> New Category
         </button>
@@ -373,9 +525,9 @@
     <main class="main-content">
       <div id="content-view">
         <div class="view-header">
-          <div id="view-title-container">
+          <div>
             <h1 id="view-title">Select a Category</h1>
-            <p id="view-subtitle" style="color: var(--text-muted); margin-top: 8px;"></p>
+            <div id="view-subtitle" class="view-subtitle"></div>
           </div>
           <div class="actions-bar hidden" id="category-actions">
             <button class="btn btn-outline" onclick="editCurrentCategory()">
@@ -395,36 +547,46 @@
           </div>
         </div>
 
-        <div id="preview-view" class="hidden" style="animation: fadeIn 0.3s ease;">
-          <div class="view-header" style="margin-bottom: 20px;">
+        <div id="preview-view" class="preview-view hidden">
+          <div style="margin-bottom: 25px;">
             <button class="btn btn-outline" onclick="closePreview()">
               <i class='bx bx-left-arrow-alt'></i> Back to Grid
             </button>
-            <div class="actions-bar">
-               <span style="color:var(--text-muted); font-size:0.8rem; font-weight:700; text-transform:uppercase;">Live Preview Mode</span>
-            </div>
           </div>
           
-          <div class="preview-container" style="display:flex; flex-direction:column; gap:24px; max-width:900px; margin:0 auto;">
-            <div style="background:linear-gradient(135deg, #fff, #f8fafc); border-radius:20px; padding:40px; box-shadow:var(--shadow); border:1px solid var(--border);">
-              <h2 id="prev-title" style="font-size:2.5rem; font-weight:800; color:var(--nbsc-dark); margin-bottom:10px;">Office Name</h2>
-              <p id="prev-info" style="font-size:1.1rem; color:var(--text-muted); line-height:1.6;"></p>
+          <div class="preview-hero">
+            <img id="prev-hero-img" src="../../assets/SAS_landing_page_header.jpg">
+            <div class="preview-hero-content">
+              <h1 id="prev-title">Office Name</h1>
             </div>
+          </div>
 
-            <div style="background:#fff; border-radius:16px; padding:30px; box-shadow:var(--shadow); border:1px solid var(--border);">
-              <h3 style="font-size:1.3rem; font-weight:800; color:var(--nbsc-dark); margin-bottom:15px; display:flex; align-items:center; gap:8px;"><i class='bx bx-info-circle'></i> About Us</h3>
-              <div id="prev-body" style="font-size:1rem; color:var(--text); line-height:1.7; white-space:pre-wrap;"></div>
+          <div class="preview-card">
+            <h3 style="color: var(--nbsc-blue); font-weight: 800; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+              <i class='bx bx-info-circle'></i> Overview
+            </h3>
+            <p id="prev-info" style="font-size: 1.1rem; line-height: 1.6; color: var(--text-secondary);"></p>
+          </div>
+
+          <div class="preview-card">
+            <h3 style="color: var(--nbsc-blue); font-weight: 800; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+              <i class='bx bx-align-left'></i> Detailed Description
+            </h3>
+            <div id="prev-body" style="line-height: 1.7; color: var(--text-secondary); white-space: pre-wrap;"></div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px;">
+            <div class="preview-card">
+              <h3 style="color: var(--nbsc-blue); font-weight: 800; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                <i class='bx bx-folder-open'></i> Documents
+              </h3>
+              <div id="prev-docs" style="display: flex; flex-direction: column; gap: 10px;"></div>
             </div>
-
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:24px;">
-              <div style="background:#fff; border-radius:16px; padding:30px; box-shadow:var(--shadow); border:1px solid var(--border);">
-                <h3 style="font-size:1.3rem; font-weight:800; color:var(--nbsc-dark); margin-bottom:15px; display:flex; align-items:center; gap:8px;"><i class='bx bx-folder-open'></i> Public Documents</h3>
-                <div id="prev-docs" style="display:flex; flex-direction:column; gap:10px;"></div>
-              </div>
-              <div style="background:#fff; border-radius:16px; padding:30px; box-shadow:var(--shadow); border:1px solid var(--border);">
-                <h3 style="font-size:1.3rem; font-weight:800; color:var(--nbsc-dark); margin-bottom:15px; display:flex; align-items:center; gap:8px;"><i class='bx bx-time-five'></i> Recent Activities</h3>
-                <div id="prev-activities" style="display:flex; flex-direction:column; gap:12px;"></div>
-              </div>
+            <div class="preview-card">
+              <h3 style="color: var(--nbsc-blue); font-weight: 800; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                <i class='bx bx-calendar-star'></i> Activities
+              </h3>
+              <div id="prev-activities" style="display: flex; flex-direction: column; gap: 12px;"></div>
             </div>
           </div>
         </div>
@@ -436,111 +598,133 @@
   <div id="category-modal" class="modal-overlay">
     <div class="modal-card">
       <div class="modal-header">
-        <h2 id="cat-modal-title">New Category</h2>
+        <div class="modal-header-top">
+          <h2 id="cat-modal-title">Category Management</h2>
+          <i class='bx bx-x' style="font-size: 1.8rem; cursor: pointer; color: var(--text-muted);" onclick="closeModals()"></i>
+        </div>
       </div>
-      <form id="category-form">
-        <input type="hidden" id="cat-id">
-        <div class="form-group">
-          <label>Category Name</label>
-          <input type="text" id="cat-name" required placeholder="e.g. Student Welfare Services">
-        </div>
-        <div class="form-group">
-          <label>Icon Class (BoxIcons)</label>
-          <input type="text" id="cat-icon" placeholder="bx-folder" value="bx-folder">
-          <small style="color: var(--text-muted);">See <a href="https://boxicons.com/" target="_blank">BoxIcons</a> for options (e.g. bx-heart)</small>
-        </div>
-        <div class="form-group">
-          <label>Description</label>
-          <textarea id="cat-desc" placeholder="Briefly describe this category..."></textarea>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline" onclick="closeModals()">Cancel</button>
-          <button type="submit" class="btn btn-primary">Save Category</button>
-        </div>
-      </form>
+      <div class="modal-body">
+        <form id="category-form">
+          <input type="hidden" id="cat-id">
+          <div class="form-group">
+            <label>Category Name</label>
+            <input type="text" id="cat-name" required placeholder="e.g. Student Development Services">
+          </div>
+          <div class="form-group">
+            <label>Icon Class (BoxIcons)</label>
+            <input type="text" id="cat-icon" placeholder="bx-folder" value="bx-folder">
+            <small style="color: var(--text-muted);">See boxicons.com for names (e.g. bx-group)</small>
+          </div>
+          <div class="form-group">
+            <label>Description</label>
+            <textarea id="cat-desc" style="min-height: 100px;" placeholder="What does this category cover?"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeModals()">Cancel</button>
+        <button type="submit" form="category-form" class="btn btn-primary">Save Category</button>
+      </div>
     </div>
   </div>
 
   <!-- Office Modal -->
   <div id="office-modal" class="modal-overlay">
-    <div class="modal-card" style="max-width: 900px; height: 90vh; display: flex; flex-direction: column; padding: 0;">
-      <div class="modal-header" style="padding: 32px 32px 10px 32px;">
-        <h2 id="off-modal-title">Office Management</h2>
-        <div class="modal-tabs" style="display: flex; gap: 20px; margin-top: 20px; border-bottom: 1px solid var(--border);">
-          <div class="modal-tab active" data-tab="info" onclick="switchOfficeTab('info')" style="padding: 10px 0; font-weight: 700; cursor: pointer; color: var(--nbsc-blue); border-bottom: 2px solid var(--nbsc-blue);">Basic Info</div>
-          <div class="modal-tab" data-tab="docs" onclick="switchOfficeTab('docs')" style="padding: 10px 0; font-weight: 700; cursor: pointer; color: var(--text-muted);">Documents</div>
-          <div class="modal-tab" data-tab="activities" onclick="switchOfficeTab('activities')" style="padding: 10px 0; font-weight: 700; cursor: pointer; color: var(--text-muted);">Activities</div>
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-header-top">
+          <h2 id="off-modal-title">Office Management</h2>
+          <i class='bx bx-x' style="font-size: 1.8rem; cursor: pointer; color: var(--text-muted);" onclick="closeModals()"></i>
+        </div>
+        <div class="modal-tabs">
+          <div class="modal-tab active" data-tab="info" onclick="switchOfficeTab('info')">Details</div>
+          <div class="modal-tab" data-tab="docs" onclick="switchOfficeTab('docs')">Documents</div>
+          <div class="modal-tab" data-tab="activities" onclick="switchOfficeTab('activities')">Activities</div>
         </div>
       </div>
       
-      <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 0 32px 32px 32px;">
+      <div class="modal-body">
         <!-- Info Tab -->
-        <form id="office-form" class="office-tab-content" data-tab="info">
-          <input type="hidden" id="off-id">
-          <div class="form-group" style="margin-top:20px;">
-            <label>Office Name</label>
-            <input type="text" id="off-name" required placeholder="e.g. Guidance and Counseling">
-          </div>
+        <div class="office-tab-content" data-tab="info">
           <div class="form-group">
-            <label>Tagline / Short Info</label>
-            <input type="text" id="off-info" placeholder="Short summary for the card view...">
+            <label>Cover Photo (Cloudinary)</label>
+            <div id="cover-upload-trigger" class="cover-upload-area" onclick="document.getElementById('cover-file-input').click()">
+              <input type="file" id="cover-file-input" hidden accept="image/*" onchange="handleCoverSelection(event)">
+              <img id="cover-preview" src="" class="hidden">
+              <div id="cover-placeholder" class="cover-placeholder">
+                <i class='bx bx-image-add'></i>
+                <p>Click to upload cover photo</p>
+                <small>Recommended: 1200 x 400px</small>
+              </div>
+            </div>
+            <input type="hidden" id="off-cover-url">
           </div>
-          <div class="form-group">
-            <label>Full Content (Markdown/HTML)</label>
-            <textarea id="off-body" style="min-height: 250px;" placeholder="Detailed information about the office..."></textarea>
-          </div>
-          <div style="display:flex; justify-content:flex-end;">
-            <button type="submit" class="btn btn-primary">Update Basic Info</button>
-          </div>
-        </form>
 
-        <!-- Documents Tab -->
-        <div id="office-docs-tab" class="office-tab-content hidden" data-tab="docs" style="margin-top:20px;">
-          <div style="display:flex; gap:15px; margin-bottom:24px; padding:20px; background:#f8fafc; border-radius:12px; border:1px solid var(--border);">
-            <div style="flex:1;">
-              <label style="display:block; font-weight:700; font-size:.8rem; margin-bottom:5px;">Document Title</label>
-              <input type="text" id="new-doc-title" placeholder="e.g. Service Guide 2024" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border);">
+          <form id="office-form">
+            <input type="hidden" id="off-id">
+            <div class="form-group">
+              <label>Office Name</label>
+              <input type="text" id="off-name" required placeholder="Full name of the office">
             </div>
-            <div style="flex:1;">
-              <label style="display:block; font-weight:700; font-size:.8rem; margin-bottom:5px;">File Upload</label>
-              <input type="file" id="new-doc-file" style="width:100%; padding:7px; border-radius:6px; border:1px solid var(--border); background:#fff;">
+            <div class="form-group">
+              <label>Short Tagline</label>
+              <input type="text" id="off-info" placeholder="One-line summary">
             </div>
-            <div style="display:flex; align-items:flex-end;">
-              <button class="btn btn-primary" onclick="uploadOfficeDoc()" id="btn-upload-doc">Upload</button>
+            <div class="form-group">
+              <label>Detailed Content</label>
+              <textarea id="off-body" style="min-height: 150px;" placeholder="Vision, mission, or primary functions..."></textarea>
             </div>
+          </form>
+        </div>
+
+        <!-- Docs Tab -->
+        <div class="office-tab-content hidden" data-tab="docs">
+          <div style="background: var(--bg-main); padding: 20px; border-radius: 12px; margin-bottom: 25px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+              <div class="form-group" style="margin:0;">
+                <label>Title</label>
+                <input type="text" id="new-doc-title">
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label>File</label>
+                <input type="file" id="new-doc-file" style="padding: 10px;">
+              </div>
+            </div>
+            <button class="btn btn-primary" style="width: 100%;" id="btn-upload-doc" onclick="uploadOfficeDoc()">
+              <i class='bx bx-upload'></i> Upload Document
+            </button>
           </div>
-          <div id="modal-docs-list">
-            <!-- Docs list injected here -->
-          </div>
+          <div id="modal-docs-list"></div>
         </div>
 
         <!-- Activities Tab -->
-        <div id="office-activities-tab" class="office-tab-content hidden" data-tab="activities" style="margin-top:20px;">
-          <div style="display:grid; grid-template-columns: 1fr 200px auto; gap:15px; margin-bottom:24px; padding:20px; background:#f8fafc; border-radius:12px; border:1px solid var(--border);">
-            <div>
-              <label style="display:block; font-weight:700; font-size:.8rem; margin-bottom:5px;">Activity Title</label>
-              <input type="text" id="new-act-title" placeholder="e.g. Career Fair 2024" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border);">
+        <div class="office-tab-content hidden" data-tab="activities">
+          <div style="background: var(--bg-main); padding: 20px; border-radius: 12px; margin-bottom: 25px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+              <div class="form-group" style="margin:0;">
+                <label>Event Title</label>
+                <input type="text" id="new-act-title">
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label>Date</label>
+                <input type="date" id="new-act-date">
+              </div>
             </div>
-            <div>
-              <label style="display:block; font-weight:700; font-size:.8rem; margin-bottom:5px;">Date</label>
-              <input type="date" id="new-act-date" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border);">
+            <div class="form-group">
+              <label>Brief Description</label>
+              <textarea id="new-act-desc" style="min-height: 80px;"></textarea>
             </div>
-            <div style="display:flex; align-items:flex-end;">
-              <button class="btn btn-primary" onclick="addOfficeActivity()" id="btn-add-act">Add</button>
-            </div>
-            <div style="grid-column: 1 / -1;">
-              <label style="display:block; font-weight:700; font-size:.8rem; margin-bottom:5px;">Brief Description</label>
-              <textarea id="new-act-desc" placeholder="What happened?" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); min-height:60px;"></textarea>
-            </div>
+            <button class="btn btn-primary" style="width: 100%;" id="btn-add-act" onclick="addOfficeActivity()">
+              <i class='bx bx-plus'></i> Add Activity
+            </button>
           </div>
-          <div id="modal-activities-list">
-            <!-- Activities list injected here -->
-          </div>
+          <div id="modal-activities-list"></div>
         </div>
       </div>
 
-      <div class="modal-footer" style="padding: 20px 32px; border-top: 1px solid var(--border);">
-        <button type="button" class="btn btn-outline" onclick="closeModals()">Close</button>
+      <div class="modal-footer" id="office-modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeModals()">Cancel</button>
+        <button type="submit" form="office-form" class="btn btn-primary" id="btn-save-office">Save Office</button>
       </div>
     </div>
   </div>
@@ -548,5 +732,4 @@
   <script src="../../src/utils/app-bridge.js" type="module"></script>
   <script src="./service_manager.js" type="module"></script>
 </body>
-
 </html>
