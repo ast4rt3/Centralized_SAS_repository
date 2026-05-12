@@ -4,6 +4,9 @@ import { getEl } from "../utils/dom.js";
  * Ensure the main app UI is visible (removing hidden classes/attributes)
  */
 export function ensureAppVisible() {
+  const hash = window.location.hash || '';
+  if (hash.startsWith('#lp-')) return;
+
   const sidebar = document.querySelector('.sidebar');
   const content = document.querySelector('.content');
   const landingPage = document.getElementById('landing-page');
@@ -65,6 +68,7 @@ export function syncFromHash(systems) {
     if (lp) {
       lp.classList.remove('hidden');
       document.body.classList.add('lp-mode');
+      document.body.classList.remove('system-mode', 'tv-mode', 'dashboard-backdrop');
       
       const mainContent = document.getElementById('lp-main-content');
       const explorerView = document.getElementById('lp-service-explorer-view');
@@ -107,6 +111,7 @@ export function syncFromHash(systems) {
       if (lp) {
         lp.classList.remove('hidden');
         document.body.classList.add('lp-mode');
+        document.body.classList.remove('system-mode', 'tv-mode', 'dashboard-backdrop');
         
         // Handle Landing Page internal routing
         const mainContent = document.getElementById('lp-main-content');
@@ -138,6 +143,7 @@ export function syncFromHash(systems) {
           showPage('landing-page'); // We need to show the landing page div, but hide its main content
           lp.classList.remove('hidden');
           document.body.classList.add('lp-mode');
+          document.body.classList.remove('system-mode', 'tv-mode', 'dashboard-backdrop');
           
           const mainContent = document.getElementById('lp-main-content');
           const explorerView = document.getElementById('lp-service-explorer-view');

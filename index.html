@@ -698,59 +698,6 @@
       transition: opacity 0.4s ease;
     }
 
-    .lp-se-nav-bar {
-      background: rgba(255, 255, 255, 0.85) !important;
-      backdrop-filter: blur(20px) !important;
-      -webkit-backdrop-filter: blur(20px) !important;
-      border: 1px solid rgba(226, 232, 240, 0.6) !important;
-      box-shadow: 0 10px 40px rgba(0, 51, 102, 0.06);
-      margin-bottom: clamp(15px, 4vw, 30px);
-      border-radius: clamp(12px, 3vw, 24px) !important;
-      padding: clamp(10px, 2vw, 15px) clamp(15px, 3vw, 25px) !important;
-      position: sticky;
-      top: clamp(70px, 10vh, 100px);
-      z-index: 100;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-
-    .lp-se-btn-back {
-      background: #f1f5f9 !important;
-      color: #1e293b !important;
-      font-weight: 800 !important;
-      padding: clamp(8px, 1.5vw, 12px) clamp(14px, 2.5vw, 20px) !important;
-      border-radius: 12px !important;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      border: 1px solid #e2e8f0 !important;
-      font-size: clamp(0.8rem, 2vw, 0.95rem);
-      white-space: nowrap;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .lp-se-btn-back:hover {
-      background: var(--lp-primary) !important;
-      color: white !important;
-      transform: translateX(-4px);
-    }
-
-    .lp-se-btn-back:active {
-      transform: scale(0.95) translateX(-4px);
-    }
-
-    .lp-se-breadcrumb {
-      font-size: clamp(0.75rem, 1.8vw, 0.9rem);
-      font-weight: 700;
-      color: #64748b;
-      display: flex;
-      align-items: center;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
     .lp-se-office-title {
       color: #003366 !important;
       letter-spacing: -0.03em !important;
@@ -771,7 +718,7 @@
       background: #fff;
       border-radius: 24px;
       border: 1px solid #e2e8f0;
-      padding: 0; /* Changed to 0 to allow cover photo to be flush */
+      padding: 0; /* Remove padding to let image reach edges */
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
       cursor: pointer;
       transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -786,15 +733,13 @@
       width: 100%;
       height: 160px;
       overflow: hidden;
-      background: #f1f5f9;
-      position: relative;
     }
 
     .lp-se-office-card-cover img {
       width: 100%;
       height: 100%;
       object-fit: cover;
-      transition: transform 0.6s ease;
+      transition: transform 0.5s ease;
     }
 
     .lp-se-office-card:hover .lp-se-office-card-cover img {
@@ -802,38 +747,17 @@
     }
 
     .lp-se-office-card-body {
-      padding: 24px;
+      padding: 20px;
       display: flex;
       flex-direction: column;
       gap: 12px;
       flex-grow: 1;
     }
 
-    .lp-se-office-card::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 4px;
-      background: var(--lp-primary);
-      transform: scaleX(0);
-      transform-origin: left;
-      transition: transform 0.4s ease;
-    }
-
     .lp-se-office-card:hover {
       transform: translateY(-8px) scale(1.02);
       border-color: var(--lp-accent);
       box-shadow: 0 20px 40px rgba(0, 51, 102, 0.1);
-    }
-
-    .lp-se-office-card:hover::after {
-      transform: scaleX(1);
-    }
-
-    .lp-se-office-card:active {
-      transform: scale(0.98);
     }
 
     .lp-se-office-card-title {
@@ -979,10 +903,22 @@
       gap: clamp(20px, 4vw, 30px);
     }
 
+    .lp-se-content {
+      padding-bottom: 120px; /* Generous space before footer */
+    }
+
+    .lp-se-loading-state {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 60px 0;
+      width: 100%;
+    }
+
     .lp-se-loader {
-      width: 40px;
-      height: 40px;
-      border: 4px solid #e2e8f0;
+      width: 48px;
+      height: 48px;
+      border: 4px solid rgba(0, 51, 102, 0.1);
       border-top-color: var(--lp-primary);
       border-radius: 50%;
       animation: spin 1s linear infinite;
@@ -1026,8 +962,15 @@
     }
 
     @keyframes slideUpFade {
-      from { opacity: 0; transform: translateY(30px); }
-      to { opacity: 1; transform: translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     /* Mobile specific tweaks */
@@ -1035,7 +978,7 @@
       #lp-service-explorer-view {
         padding-top: 90px !important;
       }
-      
+
       .lp-se-nav-bar {
         border-radius: 16px !important;
         margin-bottom: 20px;
@@ -1046,9 +989,10 @@
       }
 
       .lp-se-btn-back span {
-        display: none; /* Hide text on very small screens, keep icon */
+        display: none;
+        /* Hide text on very small screens, keep icon */
       }
-      
+
       .lp-se-btn-back::after {
         content: 'Back';
         display: inline-block;
@@ -1056,22 +1000,21 @@
     }
 
     @media (max-width: 480px) {
-      .lp-se-nav-bar {
-        padding: 10px 15px !important;
-      }
-      
       .lp-se-office-title {
         font-size: 1.8rem !important;
-      }
-
-      .lp-se-btn-back::after {
-        content: 'Back';
       }
     }
 
     @keyframes slideUpFade {
-      from { opacity: 0; transform: translateY(30px); }
-      to { opacity: 1; transform: translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     /* Mobile specific tweaks */
@@ -1079,37 +1022,18 @@
       #lp-service-explorer-view {
         padding-top: 90px !important;
       }
-      
-      .lp-se-nav-bar {
-        border-radius: 16px !important;
-        margin-bottom: 20px;
+      .lp-se-content {
+        padding-bottom: 60px !important;
       }
 
       .lp-se-office-grid-layout {
         grid-template-columns: 1fr;
       }
-
-      .lp-se-btn-back span {
-        display: none; /* Hide text on very small screens, keep icon */
-      }
-      
-      .lp-se-btn-back::after {
-        content: 'Back';
-        display: inline-block;
-      }
     }
 
     @media (max-width: 480px) {
-      .lp-se-nav-bar {
-        padding: 10px 15px !important;
-      }
-      
       .lp-se-office-title {
         font-size: 1.8rem !important;
-      }
-
-      .lp-se-btn-back::after {
-        content: 'Back';
       }
     }
 
@@ -1122,7 +1046,8 @@
       align-items: center;
       justify-content: center;
       font-size: 1.8rem;
-      color: var(--lp-accent); /* Synchronized with portal accent */
+      color: var(--lp-accent);
+      /* Synchronized with portal accent */
       margin-bottom: 15px;
       flex-shrink: 0;
     }
@@ -1132,16 +1057,43 @@
       overflow: hidden;
       display: flex;
       flex-direction: column;
-      align-items: center; /* Force horizontal centering */
+      align-items: center; /* Back to centered */
       text-align: center;
-      gap: 12px;
-      padding: 30px !important;
+      padding: 30px !important; /* Back to original padding */
       background: white !important;
       border: 1px solid #e2e8f0 !important;
       border-radius: 32px !important;
       transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
-      height: 100%; /* Ensure all cards in grid have same height */
+      height: 100%;
+    }
+
+    /* Keep the cover CSS for office cards but remove body wrapper if needed or adapt */
+    .lp-se-retrace-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      background: #f1f5f9;
+      color: var(--lp-primary);
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-bottom: 20px;
+    }
+
+    .lp-se-retrace-btn:hover {
+      background: var(--lp-primary);
+      color: white;
+      border-color: var(--lp-primary);
+      transform: translateX(-5px);
+    }
+
+    .lp-se-retrace-btn i {
+      font-size: 1.2rem;
     }
 
     .lp-service-card:hover {
@@ -1156,7 +1108,8 @@
       color: #003366 !important;
       margin-bottom: 12px !important;
       font-family: 'Outfit', sans-serif;
-      min-height: 4.8rem; /* Further standardized to ensure symmetry across all card titles */
+      min-height: 4.8rem;
+      /* Further standardized to ensure symmetry across all card titles */
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1166,17 +1119,19 @@
     }
 
     .lp-service-sub-container {
-      height: 50px; /* Exact match to item height to prevent ghosting */
+      height: 50px;
+      /* Exact match to item height to prevent ghosting */
       width: 100%;
       overflow: hidden;
       position: relative;
       margin-top: 8px;
       border-top: 1px solid rgba(0, 51, 102, 0.08);
-      padding-top: 0; /* Removed padding to align perfectly with scroll steps */
+      padding-top: 0;
+      /* Removed padding to align perfectly with scroll steps */
       -webkit-mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
       mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
     }
-    
+
     .lp-service-sub-list {
       display: flex;
       flex-direction: column;
@@ -1190,16 +1145,22 @@
     }
 
     @keyframes vertical-scroll {
-      0% { transform: translateY(0); }
-      100% { transform: translateY(-50%); }
+      0% {
+        transform: translateY(0);
+      }
+
+      100% {
+        transform: translateY(-50%);
+      }
     }
 
     .lp-service-sub-item {
       display: flex;
       align-items: center;
-      justify-content: center; /* Center text inside pill */
+      justify-content: center;
+      /* Center text inside pill */
       gap: 12px;
-      height: 50px; 
+      height: 50px;
       font-size: 0.8rem;
       font-weight: 700;
       color: #003366;
@@ -1212,7 +1173,8 @@
       border: 1px solid #e2e8f0;
       flex-shrink: 0;
       cursor: pointer;
-      width: 100%; /* Ensure pill takes full container width */
+      width: 100%;
+      /* Ensure pill takes full container width */
     }
 
     .lp-service-sub-item:hover {
@@ -1223,10 +1185,11 @@
     }
 
     .lp-service-sub-item i {
-      color: #f59e0b; /* Matching Amber/Gold */
+      color: #f59e0b;
+      /* Matching Amber/Gold */
       font-size: 1rem;
     }
-    
+
     .lp-service-sub-item:hover i {
       color: white;
     }
@@ -1251,6 +1214,7 @@
     .lp-service-card:hover .lp-service-action {
       gap: 10px;
     }
+
     .lp-se-export-btn {
       background: var(--lp-primary) !important;
       color: #fff !important;
@@ -1265,28 +1229,24 @@
       transform: translateY(-3px);
       box-shadow: 0 12px 25px rgba(0, 51, 102, 0.3) !important;
     }
-    
+
     @keyframes spin {
-      to { transform: rotate(360deg); }
+      to {
+        transform: rotate(360deg);
+      }
     }
 
     #lp-services {
       background: #f1f5f9 !important;
       padding: 100px 0 !important;
     }
-    
+
     #lp-services .lp-section-header h2 {
       color: #003366 !important;
     }
-    
+
     #lp-services .lp-section-header p {
       color: #64748b !important;
-    }
-
-    @media (max-width: 768px) {
-      .lp-se-nav-bar {
-        display: none !important;
-      }
     }
   </style>
 
@@ -1334,95 +1294,126 @@
     <!-- Hero Section -->
     <div id="lp-main-content">
       <header id="lp-hero" class="lp-hero">
-      <div class="lp-hero-background-effects">
-        <div class="lp-glow lp-glow-1"></div>
-        <div class="lp-glow lp-glow-2"></div>
-      </div>
-      <div class="lp-container lp-hero-flex">
-        <div class="lp-hero-text">
-          <h1 class="lp-hero-title">Student Affairs,<br>Services & Development</h1>
-          <p class="lp-hero-description">
-            Serving Northern Bukidnon State College with holistic programs, 
-            welfare support, and student development opportunities.
-          </p>
-          <div class="lp-hero-cta">
-            <a href="#lp-about" class="lp-btn-primary">Learn More</a>
-            <a href="#lp-services" class="lp-btn-secondary">Explore Services</a>
+        <div class="lp-hero-background-effects">
+          <div class="lp-glow lp-glow-1"></div>
+          <div class="lp-glow lp-glow-2"></div>
+        </div>
+        <div class="lp-container lp-hero-flex">
+          <div class="lp-hero-text">
+            <h1 class="lp-hero-title">Student Affairs,<br>Services & Development</h1>
+            <p class="lp-hero-description">
+              Serving Northern Bukidnon State College with holistic programs,
+              welfare support, and student development opportunities.
+            </p>
+            <div class="lp-hero-cta">
+              <a href="#lp-about" class="lp-btn-primary">Learn More</a>
+              <a href="#lp-services" class="lp-btn-secondary">Explore Services</a>
+            </div>
+          </div>
+          <div class="lp-hero-visual">
+            <div class="lp-hero-card">
+              <img src="assets/SAS_landing_page_header.jpg" alt="SAS Banner" class="lp-hero-banner-img">
+              <div class="lp-card-glass-shine"></div>
+            </div>
           </div>
         </div>
-        <div class="lp-hero-visual">
-          <div class="lp-hero-card">
-            <img src="assets/SAS_landing_page_header.jpg" alt="SAS Banner" class="lp-hero-banner-img">
-            <div class="lp-card-glass-shine"></div>
-          </div>
-        </div>
-      </div>
-    </header>
+      </header>
 
-    <!-- About / Objective Section -->
-    <section id="lp-about" class="lp-section">
-      <div class="lp-container">
-        <div class="lp-section-header">
-          <h2>Our Objective</h2>
-          <p>The SASDD-NBSC serves as the implementing unit of the rules, policies, and regulations of the college and
-            of those of CHED in relation to student-related concerns.</p>
-        </div>
-        <div class="lp-objective-grid">
-          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Assists students in transition to
-              college life</span></div>
-          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Help students to explore and clarify
-              their values</span></div>
-          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Encourages the development of
-              relationships of friendship and a sense of belonging to a campus community</span></div>
-          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Assists in identifying financial aid
-              resources for further education</span></div>
-          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Creates opportunities to expand the
-              cultural and aesthetic horizons of students</span></div>
-          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Teaches students how to solve personal
-              and group conflicts</span></div>
-          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Provides special programs and services
-              for students who have learning difficulties</span></div>
-          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Contributes to the understanding and
-              appreciation of ethnic differences, racial or otherwise</span></div>
-          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Creates opportunities for leadership
-              development</span></div>
-          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Establishes programs that encourage a
-              healthy lifestyle and reduce misbehavior</span></div>
-          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Provides opportunities for recreation
-              and leisure</span></div>
-          <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Provides counseling and career
-              guidance, helping to clarify professional goals, and exploring options for further study or
-              employment</span></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Services Section -->
-    <section id="lp-services" class="lp-section lp-bg-alt">
-      <div class="lp-container">
-        <div class="lp-section-header">
-          <h2>Our Services</h2>
-          <p>Comprehensive programs designed to support student welfare and foster holistic development.</p>
-        </div>
-        <div class="lp-services-grid" id="lp-services-grid">
-          <!-- Dynamically populated from Supabase -->
-          <div style="grid-column:1/-1; text-align:center; padding:40px;">
-            <i class='bx bx-loader-alt bx-spin' style="font-size:2rem; color:var(--lp-primary);"></i>
-            <p style="margin-top:10px; color:#64748b;">Loading services...</p>
+      <!-- About / Objective Section -->
+      <section id="lp-about" class="lp-section">
+        <div class="lp-container">
+          <div class="lp-section-header">
+            <h2>Our Objective</h2>
+            <p>The SASDD-NBSC serves as the implementing unit of the rules, policies, and regulations of the college and
+              of those of CHED in relation to student-related concerns.</p>
+          </div>
+          <div class="lp-objective-grid">
+            <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Assists students in transition to
+                college life</span></div>
+            <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Help students to explore and clarify
+                their values</span></div>
+            <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Encourages the development of
+                relationships of friendship and a sense of belonging to a campus community</span></div>
+            <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Assists in identifying financial aid
+                resources for further education</span></div>
+            <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Creates opportunities to expand the
+                cultural and aesthetic horizons of students</span></div>
+            <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Teaches students how to solve
+                personal
+                and group conflicts</span></div>
+            <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Provides special programs and
+                services
+                for students who have learning difficulties</span></div>
+            <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Contributes to the understanding and
+                appreciation of ethnic differences, racial or otherwise</span></div>
+            <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Creates opportunities for leadership
+                development</span></div>
+            <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Establishes programs that encourage a
+                healthy lifestyle and reduce misbehavior</span></div>
+            <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Provides opportunities for recreation
+                and leisure</span></div>
+            <div class="lp-objective-item"><i class='bx bx-check-circle'></i><span>Provides counseling and career
+                guidance, helping to clarify professional goals, and exploring options for further study or
+                employment</span></div>
           </div>
         </div>
-        
-        <script>
-          async function loadLPServices() {
-            const grid = document.getElementById('lp-services-grid');
-            try {
-              const res = await sasFetch('getServiceCategories');
-              const categories = res.categories || res.data || [];
-              if (res.success && categories.length > 0) {
-                grid.innerHTML = categories.map((cat, idx) => {
-                  const offices = cat.offices || [];
-                  const subItemsHtml = offices.length > 0 
-                    ? `<div class="lp-service-sub-container">
+      </section>
+
+      <!-- Services Section -->
+      <section id="lp-services" class="lp-section lp-bg-alt">
+        <div class="lp-container">
+          <div class="lp-section-header">
+            <h2>Our Services</h2>
+            <p>Comprehensive programs designed to support student welfare and foster holistic development.</p>
+          </div>
+          <div class="lp-services-grid" id="lp-services-grid">
+            <!-- Dynamically populated from Supabase -->
+            <div style="grid-column:1/-1; text-align:center; padding:40px;">
+              <i class='bx bx-loader-alt bx-spin' style="font-size:2rem; color:var(--lp-primary);"></i>
+              <p style="margin-top:10px; color:#64748b;">Loading services...</p>
+            </div>
+          </div>
+
+          <script>
+            async function loadLPServices() {
+              const grid = document.getElementById('lp-services-grid');
+              
+              // 1. Try local cache first for instant load
+              const cached = localStorage.getItem('sas_lp_services_cache');
+              if (cached) {
+                try {
+                  const data = JSON.parse(cached);
+                  const categories = data.categories || data.data || [];
+                  if (categories.length > 0) {
+                    renderLPServices(categories);
+                  }
+                } catch (e) {
+                  console.warn("Failed to parse services cache");
+                }
+              }
+
+              try {
+                const res = await sasFetch('getServiceCategories');
+                const categories = res.categories || res.data || [];
+                if (res.success && categories.length > 0) {
+                  localStorage.setItem('sas_lp_services_cache', JSON.stringify(res));
+                  renderLPServices(categories);
+                } else if (!cached) {
+                  grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:#ef4444;">Error loading services.</p>';
+                }
+              } catch (e) {
+                if (!cached) {
+                  grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:#ef4444;">Connection error.</p>';
+                }
+              }
+            }
+
+            function renderLPServices(categories) {
+              const grid = document.getElementById('lp-services-grid');
+              grid.innerHTML = categories.map((cat, idx) => {
+                const offices = cat.offices || [];
+                const subItemsHtml = offices.length > 0
+                  ? `<div class="lp-service-sub-container">
                          <div class="lp-service-sub-list" id="ticker-${idx}">
                            ${offices.map(off => `
                              <div class="lp-service-sub-item" onclick="openServiceOffice('${off.id}', '${off.name.replace(/'/g, "\\'")}', event)">
@@ -1439,9 +1430,9 @@
                            ` : ''}
                          </div>
                        </div>`
-                    : `<p class="lp-service-desc">${cat.description || 'Comprehensive support services for students.'}</p>`;
+                  : `<p class="lp-service-desc">${cat.description || 'Comprehensive support services for students.'}</p>`;
 
-                  return `
+                return `
                     <div class="lp-service-card lp-service-clickable" onclick="openServiceCategory('${cat.name.replace(/'/g, "\\'")}')">
                       <div class="lp-service-icon"><i class='bx ${cat.icon_class || 'bx-folder'}'></i></div>
                       <h3 class="lp-service-title">${cat.name}</h3>
@@ -1449,267 +1440,272 @@
                       <div class="lp-service-action">Explore All <i class='bx bx-right-arrow-alt'></i></div>
                     </div>
                   `;
-                }).join('');
+              }).join('');
 
-                // Start Tickers
-                categories.forEach((cat, idx) => {
-                  if (cat.offices && cat.offices.length > 1) {
-                    initServiceTicker(idx, cat.offices.length);
-                  }
-                });
-              } else {
-                grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:#ef4444;">Error loading services.</p>';
-              }
-            } catch (e) {
-              grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:#ef4444;">Connection error.</p>';
-            }
-          }
-
-          function initServiceTicker(idx, count) {
-            const list = document.getElementById(`ticker-${idx}`);
-            if (!list) return;
-            
-            let current = 0;
-            const itemHeight = 44; // Sync with new compact CSS
-            
-            setInterval(() => {
-              // Pause if hovering on parent card
-              if (list.closest('.lp-service-card').matches(':hover')) return;
-
-              current++;
-              list.style.transform = `translateY(-${current * itemHeight}px)`;
-              
-              if (current >= count) {
-                setTimeout(() => {
-                  list.style.transition = 'none';
-                  current = 0;
-                  list.style.transform = `translateY(0)`;
-                  setTimeout(() => {
-                    list.style.transition = 'transform 0.6s cubic-bezier(0.85, 0, 0.15, 1)';
-                  }, 50);
-                }, 600); // Wait for transition to end
-              }
-            }, 3000); // 3 second pause
-          }
-
-          function initObjectiveCarousel() {
-            const grid = document.querySelector('.lp-objective-grid');
-            if (!grid) return;
-            
-            // Clone items for a seamless infinite loop
-            const items = Array.from(grid.children);
-            items.forEach(item => grid.appendChild(item.cloneNode(true)));
-
-            let isPaused = false;
-            let currentScroll = 0;
-            let scrollSpeed = 0.6; // Linear pixels per frame
-            
-            function step() {
-              if (!isPaused && window.innerWidth <= 991) {
-                currentScroll += scrollSpeed;
-                
-                // Seamless reset: jump back to start once the first set is scrolled
-                if (currentScroll >= grid.scrollWidth / 2) {
-                  currentScroll = 0;
+              // Start Tickers
+              categories.forEach((cat, idx) => {
+                if (cat.offices && cat.offices.length > 1) {
+                  initServiceTicker(idx, cat.offices.length);
                 }
-                grid.scrollLeft = currentScroll;
-              }
-              requestAnimationFrame(step);
-            }
-            
-            grid.addEventListener('touchstart', () => isPaused = true);
-            grid.addEventListener('touchend', () => {
-              isPaused = false;
-              currentScroll = grid.scrollLeft;
-            });
-            
-            step();
-          }
-
-          function initServiceCarousel() {
-            const grid = document.getElementById('lp-services-grid');
-            if (!grid) return;
-            
-            let currentIndex = 0;
-            let isPaused = false;
-            
-            setInterval(() => {
-              if (isPaused || window.innerWidth > 991) return;
-              
-              const cards = grid.querySelectorAll('.lp-service-card');
-              if (cards.length <= 1) return;
-              
-              currentIndex = (currentIndex + 1) % cards.length;
-              const cardWidth = cards[0].offsetWidth + 15; // Card + gap
-              
-              grid.scrollTo({
-                left: currentIndex * cardWidth,
-                behavior: 'smooth'
               });
-            }, 5000); // 5 second per slide
-            
-            grid.addEventListener('touchstart', () => isPaused = true);
-            grid.addEventListener('touchend', () => {
-              setTimeout(() => {
-                const cardWidth = grid.querySelector('.lp-service-card')?.offsetWidth + 15;
-                if (cardWidth) currentIndex = Math.round(grid.scrollLeft / cardWidth);
-                isPaused = false;
-              }, 600);
-            });
-          }
+            }
 
-          document.addEventListener('DOMContentLoaded', async () => {
-            await loadLPServices();
-            initObjectiveCarousel();
-            initServiceCarousel();
-          });
+            function initServiceTicker(idx, count) {
+              const list = document.getElementById(`ticker-${idx}`);
+              if (!list) return;
 
-          function openServiceCategory(categoryName) {
-            localStorage.setItem('sas_selected_service_category', categoryName);
-            window.location.hash = 'service-viewer';
-          }
+              let current = 0;
+              const itemHeight = 44; // Sync with new compact CSS
 
-          function openServiceOffice(officeId, officeName, event) {
-            if (event) event.stopPropagation(); // Prevent card click
-            localStorage.setItem('sas_selected_office_id', officeId);
-            localStorage.setItem('sas_selected_office_name', officeName);
-            window.location.hash = 'service-viewer';
-          }
+              setInterval(() => {
+                // Pause if hovering on parent card
+                if (list.closest('.lp-service-card').matches(':hover')) return;
 
-          async function loadLPActivities() {
-            const grid = document.getElementById('lp-activities-grid');
-            try {
-              const res = await sasFetch('getAllRecentActivities');
-              if (res.success && res.data) {
-                if (res.data.length === 0) {
-                  grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:#64748b; padding:40px;">No recent activities logged yet.</p>';
-                  return;
+                current++;
+                list.style.transform = `translateY(-${current * itemHeight}px)`;
+
+                if (current >= count) {
+                  setTimeout(() => {
+                    list.style.transition = 'none';
+                    current = 0;
+                    list.style.transform = `translateY(0)`;
+                    setTimeout(() => {
+                      list.style.transition = 'transform 0.6s cubic-bezier(0.85, 0, 0.15, 1)';
+                    }, 50);
+                  }, 600); // Wait for transition to end
                 }
-                grid.innerHTML = res.data.map(act => `
-                  <div class="lp-activity-card">
-                    <div class="lp-activity-info">
-                      <div class="lp-activity-meta">
-                        <span class="lp-activity-date">${new Date(act.activity_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                        <span class="lp-activity-office">${act.sas_offices?.name || 'SAS Office'}</span>
-                      </div>
-                      <h3 class="lp-activity-title">${act.title}</h3>
-                      <p class="lp-activity-snippet">${act.description || ''}</p>
-                    </div>
-                  </div>
-                `).join('');
+              }, 3000); // 3 second pause
+            }
+
+            function initObjectiveCarousel() {
+              const grid = document.querySelector('.lp-objective-grid');
+              if (!grid) return;
+
+              // Clone items for a seamless infinite loop
+              const items = Array.from(grid.children);
+              items.forEach(item => grid.appendChild(item.cloneNode(true)));
+
+              let isPaused = false;
+              let currentScroll = 0;
+              let scrollSpeed = 0.6; // Linear pixels per frame
+
+              function step() {
+                if (!isPaused && window.innerWidth <= 991) {
+                  currentScroll += scrollSpeed;
+
+                  // Seamless reset: jump back to start once the first set is scrolled
+                  if (currentScroll >= grid.scrollWidth / 2) {
+                    currentScroll = 0;
+                  }
+                  grid.scrollLeft = currentScroll;
+                }
+                requestAnimationFrame(step);
               }
-            } catch (e) { console.error("Activities error:", e); }
-          }
 
-          // Initial load
-          document.addEventListener('DOMContentLoaded', () => {
-            loadLPServices();
-            loadLPActivities();
-          });
-        </script>
-      </div>
-    </section>
+              grid.addEventListener('touchstart', () => isPaused = true);
+              grid.addEventListener('touchend', () => {
+                isPaused = false;
+                currentScroll = grid.scrollLeft;
+              });
 
-    <!-- Documents Section -->
-    <section id="lp-documents" class="lp-section">
-      <div class="lp-container">
-        <div class="lp-section-header">
-          <h2>Official Documents</h2>
-          <p>Signed issuances, memos, advisories, forms, and resolutions from SASDD-NBSC.</p>
+              step();
+            }
+
+            function initServiceCarousel() {
+              const grid = document.getElementById('lp-services-grid');
+              if (!grid) return;
+
+              let currentIndex = 0;
+              let isPaused = false;
+
+              setInterval(() => {
+                if (isPaused || window.innerWidth > 991) return;
+
+                const cards = grid.querySelectorAll('.lp-service-card');
+                if (cards.length <= 1) return;
+
+                currentIndex = (currentIndex + 1) % cards.length;
+                const cardWidth = cards[0].offsetWidth + 15; // Card + gap
+
+                grid.scrollTo({
+                  left: currentIndex * cardWidth,
+                  behavior: 'smooth'
+                });
+              }, 5000); // 5 second per slide
+
+              grid.addEventListener('touchstart', () => isPaused = true);
+              grid.addEventListener('touchend', () => {
+                setTimeout(() => {
+                  const cardWidth = grid.querySelector('.lp-service-card')?.offsetWidth + 15;
+                  if (cardWidth) currentIndex = Math.round(grid.scrollLeft / cardWidth);
+                  isPaused = false;
+                }, 600);
+              });
+            }
+
+            function openServiceCategory(categoryName) {
+              localStorage.setItem('sas_selected_service_category', categoryName);
+              window.location.hash = 'service-viewer';
+            }
+
+            function openServiceOffice(officeId, officeName, event) {
+              if (event) event.stopPropagation(); // Prevent card click
+              localStorage.setItem('sas_selected_office_id', officeId);
+              localStorage.setItem('sas_selected_office_name', officeName);
+              window.location.hash = 'service-viewer';
+            }
+
+            async function loadLPActivities() {
+              const grid = document.getElementById('lp-activities-grid');
+              
+              // 1. Try local cache
+              const cached = localStorage.getItem('sas_lp_activities_cache');
+              if (cached) {
+                try {
+                  const data = JSON.parse(cached);
+                  if (data && data.length > 0) renderLPActivities(data);
+                } catch(e) {}
+              }
+
+              try {
+                const res = await sasFetch('getAllRecentActivities');
+                if (res.success && res.data) {
+                  localStorage.setItem('sas_lp_activities_cache', JSON.stringify(res.data));
+                  renderLPActivities(res.data);
+                }
+              } catch (e) { 
+                console.error("Activities error:", e); 
+              }
+            }
+
+            function renderLPActivities(data) {
+              const grid = document.getElementById('lp-activities-grid');
+              if (!data || data.length === 0) {
+                grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:#64748b; padding:40px;">No recent activities logged yet.</p>';
+                return;
+              }
+              grid.innerHTML = data.map(act => `
+                <div class="lp-activity-card">
+                  <div class="lp-activity-info">
+                    <div class="lp-activity-meta">
+                      <span class="lp-activity-date">${new Date(act.activity_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                      <span class="lp-activity-office">${act.sas_offices?.name || 'SAS Office'}</span>
+                    </div>
+                    <h3 class="lp-activity-title">${act.title}</h3>
+                    <p class="lp-activity-snippet">${act.description || ''}</p>
+                  </div>
+                </div>
+              `).join('');
+            }
+
+            document.addEventListener('DOMContentLoaded', async () => {
+              // Priority Load
+              await loadLPServices();
+              loadLPActivities();
+              
+              // Initialize Carousels
+              initObjectiveCarousel();
+              initServiceCarousel();
+            });
+          </script>
         </div>
+      </section>
 
-        <!-- Filter Bar -->
-        <div class="lp-docs-filter-bar">
-          <div class="lp-docs-category-tabs" id="lp-docs-category-tabs">
-            <button class="lp-docs-tab active" data-cat="">All</button>
-            <button class="lp-docs-tab" data-cat="Memo">Memo</button>
-            <button class="lp-docs-tab" data-cat="Advisory">Advisory</button>
-            <button class="lp-docs-tab" data-cat="Form">Form</button>
-            <button class="lp-docs-tab" data-cat="Resolution">Resolution</button>
-            <button class="lp-docs-tab" data-cat="Issuance">Issuance</button>
+      <!-- Documents Section -->
+      <section id="lp-documents" class="lp-section">
+        <div class="lp-container">
+          <div class="lp-section-header">
+            <h2>Official Documents</h2>
+            <p>Signed issuances, memos, advisories, forms, and resolutions from SASDD-NBSC.</p>
           </div>
-          <select id="lp-docs-year" class="lp-docs-year-select">
-            <option value="">All Years</option>
-          </select>
-        </div>
 
-        <!-- Document Grid -->
-        <div class="lp-docs-grid" id="lp-docs-grid">
-          <!-- Skeleton -->
-          <div class="lp-doc-skeleton"></div>
-          <div class="lp-doc-skeleton"></div>
-          <div class="lp-doc-skeleton"></div>
-          <div class="lp-doc-skeleton"></div>
-        </div>
+          <!-- Filter Bar -->
+          <div class="lp-docs-filter-bar">
+            <div class="lp-docs-category-tabs" id="lp-docs-category-tabs">
+              <button class="lp-docs-tab active" data-cat="">All</button>
+              <button class="lp-docs-tab" data-cat="Memo">Memo</button>
+              <button class="lp-docs-tab" data-cat="Advisory">Advisory</button>
+              <button class="lp-docs-tab" data-cat="Form">Form</button>
+              <button class="lp-docs-tab" data-cat="Resolution">Resolution</button>
+              <button class="lp-docs-tab" data-cat="Issuance">Issuance</button>
+            </div>
+            <select id="lp-docs-year" class="lp-docs-year-select">
+              <option value="">All Years</option>
+            </select>
+          </div>
 
-        <div id="lp-docs-empty" class="lp-docs-empty hidden">
-          <i class='bx bx-folder-open'></i>
-          <p>No documents found for this filter.</p>
-        </div>
-      </div>
-    </section>
+          <!-- Document Grid -->
+          <div class="lp-docs-grid" id="lp-docs-grid">
+            <!-- Skeleton -->
+            <div class="lp-doc-skeleton"></div>
+            <div class="lp-doc-skeleton"></div>
+            <div class="lp-doc-skeleton"></div>
+            <div class="lp-doc-skeleton"></div>
+          </div>
 
-    <!-- Activity Documentation Feed -->
-    <section id="lp-activities" class="lp-section lp-bg-alt">
-      <div class="lp-container">
-        <div class="lp-section-header">
-          <h2>Recent Activities</h2>
-          <p>Documenting vibrant student life and institutional events at NBSC.</p>
+          <div id="lp-docs-empty" class="lp-docs-empty hidden">
+            <i class='bx bx-folder-open'></i>
+            <p>No documents found for this filter.</p>
+          </div>
         </div>
+      </section>
 
-        <div class="lp-activities-grid" id="lp-activities-grid">
-          <!-- Skeleton loading state -->
-          <div class="lp-activity-skeleton">
-            <div class="lp-skeleton-img"></div>
-            <div class="lp-skeleton-body">
-              <div class="lp-skeleton-line short"></div>
-              <div class="lp-skeleton-line"></div>
-              <div class="lp-skeleton-line medium"></div>
+      <!-- Activity Documentation Feed -->
+      <section id="lp-activities" class="lp-section lp-bg-alt">
+        <div class="lp-container">
+          <div class="lp-section-header">
+            <h2>Recent Activities</h2>
+            <p>Documenting vibrant student life and institutional events at NBSC.</p>
+          </div>
+
+          <div class="lp-activities-grid" id="lp-activities-grid">
+            <!-- Skeleton loading state -->
+            <div class="lp-activity-skeleton">
+              <div class="lp-skeleton-img"></div>
+              <div class="lp-skeleton-body">
+                <div class="lp-skeleton-line short"></div>
+                <div class="lp-skeleton-line"></div>
+                <div class="lp-skeleton-line medium"></div>
+              </div>
+            </div>
+            <div class="lp-activity-skeleton">
+              <div class="lp-skeleton-img"></div>
+              <div class="lp-skeleton-body">
+                <div class="lp-skeleton-line short"></div>
+                <div class="lp-skeleton-line"></div>
+                <div class="lp-skeleton-line medium"></div>
+              </div>
+            </div>
+            <div class="lp-activity-skeleton">
+              <div class="lp-skeleton-img"></div>
+              <div class="lp-skeleton-body">
+                <div class="lp-skeleton-line short"></div>
+                <div class="lp-skeleton-line"></div>
+                <div class="lp-skeleton-line medium"></div>
+              </div>
             </div>
           </div>
-          <div class="lp-activity-skeleton">
-            <div class="lp-skeleton-img"></div>
-            <div class="lp-skeleton-body">
-              <div class="lp-skeleton-line short"></div>
-              <div class="lp-skeleton-line"></div>
-              <div class="lp-skeleton-line medium"></div>
-            </div>
-          </div>
-          <div class="lp-activity-skeleton">
-            <div class="lp-skeleton-img"></div>
-            <div class="lp-skeleton-body">
-              <div class="lp-skeleton-line short"></div>
-              <div class="lp-skeleton-line"></div>
-              <div class="lp-skeleton-line medium"></div>
-            </div>
-          </div>
-        </div>
 
-        <!-- See More button — always visible, opens full-page activities view -->
-        <div class="lp-view-all-wrap" id="lp-view-all-wrap" style="display:none;">
-          <button id="lp-view-all-btn" class="lp-view-all-btn">
-            See More Activities
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-              stroke-linecap="round" stroke-linejoin="round">
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-              <polyline points="12 5 19 12 12 19"></polyline>
-            </svg>
-          </button>
+          <!-- See More button — always visible, opens full-page activities view -->
+          <div class="lp-view-all-wrap" id="lp-view-all-wrap" style="display:none;">
+            <button id="lp-view-all-btn" class="lp-view-all-btn">
+              See More Activities
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </button>
+          </div>
         </div>
-      </div>
-    </section>
-    </div> <!-- /lp-main-content -->    <!-- Service Explorer View -->
+      </section>
+    </div> <!-- /lp-main-content --> <!-- Service Explorer View -->
     <div id="lp-service-explorer-view" style="display:none;">
       <div class="lp-container">
-        
-        <div class="lp-se-nav-bar" id="se-nav-bar" style="display:none;">
-          <button class="lp-se-btn-back" id="se-btn-back">
-            <i class='bx bx-left-arrow-alt'></i>
-            <span>Back to Categories</span>
-          </button>
-          <div class="lp-se-breadcrumb" id="se-breadcrumb">Category</div>
-        </div>
-        
+
+      <div class="lp-container">
+
+
         <div class="lp-se-content">
           <div class="lp-se-loading-state" id="se-loading-state" style="display:flex;">
             <div class="lp-se-loader"></div>
@@ -1719,6 +1715,9 @@
           <div class="lp-se-category-view" id="se-category-view" style="display:none;">
             <div class="lp-se-category-header">
               <h2 id="se-category-title" class="lp-se-office-title">Services</h2>
+              <button class="lp-se-retrace-btn" onclick="handleServiceExplorerBack()">
+                <i class='bx bx-left-arrow-alt'></i> Back
+              </button>
             </div>
             <div class="lp-se-offices-grid" id="se-offices-grid"></div>
           </div>
@@ -1728,6 +1727,9 @@
             <div class="lp-se-office-info-card">
               <h2 class="lp-se-office-title" id="se-office-title">Office Name</h2>
               <div class="lp-se-office-info" id="se-office-info">Information overview...</div>
+              <button class="lp-se-retrace-btn" onclick="handleServiceExplorerBack()" style="margin-top: 15px; margin-bottom: 0;">
+                <i class='bx bx-left-arrow-alt'></i> Back
+              </button>
             </div>
 
             <div class="lp-se-office-body-card">
@@ -1761,23 +1763,11 @@
 
     <script>
       async function sasFetch(action, params = {}) {
-        // Priority: 1. localStorage override, 2. window.ENV, 3. hardcoded production fallback
-        const productionUrl = 'https://script.google.com/macros/s/AKfycbwXAyuE63HcK0maq2bmDtr3Bfvh1QjC1mqOcqGgClq8cj8t2jj9hbQIix66pYkT2d59Ag/exec';
-        const urlString = localStorage.getItem('sas_backend_url') || (window.ENV && window.ENV.BACKEND_GAS_URL) || productionUrl;
-        
+        const urlString = window.ENV?.BACKEND_GAS_URL || 'https://script.google.com/macros/s/AKfycbyNmsUvDndrM5L2v_E3gJvM2jHqI1o30Tz8X-aI2H9vX-xYjZ0/exec';
         if (!urlString) {
           console.warn("Backend URL missing!");
           return { success: false, message: "Backend URL missing" };
         }
-
-        // Cache implementation
-        const cacheKey = `sas_cache_${action}_${JSON.stringify(params)}`;
-        const cachedResponse = sessionStorage.getItem(cacheKey);
-        if (cachedResponse) {
-          console.log("sasFetch: Serving from cache", action);
-          return JSON.parse(cachedResponse);
-        }
-
         try {
           const url = new URL(urlString);
           url.searchParams.append('action', action);
@@ -1787,12 +1777,7 @@
           const finalUrl = url.toString();
           console.log("sasFetch: Fetching", finalUrl);
           const r = await fetch(finalUrl);
-          const data = await r.json();
-          
-          if (data && data.success) {
-            sessionStorage.setItem(cacheKey, JSON.stringify(data));
-          }
-          return data;
+          return await r.json();
         } catch (e) {
           console.error("SAS Fetch Error:", e);
           return { success: false, message: e.message };
@@ -1806,24 +1791,21 @@
         const categoryView = document.getElementById('se-category-view');
         const loadingState = document.getElementById('se-loading-state');
         const officeView = document.getElementById('se-office-view');
-        const navBar = document.getElementById('se-nav-bar');
-        const breadcrumb = document.getElementById('se-breadcrumb');
 
         // Check for direct office preview request
         const previewOfficeId = localStorage.getItem('sas_selected_office_id');
         const previewOfficeName = localStorage.getItem('sas_selected_office_name');
-        
+
         if (previewOfficeId && previewOfficeName) {
-            localStorage.removeItem('sas_selected_office_id');
-            localStorage.removeItem('sas_selected_office_name');
-            await loadOfficeDetails(previewOfficeId, previewOfficeName);
-            return;
+          localStorage.removeItem('sas_selected_office_id');
+          localStorage.removeItem('sas_selected_office_name');
+          await loadOfficeDetails(previewOfficeId, previewOfficeName);
+          return;
         }
 
         seCurrentCategoryName = localStorage.getItem('sas_selected_service_category') || 'Services';
-        
+
         document.getElementById('se-category-title').textContent = seCurrentCategoryName;
-        breadcrumb.textContent = seCurrentCategoryName;
 
         // Force main navbar visibility
         const mainNavbar = document.querySelector('.lp-navbar');
@@ -1832,26 +1814,22 @@
         loadingState.style.display = 'flex';
         categoryView.style.display = 'none';
         officeView.style.display = 'none';
-        navBar.style.display = 'none';
 
         try {
           const res = await sasFetch('getOfficesByCategory', { categoryName: seCurrentCategoryName });
-          
+
           loadingState.style.display = 'none';
           if (res.success) {
             renderOffices(res.offices);
             categoryView.style.display = 'block';
-            navBar.style.display = 'flex';
           } else {
             document.getElementById('se-offices-grid').innerHTML = `<p style="color:red;">Error: ${res.message}</p>`;
             categoryView.style.display = 'block';
-            navBar.style.display = 'flex';
           }
         } catch (err) {
           loadingState.style.display = 'none';
           document.getElementById('se-offices-grid').innerHTML = `<p style="color:red;">Network Error.</p>`;
           categoryView.style.display = 'block';
-          navBar.style.display = 'flex';
         }
       };
 
@@ -1866,7 +1844,7 @@
           <div class="lp-se-office-card" data-id="${o.id}" data-name="${o.name}" 
                style="animation: slideUpFade 0.6s cubic-bezier(0.23, 1, 0.32, 1) both ${idx * 0.05}s;">
             <div class="lp-se-office-card-cover">
-              <img src="assets/SAS_landing_page_header.jpg" alt="${o.name}">
+               <img src="assets/SAS_landing_page_header.jpg" alt="${o.name}">
             </div>
             <div class="lp-se-office-card-body">
               <h3 class="lp-se-office-card-title">${o.name}</h3>
@@ -1893,14 +1871,10 @@
         seCurrentOfficeId = officeId;
         const categoryView = document.getElementById('se-category-view');
         const loadingState = document.getElementById('se-loading-state');
-        const navBar = document.getElementById('se-nav-bar');
         const officeView = document.getElementById('se-office-view');
-        const breadcrumb = document.getElementById('se-breadcrumb');
-        
+
         categoryView.style.display = 'none';
         loadingState.style.display = 'flex';
-        navBar.style.display = 'flex';
-        breadcrumb.textContent = `${seCurrentCategoryName} / ${officeName}`;
 
         try {
           const res = await sasFetch('getOfficeDetails', { officeId });
@@ -1930,7 +1904,7 @@
             } else {
               actList.innerHTML = res.activities.map(a => `
                 <div class="lp-se-activity-mini">
-                  <div class="lp-se-activity-date">${new Date(a.activity_date).toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'})}</div>
+                  <div class="lp-se-activity-date">${new Date(a.activity_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
                   <div class="lp-se-activity-title">${a.title}</div>
                   <div class="lp-se-activity-desc">${a.description || ''}</div>
                 </div>
@@ -1976,23 +1950,51 @@
         }
       });
 
-      document.getElementById('se-btn-back').addEventListener('click', () => {
+      window.handleServiceExplorerBack = () => {
         const officeView = document.getElementById('se-office-view');
-        if (officeView.style.display === 'flex') {
-          // If in office view, go back to category list
+        if (officeView && officeView.style.display === 'flex') {
           officeView.style.display = 'none';
           window.loadServiceCategory();
         } else {
-          // If in category view, go back to landing page home
           window.location.hash = '#home';
         }
-      });
+      };
     </script>
 
     <!-- Footer -->
     <footer class="lp-footer">
       <div class="lp-container">
-        <p>&copy; 2026 Northern Bukidnon State College. All rights reserved.</p>
+        <div class="lp-footer-grid">
+          <div class="lp-footer-brand">
+            <img src="assets/sas_logo.png" alt="NBSC SAS" class="lp-footer-logo">
+            <p>Northern Bukidnon State College<br>Student Affairs and Services</p>
+          </div>
+          <div class="lp-footer-links">
+            <h4>Quick Links</h4>
+            <ul>
+              <li><a href="#home">Home</a></li>
+              <li><a href="#lp-about">About Us</a></li>
+              <li><a href="#lp-services">Our Services</a></li>
+              <li><a href="#lp-activities">Recent Activities</a></li>
+            </ul>
+          </div>
+          <div class="lp-footer-contact">
+            <h4>Contact Us</h4>
+            <p><i class='bx bx-envelope'></i> sas@nbsc.edu.ph</p>
+            <p><i class='bx bx-map'></i> Manolo Fortich, Bukidnon</p>
+          </div>
+          <div class="lp-footer-social">
+            <h4>Follow Us</h4>
+            <div class="lp-social-icons">
+              <a href="#"><i class='bx bxl-facebook-circle'></i></a>
+              <a href="#"><i class='bx bxl-twitter'></i></a>
+              <a href="#"><i class='bx bxl-instagram-alt'></i></a>
+            </div>
+          </div>
+        </div>
+        <div class="lp-footer-bottom">
+          <p>&copy; 2026 Northern Bukidnon State College. All rights reserved.</p>
+        </div>
       </div>
     </footer>
 
@@ -3384,5 +3386,7 @@
 
   <script src="env.js" type="module"></script>
   <script src="src/main.js" type="module"></script>
+
+</body>
 
 </html>
