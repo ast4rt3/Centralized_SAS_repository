@@ -2,7 +2,7 @@
   "scripts": {
     "dev": "node scripts/dev-setup.js && vite",
     "dev:quick": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/post-build.js",
     "ci": "node scripts/ci-syntax-check.js",
     "mcp:serve": "node scripts/mcp-sas-server.js",
     "mcp:inspect": "npx @modelcontextprotocol/inspector node scripts/mcp-sas-server.js"

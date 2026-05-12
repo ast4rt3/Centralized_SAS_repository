@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
-import obfuscator from 'vite-plugin-javascript-obfuscator';
+// import obfuscator from 'vite-plugin-javascript-obfuscator';
 
 export default defineConfig({
   base: '/',
@@ -33,21 +33,21 @@ export default defineConfig({
         { src: ['apps/**/*', '!apps/**/index.html'], dest: '.' }
       ]
     }),
-    obfuscator({
-      // include: [/env\.js$/], 
-      exclude: [/node_modules/, /env\.js$/],
-      apply: 'build',
-      options: {
-        compact: true,
-        controlFlowFlattening: true,
-        controlFlowFlatteningThreshold: 1,
-        numbersToExpressions: true,
-        simplify: true,
-        stringArray: true,
-        stringArrayEncoding: ['base64'],
-        stringArrayThreshold: 1,
-        renameProperties: false
-      }
-    })
+    // obfuscator({
+    //   // include: [/env\.js$/], 
+    //   exclude: [/node_modules/, /env\.js$/],
+    //   apply: 'build',
+    //   options: {
+    //     compact: true,
+    //     controlFlowFlattening: true,
+    //     controlFlowFlatteningThreshold: 1,
+    //     numbersToExpressions: true,
+    //     simplify: true,
+    //     stringArray: true,
+    //     stringArrayEncoding: ['base64'],
+    //     stringArrayThreshold: 1,
+    //     renameProperties: false
+    //   }
+    // })
   ]
 });
