@@ -34,8 +34,8 @@ export default defineConfig({
       ]
     }),
     obfuscator({
-      include: [/env\.js$/], // Explicitly target env.js
-      exclude: [/node_modules/],
+      // include: [/env\.js$/], 
+      exclude: [/node_modules/, /env\.js$/],
       apply: 'build',
       options: {
         compact: true,
