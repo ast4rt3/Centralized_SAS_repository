@@ -4973,7 +4973,8 @@ body.lp-mode .main-wrapper {
 }
 
 .lp-hero-card:hover {
-  transform: perspective(1000px) rotateY(0deg) rotateX(0deg) scale(1.02);
+  box-shadow: 0 40px 80px rgba(0, 0, 0, 0.6), 
+              inset 0 0 0 2px rgba(255, 255, 255, 0.2);
 }
 
 @keyframes float {
@@ -5007,8 +5008,9 @@ body.lp-mode .main-wrapper {
 }
 
 .lp-btn-primary:hover {
-  transform: translateY(-3px) scale(1.05);
-  box-shadow: 0 12px 30px rgba(230, 145, 28, 0.4);
+  background-color: #f59e0b;
+  box-shadow: 0 0 20px rgba(230, 145, 28, 0.5);
+  filter: brightness(1.1);
 }
 
 /* --- Common Sections --- */
@@ -5046,6 +5048,10 @@ body.lp-mode .main-wrapper {
   gap: 30px;
 }
 
+.lp-card-clone {
+  display: none !important;
+}
+
 .lp-service-card {
   background: var(--lp-white);
   padding: 50px 30px;
@@ -5060,9 +5066,9 @@ body.lp-mode .main-wrapper {
 
 .lp-service-card:hover,
 .lp-service-card.active {
-  transform: translateY(-10px) scale(1.02);
   border-color: var(--lp-accent);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 0 30px rgba(0, 51, 102, 0.15), 
+              inset 0 0 0 2px var(--lp-accent);
   z-index: 10;
 }
 
@@ -5412,12 +5418,18 @@ body.lp-mode .main-wrapper {
     display: none !important;
   }
 
+  }
+
   .lp-service-card {
     flex: 0 0 85%;
     scroll-snap-align: center;
     padding: 30px 20px;
     border-radius: 16px;
     height: auto;
+  }
+
+  .lp-card-clone {
+    display: flex !important;
   }
 
   .lp-service-icon {
@@ -5432,7 +5444,7 @@ body.lp-mode .main-wrapper {
   }
 
   .lp-service-sub-item {
-    height: 44px; /* Slightly more compact ticker */
+    height: 46px; 
     font-size: 0.85rem;
   }
 

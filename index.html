@@ -27,7 +27,7 @@
     href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&family=Outfit:wght@400;600;800&display=swap"
     rel="stylesheet">
   <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
-  <link rel="stylesheet" href="styles.css?v=23.0">
+  <link rel="stylesheet" href="styles.css?v=24.0">
   <script>
     // TEMPORARILY DISABLED: Service Worker causing caching issues for new apps
     // Automatically register Service Worker for offline caching
@@ -1097,9 +1097,26 @@
     }
 
     .lp-service-card:hover {
-      transform: translateY(-10px);
-      box-shadow: 0 20px 40px rgba(0, 51, 102, 0.08) !important;
-      border-color: var(--lp-primary) !important;
+
+
+
+    }
+
+    .lp-card-clone {
+      display: none !important;
+    }
+
+    .lp-mobile-toggle {
+      display: none !important;
+    }
+
+    @media (max-width: 991px) {
+      .lp-card-clone {
+        display: flex !important;
+      }
+      .lp-mobile-toggle {
+        display: block !important;
+      }
     }
 
     .lp-service-title {
@@ -1119,7 +1136,7 @@
     }
 
     .lp-service-sub-container {
-      height: 50px;
+      height: 46px;
       /* Exact match to item height to prevent ghosting */
       width: 100%;
       overflow: hidden;
@@ -1128,8 +1145,8 @@
       border-top: 1px solid rgba(0, 51, 102, 0.08);
       padding-top: 0;
       /* Removed padding to align perfectly with scroll steps */
-      -webkit-mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
-      mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
+
+
     }
 
     .lp-service-sub-list {
@@ -1160,7 +1177,7 @@
       justify-content: center;
       /* Center text inside pill */
       gap: 12px;
-      height: 50px;
+      height: 46px;
       font-size: 0.8rem;
       font-weight: 700;
       color: #003366;
@@ -1206,9 +1223,9 @@
     }
 
     .lp-service-card:hover {
-      transform: translateY(-12px) scale(1.02);
-      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5) !important;
-      border-color: var(--lp-primary) !important;
+
+
+
     }
 
     .lp-service-card:hover .lp-service-action {
@@ -1476,7 +1493,7 @@
               if (!list) return;
 
               let current = 0;
-              const itemHeight = 44; 
+              const itemHeight = 46; 
 
               setInterval(() => {
                 if (list.closest('.lp-service-card').matches(':hover')) return;
@@ -1539,7 +1556,7 @@
               function animateScroll(target, onComplete) {
                 const start = grid.scrollLeft;
                 const change = target - start;
-                const duration = 800;
+                const duration = 600;
                 let startTime = null;
 
                 function animation(currentTime) {
