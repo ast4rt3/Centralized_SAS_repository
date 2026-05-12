@@ -1840,12 +1840,12 @@
           return;
         }
 
-        grid.innerHTML = offices.map((o, idx) => `
-          <div class="lp-se-office-card" data-id="${o.id}" data-name="${o.name}" 
-               style="animation: slideUpFade 0.6s cubic-bezier(0.23, 1, 0.32, 1) both ${idx * 0.05}s;">
-            <div class="lp-se-office-card-cover">
-               <img src="assets/SAS_landing_page_header.jpg" alt="${o.name}">
-            </div>
+         grid.innerHTML = offices.map((o, idx) => `
+           <div class="lp-se-office-card" data-id="${o.id}" data-name="${o.name}" 
+                style="animation: slideUpFade 0.6s cubic-bezier(0.23, 1, 0.32, 1) both ${idx * 0.05}s;">
+             <div class="lp-se-office-card-cover">
+                <img src="${o.cover_url || 'assets/SAS_landing_page_header.jpg'}" alt="${o.name}">
+             </div>
             <div class="lp-se-office-card-body">
               <h3 class="lp-se-office-card-title">${o.name}</h3>
               <p class="lp-se-office-card-info">${o.info || 'No information available.'}</p>
