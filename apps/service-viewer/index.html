@@ -11,6 +11,7 @@
       --blue: #003366; --gold: #ffd700; --dark: #001a33;
       --bg: #f8fafc; --card: #fff; --border: #e2e8f0;
       --shadow: 0 4px 15px rgba(0,0,0,0.05);
+      --shadow-lg: 0 10px 25px rgba(0,0,0,0.1);
       --font: 'Outfit', sans-serif;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -46,14 +47,23 @@
     .category-header { margin-bottom: 25px; }
     .category-header h2 { font-size: 2rem; font-weight: 800; color: var(--blue); }
     
-    .offices-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+    .offices-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 30px; }
     .office-card {
-      background: var(--card); border-radius: 16px; border: 1px solid var(--border);
-      padding: 24px; box-shadow: var(--shadow); cursor: pointer; transition: 0.2s;
+      background: var(--card); border-radius: 20px; border: 1px solid var(--border);
+      overflow: hidden; box-shadow: var(--shadow); cursor: pointer; transition: 0.3s;
+      display: flex; flex-direction: column;
     }
-    .office-card:hover { transform: translateY(-4px); border-color: var(--gold); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-    .office-card h3 { font-size: 1.2rem; font-weight: 800; color: var(--dark); margin-bottom: 8px; }
-    .office-card p { font-size: .9rem; color: #64748b; display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .office-card:hover { transform: translateY(-8px); border-color: var(--gold); box-shadow: var(--shadow-lg); }
+    
+    .office-card-img { width: 100%; height: 180px; object-fit: cover; border-bottom: 1px solid var(--border); }
+    .office-card-body { padding: 25px; flex: 1; display: flex; flex-direction: column; gap: 10px; }
+    .office-card-body h3 { font-size: 1.25rem; font-weight: 800; color: var(--blue); }
+    .office-card-body p { font-size: .95rem; color: #64748b; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    
+    .office-card-footer { padding: 0 25px 25px 25px; margin-top: auto; }
+    .learn-more { color: var(--gold); font-weight: 700; font-size: .9rem; display: flex; align-items: center; gap: 6px; }
+    .learn-more i { transition: 0.2s; }
+    .office-card:hover .learn-more i { transform: translateX(5px); }
 
     /* Office Details View */
     .office-view { display: none; }
@@ -87,7 +97,7 @@
       background: #fff; border-radius: 16px; padding: 30px;
       box-shadow: var(--shadow); border: 1px solid var(--border);
     }
-    .section-title { font-size: 1.3rem; font-weight: 800; color: var(--dark); margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+    .section-title { font-size: 1.3rem; font-weight: 800; color: var(--blue); margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
     .office-body-content { font-size: 1rem; color: #334155; line-height: 1.7; white-space: pre-wrap; }
 
     .grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
@@ -167,10 +177,11 @@
           </div>
         </div>
 
-        <div class="export-card">
-          <h3 class="section-title" style="margin:0;"><i class='bx bx-bar-chart-alt-2'></i> Analytics</h3>
-          <p style="font-size:.9rem; color:#64748b;">Download engagement and visitor reports for this office.</p>
-          <button class="btn-export" id="btn-export"><i class='bx bxs-download'></i> Export Data (CSV)</button>
+        <div class="office-body-card">
+          <h3 class="section-title"><i class='bx bx-time-five'></i> Recent Activities</h3>
+          <div id="activities-list" style="display: flex; flex-direction: column; gap: 12px;">
+            <div style="color:#64748b; font-size:.9rem;">No activities available.</div>
+          </div>
         </div>
       </div>
     </div>

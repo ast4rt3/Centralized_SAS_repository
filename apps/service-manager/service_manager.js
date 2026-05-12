@@ -28,6 +28,7 @@ const API_URL = window.parent.ENV?.BACKEND_GAS_URL || 'https://script.google.com
 async function api(action, payload = {}) {
     const session = getSession();
     try {
+        console.log(`API Request [${action}]:`, payload);
         const res = await fetch(API_URL, {
             method: 'POST',
             body: JSON.stringify({ 
@@ -193,19 +194,19 @@ function renderOfficeGrid() {
         return;
     }
     
-    grid.innerHTML = offices.map(off => `
-        <div class="office-card" onclick="previewOffice('${off.id}', '${off.name}')">
-            ${off.cover_url ? `<div style="position:absolute; top:0; left:0; width:100%; height:80px; background:url('${off.cover_url}') center/cover; opacity:0.3; z-index:0;"></div>` : ''}
-            <div class="office-actions" style="z-index:1;">
-                <div class="action-btn" onclick="event.stopPropagation(); editOffice('${off.id}')"><i class='bx bx-edit-alt'></i></div>
-                <div class="action-btn delete" onclick="event.stopPropagation(); deleteOffice('${off.id}')"><i class='bx bx-trash'></i></div>
+    grid.innerHTML = offices.map(o => `
+        <div class="office-card" onclick="previewOffice('${o.id}', '${o.name}')">
+            <div class="office-actions">
+                <div class="action-btn" onclick="event.stopPropagation(); editOffice('${o.id}')" title="Edit Office"><i class='bx bx-edit-alt'></i></div>
+                <div class="action-btn delete" onclick="event.stopPropagation(); deleteOffice('${o.id}')" title="Delete Office"><i class='bx bx-trash'></i></div>
             </div>
-            <div style="position:relative; z-index:1;">
-                <h3>${off.name}</h3>
-                <p>${off.info || 'No info provided.'}</p>
-                <div style="margin-top:20px; font-size:0.75rem; font-weight:800; color:var(--nbsc-blue); text-transform:uppercase; letter-spacing:1px; display:flex; align-items:center; gap:6px;">
-                    <i class='bx bx-show'></i> Click to Preview
-                </div>
+            <img class="office-card-img" src="${o.cover_url || '../../assets/SAS_landing_page_header.jpg'}" alt="${o.name}">
+            <div class="office-card-body">
+                <h3>${o.name}</h3>
+                <p>${o.info || 'No information available.'}</p>
+            </div>
+            <div class="office-card-footer">
+                <div class="learn-more">Click to Preview <i class='bx bx-right-arrow-alt'></i></div>
             </div>
         </div>
     `).join('');
@@ -213,49 +214,50 @@ function renderOfficeGrid() {
 
 window.previewOffice = async (id, name) => {
     const grid = document.getElementById('office-grid');
-    const header = document.getElementById('view-title-container');
-    const actions = document.getElementById('category-actions');
+    const header = document.querySelector('.view-header');
     const preview = document.getElementById('preview-view');
     
     grid.classList.add('hidden');
     header.classList.add('hidden');
-    actions.classList.add('hidden');
     preview.classList.remove('hidden');
     
     document.getElementById('prev-title').innerText = "Loading...";
     document.getElementById('prev-info').innerText = "";
     document.getElementById('prev-body').innerText = "";
-    document.getElementById('prev-docs').innerHTML = "";
+    document.getElementById('prev-docs').innerHTML = '<div class="spinner"></div>';
     document.getElementById('prev-activities').innerHTML = "";
 
     const res = await api('getOfficeDetails', { officeId: id });
     if (res.success) {
-        document.getElementById('prev-title').innerText = res.office.name;
-        document.getElementById('prev-info').innerText = res.office.info || '';
-        document.getElementById('prev-body').innerText = res.office.office_body || '';
+        const off = res.office;
+        const heroImg = document.getElementById('prev-hero-img');
+        heroImg.src = off.cover_url || "../../assets/SAS_landing_page_header.jpg";
+
+        document.getElementById('prev-title').innerText = off.name;
+        document.getElementById('prev-info').innerText = off.info || 'No info provided.';
+        document.getElementById('prev-body').innerText = off.office_body || 'No description provided.';
         
         document.getElementById('prev-docs').innerHTML = res.docs.map(d => `
-            <a href="${d.url}" target="_blank" style="display:flex; align-items:center; gap:12px; padding:12px 16px; background:#f8fafc; border:1px solid var(--border); border-radius:12px; text-decoration:none; color:var(--text-primary); font-weight:600; font-size:.9rem; transition:0.2s;">
-                <i class='bx bxs-file-pdf' style="color:#ef4444; font-size:1.3rem;"></i>
+            <a href="${d.url}" target="_blank" class="doc-item">
+                <i class='bx bxs-file-pdf'></i>
                 <span>${d.title}</span>
             </a>
-        `).join('') || '<p style="color:var(--text-muted); font-size:.9rem;">No documents.</p>';
+        `).join('') || '<div style="color:#64748b; font-size:.9rem;">No documents available.</div>';
 
         document.getElementById('prev-activities').innerHTML = res.activities.map(a => `
             <div style="padding:15px; background:#f8fafc; border:1px solid var(--border); border-radius:12px;">
-                <div style="font-size:0.75rem; color:var(--nbsc-orange); font-weight:800; margin-bottom:4px; text-transform:uppercase;">${a.activity_date}</div>
-                <div style="font-weight:700; font-size:1rem; color:var(--nbsc-blue); margin-bottom:4px;">${a.title}</div>
-                <div style="font-size:0.9rem; color:var(--text-secondary); line-height:1.5;">${a.description || ''}</div>
+                <div style="font-size:0.75rem; color:var(--orange); font-weight:800; margin-bottom:4px; text-transform:uppercase;">${a.activity_date}</div>
+                <div style="font-weight:700; font-size:1rem; color:var(--blue); margin-bottom:4px;">${a.title}</div>
+                <div style="font-size:0.9rem; color:var(--text-sec); line-height:1.5;">${a.description || ''}</div>
             </div>
-        `).join('') || '<p style="color:var(--text-muted); font-size:.9rem;">No recent activities.</p>';
+        `).join('') || '<div style="color:#64748b; font-size:.9rem;">No activities available.</div>';
     }
 };
 
 window.closePreview = () => {
     document.getElementById('preview-view').classList.add('hidden');
     document.getElementById('office-grid').classList.remove('hidden');
-    document.getElementById('view-title-container').classList.remove('hidden');
-    document.getElementById('category-actions').classList.remove('hidden');
+    document.querySelector('.view-header').classList.remove('hidden');
 };
 
 // Modals & Forms
@@ -318,7 +320,7 @@ window.openOfficeModal = () => {
 };
 
 window.editOffice = async (id) => {
-    const off = offices.find(o => o.id === id);
+    const off = offices.find(o => o.id == id);
     if (!off) return;
     
     document.getElementById('off-modal-title').innerText = "Edit Office";
@@ -419,12 +421,12 @@ function renderModalDocs(docs) {
         return;
     }
     list.innerHTML = docs.map(d => `
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 20px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:14px; margin-bottom:10px;">
-            <div style="display:flex; align-items:center; gap:15px;">
-                <i class='bx bxs-file-pdf' style="color:#ef4444; font-size:1.8rem;"></i>
-                <span style="font-weight:700; color:#fff;">${d.title}</span>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:var(--bg); border:1px solid var(--border); border-radius:12px; margin-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <i class='bx bxs-file-pdf' style="color:#ef4444; font-size:1.4rem;"></i>
+                <span style="font-weight:700; font-size:0.9rem; color:var(--blue);">${d.title}</span>
             </div>
-            <div style="display:flex; gap:10px;">
+            <div style="display:flex; gap:8px;">
                 <a href="${d.url}" target="_blank" class="action-btn"><i class='bx bx-link-external'></i></a>
                 <div class="action-btn delete" onclick="deleteOfficeDoc('${d.id}')"><i class='bx bx-trash'></i></div>
             </div>
@@ -439,13 +441,13 @@ function renderModalActivities(acts) {
         return;
     }
     list.innerHTML = acts.map(a => `
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; padding:18px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:14px; margin-bottom:12px;">
+        <div style="padding:15px; background:var(--bg); border:1px solid var(--border); border-radius:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:flex-start;">
             <div style="flex:1;">
-                <div style="font-size:0.75rem; color:var(--lp-primary); font-weight:800; text-transform:uppercase; margin-bottom:5px;">${a.activity_date}</div>
-                <div style="font-weight:700; color:#fff; font-size:1rem; margin-bottom:5px;">${a.title}</div>
-                <div style="font-size:0.9rem; color:var(--text-muted); line-height:1.5;">${a.description || ''}</div>
+                <div style="font-size:0.7rem; color:var(--orange); font-weight:800; text-transform:uppercase; margin-bottom:4px;">${a.activity_date}</div>
+                <div style="font-weight:700; color:var(--blue); font-size:0.95rem; margin-bottom:4px;">${a.title}</div>
+                <div style="font-size:0.85rem; color:var(--text-sec); line-height:1.5;">${a.description || ''}</div>
             </div>
-            <div class="action-btn delete" onclick="deleteOfficeActivity('${a.id}')" style="margin-left:15px;"><i class='bx bx-trash'></i></div>
+            <div class="action-btn delete" onclick="deleteOfficeActivity('${a.id}')"><i class='bx bx-trash'></i></div>
         </div>
     `).join('');
 }

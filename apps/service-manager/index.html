@@ -19,18 +19,18 @@
   <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
   <style>
     :root {
-      --nbsc-blue: #003366;
-      --nbsc-dark: #001a33;
-      --nbsc-gold: #ffd700;
-      --nbsc-orange: #f59e0b;
-      --bg-main: #f1f5f9;
-      --bg-sidebar: #003366;
-      --bg-card: #ffffff;
-      --text-primary: #001a33;
-      --text-secondary: #475569;
+      --blue: #003366; 
+      --dark: #001a33;
+      --gold: #ffd700;
+      --orange: #f59e0b;
+      --bg: #f1f5f9;
+      --sidebar-bg: #003366;
+      --card: #ffffff;
+      --text: #001a33;
+      --text-sec: #475569;
       --text-muted: #94a3b8;
       --border: #e2e8f0;
-      --font-sans: 'Outfit', 'Montserrat', sans-serif;
+      --font: 'Outfit', 'Montserrat', sans-serif;
       --shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
       --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
     }
@@ -39,9 +39,9 @@
 
     body {
       margin: 0;
-      font-family: var(--font-sans);
-      background: var(--bg-main);
-      color: var(--text-primary);
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
       height: 100vh;
       overflow: hidden;
     }
@@ -50,7 +50,7 @@
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: rgba(0, 51, 102, 0.1); border-radius: 10px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--nbsc-blue); }
+    ::-webkit-scrollbar-thumb:hover { background: var(--blue); }
 
     .app-container {
       display: grid;
@@ -60,7 +60,7 @@
 
     /* Sidebar */
     .sidebar {
-      background: linear-gradient(180deg, var(--nbsc-blue) 0%, var(--nbsc-dark) 100%);
+      background: linear-gradient(180deg, var(--blue) 0%, var(--dark) 100%);
       color: #fff;
       display: flex;
       flex-direction: column;
@@ -76,431 +76,210 @@
       gap: 12px;
     }
 
-    .sidebar-header i {
-      font-size: 1.8rem;
-      color: var(--nbsc-gold);
-    }
+    .sidebar-header i { font-size: 1.8rem; color: var(--gold); }
+    .sidebar-header h2 { margin: 0; font-size: 1.1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
 
-    .sidebar-header h2 {
-      margin: 0;
-      font-size: 1.1rem;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: #fff;
-    }
-
-    .category-list {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px 15px;
-    }
-
-    .nav-item-wrapper {
-      position: relative;
-      margin-bottom: 6px;
-    }
-
+    .category-list { flex: 1; overflow-y: auto; padding: 20px 15px; }
+    .nav-item-wrapper { position: relative; margin-bottom: 6px; }
     .nav-item {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      padding: 14px 18px;
-      color: rgba(255, 255, 255, 0.65);
-      text-decoration: none;
-      font-weight: 600;
-      border-radius: 12px;
-      transition: all 0.2s ease;
-      cursor: pointer;
+      display: flex; align-items: center; gap: 14px; padding: 14px 18px;
+      color: rgba(255, 255, 255, 0.65); text-decoration: none; font-weight: 600;
+      border-radius: 12px; transition: all 0.2s ease; cursor: pointer;
     }
-
-    .nav-item:hover {
-      background: rgba(255, 255, 255, 0.08);
-      color: #fff;
-    }
-
-    .nav-item.active {
-      background: var(--nbsc-gold);
-      color: var(--nbsc-blue);
-      box-shadow: 0 4px 15px rgba(255, 215, 0, 0.25);
-    }
-
-    .nav-item.active i {
-      color: var(--nbsc-blue);
-    }
+    .nav-item:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+    .nav-item.active { background: var(--gold); color: var(--blue); box-shadow: 0 4px 15px rgba(255, 215, 0, 0.25); }
+    .nav-item.active i { color: var(--blue); }
 
     .cat-delete-btn {
-      position: absolute;
-      right: 10px;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 28px;
-      height: 28px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 8px;
-      color: #f87171;
-      opacity: 0;
-      transition: all 0.2s;
-      cursor: pointer;
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+      border-radius: 8px; color: #f87171; opacity: 0; transition: all 0.2s; cursor: pointer;
     }
-
-    .nav-item-wrapper:hover .cat-delete-btn {
-      opacity: 1;
-    }
-
-    .cat-delete-btn:hover {
-      background: rgba(248, 113, 113, 0.1);
-    }
+    .nav-item-wrapper:hover .cat-delete-btn { opacity: 1; }
+    .cat-delete-btn:hover { background: rgba(248, 113, 113, 0.1); }
 
     .add-btn {
-      background: rgba(255, 215, 0, 0.1);
-      border: 1px dashed rgba(255, 215, 0, 0.4);
-      color: var(--nbsc-gold);
-      width: 100%;
-      padding: 14px;
-      border-radius: 12px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      transition: all 0.2s ease;
-      font-weight: 700;
-      font-size: 0.9rem;
+      background: rgba(255, 215, 0, 0.1); border: 1px dashed rgba(255, 215, 0, 0.4);
+      color: var(--gold); width: 100%; padding: 14px; border-radius: 12px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      gap: 10px; transition: all 0.2s ease; font-weight: 700; font-size: 0.9rem;
     }
-
-    .add-btn:hover {
-      background: var(--nbsc-gold);
-      color: var(--nbsc-blue);
-      border-style: solid;
-    }
+    .add-btn:hover { background: var(--gold); color: var(--blue); border-style: solid; }
 
     /* Main Content */
-    .main-content {
-      overflow-y: auto;
-      background: var(--bg-main);
-      display: flex;
-      flex-direction: column;
-    }
+    .main-content { overflow-y: auto; background: var(--bg); display: flex; flex-direction: column; }
 
     .view-header {
-      padding: 40px 60px;
-      background: #fff;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      position: sticky;
-      top: 0;
-      z-index: 50;
+      padding: 30px 40px; background: #fff; border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+      position: sticky; top: 0; z-index: 50;
     }
+    .view-header h1 { margin: 0; font-size: 1.8rem; font-weight: 800; color: var(--blue); }
+    .view-subtitle { margin-top: 4px; color: var(--text-sec); font-weight: 500; font-size: 0.95rem; }
 
-    .view-header h1 {
-      margin: 0;
-      font-size: 2rem;
-      font-weight: 800;
-      color: var(--nbsc-blue);
-    }
-
-    .view-subtitle {
-      margin-top: 5px;
-      color: var(--text-secondary);
-      font-weight: 500;
-    }
-
-    .actions-bar {
-      display: flex;
-      gap: 12px;
-    }
+    .actions-bar { display: flex; gap: 12px; }
 
     .btn {
-      padding: 12px 22px;
-      border-radius: 10px;
-      font-weight: 700;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      border: none;
-      transition: 0.2s;
-      font-family: inherit;
-      font-size: 0.9rem;
+      padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; gap: 8px; border: none; transition: 0.2s;
+      font-family: inherit; font-size: 0.85rem;
     }
-
     .btn-primary { 
-      background: var(--nbsc-blue);
-      color: #fff;
-    }
-    .btn-primary:hover { 
-      background: var(--nbsc-dark);
-      transform: translateY(-2px);
+      background: linear-gradient(135deg, var(--blue) 0%, var(--dark) 100%); 
+      color: #fff; 
       box-shadow: 0 4px 12px rgba(0, 51, 102, 0.2);
     }
-
-    .btn-outline { 
-      background: #fff; 
-      border: 1px solid var(--border); 
-      color: var(--nbsc-blue); 
+    .btn-primary:hover { 
+      background: var(--dark);
+      transform: translateY(-2px); 
+      box-shadow: 0 6px 15px rgba(0, 51, 102, 0.3);
     }
-    .btn-outline:hover { 
-      background: var(--bg-main);
-      border-color: var(--nbsc-blue);
+    
+    .btn-gold {
+      background: linear-gradient(135deg, var(--gold) 0%, var(--orange) 100%);
+      color: var(--blue);
+      border: none;
     }
-
-    /* Office Cards */
-    .office-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: 25px;
-      padding: 40px 60px;
+    .btn-gold:hover {
+      background: var(--gold);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 15px rgba(245, 158, 11, 0.4);
     }
 
+    .btn-outline { background: #fff; border: 1px solid var(--border); color: var(--blue); }
+    .btn-outline:hover { background: var(--bg); border-color: var(--blue); }
+
+    /* Office Grid (Matching Viewer) */
+    .office-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 30px; padding: 30px 40px; }
     .office-card {
-      background: var(--bg-card);
-      border-radius: 20px;
-      padding: 30px;
-      border: 1px solid var(--border);
-      transition: all 0.3s ease;
-      position: relative;
-      overflow: hidden;
-      box-shadow: var(--shadow);
+      background: var(--card); border-radius: 20px; border: 1px solid var(--border);
+      overflow: hidden; box-shadow: var(--shadow); cursor: pointer; transition: 0.3s;
+      display: flex; flex-direction: column; position: relative;
     }
-
-    .office-card:hover {
-      transform: translateY(-6px);
-      box-shadow: var(--shadow-lg);
-      border-color: var(--nbsc-gold);
-    }
-
-    .office-card h3 {
-      margin: 0 0 12px 0;
-      font-size: 1.25rem;
-      color: var(--nbsc-blue);
-      font-weight: 800;
-    }
-
-    .office-card p {
-      margin: 0;
-      font-size: 0.95rem;
-      color: var(--text-secondary);
-      line-height: 1.6;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
+    .office-card:hover { transform: translateY(-8px); border-color: var(--gold); box-shadow: var(--shadow-lg); }
+    
+    .office-card-img { width: 100%; height: 180px; object-fit: cover; border-bottom: 1px solid var(--border); }
+    .office-card-body { padding: 25px; flex: 1; display: flex; flex-direction: column; gap: 10px; }
+    .office-card-body h3 { font-size: 1.25rem; font-weight: 800; color: var(--blue); }
+    .office-card-body p { font-size: .95rem; color: #64748b; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    
+    .office-card-footer { padding: 0 25px 25px 25px; margin-top: auto; }
+    .learn-more { color: var(--gold); font-weight: 700; font-size: .9rem; display: flex; align-items: center; gap: 6px; }
+    .learn-more i { transition: 0.2s; }
+    .office-card:hover .learn-more i { transform: translateX(5px); }
 
     .office-actions {
-      position: absolute;
-      top: 25px;
-      right: 25px;
-      display: flex;
-      gap: 8px;
-      opacity: 0;
-      transition: 0.2s;
+      position: absolute; top: 20px; right: 20px;
+      display: flex; gap: 8px; opacity: 0; transition: 0.2s; z-index: 5;
     }
-
-    .office-card:hover .office-actions {
-      opacity: 1;
-    }
+    .office-card:hover .office-actions { opacity: 1; }
 
     .action-btn {
-      width: 34px;
-      height: 34px;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      background: #fff;
-      color: var(--nbsc-blue);
-      transition: 0.2s;
-      border: 1px solid var(--border);
-      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      width: 32px; height: 32px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; background: #fff; color: var(--blue);
+      transition: 0.2s; border: 1px solid var(--border);
+    }
+    .action-btn:hover { background: var(--blue); color: #fff; border-color: var(--blue); }
+    .action-btn.delete:hover { background: #fee2e2; color: #ef4444; border-color: #fee2e2; }
+
+    /* Preview View (Matching Viewer Details) */
+    .preview-view { flex: 1; overflow-y: auto; background: var(--bg); padding: 30px; display: flex; flex-direction: column; gap: 30px; }
+    
+    .preview-hero {
+      width: 100%; height: 250px; border-radius: 24px; overflow: hidden;
+      position: relative; background: var(--dark); border: 1px solid var(--border);
+    }
+    .preview-hero img { width: 100%; height: 100%; object-fit: cover; }
+    .preview-hero-overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: linear-gradient(0deg, rgba(0,0,0,0.6) 0%, transparent 60%);
     }
 
-    .action-btn:hover { 
-      background: var(--nbsc-blue); 
-      color: #fff; 
-      border-color: var(--nbsc-blue);
+    .preview-info-card {
+      background: linear-gradient(135deg, #fff, #f8fafc); border-radius: 20px;
+      padding: 35px; box-shadow: var(--shadow); border: 1px solid var(--border);
+      position: relative; z-index: 2; margin-top: -60px; width: 92%; margin-left: auto; margin-right: auto;
     }
-    .action-btn.delete:hover { background: #fee2e2; color: #ef4444; border-color: #fee2e2; }
+    .preview-title { font-size: 2.2rem; font-weight: 800; color: var(--blue); margin-bottom: 10px; }
+    .preview-info { font-size: 1.1rem; color: #475569; line-height: 1.6; }
+
+    .preview-body-card {
+      background: #fff; border-radius: 16px; padding: 30px;
+      box-shadow: var(--shadow); border: 1px solid var(--border);
+      max-width: 92%; margin: 0 auto; width: 100%;
+    }
+    .section-title { font-size: 1.3rem; font-weight: 800; color: var(--blue); margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+    .preview-body-content { font-size: 1rem; color: #334155; line-height: 1.7; white-space: pre-wrap; }
+
+    .grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; max-width: 92%; margin: 0 auto; width: 100%; }
+
+    .docs-list { display: flex; flex-direction: column; gap: 10px; }
+    .doc-item {
+      display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+      background: #f8fafc; border: 1px solid var(--border); border-radius: 10px;
+      text-decoration: none; color: var(--dark); font-weight: 600; font-size: .95rem; transition: 0.2s;
+    }
+    .doc-item:hover { background: #e2e8f0; }
+    .doc-item i { color: #dc2626; font-size: 1.4rem; }
 
     /* Modals */
     .modal-overlay {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 26, 51, 0.6);
-      backdrop-filter: blur(8px);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-      padding: 20px;
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 26, 51, 0.6); backdrop-filter: blur(8px);
+      display: none; align-items: center; justify-content: center;
+      z-index: 1000; padding: 20px;
     }
-
     .modal-overlay.active { display: flex; }
 
     .modal-card {
-      background: #fff;
-      width: 100%;
-      max-width: 800px;
-      border-radius: 24px;
-      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
-      border: 1px solid var(--border);
-      position: relative;
-      overflow: hidden;
-      max-height: 95vh;
-      display: flex;
-      flex-direction: column;
+      background: #fff; width: 100%; max-width: 800px; border-radius: 24px;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2); border: 1px solid var(--border);
+      position: relative; overflow: hidden; max-height: 95vh; display: flex; flex-direction: column;
     }
-
-    .modal-header { 
-      padding: 30px 40px; 
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-    }
-
-    .modal-header-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .modal-header h2 { margin: 0; font-size: 1.6rem; font-weight: 800; color: var(--nbsc-blue); }
-
-    .modal-tabs {
-      display: flex;
-      gap: 30px;
-    }
-
+    .modal-header { padding: 30px 40px; border-bottom: 1px solid var(--border); }
+    .modal-header h2 { margin: 0; font-size: 1.6rem; font-weight: 800; color: var(--blue); }
+    .modal-tabs { display: flex; gap: 30px; margin-top: 15px; }
     .modal-tab {
-      padding-bottom: 10px;
-      font-weight: 700;
-      cursor: pointer;
-      color: var(--text-muted);
-      position: relative;
-      transition: 0.2s;
-      font-size: 0.95rem;
-      border-bottom: 3px solid transparent;
+      padding-bottom: 10px; font-weight: 700; cursor: pointer; color: var(--text-muted);
+      position: relative; transition: 0.2s; font-size: 0.9rem; border-bottom: 3px solid transparent;
     }
+    .modal-tab:hover { color: var(--blue); }
+    .modal-tab.active { color: var(--blue); border-bottom-color: var(--blue); }
 
-    .modal-tab:hover { color: var(--nbsc-blue); }
-    .modal-tab.active { color: var(--nbsc-blue); border-bottom-color: var(--nbsc-blue); }
-
-    .modal-body {
-      padding: 40px;
-      overflow-y: auto;
-      flex: 1;
-    }
-
+    .modal-body { padding: 35px 40px; overflow-y: auto; flex: 1; }
     .form-group { margin-bottom: 24px; }
     .form-group label {
-      display: block;
-      margin-bottom: 10px;
-      font-weight: 800;
-      font-size: 0.85rem;
-      color: var(--nbsc-blue);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      display: block; margin-bottom: 8px; font-weight: 800; font-size: 0.8rem;
+      color: var(--blue); text-transform: uppercase; letter-spacing: 0.5px;
     }
-
     .form-group input, .form-group textarea, .form-group select {
-      width: 100%;
-      padding: 14px 18px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: var(--bg-main);
-      color: var(--text-primary);
-      font-family: inherit;
-      font-size: 1rem;
-      transition: 0.2s;
+      width: 100%; padding: 14px; border-radius: 10px; border: 1px solid var(--border);
+      background: var(--bg); color: var(--text); font-family: inherit; font-size: 1rem; transition: 0.2s;
     }
+    .form-group input:focus, .form-group textarea:focus { outline: none; border-color: var(--blue); background: #fff; }
 
-    .form-group input:focus, .form-group textarea:focus {
-      outline: none;
-      border-color: var(--nbsc-blue);
-      background: #fff;
-      box-shadow: 0 0 0 4px rgba(0, 51, 102, 0.05);
-    }
+    .modal-footer { padding: 25px 40px; display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid var(--border); background: var(--bg); }
 
-    .modal-footer {
-      padding: 25px 40px;
-      display: flex;
-      justify-content: flex-end;
-      gap: 15px;
-      border-top: 1px solid var(--border);
-      background: var(--bg-main);
-    }
-
-    /* Cover Photo */
     .cover-upload-area {
-      width: 100%;
-      height: 200px;
-      border-radius: 15px;
-      background: var(--bg-main);
-      border: 2px dashed var(--border);
-      margin-bottom: 10px;
-      position: relative;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: 0.2s;
+      width: 100%; height: 180px; border-radius: 15px; background: var(--bg);
+      border: 2px dashed var(--border); margin-bottom: 10px; position: relative;
+      overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer;
     }
-
-    .cover-upload-area:hover {
-      border-color: var(--nbsc-blue);
-      background: #fff;
-    }
-
-    .cover-upload-area img {
-      width: 100%; height: 100%; object-fit: cover;
-      position: absolute; top: 0; left: 0; z-index: 1;
-    }
-
-    .cover-placeholder {
-      position: relative; z-index: 2; text-align: center; color: var(--text-muted);
-    }
-
-    .cover-placeholder i { font-size: 2.5rem; color: var(--nbsc-blue); margin-bottom: 8px; }
-
-    /* Previews */
-    .preview-view { padding: 40px 60px; max-width: 1000px; margin: 0 auto; width: 100%; }
-    .preview-hero { 
-      width: 100%; height: 300px; border-radius: 25px; 
-      background: var(--nbsc-dark); margin-bottom: 30px; 
-      position: relative; overflow: hidden; box-shadow: var(--shadow-lg);
-    }
-    .preview-hero img { width: 100%; height: 100%; object-fit: cover; opacity: 0.7; }
-    .preview-hero-content {
-      position: absolute; bottom: 0; left: 0; width: 100%; padding: 40px;
-      background: linear-gradient(0deg, rgba(0,26,51,0.9) 0%, transparent 100%);
-      color: #fff;
-    }
-    .preview-hero-content h1 { font-size: 2.5rem; font-weight: 800; margin: 0; }
-
-    .preview-card {
-      background: #fff; border-radius: 20px; padding: 35px;
-      box-shadow: var(--shadow); border: 1px solid var(--border); margin-bottom: 25px;
-    }
+    .cover-upload-area:hover { border-color: var(--blue); background: #fff; }
+    .cover-upload-area img { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1; }
+    .cover-placeholder { position: relative; z-index: 2; text-align: center; color: var(--text-muted); }
+    .cover-placeholder i { font-size: 2.5rem; color: var(--blue); margin-bottom: 8px; }
 
     /* Utilities */
     .hidden { display: none !important; }
     .empty-state { text-align: center; padding: 100px 40px; color: var(--text-muted); }
     .empty-state i { font-size: 4rem; color: var(--border); margin-bottom: 15px; }
 
-    @media (max-width: 768px) {
-      .app-container { grid-template-columns: 1fr; }
-      .sidebar { display: none; }
-      .view-header, .office-grid, .preview-view { padding: 30px 20px; }
+    @media (max-width: 991px) {
+      .app-container { grid-template-columns: 80px 1fr; }
+      .sidebar-header h2, .nav-item span, .sidebar-footer span { display: none; }
+      .grid-2col { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -524,6 +303,7 @@
 
     <main class="main-content">
       <div id="content-view">
+        <!-- View Header -->
         <div class="view-header">
           <div>
             <h1 id="view-title">Select a Category</h1>
@@ -533,12 +313,13 @@
             <button class="btn btn-outline" onclick="editCurrentCategory()">
               <i class='bx bx-edit-alt'></i> Edit Category
             </button>
-            <button class="btn btn-primary" onclick="openOfficeModal()">
+            <button class="btn btn-gold" onclick="openOfficeModal()">
               <i class='bx bx-plus'></i> Add Office
             </button>
           </div>
         </div>
 
+        <!-- Office Grid -->
         <div id="office-grid" class="office-grid">
           <div class="empty-state">
             <i class='bx bx-category'></i>
@@ -547,45 +328,39 @@
           </div>
         </div>
 
+        <!-- Preview View (Matching Viewer Details) -->
         <div id="preview-view" class="preview-view hidden">
-          <div style="margin-bottom: 25px;">
+          <div style="margin-bottom: 10px;">
             <button class="btn btn-outline" onclick="closePreview()">
               <i class='bx bx-left-arrow-alt'></i> Back to Grid
             </button>
           </div>
           
-          <div class="preview-hero">
-            <img id="prev-hero-img" src="../../assets/SAS_landing_page_header.jpg">
-            <div class="preview-hero-content">
-              <h1 id="prev-title">Office Name</h1>
+          <div class="preview-hero" id="preview-hero">
+            <img id="prev-hero-img" src="../../assets/SAS_landing_page_header.jpg" alt="Office Cover">
+            <div class="preview-hero-overlay"></div>
+          </div>
+
+          <div class="preview-info-card">
+            <h2 class="preview-title" id="prev-title">Office Name</h2>
+            <div class="preview-info" id="prev-info">Information overview...</div>
+          </div>
+
+          <div class="preview-body-card">
+            <h3 class="section-title"><i class='bx bx-info-circle'></i> About Us</h3>
+            <div class="preview-body-content" id="prev-body">Detailed description goes here.</div>
+          </div>
+
+          <div class="grid-2col">
+            <div class="preview-body-card" style="max-width: 100%; margin: 0;">
+              <h3 class="section-title"><i class='bx bx-folder-open'></i> Public Documents</h3>
+              <div class="docs-list" id="prev-docs">
+                <div style="color:#64748b; font-size:.9rem;">No documents available.</div>
+              </div>
             </div>
-          </div>
 
-          <div class="preview-card">
-            <h3 style="color: var(--nbsc-blue); font-weight: 800; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
-              <i class='bx bx-info-circle'></i> Overview
-            </h3>
-            <p id="prev-info" style="font-size: 1.1rem; line-height: 1.6; color: var(--text-secondary);"></p>
-          </div>
-
-          <div class="preview-card">
-            <h3 style="color: var(--nbsc-blue); font-weight: 800; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
-              <i class='bx bx-align-left'></i> Detailed Description
-            </h3>
-            <div id="prev-body" style="line-height: 1.7; color: var(--text-secondary); white-space: pre-wrap;"></div>
-          </div>
-
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px;">
-            <div class="preview-card">
-              <h3 style="color: var(--nbsc-blue); font-weight: 800; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
-                <i class='bx bx-folder-open'></i> Documents
-              </h3>
-              <div id="prev-docs" style="display: flex; flex-direction: column; gap: 10px;"></div>
-            </div>
-            <div class="preview-card">
-              <h3 style="color: var(--nbsc-blue); font-weight: 800; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
-                <i class='bx bx-calendar-star'></i> Activities
-              </h3>
+            <div class="preview-body-card" style="max-width: 100%; margin: 0;">
+              <h3 class="section-title"><i class='bx bx-time-five'></i> Recent Activities</h3>
               <div id="prev-activities" style="display: flex; flex-direction: column; gap: 12px;"></div>
             </div>
           </div>
@@ -598,32 +373,28 @@
   <div id="category-modal" class="modal-overlay">
     <div class="modal-card">
       <div class="modal-header">
-        <div class="modal-header-top">
-          <h2 id="cat-modal-title">Category Management</h2>
-          <i class='bx bx-x' style="font-size: 1.8rem; cursor: pointer; color: var(--text-muted);" onclick="closeModals()"></i>
-        </div>
+        <h2 id="cat-modal-title">Category Management</h2>
       </div>
       <div class="modal-body">
         <form id="category-form">
           <input type="hidden" id="cat-id">
           <div class="form-group">
             <label>Category Name</label>
-            <input type="text" id="cat-name" required placeholder="e.g. Student Development Services">
+            <input type="text" id="cat-name" required placeholder="e.g. Student Welfare Services">
           </div>
           <div class="form-group">
             <label>Icon Class (BoxIcons)</label>
             <input type="text" id="cat-icon" placeholder="bx-folder" value="bx-folder">
-            <small style="color: var(--text-muted);">See boxicons.com for names (e.g. bx-group)</small>
           </div>
           <div class="form-group">
             <label>Description</label>
-            <textarea id="cat-desc" style="min-height: 100px;" placeholder="What does this category cover?"></textarea>
+            <textarea id="cat-desc" style="min-height: 80px;" placeholder="Brief summary..."></textarea>
           </div>
         </form>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-outline" onclick="closeModals()">Cancel</button>
-        <button type="submit" form="category-form" class="btn btn-primary">Save Category</button>
+        <button type="submit" form="category-form" class="btn btn-gold">Save Category</button>
       </div>
     </div>
   </div>
@@ -632,10 +403,7 @@
   <div id="office-modal" class="modal-overlay">
     <div class="modal-card">
       <div class="modal-header">
-        <div class="modal-header-top">
-          <h2 id="off-modal-title">Office Management</h2>
-          <i class='bx bx-x' style="font-size: 1.8rem; cursor: pointer; color: var(--text-muted);" onclick="closeModals()"></i>
-        </div>
+        <h2 id="off-modal-title">Office Management</h2>
         <div class="modal-tabs">
           <div class="modal-tab active" data-tab="info" onclick="switchOfficeTab('info')">Details</div>
           <div class="modal-tab" data-tab="docs" onclick="switchOfficeTab('docs')">Documents</div>
@@ -647,7 +415,7 @@
         <!-- Info Tab -->
         <div class="office-tab-content" data-tab="info">
           <div class="form-group">
-            <label>Cover Photo (Cloudinary)</label>
+            <label>Cover Photo</label>
             <div id="cover-upload-trigger" class="cover-upload-area" onclick="document.getElementById('cover-file-input').click()">
               <input type="file" id="cover-file-input" hidden accept="image/*" onchange="handleCoverSelection(event)">
               <img id="cover-preview" src="" class="hidden">
@@ -672,59 +440,40 @@
             </div>
             <div class="form-group">
               <label>Detailed Content</label>
-              <textarea id="off-body" style="min-height: 150px;" placeholder="Vision, mission, or primary functions..."></textarea>
+              <textarea id="off-body" style="min-height: 150px;" placeholder="Office description..."></textarea>
             </div>
           </form>
         </div>
 
         <!-- Docs Tab -->
         <div class="office-tab-content hidden" data-tab="docs">
-          <div style="background: var(--bg-main); padding: 20px; border-radius: 12px; margin-bottom: 25px;">
+          <div style="background: var(--bg); padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid var(--border);">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-              <div class="form-group" style="margin:0;">
-                <label>Title</label>
-                <input type="text" id="new-doc-title">
-              </div>
-              <div class="form-group" style="margin:0;">
-                <label>File</label>
-                <input type="file" id="new-doc-file" style="padding: 10px;">
-              </div>
+              <div class="form-group" style="margin:0;"><label>Title</label><input type="text" id="new-doc-title"></div>
+              <div class="form-group" style="margin:0;"><label>File</label><input type="file" id="new-doc-file" style="padding: 10px;"></div>
             </div>
-            <button class="btn btn-primary" style="width: 100%;" id="btn-upload-doc" onclick="uploadOfficeDoc()">
-              <i class='bx bx-upload'></i> Upload Document
-            </button>
+            <button class="btn btn-primary" style="width: 100%;" onclick="uploadOfficeDoc()"><i class='bx bx-upload'></i> Upload</button>
           </div>
           <div id="modal-docs-list"></div>
         </div>
 
         <!-- Activities Tab -->
         <div class="office-tab-content hidden" data-tab="activities">
-          <div style="background: var(--bg-main); padding: 20px; border-radius: 12px; margin-bottom: 25px;">
+          <div style="background: var(--bg); padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid var(--border);">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-              <div class="form-group" style="margin:0;">
-                <label>Event Title</label>
-                <input type="text" id="new-act-title">
-              </div>
-              <div class="form-group" style="margin:0;">
-                <label>Date</label>
-                <input type="date" id="new-act-date">
-              </div>
+              <div class="form-group" style="margin:0;"><label>Title</label><input type="text" id="new-act-title"></div>
+              <div class="form-group" style="margin:0;"><label>Date</label><input type="date" id="new-act-date"></div>
             </div>
-            <div class="form-group">
-              <label>Brief Description</label>
-              <textarea id="new-act-desc" style="min-height: 80px;"></textarea>
-            </div>
-            <button class="btn btn-primary" style="width: 100%;" id="btn-add-act" onclick="addOfficeActivity()">
-              <i class='bx bx-plus'></i> Add Activity
-            </button>
+            <div class="form-group"><label>Description</label><textarea id="new-act-desc" style="min-height: 60px;"></textarea></div>
+            <button class="btn btn-primary" style="width: 100%;" onclick="addOfficeActivity()"><i class='bx bx-plus'></i> Add Activity</button>
           </div>
           <div id="modal-activities-list"></div>
         </div>
       </div>
 
-      <div class="modal-footer" id="office-modal-footer">
+      <div class="modal-footer">
         <button type="button" class="btn btn-outline" onclick="closeModals()">Cancel</button>
-        <button type="submit" form="office-form" class="btn btn-primary" id="btn-save-office">Save Office</button>
+        <button type="submit" form="office-form" class="btn btn-gold" id="btn-save-office">Save Office</button>
       </div>
     </div>
   </div>
