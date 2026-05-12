@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function fetchSystems() {
   try {
-    const res = await fetch('systems.json?v=' + Date.now());
+    const res = await fetch('systems.txt?v=' + Date.now());
     const data = await res.json();
     if (window.ENV) window.ENV.systems = data;
     return data;
@@ -55,7 +55,7 @@ async function fetchSystems() {
 
 async function checkForUpdates() {
   try {
-    const response = await fetch('version.json?t=' + Date.now());
+    const response = await fetch('version.txt?t=' + Date.now());
     if (!response.ok) return;
     const data = await response.json();
     const localVersion = localStorage.getItem('sas_app_version');

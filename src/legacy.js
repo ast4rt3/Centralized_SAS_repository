@@ -763,7 +763,7 @@ let tvTheaterEnabled = localStorage.getItem('sas_tv_theater_enabled') === 'true'
 async function checkForUpdates() {
   try {
     // Use timestamp query param to bypass middle-man caches
-    const response = await fetch('version.json?t=' + new Date().getTime());
+    const response = await fetch('version.txt?t=' + new Date().getTime());
     if (!response.ok) return;
 
     const data = await response.json();

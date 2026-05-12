@@ -13,7 +13,7 @@
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
 
-  <link rel="manifest" href="manifest.json">
+  <link rel="manifest" href="manifest.webmanifest">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1442,7 +1442,28 @@
                   `;
               }).join('');
 
-              // Start Tickers
+              // 2. Clone for infinite loop
+              const cards = Array.from(grid.children);
+              if (cards.length > 1) {
+                const firstClone = cards[0].cloneNode(true);
+                const lastClone = cards[cards.length - 1].cloneNode(true);
+                firstClone.classList.add('lp-card-clone');
+                lastClone.classList.add('lp-card-clone');
+                grid.appendChild(firstClone);
+                grid.insertBefore(lastClone, grid.firstChild);
+                
+                setTimeout(() => {
+                  const realCards = grid.querySelectorAll('.lp-service-card:not(.lp-card-clone)');
+                  if (realCards.length > 0) {
+                    const firstRealCard = realCards[0];
+                    grid.scrollTo({
+                      left: firstRealCard.offsetLeft - (grid.offsetWidth / 2) + (firstRealCard.offsetWidth / 2),
+                      behavior: 'auto'
+                    });
+                  }
+                }, 100);
+              }
+
               categories.forEach((cat, idx) => {
                 if (cat.offices && cat.offices.length > 1) {
                   initServiceTicker(idx, cat.offices.length);
@@ -1455,12 +1476,10 @@
               if (!list) return;
 
               let current = 0;
-              const itemHeight = 44; // Sync with new compact CSS
+              const itemHeight = 44; 
 
               setInterval(() => {
-                // Pause if hovering on parent card
                 if (list.closest('.lp-service-card').matches(':hover')) return;
-
                 current++;
                 list.style.transform = `translateY(-${current * itemHeight}px)`;
 
@@ -1472,42 +1491,30 @@
                     setTimeout(() => {
                       list.style.transition = 'transform 0.6s cubic-bezier(0.85, 0, 0.15, 1)';
                     }, 50);
-                  }, 600); // Wait for transition to end
+                  }, 600);
                 }
-              }, 3000); // 3 second pause
+              }, 3000);
             }
 
             function initObjectiveCarousel() {
               const grid = document.querySelector('.lp-objective-grid');
               if (!grid) return;
-
-              // Clone items for a seamless infinite loop
               const items = Array.from(grid.children);
               items.forEach(item => grid.appendChild(item.cloneNode(true)));
-
               let isPaused = false;
               let currentScroll = 0;
-              let scrollSpeed = 0.6; // Linear pixels per frame
+              let scrollSpeed = 0.6;
 
               function step() {
                 if (!isPaused && window.innerWidth <= 991) {
                   currentScroll += scrollSpeed;
-
-                  // Seamless reset: jump back to start once the first set is scrolled
-                  if (currentScroll >= grid.scrollWidth / 2) {
-                    currentScroll = 0;
-                  }
+                  if (currentScroll >= grid.scrollWidth / 2) currentScroll = 0;
                   grid.scrollLeft = currentScroll;
                 }
                 requestAnimationFrame(step);
               }
-
               grid.addEventListener('touchstart', () => isPaused = true);
-              grid.addEventListener('touchend', () => {
-                isPaused = false;
-                currentScroll = grid.scrollLeft;
-              });
-
+              grid.addEventListener('touchend', () => { isPaused = false; currentScroll = grid.scrollLeft; });
               step();
             }
 
@@ -1515,31 +1522,86 @@
               const grid = document.getElementById('lp-services-grid');
               if (!grid) return;
 
-              let currentIndex = 0;
               let isPaused = false;
+              let currentIndex = 1;
+
+              const observerOptions = { root: grid, threshold: 0.6 };
+              const observer = new IntersectionObserver((entries) => {
+                if (window.innerWidth > 991) return;
+                entries.forEach(entry => {
+                  if (entry.isIntersecting && !entry.target.classList.contains('lp-card-clone')) {
+                    grid.querySelectorAll('.lp-service-card').forEach(c => c.classList.remove('active'));
+                    entry.target.classList.add('active');
+                  }
+                });
+              }, observerOptions);
+
+              function animateScroll(target, onComplete) {
+                const start = grid.scrollLeft;
+                const change = target - start;
+                const duration = 800;
+                let startTime = null;
+
+                function animation(currentTime) {
+                  if (!startTime) startTime = currentTime;
+                  const progress = Math.min((currentTime - startTime) / duration, 1);
+                  const ease = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+                  grid.scrollLeft = start + change * ease;
+                  if (progress < 1) requestAnimationFrame(animation);
+                  else {
+                    grid.style.scrollSnapType = 'x mandatory';
+                    if (onComplete) onComplete();
+                  }
+                }
+                grid.style.scrollSnapType = 'none';
+                requestAnimationFrame(animation);
+              }
 
               setInterval(() => {
                 if (isPaused || window.innerWidth > 991) return;
-
-                const cards = grid.querySelectorAll('.lp-service-card');
+                const cards = Array.from(grid.querySelectorAll('.lp-service-card'));
                 if (cards.length <= 1) return;
 
-                currentIndex = (currentIndex + 1) % cards.length;
-                const cardWidth = cards[0].offsetWidth + 15; // Card + gap
+                currentIndex++;
+                if (currentIndex >= cards.length) currentIndex = 0;
+                const card = cards[currentIndex];
+                if (!card) return;
 
-                grid.scrollTo({
-                  left: currentIndex * cardWidth,
-                  behavior: 'smooth'
+                const targetScroll = card.offsetLeft - (grid.offsetWidth / 2) + (card.offsetWidth / 2);
+
+                animateScroll(targetScroll, () => {
+                  if (card.classList.contains('lp-card-clone')) {
+                    const realCards = grid.querySelectorAll('.lp-service-card:not(.lp-card-clone)');
+                    let jumpTarget = (currentIndex === 0) ? realCards[realCards.length - 1] : realCards[0];
+                    currentIndex = cards.indexOf(jumpTarget);
+                    grid.style.scrollSnapType = 'none';
+                    grid.scrollLeft = jumpTarget.offsetLeft - (grid.offsetWidth / 2) + (jumpTarget.offsetWidth / 2);
+                    grid.style.scrollSnapType = 'x mandatory';
+                  }
                 });
-              }, 5000); // 5 second per slide
+              }, 5000);
+
+              function setupCardObservers() {
+                grid.querySelectorAll('.lp-service-card').forEach(card => observer.observe(card));
+              }
+              setupCardObservers();
+              const mutationObserver = new MutationObserver(() => setupCardObservers());
+              mutationObserver.observe(grid, { childList: true });
 
               grid.addEventListener('touchstart', () => isPaused = true);
               grid.addEventListener('touchend', () => {
                 setTimeout(() => {
-                  const cardWidth = grid.querySelector('.lp-service-card')?.offsetWidth + 15;
-                  if (cardWidth) currentIndex = Math.round(grid.scrollLeft / cardWidth);
+                  // Re-sync currentIndex after manual scroll
+                  const cards = grid.querySelectorAll('.lp-service-card');
+                  let closest = 0;
+                  let minDiff = Infinity;
+                  cards.forEach((c, i) => {
+                    const diff = Math.abs(grid.scrollLeft - (c.offsetLeft - grid.offsetWidth/2 + c.offsetWidth/2));
+                    if (diff < minDiff) { minDiff = diff; closest = i; }
+                  });
+                  currentIndex = closest;
                   isPaused = false;
-                }, 600);
+                }, 2000);
               });
             }
 

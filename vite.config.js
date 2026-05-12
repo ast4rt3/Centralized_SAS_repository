@@ -23,9 +23,9 @@ export default defineConfig({
   plugins: [
     viteStaticCopy({
       targets: [
-        { src: 'systems.json', dest: '.' },
-        { src: 'version.json', dest: '.' },
-        { src: 'manifest.json', dest: '.' },
+        { src: 'systems.txt', dest: '.' },
+        { src: 'version.txt', dest: '.' },
+        { src: 'manifest.webmanifest', dest: '.' },
         { src: 'serviceWorker.js', dest: '.' },
         { src: 'env.js', dest: '.' },
         { src: 'assets/*', dest: 'assets' },
