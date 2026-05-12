@@ -35,19 +35,21 @@ jobs:
         env:
           FIREBASE_CONFIG: "${{ secrets['FIREBASE_CONFIG'] }}"
         run: |
-          cat <<EOF > env.js
-          window.ENV = {
-            BACKEND_GAS_URL: "${{ secrets.BACKEND_GAS_URL }}",
-            SCANNER_GAS_URL: "${{ secrets.SCANNER_GAS_URL }}",
-            YOUTUBE_PROXY_URL: "${{ secrets.YOUTUBE_PROXY_URL }}",
-            CLOUDINARY_CLOUD_NAME: "${{ secrets.CLOUDINARY_CLOUD_NAME }}",
-            CLOUDINARY_UPLOAD_PRESET: "${{ secrets.CLOUDINARY_UPLOAD_PRESET }}",
-            SUPABASE_URL: "${{ secrets.SUPABASE_URL }}",
-            SUPABASE_ANON_KEY: "${{ secrets.SUPABASE_ANON_KEY }}",
-            FIREBASE_CONFIG: $FIREBASE_CONFIG,
-            systems: $(cat systems.json)
-          };
-          EOF
+          echo "window.ENV = {" > env.js
+          echo "  BACKEND_GAS_URL: \"${{ secrets.BACKEND_GAS_URL }}\"," >> env.js
+          echo "  SCANNER_GAS_URL: \"${{ secrets.SCANNER_GAS_URL }}\"," >> env.js
+          echo "  YOUTUBE_PROXY_URL: \"${{ secrets.YOUTUBE_PROXY_URL }}\"," >> env.js
+          echo "  CLOUDINARY_CLOUD_NAME: \"${{ secrets.CLOUDINARY_CLOUD_NAME }}\"," >> env.js
+          echo "  CLOUDINARY_UPLOAD_PRESET: \"${{ secrets.CLOUDINARY_UPLOAD_PRESET }}\"," >> env.js
+          echo "  SUPABASE_URL: \"${{ secrets.SUPABASE_URL }}\"," >> env.js
+          echo "  SUPABASE_ANON_KEY: \"${{ secrets.SUPABASE_ANON_KEY }}\"," >> env.js
+          echo "  FIREBASE_CONFIG: $FIREBASE_CONFIG," >> env.js
+          echo "  SYSTEM_THEME: \"nbsc-modern\"," >> env.js
+          echo "  TV_AUDIO_ENABLED: false," >> env.js
+          echo "  TV_THEATER_MODE: false," >> env.js
+          echo "  systems: $(cat systems.json || echo '[]')" >> env.js
+          echo "};" >> env.js
+
 
   # 2. AUTOMATED TESTS
   automated-tests:
@@ -157,19 +159,22 @@ jobs:
         env:
           FIREBASE_CONFIG: "${{ secrets['FIREBASE_CONFIG'] }}"
         run: |
-          cat <<EOF > env.js
-          window.ENV = {
-            BACKEND_GAS_URL: "${{ secrets.BACKEND_GAS_URL }}",
-            SCANNER_GAS_URL: "${{ secrets.SCANNER_GAS_URL }}",
-            YOUTUBE_PROXY_URL: "${{ secrets.YOUTUBE_PROXY_URL }}",
-            CLOUDINARY_CLOUD_NAME: "${{ secrets.CLOUDINARY_CLOUD_NAME }}",
-            CLOUDINARY_UPLOAD_PRESET: "${{ secrets.CLOUDINARY_UPLOAD_PRESET }}",
-            SUPABASE_URL: "${{ secrets.SUPABASE_URL }}",
-            SUPABASE_ANON_KEY: "${{ secrets.SUPABASE_ANON_KEY }}",
-            FIREBASE_CONFIG: $FIREBASE_CONFIG,
-            systems: $(cat systems.json)
-          };
-          EOF
+          # Create a clean env.js. We use printf to avoid escaping issues with cat <<EOF
+          echo "window.ENV = {" > env.js
+          echo "  BACKEND_GAS_URL: \"${{ secrets.BACKEND_GAS_URL }}\"," >> env.js
+          echo "  SCANNER_GAS_URL: \"${{ secrets.SCANNER_GAS_URL }}\"," >> env.js
+          echo "  YOUTUBE_PROXY_URL: \"${{ secrets.YOUTUBE_PROXY_URL }}\"," >> env.js
+          echo "  CLOUDINARY_CLOUD_NAME: \"${{ secrets.CLOUDINARY_CLOUD_NAME }}\"," >> env.js
+          echo "  CLOUDINARY_UPLOAD_PRESET: \"${{ secrets.CLOUDINARY_UPLOAD_PRESET }}\"," >> env.js
+          echo "  SUPABASE_URL: \"${{ secrets.SUPABASE_URL }}\"," >> env.js
+          echo "  SUPABASE_ANON_KEY: \"${{ secrets.SUPABASE_ANON_KEY }}\"," >> env.js
+          echo "  FIREBASE_CONFIG: $FIREBASE_CONFIG," >> env.js
+          echo "  SYSTEM_THEME: \"nbsc-modern\"," >> env.js
+          echo "  TV_AUDIO_ENABLED: false," >> env.js
+          echo "  TV_THEATER_MODE: false," >> env.js
+          echo "  systems: $(cat systems.json || echo '[]')" >> env.js
+          echo "};" >> env.js
+
       - name: Debug — Verify deployment files
         run: |
           echo "=== Root files ==="
