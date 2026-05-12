@@ -34,7 +34,7 @@ export default defineConfig({
       ]
     }),
     obfuscator({
-      include: ['**/env*.js'], // Only target the generated env.js chunk
+      include: [/env\.js$/], // Explicitly target env.js
       exclude: [/node_modules/],
       apply: 'build',
       options: {
@@ -44,7 +44,7 @@ export default defineConfig({
         numbersToExpressions: true,
         simplify: true,
         stringArray: true,
-        stringArrayEncoding: ['rc4'],
+        stringArrayEncoding: ['base64'],
         stringArrayThreshold: 1,
         renameProperties: false
       }
