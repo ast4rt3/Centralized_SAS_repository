@@ -60,8 +60,8 @@ html {
 
 /* Firefox Support */
 * {
-  scrollbar-width: auto !important;
-  scrollbar-color: var(--nbsc-gold) transparent !important;
+  scrollbar-width: auto;
+  scrollbar-color: var(--nbsc-gold) transparent;
 }
 
 @keyframes pulse-live {
@@ -5126,17 +5126,7 @@ body.lp-mode .main-wrapper {
   gap: 16px;
 }
 
-/* Horizontal scroll indicator for mobile */
-.lp-scroll-hint {
-  display: none;
-  text-align: center;
-  font-size: 0.75rem;
-  color: var(--lp-text-muted);
-  margin-top: 10px;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-}
+
 
 .lp-objective-item {
   display: flex;
@@ -5382,7 +5372,6 @@ body.lp-mode .main-wrapper {
     gap: 15px;
   }
 
-  /* UX Optimization: Horizontal scroll for long lists on mobile */
   .lp-objective-grid {
     display: flex !important;
     overflow-x: auto;
@@ -5390,37 +5379,17 @@ body.lp-mode .main-wrapper {
     padding: 5px 20px 20px;
     margin: 0 -20px;
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+    scrollbar-width: none !important;
     scroll-snap-type: none; /* Disable snapping for smooth linear movement */
   }
   
   .lp-objective-grid::-webkit-scrollbar {
-    display: none;
+    display: none !important;
   }
 
   .lp-objective-item {
     flex: 0 0 85%;
     scroll-snap-align: none;
-  }
-
-  .lp-scroll-hint {
-    display: flex;
-    justify-content: center;
-    gap: 30px;
-    margin-top: 10px;
-  }
-
-  .lp-scroll-hint i {
-    font-size: 1.8rem;
-    color: var(--lp-primary);
-    background: rgba(0, 51, 102, 0.06);
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0.6;
   }
 
   /* UX Optimization: Horizontal scroll for main services on mobile */
@@ -5432,11 +5401,11 @@ body.lp-mode .main-wrapper {
     padding: 10px 20px 25px;
     margin: 0 -20px;
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+    scrollbar-width: none !important;
   }
 
   .lp-services-grid::-webkit-scrollbar {
-    display: none;
+    display: none !important;
   }
 
   .lp-service-card {
