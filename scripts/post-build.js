@@ -6,24 +6,25 @@ const distPath = path.resolve('dist', 'env.js');
 
 if (fs.existsSync(distPath)) {
     console.log('🔒 Obfuscating dist/env.js for production...');
+    const code = fs.readFileSync(distPath, 'utf8');
+    
     try {
-        const code = fs.readFileSync(distPath, 'utf8');
-        
         const obfuscatedCode = JavaScriptObfuscator.obfuscate(code, {
             compact: true,
-            // Simplified settings for maximum compatibility
-            controlFlowFlattening: false, 
-            deadCodeInjection: false,
-            stringArray: true,
-            stringArrayEncoding: ['base64'],
-            stringArrayThreshold: 0.75,
-            unicodeEscapeSequence: false
+            controlFlowFlattening: false,
+            stringArray: false // Disable string array to see if it fixes the crash
         });
 
         fs.writeFileSync(distPath, obfuscatedCode.getObfuscatedCode());
         console.log('✅ dist/env.js obfuscated successfully!');
     } catch (err) {
         console.error('❌ Obfuscation failed!');
+        const match = err.message.match(/\((\d+):(\d+)\)/);
+        if (match) {
+            const line = parseInt(match[1]);
+            const lines = code.split('\n');
+            console.error(`Error at line ${line}: "${lines[line - 1]}"`);
+        }
         console.error(err);
         process.exit(1);
     }
