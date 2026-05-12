@@ -120,7 +120,38 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-    @media (max-width: 768px) { .grid-2col { grid-template-columns: 1fr; } }
+    /* Career View Styles */
+    .career-view { display: none; flex-direction: column; gap: 20px; padding: 0 40px 40px 40px; animation: fadeIn 0.3s; }
+    .career-view.active { display: flex; }
+    
+    .career-header { text-align: center; margin-top: 20px; margin-bottom: 10px; }
+    .career-header h2 { font-size: 2.2rem; font-weight: 800; color: var(--blue); margin: 0; }
+    .career-header p { color: var(--text-sec); font-size: 1.1rem; margin-top: 5px; }
+
+    .month-tabs { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 15px; }
+    .month-tab { padding: 12px 24px; background: #fff; border: 2px solid var(--border); border-radius: 30px; cursor: pointer; white-space: nowrap; font-weight: 800; color: var(--text-sec); transition: 0.2s; font-size: 0.95rem; }
+    .month-tab:hover { background: #f8fafc; border-color: var(--blue); color: var(--blue); }
+    .month-tab.active { background: linear-gradient(135deg, var(--blue) 0%, var(--dark) 100%); color: #fff; border-color: var(--blue); box-shadow: 0 4px 12px rgba(0, 51, 102, 0.2); }
+    
+    .vacancy-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px; }
+    .vacancy-card { border-radius: 20px; overflow: hidden; background: var(--card); box-shadow: var(--shadow); cursor: pointer; transition: 0.3s; border: 1px solid var(--border); }
+    .vacancy-card:hover { transform: translateY(-8px); box-shadow: var(--shadow-lg); border-color: var(--gold); }
+    .vacancy-card img { width: 100%; height: 350px; object-fit: contain; background: #f1f5f9; border-bottom: 1px solid var(--border); }
+    .vacancy-card-footer { padding: 18px; text-align: center; font-weight: 800; color: var(--blue); font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* Lightbox Modal */
+    .lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 26, 51, 0.95); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
+    .lightbox.active { display: flex; }
+    .lightbox img { max-width: 90%; max-height: 90vh; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.4); object-fit: contain; }
+    .lightbox-close { position: absolute; top: 25px; right: 40px; font-size: 3rem; color: #fff; cursor: pointer; transition: 0.2s; line-height: 1; }
+    .lightbox-close:hover { color: var(--gold); transform: scale(1.1) rotate(90deg); }
+
+    @media (max-width: 768px) { 
+      .grid-2col { grid-template-columns: 1fr; }
+      .career-view { padding: 0 20px 20px 20px; }
+      .month-tabs { padding-bottom: 10px; }
+      .vacancy-card img { height: 250px; }
+    }
   </style>
 </head>
 <body>
@@ -185,8 +216,33 @@
         </div>
       </div>
     </div>
+    
+    <!-- Career & Placement Services View -->
+    <div class="career-view" id="career-view">
+      <div class="career-header">
+        <h2>Job Vacancies</h2>
+        <p>Explore career opportunities and placement services.</p>
+      </div>
+      
+      <!-- Month Navigation -->
+      <div class="month-tabs" id="career-month-tabs">
+        <!-- Tabs will be injected here -->
+      </div>
+
+      <!-- Vacancy Images Grid -->
+      <div class="vacancy-grid" id="career-vacancy-grid">
+        <!-- Images will be injected here -->
+      </div>
+    </div>
 
   </main>
+
+  <!-- Lightbox Modal -->
+  <div class="lightbox" id="lightbox">
+    <div class="lightbox-close" onclick="closeLightbox()">&times;</div>
+    <img id="lightbox-img" src="" alt="Full size view">
+  </div>
+
 
   <script type="module" src="../../src/utils/app-bridge.js"></script>
   <script type="module" src="./service_viewer.js"></script>

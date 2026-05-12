@@ -6313,3 +6313,33 @@ body.lp-mode .main-wrapper {
   .lp-docs-filter-bar { flex-direction: column; align-items: flex-start; }
   .lp-docs-grid { grid-template-columns: 1fr; }
 }
+
+/* --- Service Explorer Career View Styles --- */
+.lp-se-career-view { display: none; flex-direction: column; gap: 20px; padding: 0 40px 40px 40px; animation: fadeIn 0.3s; }
+.lp-se-career-view.active { display: flex; }
+
+.lp-se-month-tabs { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 15px; }
+.lp-se-month-tab { padding: 12px 24px; background: #fff; border: 2px solid var(--border); border-radius: 30px; cursor: pointer; white-space: nowrap; font-weight: 800; color: var(--text-muted); transition: 0.2s; font-size: 0.95rem; }
+.lp-se-month-tab:hover { background: #f8fafc; border-color: var(--nbsc-blue); color: var(--nbsc-blue); }
+.lp-se-month-tab.active { background: linear-gradient(135deg, var(--nbsc-mid) 0%, var(--nbsc-dark) 100%); color: #fff; border-color: var(--nbsc-mid); box-shadow: 0 4px 12px rgba(0, 51, 102, 0.2); }
+
+.lp-se-vacancy-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px; }
+.lp-se-vacancy-card { border-radius: 20px; overflow: hidden; background: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.05); cursor: pointer; transition: 0.3s; border: 1px solid var(--border); }
+.lp-se-vacancy-card:hover { transform: translateY(-8px); box-shadow: 0 12px 30px rgba(0,0,0,0.1); border-color: var(--nbsc-gold); }
+.lp-se-vacancy-card img { width: 100%; height: 350px; object-fit: contain; background: #f1f5f9; }
+
+.lp-se-subfolder-header { font-size: 1.15rem; font-weight: 800; color: var(--nbsc-dark); display: flex; align-items: center; gap: 8px; padding-bottom: 8px; border-bottom: 2px dashed rgba(0, 26, 51, 0.1); }
+.lp-se-subfolder-header i { color: var(--nbsc-gold); font-size: 1.3rem; }
+
+/* Lightbox Modal */
+.lp-se-lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 26, 51, 0.95); z-index: 99999; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
+.lp-se-lightbox.active { display: flex; }
+.lp-se-lightbox img { max-width: 90%; max-height: 90vh; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.4); object-fit: contain; }
+.lp-se-lightbox-close { position: absolute; top: 25px; right: 40px; font-size: 3rem; color: #fff; cursor: pointer; transition: 0.2s; line-height: 1; }
+.lp-se-lightbox-close:hover { color: var(--nbsc-gold); transform: scale(1.1) rotate(90deg); }
+
+@media (max-width: 768px) {
+  .lp-se-career-view { padding: 0 20px 20px 20px; }
+  .lp-se-month-tabs { padding-bottom: 10px; }
+  .lp-se-vacancy-card img { height: 250px; }
+}

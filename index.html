@@ -1757,8 +1757,34 @@
               </button>
             </div>
           </div>
+          
+          <!-- Career & Placement Services View -->
+          <div class="lp-se-career-view" id="se-career-view" style="display:none;">
+            <div class="lp-se-category-header" style="flex-direction:column; align-items:center; border:none; padding-bottom:0;">
+              <h2 class="lp-se-office-title" style="margin-bottom:5px;">Job Vacancies</h2>
+              <p style="color:#64748b; font-size:1.1rem; margin-top:0;">Explore career opportunities and placement services.</p>
+              <button class="lp-se-retrace-btn" onclick="handleServiceExplorerBack()" style="margin-top:15px;">
+                <i class='bx bx-left-arrow-alt'></i> Back
+              </button>
+            </div>
+            
+            <div class="lp-se-month-tabs" id="se-career-month-tabs">
+              <!-- Tabs will be injected here -->
+            </div>
+
+            <div class="lp-se-vacancy-grid" id="se-career-vacancy-grid">
+              <!-- Images will be injected here -->
+            </div>
+          </div>
+          
         </div>
       </div>
+    </div>
+
+    <!-- Lightbox Modal -->
+    <div class="lp-se-lightbox" id="se-lightbox">
+      <div class="lp-se-lightbox-close" onclick="closeSeLightbox()">&times;</div>
+      <img id="se-lightbox-img" src="" alt="Full size view">
     </div>
 
     <script>
@@ -1785,13 +1811,14 @@
       }
 
       let seCurrentCategoryName = 'Services';
+
+
       let seCurrentOfficeId = null;
 
       window.loadServiceCategory = async () => {
         const categoryView = document.getElementById('se-category-view');
         const loadingState = document.getElementById('se-loading-state');
         const officeView = document.getElementById('se-office-view');
-
         // Check for direct office preview request
         const previewOfficeId = localStorage.getItem('sas_selected_office_id');
         const previewOfficeName = localStorage.getItem('sas_selected_office_name');
@@ -1804,7 +1831,6 @@
         }
 
         seCurrentCategoryName = localStorage.getItem('sas_selected_service_category') || 'Services';
-
         document.getElementById('se-category-title').textContent = seCurrentCategoryName;
 
         // Force main navbar visibility
@@ -1814,6 +1840,15 @@
         loadingState.style.display = 'flex';
         categoryView.style.display = 'none';
         officeView.style.display = 'none';
+
+        // Custom Career View Interception
+        const careerView = document.getElementById('se-career-view');
+        if (careerView) careerView.style.display = 'none';
+
+        const catNameLower = seCurrentCategoryName.toLowerCase();
+        if (catNameLower.includes('career') && catNameLower.includes('placement')) {
+          return loadSeCareerView();
+        }
 
         try {
           const res = await sasFetch('getOfficesByCategory', { categoryName: seCurrentCategoryName });
@@ -1833,6 +1868,133 @@
         }
       };
 
+      // --- Career View Logic for Landing Page ---
+      let seCareerFolders = [];
+
+      async function loadSeCareerView() {
+        const loadingState = document.getElementById('se-loading-state');
+        const careerViewEl = document.getElementById('se-career-view');
+        const categoryView = document.getElementById('se-category-view');
+        const officeView = document.getElementById('se-office-view');
+
+        loadingState.style.display = 'flex';
+        categoryView.style.display = 'none';
+        officeView.style.display = 'none';
+        
+        try {
+          const res = await sasFetch('getDriveVacancies');
+          loadingState.style.display = 'none';
+          if (res.success) {
+            seCareerFolders = res.folders || [];
+            renderSeCareerFolders();
+            careerViewEl.style.display = 'flex';
+          } else {
+            careerViewEl.innerHTML = `<p style="color:red; text-align:center; width:100%;">Error: ${res.message}</p>`;
+            careerViewEl.style.display = 'flex';
+          }
+        } catch (err) {
+          loadingState.style.display = 'none';
+          careerViewEl.innerHTML = `<p style="color:red; text-align:center; width:100%;">Network Error.</p>`;
+          careerViewEl.style.display = 'flex';
+        }
+      }
+
+      function renderSeCareerFolders() {
+        const tabsContainer = document.getElementById('se-career-month-tabs');
+        const gridContainer = document.getElementById('se-career-vacancy-grid');
+
+        if (!seCareerFolders || seCareerFolders.length === 0) {
+          tabsContainer.innerHTML = '';
+          gridContainer.innerHTML = '<p style="color:#64748b; text-align:center; width: 100%;">No folders found in Drive.</p>';
+          return;
+        }
+
+        tabsContainer.innerHTML = seCareerFolders.map((f, index) => `
+          <div class="lp-se-month-tab ${index === 0 ? 'active' : ''}" data-id="${f.id}" onclick="selectSeCareerFolder('${f.id}')">
+            ${f.name}
+          </div>
+        `).join('');
+
+        renderSeCareerImages(seCareerFolders[0].id);
+      }
+
+      window.selectSeCareerFolder = (folderId) => {
+        document.querySelectorAll('.lp-se-month-tab').forEach(tab => {
+          if (tab.getAttribute('data-id') === folderId) {
+            tab.classList.add('active');
+          } else {
+            tab.classList.remove('active');
+          }
+        });
+        renderSeCareerImages(folderId);
+      };
+
+      function renderSeCareerImages(folderId) {
+        const gridContainer = document.getElementById('se-career-vacancy-grid');
+        const folder = seCareerFolders.find(f => f.id === folderId);
+
+        if (!folder || (!folder.files.length && (!folder.subfolders || !folder.subfolders.length))) {
+          gridContainer.innerHTML = '<p style="color:#64748b; text-align:center; width: 100%;">No images found in this folder.</p>';
+          return;
+        }
+
+        let html = '';
+
+        // Helper to generate a grid of files
+        const generateGrid = (files) => {
+          return files.map(file => {
+            const thumbUrl = `https://drive.google.com/thumbnail?id=${file.id}&sz=w1000`;
+            return `
+              <div class="lp-se-vacancy-card" onclick="openSeLightbox('${thumbUrl}')">
+                <img src="${thumbUrl}" alt="${file.name}" loading="lazy" onerror="this.onerror=null; this.src='assets/sas_logo_real.png'; this.style.padding='40px'; this.style.objectFit='contain';">
+              </div>
+            `;
+          }).join('');
+        };
+
+        // Render direct files first
+        if (folder.files && folder.files.length > 0) {
+          html += generateGrid(folder.files);
+        }
+
+        // Render nested subfolders as sections
+        if (folder.subfolders && folder.subfolders.length > 0) {
+          folder.subfolders.forEach(sub => {
+            if (sub.files && sub.files.length > 0) {
+              html += `
+                <div style="grid-column: 1 / -1; margin-top: 20px;">
+                  <div class="lp-se-subfolder-header"><i class='bx bx-folder'></i> ${sub.name}</div>
+                  <div class="lp-se-vacancy-grid" style="margin-top: 15px;">
+                    ${generateGrid(sub.files)}
+                  </div>
+                </div>
+              `;
+            }
+          });
+        }
+
+        gridContainer.innerHTML = html;
+      }
+
+      window.openSeLightbox = (url) => {
+        const lightbox = document.getElementById('se-lightbox');
+        const img = document.getElementById('se-lightbox-img');
+        img.src = url;
+        lightbox.classList.add('active');
+      };
+
+      window.closeSeLightbox = () => {
+        const lightbox = document.getElementById('se-lightbox');
+        lightbox.classList.remove('active');
+        document.getElementById('se-lightbox-img').src = '';
+      };
+
+      document.getElementById('se-lightbox').addEventListener('click', (e) => {
+        if (e.target.id === 'se-lightbox') {
+          window.closeSeLightbox();
+        }
+      });
+
       function renderOffices(offices) {
         const grid = document.getElementById('se-offices-grid');
         if (!offices || offices.length === 0) {
@@ -1840,8 +2002,8 @@
           return;
         }
 
-         grid.innerHTML = offices.map((o, idx) => `
-           <div class="lp-se-office-card" data-id="${o.id}" data-name="${o.name}" 
+        grid.innerHTML = offices.map((o, idx) => `
+          <div class="lp-se-office-card" data-id="${o.id}" data-name="${o.name}" 
                 style="animation: slideUpFade 0.6s cubic-bezier(0.23, 1, 0.32, 1) both ${idx * 0.05}s;">
              <div class="lp-se-office-card-cover">
                 <img src="${o.cover_url || 'assets/SAS_landing_page_header.jpg'}" alt="${o.name}">
