@@ -4,7 +4,7 @@ import { viteStaticCopy } from 'vite-plugin-static-copy';
 import obfuscator from 'vite-plugin-javascript-obfuscator';
 
 export default defineConfig({
-  base: '/Centralized_SAS_repository/',
+  base: '/',
   build: {
     rollupOptions: {
       input: {
