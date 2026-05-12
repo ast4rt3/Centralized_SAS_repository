@@ -1,0 +1,36 @@
+# Ensure correct MIME types
+AddType application/javascript .js
+AddType application/javascript .mjs
+AddType application/manifest+json .webmanifest
+AddType text/css .css
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  
+  # 1. If the file exists in assets/, serve it directly and stop
+  RewriteCond %{REQUEST_FILENAME} -f
+  RewriteRule ^assets/(.*) - [L]
+
+  # 2. SPA Routing: Redirect everything else to index.html
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
+</IfModule>
+
+# Prevent caching of the environment config
+<Files "env.js">
+    <IfModule mod_headers.c>
+        Header set Cache-Control "max-age=0, no-cache, no-store, must-revalidate"
+        Header set Pragma "no-cache"
+        Header set Expires "Wed, 11 Jan 1984 05:00:00 GMT"
+    </IfModule>
+</Files>
+
+# Fix for module loading issues
+<IfModule mod_headers.c>
+    <FilesMatch "\.(js|mjs|css|webmanifest)$">
+        Header set Access-Control-Allow-Origin "*"
+    </FilesMatch>
+</IfModule>

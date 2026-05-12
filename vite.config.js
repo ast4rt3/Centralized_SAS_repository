@@ -28,6 +28,7 @@ export default defineConfig({
         { src: 'manifest.webmanifest', dest: '.' },
         { src: 'serviceWorker.js', dest: '.' },
         { src: 'env.js', dest: '.' },
+        { src: '.htaccess', dest: '.' },
         { src: 'assets/*', dest: 'assets' },
         { src: 'src/utils', dest: '.' },
         { src: ['apps/**/*', '!apps/**/index.html'], dest: '.' }
