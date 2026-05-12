@@ -27,7 +27,7 @@
     href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&family=Outfit:wght@400;600;800&display=swap"
     rel="stylesheet">
   <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
-  <link rel="stylesheet" href="styles.css?v=24.0">
+  <link rel="stylesheet" href="styles.css?v=24.1">
   <script>
     // TEMPORARILY DISABLED: Service Worker causing caching issues for new apps
     // Automatically register Service Worker for offline caching
@@ -1096,10 +1096,21 @@
       font-size: 1.2rem;
     }
 
-    .lp-service-card:hover {
+    .lp-card-clone {
+      display: none !important;
+    }
 
+    .lp-mobile-toggle {
+      display: none !important;
+    }
 
-
+    @media (max-width: 991px) {
+      .lp-card-clone {
+        display: flex !important;
+      }
+      .lp-mobile-toggle {
+        display: block !important;
+      }
     }
 
     .lp-card-clone {
@@ -1222,11 +1233,7 @@
       transition: gap 0.3s;
     }
 
-    .lp-service-card:hover {
 
-
-
-    }
 
     .lp-service-card:hover .lp-service-action {
       gap: 10px;
