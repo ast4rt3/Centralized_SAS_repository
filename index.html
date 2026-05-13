@@ -28,6 +28,7 @@
     rel="stylesheet">
   <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
   <link rel="stylesheet" href="styles.css?v=24.1">
+  <link rel="stylesheet" href="navbar-dropdown.css?v=1.0">
   <script>
     // TEMPORARILY DISABLED: Service Worker causing caching issues for new apps
     // Automatically register Service Worker for offline caching
@@ -1301,7 +1302,14 @@
           <ul class="lp-nav-links" id="lp-nav-links">
             <li><a href="#lp-hero" class="active">Home</a></li>
             <li><a href="#lp-about">About</a></li>
-            <li><a href="#lp-services">Our Services</a></li>
+            <li class="lp-dropdown">
+              <a href="#lp-services" class="lp-dropdown-toggle">
+                Our Services <i class='bx bx-chevron-down'></i>
+              </a>
+              <ul class="lp-dropdown-menu" id="lp-services-dropdown">
+                <li><a href="#lp-services">All Services</a></li>
+              </ul>
+            </li>
             <li><a href="#lp-documents">Documents</a></li>
             <li><a href="#lp-activities">Recent Activities</a></li>
           </ul>
@@ -1433,8 +1441,24 @@
             }
 
             function renderLPServices(categories) {
+              // Populate Navbar Dropdown
+              const dropdown = document.getElementById('lp-services-dropdown');
+              if (dropdown) {
+                const categoriesHtml = categories.map(cat => {
+                  const displayName = cat.name === 'Career and Placement Services' ? 'Job Vacancies' : cat.name;
+                  return `
+                    <li><a href="javascript:void(0)" onclick="openServiceCategory('${cat.name.replace(/'/g, "\\'")}')">
+                      <i class='bx ${cat.icon_class || 'bx-folder'}'></i>
+                      <span>${displayName}</span>
+                    </a></li>
+                  `;
+                }).join('');
+                dropdown.innerHTML = categoriesHtml;
+              }
+
               const grid = document.getElementById('lp-services-grid');
               grid.innerHTML = categories.map((cat, idx) => {
+                const displayName = cat.name === 'Career and Placement Services' ? 'Job Vacancies' : cat.name;
                 const offices = cat.offices || [];
                 const subItemsHtml = offices.length > 0
                   ? `<div class="lp-service-sub-container">
@@ -1457,9 +1481,9 @@
                   : `<p class="lp-service-desc">${cat.description || 'Comprehensive support services for students.'}</p>`;
 
                 return `
-                    <div class="lp-service-card lp-service-clickable" onclick="openServiceCategory('${cat.name.replace(/'/g, "\\'")}')">
+                    <div id="cat-${cat.id || cat.name.replace(/\s+/g, '-').toLowerCase()}" class="lp-service-card lp-service-clickable" onclick="openServiceCategory('${cat.name.replace(/'/g, "\\'")}')">
                       <div class="lp-service-icon"><i class='bx ${cat.icon_class || 'bx-folder'}'></i></div>
-                      <h3 class="lp-service-title">${cat.name}</h3>
+                      <h3 class="lp-service-title">${displayName}</h3>
                       ${subItemsHtml}
                       <div class="lp-service-action">Explore All <i class='bx bx-right-arrow-alt'></i></div>
                     </div>
@@ -1631,7 +1655,19 @@
 
             function openServiceCategory(categoryName) {
               localStorage.setItem('sas_selected_service_category', categoryName);
-              window.location.hash = 'service-viewer';
+              if (window.location.hash === '#service-viewer') {
+                if (window.loadServiceCategory) window.loadServiceCategory();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              } else {
+                window.location.hash = 'service-viewer';
+              }
+              // Close mobile nav if open
+              const menu = document.getElementById('lp-nav-menu');
+              if (menu && menu.classList.contains('active')) {
+                menu.classList.remove('active');
+                const toggle = document.getElementById('lp-mobile-toggle');
+                if (toggle) toggle.querySelector('i').className = 'bx bx-menu';
+              }
             }
 
             function openServiceOffice(officeId, officeName, event) {
@@ -1896,16 +1932,37 @@
         }
       }
 
+      const SAS_CACHE_TTL = 3600000; // 1 hour
+      function getSasCache(key) {
+        const item = localStorage.getItem(key);
+        if (!item) return null;
+        try {
+          const parsed = JSON.parse(item);
+          return parsed.data; // Return even if stale for SWR
+        } catch(e) { return null; }
+      }
+      function setSasCache(key, data) {
+        localStorage.setItem(key, JSON.stringify({ timestamp: Date.now(), data: data }));
+      }
+
+      window.loadServiceCategory = async () => {
+        const categoryView = document.getElementById('se-category-view');
       let seCurrentCategoryName = 'Services';
-
-
       let seCurrentOfficeId = null;
+
+      function resetExplorerViews() {
+        const views = ['se-category-view', 'se-office-view', 'se-career-view', 'se-loading-state'];
+        views.forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.style.display = 'none';
+        });
+      }
 
       window.loadServiceCategory = async () => {
         const categoryView = document.getElementById('se-category-view');
         const loadingState = document.getElementById('se-loading-state');
         const officeView = document.getElementById('se-office-view');
-        // Check for direct office preview request
+        
         const previewOfficeId = localStorage.getItem('sas_selected_office_id');
         const previewOfficeName = localStorage.getItem('sas_selected_office_name');
 
@@ -1917,40 +1974,52 @@
         }
 
         seCurrentCategoryName = localStorage.getItem('sas_selected_service_category') || 'Services';
-        document.getElementById('se-category-title').textContent = seCurrentCategoryName;
+        const activeCategory = seCurrentCategoryName; // Guard for async race conditions
+        
+        document.getElementById('se-category-title').textContent = 
+          seCurrentCategoryName === 'Career and Placement Services' ? 'Job Vacancies' : seCurrentCategoryName;
 
-        // Force main navbar visibility
         const mainNavbar = document.querySelector('.lp-navbar');
         if (mainNavbar) mainNavbar.classList.add('scrolled');
-
-        loadingState.style.display = 'flex';
-        categoryView.style.display = 'none';
-        officeView.style.display = 'none';
-
-        // Custom Career View Interception
-        const careerView = document.getElementById('se-career-view');
-        if (careerView) careerView.style.display = 'none';
 
         const catNameLower = seCurrentCategoryName.toLowerCase();
         if (catNameLower.includes('career') && catNameLower.includes('placement')) {
           return loadSeCareerView();
         }
 
+        resetExplorerViews();
+
+        // 1. Try Cache (SWR Pattern)
+        const cacheKey = `sas_cache_offices_${seCurrentCategoryName}`;
+        const cachedData = getSasCache(cacheKey);
+        if (cachedData) {
+          renderOffices(cachedData);
+          categoryView.style.display = 'block';
+        } else {
+          loadingState.style.display = 'flex';
+        }
+
         try {
           const res = await sasFetch('getOfficesByCategory', { categoryName: seCurrentCategoryName });
+          if (activeCategory !== seCurrentCategoryName) return; // Category changed during fetch
 
-          loadingState.style.display = 'none';
           if (res.success) {
+            setSasCache(cacheKey, res.offices);
             renderOffices(res.offices);
+            resetExplorerViews();
             categoryView.style.display = 'block';
-          } else {
+          } else if (!cachedData) {
+            resetExplorerViews();
             document.getElementById('se-offices-grid').innerHTML = `<p style="color:red;">Error: ${res.message}</p>`;
             categoryView.style.display = 'block';
           }
         } catch (err) {
-          loadingState.style.display = 'none';
-          document.getElementById('se-offices-grid').innerHTML = `<p style="color:red;">Network Error.</p>`;
-          categoryView.style.display = 'block';
+          if (activeCategory !== seCurrentCategoryName) return;
+          if (!cachedData) {
+            resetExplorerViews();
+            document.getElementById('se-offices-grid').innerHTML = `<p style="color:red;">Network Error.</p>`;
+            categoryView.style.display = 'block';
+          }
         }
       };
 
@@ -1958,30 +2027,44 @@
       let seCareerFolders = [];
 
       async function loadSeCareerView() {
-        const loadingState = document.getElementById('se-loading-state');
         const careerViewEl = document.getElementById('se-career-view');
-        const categoryView = document.getElementById('se-category-view');
-        const officeView = document.getElementById('se-office-view');
+        const activeCategory = seCurrentCategoryName;
 
-        loadingState.style.display = 'flex';
-        categoryView.style.display = 'none';
-        officeView.style.display = 'none';
+        const cacheKey = 'sas_cache_vacancies';
+        const cachedData = getSasCache(cacheKey);
+        
+        if (cachedData) {
+          seCareerFolders = cachedData;
+          renderSeCareerFolders();
+          resetExplorerViews();
+          careerViewEl.style.display = 'flex';
+        } else {
+          resetExplorerViews();
+          document.getElementById('se-loading-state').style.display = 'flex';
+        }
         
         try {
           const res = await sasFetch('getDriveVacancies');
-          loadingState.style.display = 'none';
+          if (activeCategory !== seCurrentCategoryName) return;
+
           if (res.success) {
             seCareerFolders = res.folders || [];
+            setSasCache(cacheKey, seCareerFolders);
             renderSeCareerFolders();
+            resetExplorerViews();
             careerViewEl.style.display = 'flex';
-          } else {
+          } else if (!cachedData) {
+            resetExplorerViews();
             careerViewEl.innerHTML = `<p style="color:red; text-align:center; width:100%;">Error: ${res.message}</p>`;
             careerViewEl.style.display = 'flex';
           }
         } catch (err) {
-          loadingState.style.display = 'none';
-          careerViewEl.innerHTML = `<p style="color:red; text-align:center; width:100%;">Network Error.</p>`;
-          careerViewEl.style.display = 'flex';
+          if (activeCategory !== seCurrentCategoryName) return;
+          if (!cachedData) {
+            resetExplorerViews();
+            careerViewEl.innerHTML = `<p style="color:red; text-align:center; width:100%;">Network Error.</p>`;
+            careerViewEl.style.display = 'flex';
+          }
         }
       }
 
@@ -2110,9 +2193,7 @@
       }
 
       async function loadOfficeDetails(officeId, officeName) {
-        console.log("Loading details for office:", officeId, officeName);
         if (!officeId) {
-          console.error("loadOfficeDetails: Missing officeId!");
           alert("Error: Missing office ID.");
           return;
         }
@@ -2121,52 +2202,67 @@
         const loadingState = document.getElementById('se-loading-state');
         const officeView = document.getElementById('se-office-view');
 
-        categoryView.style.display = 'none';
-        loadingState.style.display = 'flex';
+        // 1. Try Cache
+        const cacheKey = `sas_cache_office_${officeId}`;
+        const cachedData = getSasCache(cacheKey);
+        if (cachedData) {
+          renderOfficeDetailsUI(cachedData);
+          officeView.style.display = 'flex';
+          categoryView.style.display = 'none';
+          loadingState.style.display = 'none';
+        } else {
+          categoryView.style.display = 'none';
+          loadingState.style.display = 'flex';
+        }
 
         try {
           const res = await sasFetch('getOfficeDetails', { officeId });
-          console.log("Office details response:", res);
-          loadingState.style.display = 'none';
-
           if (res.success) {
-            document.getElementById('se-office-title').textContent = res.office.name;
-            document.getElementById('se-office-info').textContent = res.office.info || 'No info provided.';
-            document.getElementById('se-office-body').textContent = res.office.office_body || 'No detailed description available.';
-
-            const docsList = document.getElementById('se-docs-list');
-            if (!res.docs || res.docs.length === 0) {
-              docsList.innerHTML = '<div style="color:#64748b; font-size:.9rem; padding:10px;">No documents available.</div>';
-            } else {
-              docsList.innerHTML = res.docs.map(d => `
-                <a href="${d.url}" target="_blank" class="lp-se-doc-item">
-                  <i class='bx bxs-file-pdf' style="color:#dc2626; font-size:1.4rem;"></i>
-                  <span>${d.title}</span>
-                </a>
-              `).join('');
-            }
-
-            const actList = document.getElementById('se-activities-list');
-            if (!res.activities || res.activities.length === 0) {
-              actList.innerHTML = '<div style="color:#64748b; font-size:.9rem; padding:10px;">No recent activities logged.</div>';
-            } else {
-              actList.innerHTML = res.activities.map(a => `
-                <div class="lp-se-activity-mini">
-                  <div class="lp-se-activity-date">${new Date(a.activity_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
-                  <div class="lp-se-activity-title">${a.title}</div>
-                  <div class="lp-se-activity-desc">${a.description || ''}</div>
-                </div>
-              `).join('');
-            }
+            setSasCache(cacheKey, res);
+            renderOfficeDetailsUI(res);
             officeView.style.display = 'flex';
-          } else {
+          } else if (!cachedData) {
             alert("Failed to load office details: " + res.message);
             window.loadServiceCategory();
           }
+          loadingState.style.display = 'none';
         } catch (err) {
           loadingState.style.display = 'none';
-          alert("Network Error.");
-          window.loadServiceCategory();
+          if (!cachedData) {
+            alert("Network Error.");
+            window.loadServiceCategory();
+          }
+        }
+      }
+
+      function renderOfficeDetailsUI(res) {
+        document.getElementById('se-office-title').textContent = res.office.name;
+        document.getElementById('se-office-info').textContent = res.office.info || 'No info provided.';
+        document.getElementById('se-office-body').textContent = res.office.office_body || 'No detailed description available.';
+
+        const docsList = document.getElementById('se-docs-list');
+        if (!res.docs || res.docs.length === 0) {
+          docsList.innerHTML = '<div style="color:#64748b; font-size:.9rem; padding:10px;">No documents available.</div>';
+        } else {
+          docsList.innerHTML = res.docs.map(d => `
+            <a href="${d.url}" target="_blank" class="lp-se-doc-item">
+              <i class='bx bxs-file-pdf' style="color:#dc2626; font-size:1.4rem;"></i>
+              <span>${d.title}</span>
+            </a>
+          `).join('');
+        }
+
+        const actList = document.getElementById('se-activities-list');
+        if (!res.activities || res.activities.length === 0) {
+          actList.innerHTML = '<div style="color:#64748b; font-size:.9rem; padding:10px;">No recent activities logged.</div>';
+        } else {
+          actList.innerHTML = res.activities.map(a => `
+            <div class="lp-se-activity-mini">
+              <div class="lp-se-activity-date">${new Date(a.activity_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
+              <div class="lp-se-activity-title">${a.title}</div>
+              <div class="lp-se-activity-desc">${a.description || ''}</div>
+            </div>
+          `).join('');
         }
       }
 

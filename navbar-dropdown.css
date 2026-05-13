@@ -1,0 +1,192 @@
+/* --- Aurora Glass Navbar Dropdown --- */
+.lp-dropdown {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.lp-dropdown-toggle {
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 0; /* Removed padding to align with sibling links */
+  transition: all 0.3s ease;
+  line-height: normal;
+}
+
+.lp-dropdown-toggle i {
+  font-size: 1.1rem;
+  transition: transform 0.3s ease;
+}
+
+.lp-dropdown:hover .lp-dropdown-toggle {
+  color: var(--lp-accent) !important;
+}
+
+.lp-dropdown:hover .lp-dropdown-toggle i {
+  transform: rotate(180deg);
+}
+
+.lp-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 25px); /* Increased gap to avoid overlapping navbar border */
+  left: 50%;
+  transform: translateX(-50%) translateY(15px);
+  background: rgba(10, 15, 28, 0.98);
+  backdrop-filter: blur(30px) saturate(200%);
+  -webkit-backdrop-filter: blur(30px) saturate(200%);
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  border-radius: 24px;
+  padding: 12px;
+  min-width: 280px;
+  list-style: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+  box-shadow: 
+    0 30px 60px -12px rgba(0, 0, 0, 0.6),
+    0 0 40px rgba(255, 215, 0, 0.05),
+    inset 0 0 1px 1px rgba(255, 255, 255, 0.1);
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Floating indicator arrow */
+.lp-dropdown-menu::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 12px;
+  height: 12px;
+  background: rgba(10, 15, 28, 0.98);
+  border-top: 1px solid rgba(255, 215, 0, 0.2);
+  border-left: 1px solid rgba(255, 215, 0, 0.2);
+}
+
+.lp-dropdown:hover .lp-dropdown-menu {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+.lp-dropdown-menu li {
+  width: 100%;
+}
+
+.lp-dropdown-menu a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 20px;
+  color: rgba(255, 255, 255, 0.85) !important;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  text-align: center;
+  border-radius: 18px;
+  position: relative;
+  gap: 4px;
+}
+
+.lp-dropdown-menu a i {
+  font-size: 1.4rem;
+  color: #ffd700;
+  transition: transform 0.4s ease;
+}
+
+.lp-dropdown-menu a::after {
+  display: none !important;
+}
+
+.lp-dropdown-menu a:hover {
+  background: rgba(255, 215, 0, 0.08);
+  color: #fff !important;
+  transform: scale(1.03);
+}
+
+.lp-dropdown-menu a:hover i {
+  transform: translateY(-3px) scale(1.1);
+}
+
+/* Animated Border Gradient */
+.lp-dropdown-menu::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 24px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.4), transparent 50%, rgba(255, 215, 0, 0.4));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* --- Scrolled State --- */
+.lp-navbar.scrolled .lp-dropdown-menu {
+  background: #ffffff;
+  border: 1px solid rgba(0, 51, 102, 0.08);
+  box-shadow: 0 20px 40px rgba(0, 51, 102, 0.12);
+}
+
+.lp-navbar.scrolled .lp-dropdown-menu::before {
+  background: #ffffff;
+  border-top: 1px solid rgba(0, 51, 102, 0.08);
+  border-left: 1px solid rgba(0, 51, 102, 0.08);
+}
+
+.lp-navbar.scrolled .lp-dropdown-menu a {
+  color: #1e293b !important;
+}
+
+.lp-navbar.scrolled .lp-dropdown-menu a:hover {
+  background: rgba(0, 74, 153, 0.04);
+  color: #004a99 !important;
+}
+
+.lp-navbar.scrolled .lp-dropdown-menu a i {
+  color: #004a99;
+}
+
+/* Mobile Adjustments */
+@media (max-width: 991px) {
+  .lp-dropdown { display: block; }
+  
+  .lp-dropdown-menu {
+    position: static;
+    transform: none !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    box-shadow: none !important;
+    border: none !important;
+    max-height: 0;
+    padding: 0 !important;
+    overflow: hidden;
+    transition: max-height 0.4s ease;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+  
+  .lp-dropdown-menu::before, 
+  .lp-dropdown-menu::after { display: none; }
+
+  .lp-dropdown:hover .lp-dropdown-menu {
+    max-height: 800px;
+    padding: 15px 0 !important;
+  }
+
+  .lp-dropdown-menu a {
+    flex-direction: row;
+    justify-content: flex-start;
+    padding: 12px 25px;
+    text-align: left;
+    gap: 15px;
+  }
+}
