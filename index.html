@@ -1407,6 +1407,36 @@
           </div>
 
           <script>
+            // Global SAS Utilities
+            async function sasFetch(action, params = {}) {
+              const urlString = window.ENV?.BACKEND_GAS_URL || 'https://script.google.com/macros/s/AKfycbyNmsUvDndrM5L2v_E3gJvM2jHqI1o30Tz8X-aI2H9vX-xYjZ0/exec';
+              try {
+                const url = new URL(urlString);
+                url.searchParams.append('action', action);
+                for (const [key, value] of Object.entries(params)) {
+                  url.searchParams.append(key, value);
+                }
+                const r = await fetch(url.toString());
+                return await r.json();
+              } catch (e) {
+                console.error("SAS Fetch Error:", e);
+                return { success: false, message: e.message };
+              }
+            }
+
+            const SAS_CACHE_TTL = 3600000;
+            function getSasCache(key) {
+              const item = localStorage.getItem(key);
+              if (!item) return null;
+              try {
+                const parsed = JSON.parse(item);
+                return parsed.data;
+              } catch(e) { return null; }
+            }
+            function setSasCache(key, data) {
+              localStorage.setItem(key, JSON.stringify({ timestamp: Date.now(), data: data }));
+            }
+
             async function loadLPServices() {
               const grid = document.getElementById('lp-services-grid');
               
@@ -1910,43 +1940,6 @@
     </div>
 
     <script>
-      async function sasFetch(action, params = {}) {
-        const urlString = window.ENV?.BACKEND_GAS_URL || 'https://script.google.com/macros/s/AKfycbyNmsUvDndrM5L2v_E3gJvM2jHqI1o30Tz8X-aI2H9vX-xYjZ0/exec';
-        if (!urlString) {
-          console.warn("Backend URL missing!");
-          return { success: false, message: "Backend URL missing" };
-        }
-        try {
-          const url = new URL(urlString);
-          url.searchParams.append('action', action);
-          for (const [key, value] of Object.entries(params)) {
-            url.searchParams.append(key, value);
-          }
-          const finalUrl = url.toString();
-          console.log("sasFetch: Fetching", finalUrl);
-          const r = await fetch(finalUrl);
-          return await r.json();
-        } catch (e) {
-          console.error("SAS Fetch Error:", e);
-          return { success: false, message: e.message };
-        }
-      }
-
-      const SAS_CACHE_TTL = 3600000; // 1 hour
-      function getSasCache(key) {
-        const item = localStorage.getItem(key);
-        if (!item) return null;
-        try {
-          const parsed = JSON.parse(item);
-          return parsed.data; // Return even if stale for SWR
-        } catch(e) { return null; }
-      }
-      function setSasCache(key, data) {
-        localStorage.setItem(key, JSON.stringify({ timestamp: Date.now(), data: data }));
-      }
-
-      window.loadServiceCategory = async () => {
-        const categoryView = document.getElementById('se-category-view');
       let seCurrentCategoryName = 'Services';
       let seCurrentOfficeId = null;
 
