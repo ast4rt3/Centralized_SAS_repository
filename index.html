@@ -1276,6 +1276,37 @@
   </style>
 
 
+  <!-- GLOBAL SAS UTILITIES -->
+  <script>
+    async function sasFetch(action, params = {}) {
+      const urlString = (window.ENV && window.ENV.BACKEND_GAS_URL) || 'https://script.google.com/macros/s/AKfycbyNmsUvDndrM5L2v_E3gJvM2jHqI1o30Tz8X-aI2H9vX-xYjZ0/exec';
+      try {
+        const url = new URL(urlString);
+        url.searchParams.append('action', action);
+        for (const [key, value] of Object.entries(params)) {
+          url.searchParams.append(key, value);
+        }
+        const r = await fetch(url.toString());
+        return await r.json();
+      } catch (e) {
+        console.error("SAS Fetch Error:", e);
+        return { success: false, message: e.message };
+      }
+    }
+
+    const SAS_CACHE_TTL = 3600000;
+    function getSasCache(key) {
+      const item = localStorage.getItem(key);
+      if (!item) return null;
+      try {
+        const parsed = JSON.parse(item);
+        return parsed.data;
+      } catch(e) { return null; }
+    }
+    function setSasCache(key, data) {
+      localStorage.setItem(key, JSON.stringify({ timestamp: Date.now(), data: data }));
+    }
+  </script>
 </head>
 
 <body>
@@ -1307,7 +1338,6 @@
                 Our Services <i class='bx bx-chevron-down'></i>
               </a>
               <ul class="lp-dropdown-menu" id="lp-services-dropdown">
-                <li><a href="#lp-services">All Services</a></li>
               </ul>
             </li>
             <li><a href="#lp-documents">Documents</a></li>
@@ -1407,36 +1437,6 @@
           </div>
 
           <script>
-            // Global SAS Utilities
-            async function sasFetch(action, params = {}) {
-              const urlString = window.ENV?.BACKEND_GAS_URL || 'https://script.google.com/macros/s/AKfycbyNmsUvDndrM5L2v_E3gJvM2jHqI1o30Tz8X-aI2H9vX-xYjZ0/exec';
-              try {
-                const url = new URL(urlString);
-                url.searchParams.append('action', action);
-                for (const [key, value] of Object.entries(params)) {
-                  url.searchParams.append(key, value);
-                }
-                const r = await fetch(url.toString());
-                return await r.json();
-              } catch (e) {
-                console.error("SAS Fetch Error:", e);
-                return { success: false, message: e.message };
-              }
-            }
-
-            const SAS_CACHE_TTL = 3600000;
-            function getSasCache(key) {
-              const item = localStorage.getItem(key);
-              if (!item) return null;
-              try {
-                const parsed = JSON.parse(item);
-                return parsed.data;
-              } catch(e) { return null; }
-            }
-            function setSasCache(key, data) {
-              localStorage.setItem(key, JSON.stringify({ timestamp: Date.now(), data: data }));
-            }
-
             async function loadLPServices() {
               const grid = document.getElementById('lp-services-grid');
               
@@ -1741,7 +1741,7 @@
                   <div class="lp-activity-info">
                     <div class="lp-activity-meta">
                       <span class="lp-activity-date">${new Date(act.activity_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                      <span class="lp-activity-office">${act.sas_offices?.name || 'SAS Office'}</span>
+                      <span class="lp-activity-office">${(act.sas_offices && act.sas_offices.name) || 'SAS Office'}</span>
                     </div>
                     <h3 class="lp-activity-title">${act.title}</h3>
                     <p class="lp-activity-snippet">${act.description || ''}</p>
@@ -2038,7 +2038,12 @@
         
         try {
           const res = await sasFetch('getDriveVacancies');
-          if (activeCategory !== seCurrentCategoryName) return;
+          // Double check category hasn't changed during fetch
+          const currentCat = localStorage.getItem('sas_selected_service_category');
+          if (activeCategory !== seCurrentCategoryName || currentCat !== activeCategory) {
+            console.log("[Career] Aborting render: Category changed during fetch");
+            return;
+          }
 
           if (res.success) {
             seCareerFolders = res.folders || [];
@@ -2296,6 +2301,14 @@
           window.location.hash = '#home';
         }
       };
+
+      // Ensure Our Services link navigates to the section
+      document.querySelector('.lp-dropdown-toggle')?.addEventListener('click', function(e) {
+        if (window.innerWidth > 991) {
+          // On desktop, navigate to the section
+          window.location.hash = 'lp-services';
+        }
+      });
     </script>
 
     <!-- Footer -->

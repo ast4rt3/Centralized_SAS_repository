@@ -4109,7 +4109,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <p class="post-desc" style="margin-bottom:12px;">${escapeHtml(post.description)}</p>
             <div class="portal-config-container">
               <div style="display:flex; gap:8px;">
-                <input type="url" class="portal-url-input" value="${window.tvPermanentUrl}" placeholder="Enter Portal URL (https://...)" style="flex: 1;">
+                <input type="text" class="portal-url-input" value="${window.tvPermanentUrl}" placeholder="Enter Portal URL (https://...)" style="flex: 1;">
                 <input type="number" class="portal-duration-input portal-url-input" value="${window.tvPermanentDuration || 60}" min="5" title="Duration in seconds" style="width: 80px; text-align: center;">
               </div>
               <button class="portal-save-btn">
@@ -4375,14 +4375,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 const originalHtml = portalSave.innerHTML;
                 portalSave.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> Syncing...";
                 try {
-                  const { error: err1 } = await supabase.from('sas_config').upsert({ key: 'tv_permanent_url', value: newUrl });
-                  const { error: err2 } = await supabase.from('sas_config').upsert({ key: 'tv_permanent_duration', value: String(newDuration) });
+                  const sessionData = localStorage.getItem('sas_user_data');
+                  if (!sessionData) throw new Error("Authentication required.");
+                  const userObj = JSON.parse(sessionData);
+
+                  const payload = {
+                    action: "updateTvConfig",
+                    username: userObj.username,
+                    token: userObj.token,
+                    url: newUrl,
+                    duration: newDuration
+                  };
+
+                  const r = await fetch(BACKEND_GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                  });
+                  const res = await r.json();
                   
-                  if (err1 || err2) throw new Error("Supabase sync failed");
-                  showToast("Portal settings updated globally!", "success");
+                  if (res.success) {
+                    showToast("Portal settings updated globally!", "success");
+                  } else {
+                    throw new Error(res.message || "Backend sync failed");
+                  }
                 } catch (e) {
                   console.error("TV Sync error:", e);
-                  showToast("Sync failed. Check connection.", "error");
+                  showToast(e.message || "Sync failed. Check connection.", "error");
                 } finally {
                   portalSave.disabled = false;
                   portalSave.innerHTML = originalHtml;
