@@ -2389,6 +2389,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentFiles = [];
     let isAppending = false;
     let previewCyclingTimer = null;
+    let isSubmitting = false;
 
     function scrollToModalBottom() {
       const modalBody = document.querySelector('#add-post-modal .modal-body');
@@ -3242,12 +3243,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (els.vStartHidden) els.vStartHidden.value = '';
         if (els.vEndHidden) els.vEndHidden.value = '';
 
-        // Reset transform state
+      // Reset transform state
         if (transformStates[scope]) {
           transformStates[scope] = { zoom: 1, x: 0, y: 0 };
           updateTransform(scope);
         }
       });
+
+      const successOverlay = document.getElementById('add-post-success');
+      if (successOverlay) successOverlay.classList.add('hidden');
 
       // Clear Upload Tab specific label
       const fileUploadLabel = document.getElementById('file-upload-label');
@@ -3331,6 +3335,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (form) {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
 
         const sessionData = localStorage.getItem('sas_user_data');
         if (!sessionData) return;
@@ -3406,6 +3411,7 @@ document.addEventListener('DOMContentLoaded', () => {
           );
 
           if (!confirmed) return;
+          isSubmitting = true;
           zzProgress.start();
 
           // Use stored token from session
@@ -3506,6 +3512,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
           if (responseData && responseData.success) {
             await zzProgress.done();
+            
+            // Show Success UI
+            const successOverlay = document.getElementById('add-post-success');
+            if (successOverlay) {
+              successOverlay.classList.remove('hidden');
+              await new Promise(res => setTimeout(res, 2000));
+            }
+
             modal.classList.add('hidden');
             window.resetAddPostForm();
             showToast(responseData.message || "Success!", 'success');
@@ -3514,12 +3528,18 @@ document.addEventListener('DOMContentLoaded', () => {
             throw new Error(responseData?.message || "Failed to post.");
           }
         } catch (err) {
-          zzProgress.reset();
           console.error("[Diagnostic] Final submission error:", err);
-          if (errorMsg) {
-            errorMsg.textContent = err.message || "An unexpected error occurred during submission.";
-            errorMsg.classList.remove('hidden');
+          
+          // Only reset/re-enable if it's NOT a potential success masked as error
+          if (!responseData || !responseData.success) {
+            zzProgress.reset();
+            if (errorMsg) {
+              errorMsg.textContent = err.message || "An unexpected error occurred during submission.";
+              errorMsg.classList.remove('hidden');
+            }
           }
+        } finally {
+          isSubmitting = false;
         }
       });
     }
