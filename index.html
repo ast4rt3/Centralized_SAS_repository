@@ -3745,9 +3745,22 @@
     }
   </style>
 
+  <!-- Floating Progress Indicator (for background uploads) -->
+  <div id="floating-progress-indicator" class="floating-progress hidden">
+    <div class="fp-header">
+      <div class="fp-title-row">
+        <div class="fp-spinner"></div>
+        <span class="fp-title">Syncing with Supabase...</span>
+      </div>
+      <span id="fp-percent" class="fp-percent">0%</span>
+    </div>
+    <div class="fp-bar-bg">
+      <div id="fp-bar-fill" class="fp-bar-fill" style="width: 0%"></div>
+    </div>
+  </div>
+
   <script src="env.js"></script>
   <script src="src/main.js" type="module"></script>
-
 </body>
 
 </html>

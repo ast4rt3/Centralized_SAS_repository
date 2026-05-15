@@ -1602,6 +1602,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let icon = 'ℹ️';
     if (type === 'success') icon = '✅';
     if (type === 'error') icon = '❌';
+    if (type === 'warning') icon = '⚠️';
 
     toast.innerHTML = `
       <span class="toast-icon">${icon}</span>
@@ -3378,27 +3379,58 @@ document.addEventListener('DOMContentLoaded', () => {
           start: () => {
             submitBtn.classList.add('active');
             submitBtn.disabled = true;
+            // Show floating indicator
+            const fp = document.getElementById('floating-progress-indicator');
+            if (fp) {
+              fp.classList.remove('hidden', 'hiding');
+              document.getElementById('fp-bar-fill').style.width = '0%';
+              document.getElementById('fp-percent').textContent = '0%';
+            }
+            // Close modal early for snappier feel
+            modal.classList.add('hidden');
           },
           update: (pct) => {
-            submitBtn.setAttribute('data-progress', Math.round(pct));
+            const rounded = Math.round(pct);
+            submitBtn.setAttribute('data-progress', rounded);
             submitBtn.style.setProperty('--zz-progress', pct);
+            
+            const fill = document.getElementById('fp-bar-fill');
+            const perc = document.getElementById('fp-percent');
+            if (fill) fill.style.width = rounded + '%';
+            if (perc) perc.textContent = rounded + '%';
           },
           done: () => {
             return new Promise(resolve => {
               submitBtn.classList.add('zz-button-progress-done');
-              setTimeout(resolve, 1000);
+              const fill = document.getElementById('fp-bar-fill');
+              const perc = document.getElementById('fp-percent');
+              if (fill) fill.style.width = '100%';
+              if (perc) perc.textContent = '100%';
+              
+              setTimeout(() => {
+                const fp = document.getElementById('floating-progress-indicator');
+                if (fp) {
+                  fp.classList.add('hiding');
+                  setTimeout(() => fp.classList.add('hidden'), 500);
+                }
+                // Refresh only the home area as requested
+                if (typeof fetchPosts === 'function') fetchPosts();
+                resolve();
+              }, 1000);
             });
           },
           reset: () => {
             submitBtn.classList.remove('active', 'zz-button-progress-done');
             submitBtn.textContent = origText;
             submitBtn.disabled = false;
+            const fp = document.getElementById('floating-progress-indicator');
+            if (fp) fp.classList.add('hidden');
           }
         };
 
-        if (errorMsg) errorMsg.classList.add('hidden');
-
+        let responseData = { success: false, message: "Submission failed or interrupted." };
         try {
+          if (errorMsg) errorMsg.classList.add('hidden');
           const userObj = JSON.parse(sessionData);
           const editTimestamp = form.getAttribute('data-edit-timestamp');
           const isEdit = !!editTimestamp;
@@ -3480,7 +3512,6 @@ document.addEventListener('DOMContentLoaded', () => {
           zzProgress.update(90);
           console.log(`[Diagnostic] Sending ${payload.action} to GAS...`, { ...payload, token: 'REDACTED' });
           
-          let responseData;
           try {
             const r = await fetch(BACKEND_GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
             responseData = await r.json();
@@ -3498,9 +3529,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
               if (postExists) {
                 console.log("[Diagnostic] Post verified in database! Recovery successful.");
-                responseData = { success: true, message: "Sync successful (recovered from network delay)." };
+                responseData = { success: true, message: "Post confirmed via background verification." };
               } else {
-                throw fetchErr;
+                // One more try after a longer delay
+                await new Promise(res => setTimeout(res, 3000));
+                const freshData2 = await fetchPosts();
+                const postExists2 = freshData2 && freshData2.posts && freshData2.posts.some(p => 
+                  p.title === title && (p.description === desc || p.imageUrl === cloudinaryUrl)
+                );
+                if (postExists2) {
+                  responseData = { success: true, message: "Post confirmed via secondary verification." };
+                } else {
+                  throw fetchErr;
+                }
               }
             } else {
               throw fetchErr;
@@ -3514,16 +3555,12 @@ document.addEventListener('DOMContentLoaded', () => {
             await zzProgress.done();
             
             // Show Success UI
-            const successOverlay = document.getElementById('add-post-success');
-            if (successOverlay) {
-              successOverlay.classList.remove('hidden');
-              await new Promise(res => setTimeout(res, 2000));
+            if (responseData.syncError) {
+              showToast(responseData.message || "Partial Success: Sheet updated but sync warning.", 'warning');
+            } else {
+              showToast(responseData.message || "Success!", 'success');
             }
-
-            modal.classList.add('hidden');
             window.resetAddPostForm();
-            showToast(responseData.message || "Success!", 'success');
-            fetchPosts();
           } else {
             throw new Error(responseData?.message || "Failed to post.");
           }
@@ -3570,6 +3607,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // We proceed if data is success, even if posts are empty (to show permanent slides or admin tools)
       if (data.success && data.posts) {
+        if (data.warning) {
+          console.warn("[Diagnostic] Backend Fallback:", data.warning);
+          showToast(data.warning, 'warning');
+        }
         // Determine role to decide which renderer to use
         let role = 'user';
         const sessionData = localStorage.getItem('sas_user_data');
