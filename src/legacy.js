@@ -1105,7 +1105,8 @@ document.addEventListener('DOMContentLoaded', () => {
     lpNavMenu?.querySelectorAll('a').forEach(link => {
       link.addEventListener('click', (e) => {
         const href = link.getAttribute('href');
-        if (href.startsWith('#lp-')) {
+        // Close menu on click, EXCEPT for the dropdown toggle which has its own logic in index.html
+        if (href.startsWith('#lp-') && !link.classList.contains('lp-dropdown-toggle')) {
           lpNavMenu.classList.remove('active');
         }
       });

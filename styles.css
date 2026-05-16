@@ -5280,6 +5280,25 @@ body.lp-mode .main-wrapper {
     transition: all 0.3s ease;
   }
 
+  
+  .lp-btn-login {
+    width: 220px;
+    justify-content: center;
+    position: relative;
+    padding: 14px 25px !important;
+    margin: 10px auto;
+    display: flex;
+    align-items: center;
+  }
+
+  .lp-btn-login i {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.4rem;
+  }
+
   .lp-nav-menu.active {
     display: flex;
   }
@@ -5318,6 +5337,10 @@ body.lp-mode .main-wrapper {
   /* Default/Dark state mobile menu text */
   .lp-nav-links a {
     color: #fff !important;
+    display: block;
+    width: 100%;
+    padding: 12px 0;
+    text-align: center;
   }
 
   .lp-nav-links li {

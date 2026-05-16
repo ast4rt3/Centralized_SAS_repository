@@ -2302,11 +2302,40 @@
         }
       };
 
-      // Ensure Our Services link navigates to the section
-      document.querySelector('.lp-dropdown-toggle')?.addEventListener('click', function(e) {
+      // Handle Our Services: Single Click (Toggle) vs Double Click (Navigate) on Mobile
+      let lpDropdownClickCount = 0;
+      let lpDropdownClickTimer = null;
+      const dropdownToggle = document.querySelector('.lp-dropdown-toggle');
+
+      dropdownToggle?.addEventListener('click', function(e) {
         if (window.innerWidth > 991) {
-          // On desktop, navigate to the section
           window.location.hash = 'lp-services';
+          return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+        
+        lpDropdownClickCount++;
+        if (lpDropdownClickCount === 1) {
+          lpDropdownClickTimer = setTimeout(() => {
+            // SINGLE CLICK -> Toggle Dropdown
+            this.closest('.lp-dropdown')?.classList.toggle('open');
+            lpDropdownClickCount = 0;
+          }, 300); // 300ms window for double click
+        } else if (lpDropdownClickCount === 2) {
+          clearTimeout(lpDropdownClickTimer);
+          // DOUBLE CLICK -> Navigate
+          window.location.hash = 'lp-services';
+          lpDropdownClickCount = 0;
+          
+          // Close mobile menu
+          const navMenu = document.getElementById('lp-nav-menu');
+          if (navMenu?.classList.contains('active')) {
+            navMenu.classList.remove('active');
+            const mobileToggle = document.getElementById('lp-mobile-toggle');
+            if (mobileToggle) mobileToggle.querySelector('i').className = 'bx bx-menu';
+          }
         }
       });
     </script>
