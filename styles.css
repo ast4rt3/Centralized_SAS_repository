@@ -4644,6 +4644,14 @@ body.lp-mode.scrolled {
   scrollbar-color: var(--lp-primary) transparent !important;
 }
 
+body.lp-mode::-webkit-scrollbar {
+  width: 12px !important;
+}
+
+body.lp-mode::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
 body.lp-mode::-webkit-scrollbar-thumb {
   background-color: var(--nbsc-gold) !important;
   border-radius: 20px !important;
