@@ -1090,32 +1090,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const lpMobileToggle = document.getElementById('lp-mobile-toggle');
   const lpNavMenu = document.getElementById('lp-nav-menu');
 
-  // Initialize Landing Page UI
-  if (landingPage) {
-    lpLoginBtn?.addEventListener('click', () => {
-      window.location.hash = 'login';
-      if (loginOverlay) loginOverlay.classList.remove('hidden');
-    });
-
-    lpMobileToggle?.addEventListener('click', () => {
-      lpNavMenu?.classList.toggle('active');
-    });
-
-    // Smooth scroll for LP links
-    lpNavMenu?.querySelectorAll('a').forEach(link => {
-      link.addEventListener('click', (e) => {
-        const href = link.getAttribute('href');
-        // Close menu on click, EXCEPT for the dropdown toggle which has its own logic in index.html
-        if (href.startsWith('#lp-') && !link.classList.contains('lp-dropdown-toggle')) {
-          lpNavMenu.classList.remove('active');
-        }
-      });
-    });
-  }
-
-  window.showLandingPage = showLandingPage;
-  window.hideLandingPage = hideLandingPage;
-
   // New UI elements for login/user menu
   const loginOverlay = document.getElementById('login-overlay');
   const loginForm = document.getElementById('login-form');
@@ -1133,6 +1107,42 @@ document.addEventListener('DOMContentLoaded', () => {
   const backToLoginBtn = document.getElementById('back-to-login-btn');
   const registerError = document.getElementById('register-error');
   const registerSuccess = document.getElementById('register-success');
+
+  // Initialize Landing Page UI
+  if (landingPage) {
+    lpLoginBtn?.addEventListener('click', () => {
+      window.location.hash = 'login';
+      if (loginOverlay) loginOverlay.classList.remove('hidden');
+    });
+
+    lpMobileToggle?.addEventListener('click', () => {
+      lpNavMenu?.classList.toggle('active');
+    });
+
+    // Click outside to close overlays
+    [loginOverlay, registerOverlay].forEach(overlay => {
+      overlay?.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          window.location.hash = 'home';
+          overlay.classList.add('hidden');
+        }
+      });
+    });
+
+    // Smooth scroll for LP links
+    lpNavMenu?.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', (e) => {
+        const href = link.getAttribute('href');
+        // Close menu on click, EXCEPT for the dropdown toggle which has its own logic in index.html
+        if (href.startsWith('#lp-') && !link.classList.contains('lp-dropdown-toggle')) {
+          lpNavMenu.classList.remove('active');
+        }
+      });
+    });
+  }
+
+  window.showLandingPage = showLandingPage;
+  window.hideLandingPage = hideLandingPage;
 
   const btnSidebarToggle = document.getElementById('sidebar-toggle');
   const btnAdminExitTv = document.getElementById('admin-exit-tv');
