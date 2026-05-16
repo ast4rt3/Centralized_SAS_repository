@@ -127,6 +127,12 @@ export function syncFromHash(systems) {
         } else if (mainContent && explorerView) {
           mainContent.style.display = 'block';
           explorerView.style.display = 'none';
+
+          // Sync navbar transparency state when returning to main landing content
+          const navbar = document.querySelector('.lp-navbar');
+          if (navbar && window.scrollY < 40) {
+            navbar.classList.remove('scrolled');
+          }
         }
       }
       return;

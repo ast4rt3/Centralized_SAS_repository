@@ -4864,7 +4864,7 @@ body.lp-mode .main-wrapper {
 .lp-glow {
   position: absolute;
   border-radius: 50%;
-  filter: blur(100px);
+  filter: blur(30px);
   opacity: 0.15;
   animation: pulse 10s infinite alternate;
 }
@@ -4872,13 +4872,13 @@ body.lp-mode .main-wrapper {
 .lp-glow-1 {
   top: -10%; left: -10%;
   width: 500px; height: 500px;
-  background: #3a0ca3; /* Midnight Purple */
+  background: var(--lp-primary);
 }
 
 .lp-glow-2 {
   bottom: -10%; right: -10%;
   width: 600px; height: 600px;
-  background: #4361ee; /* Modern Blue */
+  background: var(--lp-accent);
 }
 
 @keyframes pulse {
