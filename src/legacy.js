@@ -2067,7 +2067,29 @@ document.addEventListener('DOMContentLoaded', () => {
       window.tvTheaterEnabled = tvTheaterEnabled;
       localStorage.setItem('sas_tv_theater_enabled', tvTheaterEnabled);
       syncTvSettingsUI();
-      if (window.setTvActiveSlide) window.setTvActiveSlide(window.currentTvSlide);
+      
+      // Apply CSS Fullscreen classes in-place on the active slide to prevent video reload/seeking!
+      const activeSlide = document.querySelector('.home-news-slide.is-active');
+      if (activeSlide) {
+        const videoEl = activeSlide.querySelector('video.home-news-image');
+        const iframeEl = activeSlide.querySelector('iframe.yt-video-frame') || activeSlide.querySelector('iframe[id^="ytplayer-"]');
+        const fbIframeEl = activeSlide.querySelector('.fb-video-container') || activeSlide.querySelector('iframe[src*="facebook.com"]');
+        const driveIframeEl = activeSlide.querySelector('iframe[src*="drive.google.com"]');
+        const websiteIframeEl = activeSlide.querySelector('iframe.website-slide-frame');
+        const isVideoSlide = (videoEl || iframeEl || fbIframeEl || driveIframeEl || websiteIframeEl);
+
+        if (isVideoSlide) {
+          if (tvTheaterEnabled && document.body.classList.contains('tv-mode')) {
+            document.body.classList.add('fullscreen-active');
+            document.body.classList.add('theater-mode');
+          } else {
+            document.body.classList.remove('fullscreen-active');
+            document.body.classList.remove('theater-mode');
+          }
+          // Dispatch resize event to let third-party elements (like FB/YT API) adjust if needed
+          window.dispatchEvent(new Event('resize'));
+        }
+      }
     });
   }
 
@@ -4222,7 +4244,7 @@ document.addEventListener('DOMContentLoaded', () => {
           } else if (ytId) {
             let muteVal = tvAudioEnabled ? '0' : '1';
             let originUrl = encodeURIComponent(window.location.origin);
-            let ytParams = `autoplay=1&mute=${muteVal}&controls=0&enablejsapi=1&origin=${originUrl}&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&showinfo=0&autohide=1`;
+            let ytParams = `autoplay=0&mute=${muteVal}&controls=0&enablejsapi=1&origin=${originUrl}&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&showinfo=0&autohide=1`;
             if (startVal) ytParams += `&start=${startVal}`;
             if (endVal) ytParams += `&end=${endVal}`;
             // Adjust parameters based on whether we use a proxy or official YT
@@ -4237,7 +4259,7 @@ document.addEventListener('DOMContentLoaded', () => {
               if (!isOfficialYT) {
                 // Public proxies often don't support YT's enablejsapi or complex flags
                 // We only keep essential ones: autoplay, mute, start, end
-                let proxyParams = `autoplay=1&mute=${muteVal}`;
+                let proxyParams = `autoplay=0&mute=${muteVal}`;
                 if (startVal) proxyParams += `&start=${startVal}`;
                 if (endVal) proxyParams += `&end=${endVal}`;
                 finalParams = proxyParams;
@@ -4972,6 +4994,21 @@ document.addEventListener('DOMContentLoaded', () => {
             oldVideo.pause();
             oldVideo.muted = true;
           }
+          if (oldIframe) {
+            const iframeId = oldIframe.id;
+            const player = ytPlayers[iframeId];
+            if (player && typeof player.pauseVideo === 'function') {
+              try { player.pauseVideo(); } catch (e) { }
+            }
+          }
+          const fbContainer = s.querySelector('.fb-video-container');
+          if (fbContainer) {
+            const fbId = fbContainer.id;
+            const player = window.fbPlayers[fbId];
+            if (player && typeof player.pause === 'function') {
+              try { player.pause(); } catch (e) { }
+            }
+          }
           // Clear multi-image interval for inactive slide
           if (s._multiImageInterval) {
             clearInterval(s._multiImageInterval);
@@ -5203,8 +5240,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (tvAudioEnabled) event.target.unMute();
                 else event.target.mute();
                 if (curStart > 0) event.target.seekTo(curStart);
-                event.target.playVideo();
-                startYTPolling(event.target);
+                
+                // Only autoplay if this slide is still the active slide!
+                if (window.currentTvSlide === index) {
+                  event.target.playVideo();
+                  startYTPolling(event.target);
+                } else {
+                  event.target.pauseVideo();
+                }
               },
               'onStateChange': function (event) {
                 if (event.data === YT.PlayerState.ENDED) {
