@@ -113,6 +113,13 @@ export function syncFromHash(systems) {
         document.body.classList.add('lp-mode');
         document.body.classList.remove('system-mode', 'tv-mode', 'dashboard-backdrop');
         
+        // Hide nav toggle if user is not logged in
+        const navToggle = document.getElementById('nav-toggle');
+        if (navToggle) {
+          navToggle.classList.add('hidden');
+          navToggle.hidden = true;
+        }
+        
         // Handle Landing Page internal routing
         const mainContent = document.getElementById('lp-main-content');
         const explorerView = document.getElementById('lp-service-explorer-view');

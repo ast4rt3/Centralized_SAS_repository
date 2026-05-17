@@ -1173,6 +1173,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (sb) sb.classList.add('hidden');
       if (ct) ct.classList.add('hidden');
       if (lo) lo.classList.add('hidden');
+      if (navToggle) {
+        navToggle.classList.add('hidden');
+        navToggle.hidden = true;
+      }
     }
   }
 
@@ -1599,7 +1603,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (userRole === 'admin' || userRole === 'superadmin') {
       adminTvNav = `
         <div class="nav-section-label">Admin Tools</div>
-        <a href="#home" class="nav-item" id="nav-toggle-tv" data-page="home">
+        <a href="#home" class="nav-item" id="nav-toggle-tv" data-page="tv-view">
           <span class="nav-icon">${SYSTEM_ICONS['tv-view']}</span>
           <span class="nav-label">TV View</span>
         </a>
