@@ -2542,6 +2542,22 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
+    const advToggle = document.getElementById('advanced-settings-toggle');
+    const advContent = document.getElementById('advanced-settings-content');
+    if (advToggle && advContent) {
+      advToggle.addEventListener('click', () => {
+        const isCollapsed = advContent.classList.contains('hidden');
+        if (isCollapsed) {
+          advContent.classList.remove('hidden');
+          advToggle.classList.add('active');
+          scrollToModalBottom();
+        } else {
+          advContent.classList.add('hidden');
+          advToggle.classList.remove('active');
+        }
+      });
+    }
+
     let videoDuration = 0;
     let previewYtPlayer = null;
     let previewFbPlayer = null;
@@ -3480,6 +3496,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const err = document.getElementById('post-error');
       if (err) err.classList.add('hidden');
+
+      // Reset Advanced Settings Accordion
+      const aToggle = document.getElementById('advanced-settings-toggle');
+      const aContent = document.getElementById('advanced-settings-content');
+      if (aToggle && aContent) {
+        aContent.classList.add('hidden');
+        aToggle.classList.remove('active');
+      }
     };
 
     if (addPostBtn && modal) {
@@ -4347,7 +4371,22 @@ document.addEventListener('DOMContentLoaded', () => {
               if (document.getElementById('post-start-date')) document.getElementById('post-start-date').value = (post.startDate || '').replace(' ', 'T');
               if (document.getElementById('post-end-date')) document.getElementById('post-end-date').value = (post.endDate || '').replace(' ', 'T');
               const dSlider = document.getElementById('post-display-duration');
-              if (dSlider) dSlider.value = parseInt(post.displayDuration) || 25;
+              if (dSlider) {
+                dSlider.value = parseInt(post.displayDuration) || 25;
+                const dValDisp = document.getElementById('post-display-duration-val');
+                if (dValDisp) dValDisp.textContent = dSlider.value + 's';
+              }
+
+              // Auto-expand advanced settings if any non-default advanced value is present
+              const hasAdvancedValue = post.startDate || post.endDate || (post.displayDuration && parseInt(post.displayDuration) !== 25);
+              if (hasAdvancedValue) {
+                const advToggle = document.getElementById('advanced-settings-toggle');
+                const advContent = document.getElementById('advanced-settings-content');
+                if (advToggle && advContent) {
+                  advContent.classList.remove('hidden');
+                  advToggle.classList.add('active');
+                }
+              }
 
               // Preserve media elements if not modified
               form.setAttribute('data-existing-image-url', post.imageUrl || '');
