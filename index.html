@@ -3378,6 +3378,68 @@
     </div>
   </main>
 
+  <!-- Device Choice Modal for Mobile Admin -->
+  <div id="device-choice-modal" class="modal-overlay hidden">
+    <div class="modal-card device-choice-card">
+      <div class="modal-body device-choice-body">
+        <div class="device-choice-header">
+          <div class="device-choice-glow-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="pulse-icon">
+              <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+              <line x1="12" y1="18" x2="12.01" y2="18"></line>
+            </svg>
+          </div>
+          <h3 class="modal-title">Mobile Access Detected</h3>
+          <p class="device-choice-subtitle">Select how you want to proceed on this device</p>
+        </div>
+
+        <div class="device-options-grid">
+          <!-- Option 1: Scanner -->
+          <button type="button" id="choice-scanner-btn" class="device-option-tile scanner-tile">
+            <div class="tile-icon-wrapper">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                <circle cx="12" cy="13" r="4"></circle>
+              </svg>
+            </div>
+            <div class="tile-content">
+              <h4>Attendance Scanner</h4>
+              <p>Quickly scan student credentials and log attendance logs using your camera.</p>
+            </div>
+            <div class="tile-hover-arrow">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </div>
+          </button>
+
+          <!-- Option 2: Dashboard -->
+          <button type="button" id="choice-dashboard-btn" class="device-option-tile dashboard-tile">
+            <div class="tile-icon-wrapper">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="9"></rect>
+                <rect x="14" y="3" width="7" height="5"></rect>
+                <rect x="14" y="12" width="7" height="9"></rect>
+                <rect x="3" y="16" width="7" height="5"></rect>
+              </svg>
+            </div>
+            <div class="tile-content">
+              <h4>Admin Dashboard</h4>
+              <p>Full control over news broadcasts, schedules, and management tools.</p>
+            </div>
+            <div class="tile-hover-arrow">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Custom Confirmation Modal -->
   <div id="confirm-modal" class="modal-overlay hidden">
     <div class="modal-card confirm-card">
