@@ -1,7 +1,15 @@
 const https = require('https');
 
-const url = "https://wdesptodbtoibkxirveb.supabase.co/rest/v1/sas_accounts?select=username,role,status";
-const key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndkZXNwdG9kYnRvaWJreGlydmViIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjY0NTU1NCwiZXhwIjoyMDkyMjIxNTU0fQ.bvRMkV_NE2XQUktJUrKll22Utoh06034HsWZcneTQK0";
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error("Error: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables must be set.");
+  process.exit(1);
+}
+
+const url = `${supabaseUrl}/rest/v1/sas_accounts?select=username,role,status`;
+const key = supabaseKey;
 
 const req = https.get(url, {
   headers: {
