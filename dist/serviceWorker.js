@@ -53,6 +53,22 @@ self.addEventListener('fetch', event => {
   // Only handle GET requests
   if (req.method !== 'GET') return;
 
+  // ---- Strategy: NETWORK FIRST → cache fallback ----
+  // Used for: HTML documents (always get the latest deployment index.html)
+  if (req.destination === 'document' || url.pathname === '/' || url.pathname.endsWith('index.html')) {
+    event.respondWith(
+      fetch(req)
+        .then(res => {
+          if (!res || !res.ok) return res;
+          const clone = res.clone();
+          caches.open(CACHE_VERSION).then(cache => cache.put(req, clone));
+          return res;
+        })
+        .catch(() => caches.match(req).then(cached => cached || caches.match('./index.html')))
+    );
+    return;
+  }
+
    // ---- Strategy: NETWORK FIRST → cache fallback ----
    // Used for: Configuration files (always get latest)
    const configFiles = ['env.js', 'manifest.webmanifest', 'version.json'];
