@@ -48,7 +48,29 @@ export function showPage(pageId) {
 export function setActiveNav(pageId) {
   const navItems = document.querySelectorAll('.nav-item');
   navItems.forEach(el => {
-    el.classList.toggle('active', el.getAttribute('data-page') === pageId);
+    const isActive = el.getAttribute('data-page') === pageId;
+    el.classList.toggle('active', isActive);
+    
+    // Automatically expand parent section if this item is active
+    if (isActive) {
+      const parentSection = el.closest('.nav-section');
+      if (parentSection && parentSection.classList.contains('collapsed')) {
+        parentSection.classList.remove('collapsed');
+        
+        // Remove from localStorage preference to persist the expanded state
+        try {
+          const sectionId = parentSection.getAttribute('data-section-id');
+          const currentCollapsed = JSON.parse(localStorage.getItem('sas_sidebar_collapsed_sections') || '[]');
+          const index = currentCollapsed.indexOf(sectionId);
+          if (index > -1) {
+            currentCollapsed.splice(index, 1);
+            localStorage.setItem('sas_sidebar_collapsed_sections', JSON.stringify(currentCollapsed));
+          }
+        } catch (e) {
+          console.error('[Navigation] Failed to update collapsible state:', e);
+        }
+      }
+    }
   });
 }
 

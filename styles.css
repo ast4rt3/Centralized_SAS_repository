@@ -231,13 +231,83 @@ body.tv-mode .sidebar {
   overflow-y: auto;
 }
 
+/* Sidebar Nav Section Collapsible Styles */
+.nav-section {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 6px;
+}
+
+.nav-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 1rem 0.4rem;
+  margin: 0 0.5rem;
+  cursor: pointer;
+  user-select: none;
+  border-radius: 8px;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.nav-section-header:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.nav-section-header:hover .nav-section-label,
+.nav-section-header:hover .nav-section-chevron {
+  color: #ffffff;
+}
+
 .nav-section-label {
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.72);
-  padding: 0.75rem 1rem 0.35rem;
+  color: rgba(255, 255, 255, 0.6);
+  padding: 0 !important;
+  margin: 0 !important;
+  transition: color 0.2s;
+  white-space: nowrap;
 }
+
+.nav-section-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.5);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s;
+}
+
+.nav-section.collapsed .nav-section-chevron {
+  transform: rotate(-90deg);
+}
+
+.nav-section-items {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  max-height: 1000px;
+  opacity: 1;
+}
+
+.nav-section.collapsed .nav-section-items {
+  max-height: 0 !important;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Sidebar collapsed overrides */
+.sidebar.collapsed .nav-section-header {
+  display: none !important;
+}
+
+.sidebar.collapsed .nav-section-items {
+  max-height: none !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
 
 .nav-item {
   display: flex;

@@ -1609,11 +1609,22 @@ document.addEventListener('DOMContentLoaded', () => {
     let adminTvNav = '';
     if (userRole === 'admin' || userRole === 'superadmin') {
       adminTvNav = `
-        <div class="nav-section-label">Admin Tools</div>
-        <a href="#home" class="nav-item" id="nav-toggle-tv" data-page="tv-view">
-          <span class="nav-icon">${SYSTEM_ICONS['tv-view']}</span>
-          <span class="nav-label">TV View</span>
-        </a>
+        <div class="nav-section" data-section-id="admin-tools">
+          <div class="nav-section-header">
+            <span class="nav-section-label">Admin Tools</span>
+            <span class="nav-section-chevron">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </span>
+          </div>
+          <div class="nav-section-items">
+            <a href="#home" class="nav-item" id="nav-toggle-tv" data-page="tv-view">
+              <span class="nav-icon">${SYSTEM_ICONS['tv-view']}</span>
+              <span class="nav-label">TV View</span>
+            </a>
+          </div>
+        </div>
       `;
     }
 
@@ -1624,6 +1635,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     navDynamic.innerHTML = adminTvNav + sectionNames
       .map(function (sectionName) {
+        var sectionSlug = sectionName.toLowerCase().replace(/[^a-z0-9]/g, '-');
         var itemsHtml = groups[sectionName]
           .map(function (s) {
             return (
@@ -1633,9 +1645,58 @@ document.addEventListener('DOMContentLoaded', () => {
             );
           })
           .join('');
-        return '<div class="nav-section-label">' + escapeHtml(sectionName) + '</div>' + itemsHtml;
+        return (
+          '<div class="nav-section" data-section-id="' + sectionSlug + '">' +
+            '<div class="nav-section-header">' +
+              '<span class="nav-section-label">' + escapeHtml(sectionName) + '</span>' +
+              '<span class="nav-section-chevron">' +
+                '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">' +
+                  '<polyline points="6 9 12 15 18 9"></polyline>' +
+                '</svg>' +
+              '</span>' +
+            '</div>' +
+            '<div class="nav-section-items">' + itemsHtml + '</div>' +
+          '</div>'
+        );
       })
       .join('');
+
+    // Restore expand/collapse states from localStorage and bind toggle event listeners
+    try {
+      const collapsedSections = JSON.parse(localStorage.getItem('sas_sidebar_collapsed_sections') || '[]');
+      navDynamic.querySelectorAll('.nav-section').forEach(function (section) {
+        const sectionId = section.getAttribute('data-section-id');
+        const header = section.querySelector('.nav-section-header');
+        
+        if (collapsedSections.indexOf(sectionId) > -1) {
+          section.classList.add('collapsed');
+        }
+        
+        if (header) {
+          header.addEventListener('click', function () {
+            const sidebar = section.closest('.sidebar');
+            if (sidebar && sidebar.classList.contains('collapsed')) return;
+            
+            section.classList.toggle('collapsed');
+            
+            const currentCollapsed = JSON.parse(localStorage.getItem('sas_sidebar_collapsed_sections') || '[]');
+            if (section.classList.contains('collapsed')) {
+              if (currentCollapsed.indexOf(sectionId) === -1) {
+                currentCollapsed.push(sectionId);
+              }
+            } else {
+              const index = currentCollapsed.indexOf(sectionId);
+              if (index > -1) {
+                currentCollapsed.splice(index, 1);
+              }
+            }
+            localStorage.setItem('sas_sidebar_collapsed_sections', JSON.stringify(currentCollapsed));
+          });
+        }
+      });
+    } catch (e) {
+      console.error('[Sidebar] Failed to restore collapsible state:', e);
+    }
 
     // Re-bind listeners
     navDynamic.querySelectorAll('.nav-item').forEach(function (a) {
