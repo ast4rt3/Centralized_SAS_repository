@@ -30,18 +30,16 @@
   <link rel="stylesheet" href="styles.css?v=24.1">
   <link rel="stylesheet" href="navbar-dropdown.css?v=1.0">
   <script>
-    // TEMPORARILY DISABLED: Service Worker causing caching issues for new apps
-    // Automatically register Service Worker for offline caching
-    // if ('serviceWorker' in navigator) {
-    //   window.addEventListener('load', () => {
-    //     navigator.serviceWorker.register('./serviceWorker.js')
-    //       .then(reg => {
-    //         console.log('SW registered:', reg.scope);
-    //         reg.update();
-    //       })
-    //       .catch(err => console.warn('SW registration failed:', err));
-    //   });
-    // }
+    // Automatically unregister stale Service Workers to prevent caching loops
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        for (let registration of registrations) {
+          registration.unregister().then(() => {
+            console.log('Stale Service Worker successfully purged.');
+          });
+        }
+      }).catch(err => console.warn('SW purge failed:', err));
+    }
   </script>
 
   <!-- FAILSAFE (KILL SWITCH) INTERCEPTOR -->
