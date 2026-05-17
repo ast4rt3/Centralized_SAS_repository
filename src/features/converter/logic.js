@@ -73,6 +73,9 @@ function renderToolWorkspace(toolId, container) {
     case 'csv-json':
       renderCSVJSONWorkspace(container);
       break;
+    case 'qr-gen':
+      renderQRWorkspace(container);
+      break;
     default:
       container.innerHTML = '<p style="color: #94a3b8;">Work in progress...</p>';
   }
@@ -1677,5 +1680,168 @@ function renderPDFCSVWorkspace(container) {
     dropzone.style.background = "rgba(0,0,0,0.15)";
     if (e.dataTransfer.files.length > 0) loadFile(e.dataTransfer.files[0]);
   });
+}
+
+
+/* ==========================================================================
+   TOOL 8: STANDALONE QR CODE GENERATOR (LINK TO QR CODE ONLY)
+   ========================================================================== */
+function renderQRWorkspace(container) {
+  container.innerHTML = `
+    <div class="tool-workspace-container" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; min-height: 380px; max-width: 500px; margin: 0 auto; padding: 20px;">
+      <div style="text-align: center; width: 100%;">
+        <p style="color: #94a3b8; font-size: 0.95rem; margin-top: 0; margin-bottom: 20px; font-family: 'Outfit', sans-serif;">
+          Convert any web link, URL, or plain text into a high-resolution QR Code image instantly.
+        </p>
+      </div>
+
+      <div style="width: 100%; display: flex; flex-direction: column; gap: 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 20px; border-radius: 16px; box-sizing: border-box;">
+        <!-- Link Input -->
+        <div class="input-group" style="margin-bottom: 0;">
+          <label style="display:block; margin-bottom:8px; font-size:0.85rem; color:#94a3b8; font-weight: 600; font-family: 'Outfit', sans-serif;">Link / URL</label>
+          <input type="url" id="qr-input-url" style="width:100%; padding:12px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.1); border-radius:8px; color:#ffffff; font-size:0.95rem; box-sizing:border-box; font-family: 'Outfit', sans-serif;" placeholder="https://example.com/your-link" value="https://nbsc-sas.kesug.com">
+        </div>
+      </div>
+
+      <!-- QR Live Preview Frame -->
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 20px; margin-top: 10px; width: 100%;">
+        <div id="qr-live-card" style="width: 220px; height: 220px; background: #ffffff; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); box-sizing: border-box; transition: transform 0.3s ease;">
+          <img id="qr-card-img-preview" src="" style="width: 100%; height: 100%; object-fit: contain;" alt="QR Code">
+        </div>
+
+        <!-- Actions Row -->
+        <div style="display: flex; gap: 12px; width: 100%; justify-content: center; max-width: 340px;">
+          <button id="qr-download-btn" class="btn" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; flex: 1; justify-content: center; box-shadow: 0 4px 12px rgba(6,182,212,0.25);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Download QR Code
+          </button>
+
+          <button id="qr-publish-btn" class="btn" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: white; padding: 12px 14px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; transition: all 0.2s;" title="Publish directly to Bulletin TV Board">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+              <line x1="4" y1="22" x2="4" y2="15"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Get DOM handles
+  const inputUrl = document.getElementById('qr-input-url');
+  const imgPreview = document.getElementById('qr-card-img-preview');
+  const downloadBtn = document.getElementById('qr-download-btn');
+  const publishBtn = document.getElementById('qr-publish-btn');
+
+  // Update image preview URL
+  function updateImageSrc() {
+    const data = (inputUrl.value || '').trim();
+    if (data) {
+      imgPreview.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(data)}`;
+    } else {
+      imgPreview.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https%3A%2F%2Fnbsc-sas.kesug.com`;
+    }
+  }
+
+  // Handle input change
+  inputUrl.addEventListener('input', updateImageSrc);
+
+  // Handle Download Image (raw high-resolution 400x400 QR code image)
+  downloadBtn.addEventListener('click', async () => {
+    const urlVal = (inputUrl.value || '').trim();
+    if (!urlVal) {
+      if (window.showToast) window.showToast("Please provide a link/text for the QR code", "error");
+      return;
+    }
+
+    try {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      // Raw QR image only
+      canvas.width = 400;
+      canvas.height = 400;
+      
+      // Draw white background
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, 400, 400);
+      
+      // Draw QR code image
+      const qrImg = new Image();
+      qrImg.crossOrigin = "anonymous";
+      qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(urlVal)}`;
+      
+      await new Promise((resolve, reject) => {
+        qrImg.onload = () => {
+          ctx.drawImage(qrImg, 10, 10, 380, 380);
+          resolve();
+        };
+        qrImg.onerror = () => reject(new Error("Failed to load QR code image"));
+      });
+
+      // Convert to Blob & download
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `qr_code_${Date.now()}.png`;
+        link.click();
+        if (window.showToast) window.showToast("QR Code image generated and downloaded successfully!", "success");
+      }, 'image/png');
+
+    } catch (err) {
+      if (window.showToast) window.showToast("Failed to compile QR image: " + err.message, "error");
+    }
+  });
+
+  // Handle Publish directly to TV bulletin board
+  publishBtn.addEventListener('click', () => {
+    const urlVal = (inputUrl.value || '').trim();
+    if (!urlVal) {
+      if (window.showToast) window.showToast("Please provide a link/text first", "error");
+      return;
+    }
+
+    const adminAddPostBtn = document.getElementById('add-post-btn');
+    if (!adminAddPostBtn || adminAddPostBtn.classList.contains('hidden')) {
+      if (window.showToast) window.showToast("Please log in as Admin to publish announcements!", "warning");
+      return;
+    }
+
+    // Set value in the legacy QR fields
+    const postQrUrl = document.getElementById('post-qr-url');
+    const postQrTitle = document.getElementById('post-qr-title');
+    const postQrDesc = document.getElementById('post-qr-desc');
+    if (postQrUrl) postQrUrl.value = urlVal;
+    if (postQrTitle) postQrTitle.value = "Scan QR Code";
+    if (postQrDesc) postQrDesc.value = "Scan to view link";
+
+    // Trigger update of modal's live QR preview
+    const legacyQrUrl = document.getElementById('post-qr-url');
+    if (legacyQrUrl) {
+      const event = new Event('input', { bubbles: true });
+      legacyQrUrl.dispatchEvent(event);
+    }
+
+    // Switch tab to QR
+    const qrTabBtn = document.querySelector('.upload-tab[data-tab="qr"]');
+    if (qrTabBtn) qrTabBtn.click();
+
+    // Open add post modal
+    const modal = document.getElementById('add-post-modal');
+    if (modal) modal.classList.remove('hidden');
+
+    // Switch hash to '#home' since that's where the dashboard panels reside
+    window.location.hash = '#home';
+
+    if (window.showToast) window.showToast("Announcements dashboard opened and QR code pre-filled!", "success");
+  });
+
+  // Init live preview image
+  updateImageSrc();
 }
 
