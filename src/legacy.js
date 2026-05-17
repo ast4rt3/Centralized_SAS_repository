@@ -48,6 +48,12 @@ function extractCloudinaryId(url) {
   return idWithExt.split('.')[0];
 }
 
+// Global Cloudinary Utility: Sanitize disabled Cloudinary URLs to active one
+function sanitizeCloudinaryUrl(url) {
+  if (!url || typeof url !== 'string') return url;
+  return url.replace(/dj8ugtlrl/gi, 'dbytj36mv');
+}
+
 // DB state
 let chatInitialized = false;
 
@@ -4106,6 +4112,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function renderPosts(posts, container, role) {
     role = (role || '').toLowerCase();
+
+    // Sanitize any legacy Cloudinary URLs
+    if (Array.isArray(posts)) {
+      posts.forEach(p => {
+        if (p.imageUrl) {
+          p.imageUrl = sanitizeCloudinaryUrl(p.imageUrl);
+        }
+      });
+    }
     // Prevent duplicate dots/tickers on re-render by clearing elements leaked to body
     const existingDots = document.body.querySelectorAll('.home-news-dots');
     existingDots.forEach(el => el.remove());
@@ -6749,7 +6764,7 @@ function initLpActivities() {
      if (data) {
        const activities = data.map(act => ({
           ...act,
-          imageUrl: act.image_url, // map snake_case to camelCase
+          imageUrl: sanitizeCloudinaryUrl(act.image_url), // map snake_case to camelCase and sanitize
           createdAt: new Date(act.created_at).getTime()
        }));
        
@@ -7074,6 +7089,7 @@ function initLpActivitiesAdmin(userObj) {
       currentList.innerHTML = '<div class="lp-act-empty-msg">Could not load activities.</div>';
     } else {
       lpActivitiesSnapshot = (data || []).reduce((acc, act) => {
+        act.imageUrl = act.image_url ? sanitizeCloudinaryUrl(act.image_url) : '';
         acc[act.id] = act;
         return acc;
       }, {});
