@@ -172,11 +172,11 @@ async function fetchSpreadsheetUsers() {
             unread: 0,
             el: null,
             history: [],
-            profilePic: userObj.profilePic || "",
+            profilePic: userObj.profilePic ? sanitizeCloudinaryUrl(userObj.profilePic) : "",
             displayName: userObj.displayName || username
           };
         } else {
-          contactsMap[username].profilePic = contactsMap[username].profilePic || userObj.profilePic || "";
+          contactsMap[username].profilePic = contactsMap[username].profilePic || (userObj.profilePic ? sanitizeCloudinaryUrl(userObj.profilePic) : "");
           contactsMap[username].displayName = contactsMap[username].displayName || userObj.displayName || username;
         }
       }
@@ -675,11 +675,11 @@ function initFullMessenger() {
             history: [],
             isOnline: false,
             displayName: u.display_name || u.username,
-            profilePic: u.profile_pic || ""
+            profilePic: u.profile_pic ? sanitizeCloudinaryUrl(u.profile_pic) : ""
           };
         } else {
           contactsMap[u.username].displayName = contactsMap[u.username].displayName || u.display_name || u.username;
-          contactsMap[u.username].profilePic = contactsMap[u.username].profilePic || u.profile_pic || "";
+          contactsMap[u.username].profilePic = contactsMap[u.username].profilePic || (u.profile_pic ? sanitizeCloudinaryUrl(u.profile_pic) : "");
         }
       });
     } else {
@@ -1895,7 +1895,7 @@ document.addEventListener('DOMContentLoaded', () => {
             sessionData.displayName = dbUser.display_name;
             updated = true;
           }
-          const dbProfilePic = dbUser.profile_pic || "";
+          const dbProfilePic = dbUser.profile_pic ? sanitizeCloudinaryUrl(dbUser.profile_pic) : "";
           if (sessionData.profilePic !== dbProfilePic) {
             sessionData.profilePic = dbProfilePic;
             updated = true;
@@ -2198,7 +2198,7 @@ document.addEventListener('DOMContentLoaded', () => {
               role: responseData.role,
               token: responseData.token || responseData.jwt || "",
               displayName: responseData.displayName || responseData.username,
-              profilePic: responseData.profilePic || "",
+              profilePic: responseData.profilePic ? sanitizeCloudinaryUrl(responseData.profilePic) : "",
               theme: responseData.theme || "light"
             };
             // console.log("[Auth] Saving session object:", sessionObj);
@@ -6469,13 +6469,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await res.json();
 
       if (data.success) {
+        const sanitizedPic = data.profilePic ? sanitizeCloudinaryUrl(data.profilePic) : "";
         // Update local storage
-        sessionData.profilePic = data.profilePic;
+        sessionData.profilePic = sanitizedPic;
         localStorage.setItem('sas_user_data', JSON.stringify(sessionData));
 
         // Update current user in contactsMap if exists
         if (contactsMap[sessionData.username]) {
-          contactsMap[sessionData.username].profilePic = data.profilePic;
+          contactsMap[sessionData.username].profilePic = sanitizedPic;
         }
 
         // Refresh user list and messenger UI
@@ -6485,16 +6486,16 @@ document.addEventListener('DOMContentLoaded', () => {
           // Refresh the active avatar in chat if currently chatting
           const activeAvatar = document.getElementById('active-avatar');
           if (activeAvatar) {
-            activeAvatar.innerHTML = `<img src="${data.profilePic}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+            activeAvatar.innerHTML = `<img src="${sanitizedPic}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
           }
         }
 
         // Also refresh the user's own preview in settings modal
         const settingsPreview = document.getElementById('settings-profile-pic-preview');
         const fallbackInitial = (sessionData.displayName || sessionData.username || "?").charAt(0).toUpperCase();
-        if (settingsPreview) settingsPreview.innerHTML = `<img src="${data.profilePic}" alt="Profile" onerror="this.outerHTML='<span>${fallbackInitial}</span>';">`;
+        if (settingsPreview) settingsPreview.innerHTML = `<img src="${sanitizedPic}" alt="Profile" onerror="this.outerHTML='<span>${fallbackInitial}</span>';">`;
         const settingsAvatar = document.getElementById('settings-preview-avatar');
-        if (settingsAvatar) settingsAvatar.innerHTML = `<img src="${data.profilePic}" alt="Profile" onerror="this.outerHTML='<span>${fallbackInitial}</span>';">`;
+        if (settingsAvatar) settingsAvatar.innerHTML = `<img src="${sanitizedPic}" alt="Profile" onerror="this.outerHTML='<span>${fallbackInitial}</span>';">`;
 
         showToast('Profile picture updated!', 'success');
       } else {

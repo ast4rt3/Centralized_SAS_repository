@@ -23,6 +23,11 @@ function optimizeText(text) {
   return optimized;
 }
 
+function sanitizeCloudinaryUrl(url) {
+  if (!url || typeof url !== 'string') return url;
+  return url.replace(/dj8ugtlrl/gi, 'dbytj36mv');
+}
+
 /**
  * Synchronize user metadata (Display names and Profile pics) from Supabase
  */
@@ -38,7 +43,7 @@ async function syncUserMetadata() {
         };
       }
       contactsMap[user.username].displayName = user.display_name;
-      contactsMap[user.username].profilePic = user.profile_pic;
+      contactsMap[user.username].profilePic = user.profile_pic ? sanitizeCloudinaryUrl(user.profile_pic) : '';
     });
     
     // Refresh UI if necessary
