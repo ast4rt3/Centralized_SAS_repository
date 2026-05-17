@@ -1,8 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+
 /* landing-template/style.css */
 :root {
-  --primary: #003366;
-  --primary-light: #004a99;
-  --accent: #f0ad4e;
+  --primary: #002858;
+  --primary-light: #003a6a;
+  --accent: #deae20;
   --text-dark: #1e293b;
   --text-muted: #64748b;
   --bg-light: #f8fafc;
@@ -18,7 +20,7 @@
 }
 
 body {
-  font-family: 'Inter', 'Montserrat', sans-serif;
+  font-family: 'Poppins', sans-serif;
   line-height: 1.6;
   color: var(--text-dark);
   background-color: var(--white);
@@ -56,7 +58,7 @@ img {
   font-weight: 800;
   color: var(--primary);
   margin-bottom: 10px;
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Poppins', sans-serif;
 }
 
 .section-header p {
@@ -103,7 +105,7 @@ img {
   font-weight: 800;
   font-size: 1.5rem;
   color: var(--primary);
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Poppins', sans-serif;
 }
 
 .nav-links {
@@ -181,7 +183,7 @@ img {
   font-size: 4rem;
   font-weight: 800;
   margin-bottom: 20px;
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Poppins', sans-serif;
   line-height: 1.1;
 }
 

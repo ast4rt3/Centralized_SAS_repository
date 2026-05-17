@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+
 html {
   scroll-behavior: smooth;
 }
@@ -14,24 +16,24 @@ html {
   --header-height: 56px;
 
   /* Theme tokens copied from PWA aesthetic */
-  --nbsc-blue: #004a99;
-  --nbsc-dark: #001a33;
-  --nbsc-mid: #003366;
-  --nbsc-gold: #f0ad4e;
+  --nbsc-blue: #003a6a;
+  --nbsc-dark: #002858;
+  --nbsc-mid: #003a6a;
+  --nbsc-gold: #deae20;
 
-  --bg-main: #f0f2f5;
-  --bg-sidebar: linear-gradient(180deg, var(--nbsc-mid) 0%, var(--nbsc-dark) 100%);
+  --bg-main: #f4f6f9;
+  --bg-sidebar: linear-gradient(180deg, var(--nbsc-dark) 0%, #001e44 100%);
   --bg-card: #ffffff;
-  --border: rgba(0, 26, 51, 0.12);
-  --text: #0b1220;
-  --text-muted: rgba(0, 26, 51, 0.7);
+  --border: rgba(0, 40, 88, 0.08);
+  --text: #001835;
+  --text-muted: rgba(0, 40, 88, 0.65);
   --accent: var(--nbsc-blue);
-  --accent-hover: #0a63c7;
-  --nav-hover: rgba(240, 173, 78, 0.18);
-  --font-sans: 'Montserrat', system-ui, -apple-system, sans-serif;
+  --accent-hover: #002858;
+  --nav-hover: rgba(222, 174, 32, 0.12);
+  --font-sans: 'Poppins', system-ui, -apple-system, sans-serif;
 
-  --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-  --shadow-soft: 0 4px 15px rgba(0, 0, 0, 0.08);
+  --shadow: 0 10px 30px rgba(0, 40, 88, 0.05);
+  --shadow-soft: 0 4px 15px rgba(0, 40, 88, 0.04);
 
   /* Missing variable used in several components */
   --border-color: var(--border);
@@ -4640,9 +4642,9 @@ body.dark-theme .db-table .type-badge.admin {
    Modular, prefixed with lp- to avoid conflicts with main portal styles.
    ========================================================================== */
 .landing-page {
-  --lp-primary: #003366;
-  --lp-primary-light: #004a99;
-  --lp-accent: #f0ad4e;
+  --lp-primary: #002858;
+  --lp-primary-light: #003a6a;
+  --lp-accent: #deae20;
   --lp-text-dark: #1e293b;
   --lp-text-muted: #64748b;
   --lp-bg-light: #f8fafc;
@@ -4650,7 +4652,7 @@ body.dark-theme .db-table .type-badge.admin {
   --lp-white: #ffffff;
   --lp-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Poppins', sans-serif;
   color: var(--lp-text-dark);
   background-color: var(--lp-white);
   line-height: 1.6;
@@ -5939,7 +5941,7 @@ body.lp-mode .main-wrapper {
   border: none;
   border-radius: 50px;
   padding: 16px 36px;
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Poppins', sans-serif;
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
@@ -6021,7 +6023,7 @@ body.lp-mode .main-wrapper {
   border: 1px solid rgba(255,255,255,0.2);
   border-radius: 10px;
   padding: 8px 16px;
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Poppins', sans-serif;
   font-size: 0.9rem;
   font-weight: 700;
   cursor: pointer;
@@ -6038,7 +6040,7 @@ body.lp-mode .main-wrapper {
   align-items: center;
   gap: 12px;
   color: #fff;
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Poppins', sans-serif;
   font-size: 1.05rem;
   font-weight: 800;
   letter-spacing: 0.3px;
@@ -6052,7 +6054,7 @@ body.lp-mode .main-wrapper {
 }
 
 .lp-all-act-count {
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Poppins', sans-serif;
   font-size: 0.85rem;
   color: rgba(255,255,255,0.6);
   font-weight: 600;
@@ -6098,7 +6100,7 @@ body.lp-mode .main-wrapper {
 .lp-all-act-search-wrap input {
   border: none;
   background: transparent;
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Poppins', sans-serif;
   font-size: 0.95rem;
   color: #1e293b;
   width: 100%;
@@ -6113,7 +6115,7 @@ body.lp-mode .main-wrapper {
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 10px 14px;
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Poppins', sans-serif;
   font-size: 0.9rem;
   color: #1e293b;
   background: #f1f5f9;
@@ -6258,7 +6260,7 @@ body.lp-mode .main-wrapper {
   border-radius: 50px;
   border: 1.5px solid #e2e8f0;
   background: #fff;
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Poppins', sans-serif;
   font-size: 0.85rem;
   font-weight: 700;
   color: #64748b;
@@ -6274,7 +6276,7 @@ body.lp-mode .main-wrapper {
   border: 1.5px solid #e2e8f0;
   border-radius: 10px;
   padding: 8px 14px;
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Poppins', sans-serif;
   font-size: 0.85rem;
   font-weight: 600;
   color: #1e293b;
@@ -6360,7 +6362,7 @@ body.lp-mode .main-wrapper {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   width: 100%; padding: 10px; border-radius: 10px;
   background: #f8fafc; border: 1.5px solid #e2e8f0;
-  font-family: 'Montserrat', sans-serif; font-size: 0.85rem; font-weight: 700;
+  font-family: 'Poppins', sans-serif; font-size: 0.85rem; font-weight: 700;
   color: #374151; cursor: pointer; text-decoration: none;
   transition: all 0.2s;
 }

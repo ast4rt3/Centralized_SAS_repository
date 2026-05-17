@@ -5656,6 +5656,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const cloudName = targetCloud || window.ENV?.CLOUDINARY_CLOUD_NAME;
       const isLegacy = cloudName === window.ENV?.OLD_CLOUDINARY_CLOUD_NAME;
 
+      if (isLegacy) {
+        cloudinaryOldStorageInfo = { usedText: 'Disabled / Offline', ratio: 0 };
+        return;
+      }
+
       if (!BACKEND_GAS_URL || !BACKEND_GAS_URL.startsWith('https://')) {
         setCloudinaryUsageFallback('N/A');
         return;
@@ -5827,32 +5832,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadMultimediaDatabase() {
       if (!elements.mediaGrid) return;
-      elements.mediaGrid.innerHTML = '<div class="db-media-loading"><div class="spinner"></div><span>Scanning Cloudinary repositories...</span></div>';
+      elements.mediaGrid.innerHTML = '<div class="db-media-loading"><div class="spinner"></div><span>Scanning Cloudinary repository...</span></div>';
 
-      const selectedValue = elements.mediaAccountSelect?.value || 'all';
-      const activeCloud = window.ENV?.CLOUDINARY_CLOUD_NAME;
-      const legacyCloud = window.ENV?.OLD_CLOUDINARY_CLOUD_NAME;
+      const activeCloud = window.ENV?.CLOUDINARY_CLOUD_NAME || 'dbytj36mv';
 
       try {
         let activeRes = { success: true, resources: [] };
-        let legacyRes = { success: true, resources: [] };
 
-        if (selectedValue === 'all' || selectedValue === activeCloud) {
-          const res = await fetch(BACKEND_GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'listMultimedia', cloudName: activeCloud }) });
-          activeRes = await res.json();
-        }
-
-        if (legacyCloud && (selectedValue === 'all' || selectedValue === legacyCloud)) {
-          const res = await fetch(BACKEND_GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'listMultimedia', cloudName: legacyCloud }) });
-          legacyRes = await res.json();
-        }
+        const res = await fetch(BACKEND_GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'listMultimedia', cloudName: activeCloud }) });
+        activeRes = await res.json();
 
         let allResources = [];
         if (activeRes.success) {
           allResources.push(...(activeRes.resources || []).map(r => ({ ...r, accountLabel: 'Active', cloudName: activeCloud })));
-        }
-        if (legacyRes.success) {
-          allResources.push(...(legacyRes.resources || []).map(r => ({ ...r, accountLabel: 'Legacy', cloudName: legacyCloud })));
         }
 
         if (allResources.length > 0 && allResources[0].secure_url) {
@@ -5860,7 +5852,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (allResources.length === 0) {
-          elements.mediaGrid.innerHTML = '<div class="db-media-empty">No assets found in any Cloudinary account.</div>';
+          elements.mediaGrid.innerHTML = '<div class="db-media-empty">No assets found in active Cloudinary account.</div>';
           return;
         }
 
@@ -5904,7 +5896,7 @@ document.addEventListener('DOMContentLoaded', () => {
         checkDatabaseStatus(storageCheckDb, storagePath),
         checkSupabaseStatus(),
         checkCloudinaryStatus(window.ENV?.CLOUDINARY_CLOUD_NAME),
-        checkCloudinaryStatus(window.ENV?.OLD_CLOUDINARY_CLOUD_NAME)
+        Promise.resolve('Disabled / Offline')
       ]);
       lastStatusSnapshot = { gasState, fbMsgState, fbStoreState, supabaseState, cloudinaryState, cloudinaryOldState, storagePath };
 
@@ -5912,7 +5904,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       await Promise.all([
         loadCloudinaryUsageOverview(window.ENV?.CLOUDINARY_CLOUD_NAME),
-        loadCloudinaryUsageOverview(window.ENV?.OLD_CLOUDINARY_CLOUD_NAME),
+        Promise.resolve(),
         loadSupabaseUsageOverview()
       ]);
 
@@ -7179,18 +7171,20 @@ function initLpActivitiesAdmin(userObj) {
           if (act.imageUrl) {
             const publicId = extractCloudinaryId(act.imageUrl);
             if (publicId) {
-              const cloudName = act.imageUrl.includes('dbytj36mv') ? 'dbytj36mv' : 'dj8ugtlrl';
-              const sessionData = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
-              const userObj = sessionData ? JSON.parse(sessionData) : null;
-              if (userObj) {
-                await fetch(BACKEND_GAS_URL, {
-                  method: 'POST',
-                  body: JSON.stringify({
-                    action: 'deleteMultimedia',
-                    publicId: publicId,
-                    cloudName: cloudName
-                  })
-                });
+              const isLegacy = !act.imageUrl.includes('dbytj36mv');
+              if (!isLegacy) {
+                const sessionData = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
+                const userObj = sessionData ? JSON.parse(sessionData) : null;
+                if (userObj) {
+                  await fetch(BACKEND_GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                      action: 'deleteMultimedia',
+                      publicId: publicId,
+                      cloudName: 'dbytj36mv'
+                    })
+                  });
+                }
               }
             }
           }
