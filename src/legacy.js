@@ -3797,7 +3797,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let role = 'user';
         const sessionData = localStorage.getItem('sas_user_data');
         if (sessionData) {
-          try { role = JSON.parse(sessionData).role; } catch (e) { }
+          try { role = (JSON.parse(sessionData).role || 'user').toLowerCase(); } catch (e) { }
         }
 
         // --- PHASE 13: TV SYNC LOGIC ---
@@ -3902,6 +3902,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderPosts(posts, container, role) {
+    role = (role || '').toLowerCase();
     // Prevent duplicate dots/tickers on re-render by clearing elements leaked to body
     const existingDots = document.body.querySelectorAll('.home-news-dots');
     existingDots.forEach(el => el.remove());
@@ -4232,7 +4233,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const urlLower = displayImageUrl.toLowerCase();
 
         let imgHtml = '';
-        if (displayImageUrl && displayImageUrl.trim() !== '') {
+        if (post.type === 'website') {
+          imgHtml = `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #0f172a; color: #facc15; border: 2px solid #facc15; border-radius: 8px;">
+            <div style="text-align: center;">
+              <i class='bx bx-tv' style="font-size: 40px; margin-bottom: 8px;"></i>
+              <div style="font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">System Portal</div>
+            </div>
+          </div>`;
+        } else if (displayImageUrl && displayImageUrl.trim() !== '') {
           // Parse saved values. Check if it's a legacy value (cover/contain) or the new zoom format (scale number)
           let parsedPos = post.imagePosition || '50% 50%'; // Legacy default
           let isLegacySize = (post.imageSize === 'cover' || post.imageSize === 'contain' || !post.imageSize);
@@ -4271,14 +4279,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const ytId = getYouTubeVideoId(displayImageUrl);
           const fbEmbedUrl = getFacebookVideoUrl(displayImageUrl);
 
-          if (post.type === 'website') {
-            imgHtml = `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #0f172a; color: #facc15; border: 2px solid #facc15; border-radius: 8px;">
-              <div style="text-align: center;">
-                <i class='bx bx-tv' style="font-size: 40px; margin-bottom: 8px;"></i>
-                <div style="font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">System Portal</div>
-              </div>
-            </div>`;
-          } else if (ytId) {
+          if (ytId) {
             imgHtml = `<img src="https://img.youtube.com/vi/${ytId}/maxresdefault.jpg" class="post-image" style="${styleStr}" loading="lazy" onerror="this.src='https://img.youtube.com/vi/${ytId}/hqdefault.jpg'">`;
           } else if (fbEmbedUrl) {
             imgHtml = `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #000; color: white;">
