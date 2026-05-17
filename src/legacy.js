@@ -735,6 +735,19 @@ function initFullMessenger() {
 const CLOUDINARY_CLOUD_NAME = window.ENV?.CLOUDINARY_CLOUD_NAME || ""; // e.g. "yourname"
 const CLOUDINARY_UPLOAD_PRESET = window.ENV?.CLOUDINARY_UPLOAD_PRESET || ""; // e.g. "sas_uploads" (Must be Unsigned)
 
+window.onYouTubeIframeAPIReady = function() {
+  console.log('[YouTube API] YouTube Iframe API is fully ready!');
+  // If we are currently on a YouTube slide and the player hasn't been initialized yet, initialize it now!
+  if (typeof window.currentTvSlide !== 'undefined' && window.setTvActiveSlide) {
+    console.log('[YouTube API] Re-initializing active slide with ready YT API...');
+    try {
+      window.setTvActiveSlide(window.currentTvSlide);
+    } catch (e) {
+      console.error('[YouTube API] Error re-activating current slide:', e);
+    }
+  }
+};
+
 // Load YouTube IFrame APIs
 if (!window.YT) {
   var tag = document.createElement('script');
@@ -744,8 +757,10 @@ if (!window.YT) {
 }
 
 // Global TV Settings State
-let tvAudioEnabled = localStorage.getItem('sas_tv_audio_enabled') === 'true';
-let tvTheaterEnabled = localStorage.getItem('sas_tv_theater_enabled') === 'true'; // Default to non-fullscreen for VIDEOS
+let tvAudioEnabled = localStorage.getItem('sas_tv_audio_enabled') !== 'false'; // Default to true
+let tvTheaterEnabled = localStorage.getItem('sas_tv_theater_enabled') === 'true'; // Default to false
+window.tvAudioEnabled = tvAudioEnabled;
+window.tvTheaterEnabled = tvTheaterEnabled;
 
 // Offline banner — automatically shown/hidden based on connectivity
 (function () {
@@ -1186,8 +1201,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnTvTheater = document.getElementById('btn-tv-theater');
   const btnTvHeaderToggle = document.getElementById('btn-tv-header-toggle');
 
-  let tvAudioEnabled = localStorage.getItem('sas_tv_audio_enabled') !== 'false'; // Default to true
-  let tvTheaterEnabled = localStorage.getItem('sas_tv_theater_enabled') === 'true'; // Default to false
+
 
   // Scroll listener for landing page navbar
   window.addEventListener('scroll', () => {
@@ -1261,6 +1275,45 @@ document.addEventListener('DOMContentLoaded', () => {
            window.tvPermanentDuration = parseInt(value) || 60;
            if (typeof fetchPosts === 'function') fetchPosts();
          }
+      })
+      .subscribe();
+
+    // 3. Realtime Posts Listener (watches all DB changes to sas_posts)
+    supabase
+      .channel('tv-posts-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sas_posts' }, payload => {
+          console.log('[Realtime] sas_posts changed! Refreshing posts...');
+          if (typeof fetchPosts === 'function') fetchPosts();
+      })
+      .subscribe();
+
+    // 4. Realtime Sync Broadcast Listener (watches live WebSocket broadcasts for posts and config updates)
+    supabase
+      .channel('tv-sync-broadcast')
+      .on('broadcast', { event: 'config-updated' }, payload => {
+          console.log('[Realtime] Config updated via broadcast! Payload:', payload);
+          if (payload && payload.payload) {
+            window.tvPermanentUrl = payload.payload.url;
+            window.tvPermanentDuration = parseInt(payload.payload.duration) || 60;
+            if (typeof fetchPosts === 'function') fetchPosts();
+          }
+      })
+      .on('broadcast', { event: 'posts-updated' }, payload => {
+          console.log('[Realtime] Posts updated via broadcast! Payload:', payload);
+          if (payload && payload.payload && payload.payload.data) {
+            const freshData = payload.payload.data;
+            if (freshData.posts) {
+              console.log('[Realtime] Consuming fresh posts data directly from broadcast payload!');
+              if (freshData.tvPermanentUrl !== undefined) {
+                window.tvPermanentUrl = freshData.tvPermanentUrl;
+                window.tvPermanentDuration = freshData.tvPermanentDuration || 60;
+              }
+              window.tvPostsDataHash = JSON.stringify(freshData.posts) + "_" + (window.tvPermanentUrl || "") + "_" + (window.tvPermanentDuration || 60);
+              if (typeof renderPosts === 'function') renderPosts(freshData.posts);
+              return;
+            }
+          }
+          if (typeof fetchPosts === 'function') fetchPosts();
       })
       .subscribe();
   }
@@ -1960,16 +2013,58 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnTvAudio) {
     btnTvAudio.addEventListener('click', () => {
       tvAudioEnabled = !tvAudioEnabled;
+      window.tvAudioEnabled = tvAudioEnabled;
       localStorage.setItem('sas_tv_audio_enabled', tvAudioEnabled);
       syncTvSettingsUI();
-      // Apply to any running videos immediately if possible
-      if (window.setTvActiveSlide) window.setTvActiveSlide(window.currentTvSlide);
+      
+      // Apply to any running videos immediately in-place (no disruptive seeking or restarts!)
+      try {
+        const activeSlide = document.querySelector('.home-news-slide.is-active');
+        if (activeSlide) {
+          // 1. Native Video
+          const videoEl = activeSlide.querySelector('video.home-news-image');
+          if (videoEl) {
+            videoEl.muted = !tvAudioEnabled;
+          }
+          // 2. YouTube Iframe Player (Mute/Unmute all registered players in-place)
+          if (ytPlayers) {
+            Object.keys(ytPlayers).forEach(id => {
+              const player = ytPlayers[id];
+              if (player && typeof player.mute === 'function') {
+                try {
+                  if (tvAudioEnabled) player.unMute();
+                  else player.mute();
+                } catch (ytErr) {
+                  console.warn("[TV Audio] Error unmuting/muting YT player:", id, ytErr);
+                }
+              }
+            });
+          }
+          // 3. Facebook Video (Mute/Unmute all registered players in-place)
+          if (window.fbPlayers) {
+            Object.keys(window.fbPlayers).forEach(id => {
+              const player = window.fbPlayers[id];
+              if (player && typeof player.mute === 'function') {
+                try {
+                  if (tvAudioEnabled) player.unmute();
+                  else player.mute();
+                } catch (fbErr) {
+                  console.warn("[TV Audio] Error unmuting/muting FB player:", id, fbErr);
+                }
+              }
+            });
+          }
+        }
+      } catch (e) {
+        console.error("[TV Audio] Error applying in-place volume toggle:", e);
+      }
     });
   }
 
   if (btnTvTheater) {
     btnTvTheater.addEventListener('click', () => {
       tvTheaterEnabled = !tvTheaterEnabled;
+      window.tvTheaterEnabled = tvTheaterEnabled;
       localStorage.setItem('sas_tv_theater_enabled', tvTheaterEnabled);
       syncTvSettingsUI();
       if (window.setTvActiveSlide) window.setTvActiveSlide(window.currentTvSlide);
@@ -3730,7 +3825,8 @@ document.addEventListener('DOMContentLoaded', () => {
               showToast(responseData.message || "Post submitted successfully!", 'success');
             }
             window.resetAddPostForm();
-            setTimeout(() => { if (typeof fetchPosts === 'function') fetchPosts(); }, 2000);
+            broadcastSyncEvent('posts-updated');
+            if (typeof fetchPosts === 'function') fetchPosts();
           } else {
             // GAS returned success:false — show the real reason as a warning, not a crash
             const reason = responseData?.message || "Unknown server error.";
@@ -3759,6 +3855,26 @@ document.addEventListener('DOMContentLoaded', () => {
           isSubmitting = false;
         }
       });
+    }
+  }
+
+  function broadcastSyncEvent(event, payload = {}) {
+    try {
+      if (supabase) {
+        const broadcastChan = supabase.channel('tv-sync-broadcast');
+        broadcastChan.subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+            await broadcastChan.send({
+              type: 'broadcast',
+              event: event,
+              payload: payload
+            });
+            console.log(`[Broadcast] Successfully sent event "${event}" to WebSockets!`);
+          }
+        });
+      }
+    } catch (e) {
+      console.error(`[Broadcast] Failed to send event "${event}":`, e);
     }
   }
 
@@ -3798,6 +3914,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (data.tvPermanentUrl !== undefined) {
           window.tvPermanentUrl = data.tvPermanentUrl;
           window.tvPermanentDuration = data.tvPermanentDuration || 60;
+        }
+
+        // If we are an Admin, broadcast the fresh posts data to all TVs in real-time over WebSockets!
+        const sessionDataObj = localStorage.getItem('sas_user_data');
+        if (sessionDataObj) {
+          try {
+            const userObj = JSON.parse(sessionDataObj);
+            const userRole = (userObj.role || 'user').toLowerCase();
+            if (userRole === 'admin' || userRole === 'superadmin' || userRole === 'uploader') {
+              broadcastSyncEvent('posts-updated', { data: data });
+            }
+          } catch (broadcastErr) {
+            console.error("[Broadcast] Error broadcasting fresh posts:", broadcastErr);
+          }
         }
 
         // Determine role to decide which renderer to use
@@ -3904,6 +4034,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await r.json();
       if (res.success) {
         console.log("Post auto-expired successfully:", timestamp);
+        broadcastSyncEvent('posts-updated');
         // Refresh the posts list to remove the expired post from all views
         if (typeof fetchPosts === 'function') fetchPosts();
       } else {
@@ -4089,8 +4220,11 @@ document.addEventListener('DOMContentLoaded', () => {
               </div>
             `;
           } else if (ytId) {
-            let ytParams = `autoplay=1&mute=1&controls=0&enablejsapi=1&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&showinfo=0&autohide=1`;
+            let muteVal = tvAudioEnabled ? '0' : '1';
+            let originUrl = encodeURIComponent(window.location.origin);
+            let ytParams = `autoplay=1&mute=${muteVal}&controls=0&enablejsapi=1&origin=${originUrl}&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&showinfo=0&autohide=1`;
             if (startVal) ytParams += `&start=${startVal}`;
+            if (endVal) ytParams += `&end=${endVal}`;
             // Adjust parameters based on whether we use a proxy or official YT
             let finalParams = ytParams;
             let embedBase = "https://www.youtube.com/embed/";
@@ -4098,12 +4232,16 @@ document.addEventListener('DOMContentLoaded', () => {
             if (window.ENV && window.ENV.YOUTUBE_PROXY_URL && window.ENV.YOUTUBE_PROXY_URL.trim() !== '') {
               embedBase = window.ENV.YOUTUBE_PROXY_URL;
               if (!embedBase.endsWith('/')) embedBase += '/';
-              // Public proxies often don't support YT's enablejsapi or complex flags
-              // We only keep essential ones: autoplay, mute, start, end
-              let proxyParams = `autoplay=1&mute=1`;
-              if (startVal) proxyParams += `&start=${startVal}`;
-              if (endVal) proxyParams += `&end=${endVal}`;
-              finalParams = proxyParams;
+              // Check if proxy is a known official YouTube domain (like youtube-nocookie.com)
+              const isOfficialYT = embedBase.includes('youtube.com') || embedBase.includes('youtube-nocookie.com') || embedBase.includes('youtu.be');
+              if (!isOfficialYT) {
+                // Public proxies often don't support YT's enablejsapi or complex flags
+                // We only keep essential ones: autoplay, mute, start, end
+                let proxyParams = `autoplay=1&mute=${muteVal}`;
+                if (startVal) proxyParams += `&start=${startVal}`;
+                if (endVal) proxyParams += `&end=${endVal}`;
+                finalParams = proxyParams;
+              }
             }
 
             imgHtml = `
@@ -4602,6 +4740,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log("[Diagnostic] GAS Response for deletePost:", res);
                 if (res.success) {
                   showToast(res.message || "Post deleted successfully", 'success');
+                  broadcastSyncEvent('posts-updated');
                   fetchPosts();
                 } else {
                   showToast(res.message || "Failed to delete.", 'error');
@@ -4655,6 +4794,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     window.tvPermanentUrl = newUrl;
                     window.tvPermanentDuration = newDuration;
                     showToast("Portal settings updated globally!", "success");
+
+                    broadcastSyncEvent('config-updated', { url: newUrl, duration: newDuration });
+
                     if (typeof fetchPosts === 'function') fetchPosts();
                   } else {
                     throw new Error(res.message || "Backend sync failed");
@@ -4703,6 +4845,7 @@ document.addEventListener('DOMContentLoaded', () => {
               const responseData = await r.json();
               if (responseData.success) {
                 showToast(responseData.message || "Visibility updated!", 'success');
+                broadcastSyncEvent('posts-updated');
                 fetchPosts(); // Refresh UI instantly
               } else {
                 showToast(responseData.message || "Failed to toggle visibility.", 'error');
@@ -4823,7 +4966,7 @@ document.addEventListener('DOMContentLoaded', () => {
           s.classList.remove('is-active');
           // Perform cleanup for inactive slides
           const oldVideo = s.querySelector('video.home-news-image');
-          const oldIframe = s.querySelector('iframe.yt-video-frame');
+          const oldIframe = s.querySelector('iframe.yt-video-frame') || s.querySelector('iframe[id^="ytplayer-"]');
 
           if (oldVideo) {
             oldVideo.pause();
@@ -4850,7 +4993,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const activeSlide = slides[index];
       const videoEl = activeSlide.querySelector('video.home-news-image');
-      const iframeEl = activeSlide.querySelector('iframe.yt-video-frame');
+      const iframeEl = activeSlide.querySelector('iframe.yt-video-frame') || activeSlide.querySelector('iframe[id^="ytplayer-"]');
       const fbIframeEl = activeSlide.querySelector('.fb-video-wrapper');
       const driveIframeEl = activeSlide.querySelector('iframe.drive-video-frame');
       const websiteIframeEl = activeSlide.querySelector('iframe.website-slide-frame');
