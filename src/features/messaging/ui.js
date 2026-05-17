@@ -9,7 +9,7 @@ export function updateUnreadBadges() {
   
   // Re-calculate unreadCount from individual contact counts
   const totalUnread = Object.values(contactsMap).reduce((sum, contact) => sum + (contact.unread || 0), 0);
-  console.log(`[Messaging] Total Unread Count: ${totalUnread}`);
+  // console.log(`[Messaging] Total Unread Count: ${totalUnread}`);
   state.unreadCount = totalUnread;
 
   // 1. Update Legacy Contact Cards in Sidebar

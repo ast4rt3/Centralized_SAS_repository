@@ -63,7 +63,7 @@ export async function initSharedMessaging(onMessageReceived) {
   } else {
     window.contactsMap = state.contactsMap;
   }
-  console.log(`[Messaging] Initializing Supabase Realtime for ${myUsername}`);
+  // console.log(`[Messaging] Initializing Supabase Realtime for ${myUsername}`);
 
   // 1. Sync User Metadata (Display Names & Profile Pics)
   await syncUserMetadata();
@@ -86,7 +86,7 @@ export async function initSharedMessaging(onMessageReceived) {
       updatePresence(newState);
     })
     .on('presence', { event: 'join', key: myUsername }, () => {
-      console.log(`[Presence] Joined as ${myUsername}`);
+      // console.log(`[Presence] Joined as ${myUsername}`);
     })
     .subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
@@ -140,7 +140,7 @@ export async function initSharedMessaging(onMessageReceived) {
 }
 
 async function loadInitialHistory(myUsername, onMessageReceived) {
-  console.log(`[Messaging] Loading history for ${myUsername}...`);
+  // console.log(`[Messaging] Loading history for ${myUsername}...`);
   try {
     const { data, error } = await supabase
       .from('user_messages')
@@ -154,7 +154,7 @@ async function loadInitialHistory(myUsername, onMessageReceived) {
       throw error;
     }
     
-    console.log(`[Messaging] Loaded ${data ? data.length : 0} messages from Supabase.`);
+    // console.log(`[Messaging] Loaded ${data ? data.length : 0} messages from Supabase.`);
     if (data) {
       data.forEach(msg => handleIncomingMessage(msg, onMessageReceived, false));
     }
@@ -187,22 +187,22 @@ function handleIncomingMessage(data, onMessageReceived, notify = true) {
     contactsMap[otherUser].unread++;
   }
   if (notify) {
-      console.log(`[Messaging] Notify triggered for message from ${data.sender}. receiver=${data.receiver}`);
+      // console.log(`[Messaging] Notify triggered for message from ${data.sender}. receiver=${data.receiver}`);
       if (onMessageReceived) {
         onMessageReceived(otherUser, data);
       } else if (typeof window.showNotification === 'function') {
         // Only show toast if chat is not active
         const currentChat = window.activeChatUser || window.activeMessengerUser;
-        console.log(`[Messaging] Checking notify: currentChat=${currentChat}, otherUser=${otherUser}, sender=${data.sender}`);
+        // console.log(`[Messaging] Checking notify: currentChat=${currentChat}, otherUser=${otherUser}, sender=${data.sender}`);
         if (currentChat !== otherUser && data.sender === otherUser) {
-          console.log(`[Messaging] SUCCESS: Triggering notification for ${otherUser}`);
+          // console.log(`[Messaging] SUCCESS: Triggering notification for ${otherUser}`);
           window.showNotification(otherUser, data.text, (sender) => {
              if (typeof window.selectContact === 'function') {
                window.selectContact(sender);
              }
           });
         } else {
-          console.log(`[Messaging] Skip notify: currentChat matches otherUser or sender is NOT otherUser`);
+          // console.log(`[Messaging] Skip notify: currentChat matches otherUser or sender is NOT otherUser`);
         }
       } else {
         console.warn("[Messaging] window.showNotification is NOT a function!");
@@ -369,13 +369,13 @@ export async function fetchAllUsers() {
       throw error;
     }
     
-    console.log("[Messaging] Raw accounts from Supabase:", data ? data.length : 0);
+    // console.log("[Messaging] Raw accounts from Supabase:", data ? data.length : 0);
     
     // Filter out system/tv roles if desired (sync with Backend.gs logic)
     const EXCLUDED_ROLES = ['tv', 'scanner', 'uploader'];
     const filtered = (data || []).filter(u => !EXCLUDED_ROLES.includes(u.role?.toLowerCase()));
     
-    console.log("[Messaging] Filtered users:", filtered.length);
+    // console.log("[Messaging] Filtered users:", filtered.length);
     return filtered;
   } catch (err) {
     console.error("[Messaging] Failed to fetch users from Supabase:", err);

@@ -525,7 +525,7 @@ function initFullMessenger() {
 
     sorted.forEach(user => {
       const info = contactsMap[user];
-      console.log(`[Messenger] Rendering ${user}:`, info);
+      // console.log(`[Messenger] Rendering ${user}:`, info);
       const card = document.createElement('div');
       card.className = `contact-card ${activeMessengerUser === user ? 'active' : ''}`;
       card.onclick = () => selectContact(user);
@@ -596,7 +596,7 @@ function initFullMessenger() {
     messagesDiv.innerHTML = '';
     const history = contactsMap[activeMessengerUser] ? (contactsMap[activeMessengerUser].history || []) : [];
 
-    console.log(`[Messenger] Rendering ${history.length} messages for ${activeMessengerUser}`);
+    // console.log(`[Messenger] Rendering ${history.length} messages for ${activeMessengerUser}`);
 
     history.forEach(data => {
       const isMe = data.sender === myUsername;
