@@ -3793,6 +3793,13 @@ document.addEventListener('DOMContentLoaded', () => {
           console.warn("[Diagnostic] Backend Fallback:", data.warning);
           showToast(data.warning, 'warning');
         }
+        
+        // Save the TV config values globally
+        if (data.tvPermanentUrl !== undefined) {
+          window.tvPermanentUrl = data.tvPermanentUrl;
+          window.tvPermanentDuration = data.tvPermanentDuration || 60;
+        }
+
         // Determine role to decide which renderer to use
         let role = 'user';
         const sessionData = localStorage.getItem('sas_user_data');
@@ -3806,8 +3813,8 @@ document.addEventListener('DOMContentLoaded', () => {
           // TV toggle state is managed entirely via localStorage (like the view-menu)
           syncTvSettingsUI();
 
-          // Hash Current Data for Background Refreshes
-          const newDataString = JSON.stringify(data.posts);
+          // Hash Current Data for Background Refreshes (includes config values to auto-rebuild if portal URL/duration is changed)
+          const newDataString = JSON.stringify(data.posts) + "_" + (data.tvPermanentUrl || "") + "_" + (data.tvPermanentDuration || 60);
 
           if (!window.tvPostsDataHash) {
             // First Boot: Save hash and start refresh loop
@@ -3818,10 +3825,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 const bgRes = await fetch(BACKEND_GAS_URL);
                 const bgData = await bgRes.json();
                 if (bgData.success && bgData.posts) {
-                  const bgDataString = JSON.stringify(bgData.posts);
-                  // If the hash changed (new/edited/deleted post)
+                  // Synchronize config values from background fetch
+                  if (bgData.tvPermanentUrl !== undefined) {
+                    window.tvPermanentUrl = bgData.tvPermanentUrl;
+                    window.tvPermanentDuration = bgData.tvPermanentDuration || 60;
+                  }
+
+                  const bgDataString = JSON.stringify(bgData.posts) + "_" + (bgData.tvPermanentUrl || "") + "_" + (bgData.tvPermanentDuration || 60);
+                  // If the hash changed (new/edited/deleted post, or updated permanent slide configuration)
                   if (bgDataString !== window.tvPostsDataHash) {
-                    console.log("TV Auto-Refresh: New posts detected! Rebuilding Carousel...");
+                    console.log("TV Auto-Refresh: New posts or config detected! Rebuilding Carousel...");
 
                     if (globalCarouselTimer) {
                       window.clearInterval(globalCarouselTimer);
@@ -4638,7 +4651,11 @@ document.addEventListener('DOMContentLoaded', () => {
                   const res = await r.json();
                   
                   if (res.success) {
+                    // Instantly sync local states to trigger immediate UI reactivity
+                    window.tvPermanentUrl = newUrl;
+                    window.tvPermanentDuration = newDuration;
                     showToast("Portal settings updated globally!", "success");
+                    if (typeof fetchPosts === 'function') fetchPosts();
                   } else {
                     throw new Error(res.message || "Backend sync failed");
                   }
