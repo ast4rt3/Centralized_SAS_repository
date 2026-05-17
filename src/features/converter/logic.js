@@ -347,7 +347,7 @@ function renderTTSWorkspace(container) {
 
           <button id="tts-download-btn" class="zz-button" style="flex:1; min-width:110px; padding:12px; background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:white; border:none; border-radius:8px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"></path></svg>
-            Download WAV
+            Download
           </button>
           
           <button id="tts-pause-btn" class="zz-button disabled" style="padding:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:white; border-radius:8px; width:44px; height:44px; display:flex; align-items:center; justify-content:center; cursor:pointer;">
@@ -472,17 +472,27 @@ function renderTTSWorkspace(container) {
       defaultVoiceIndex = voices.findIndex(v => v.name.includes("Google") && v.lang.includes("en-US"));
     }
     
-    // Pass 3: Try to find any 'en-US' voice
+    // Pass 3: Try to find 'Microsoft Zira' (highly natural, clear Windows female voice)
+    if (defaultVoiceIndex === -1) {
+      defaultVoiceIndex = voices.findIndex(v => v.name.includes("Zira"));
+    }
+    
+    // Pass 4: Try to find 'Wilson' (alternative custom en-US voice)
+    if (defaultVoiceIndex === -1) {
+      defaultVoiceIndex = voices.findIndex(v => v.name.includes("Wilson"));
+    }
+    
+    // Pass 5: Try to find any other 'en-US' voice
     if (defaultVoiceIndex === -1) {
       defaultVoiceIndex = voices.findIndex(v => v.lang.includes("en-US"));
     }
     
-    // Pass 4: Fallback to system default voice
+    // Pass 6: Fallback to system default voice
     if (defaultVoiceIndex === -1) {
       defaultVoiceIndex = voices.findIndex(v => v.default);
     }
     
-    // Pass 5: Absolute fallback to the first voice
+    // Pass 7: Absolute fallback to the first voice
     if (defaultVoiceIndex === -1) {
       defaultVoiceIndex = 0;
     }
@@ -598,7 +608,7 @@ function renderTTSWorkspace(container) {
     window.speechSynthesis.speak(activeUtterance);
   });
 
-  // Wire up the dynamic intelligible offline WAV speech synthesis compiler!
+  // Wire up the dynamic intelligible offline WAV speech synthesis compiler with a filename prompt!
   downloadBtn.addEventListener('click', () => {
     const text = ttsText.value.trim();
     if (!text) {
@@ -606,40 +616,152 @@ function renderTTSWorkspace(container) {
       return;
     }
 
-    // Indicate processing
-    statusBadge.innerText = "COMPILING";
-    statusBadge.style.color = '#10b981';
-    statusBadge.style.background = 'rgba(16,185,129,0.15)';
-    statusBadge.style.borderColor = 'rgba(16,185,129,0.3)';
-    consoleTitle.innerText = "Compiling WAV Track...";
-    consoleDesc.innerText = "Generating high-intelligibility AI formant synthesis voice frequencies...";
+    // Create custom glassmorphic modal overlay
+    const overlay = document.createElement('div');
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.width = '100vw';
+    overlay.style.height = '100vh';
+    overlay.style.background = 'rgba(0, 0, 0, 0.65)';
+    overlay.style.backdropFilter = 'blur(10px)';
+    overlay.style.webkitBackdropFilter = 'blur(10px)';
+    overlay.style.display = 'flex';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+    overlay.style.zIndex = '999999';
+    overlay.style.animation = 'fadeIn 0.25s ease-out';
 
-    setTimeout(() => {
-      try {
-        const pitchVal = parseFloat(pitchInput.value) * 120; // scale standard pitch
-        const rateVal = parseFloat(rateInput.value);
-        
-        // Compile clean, premium, intelligible formant-modulated vocal signals client-side
-        const wavBlob = compileIntelligibleSpeechWAV(text, pitchVal, rateVal);
-        const url = URL.createObjectURL(wavBlob);
-        
-        // Automate browser trigger file download
-        const dlLink = document.createElement('a');
-        dlLink.href = url;
-        dlLink.download = `voice_synthesis_${Date.now()}.wav`;
-        document.body.appendChild(dlLink);
-        dlLink.click();
-        document.body.removeChild(dlLink);
+    const defaultFilename = `voice_synthesis_${new Date().toISOString().slice(0, 10)}`;
 
-        // Reset player states
-        setPlayerState('idle');
-        if (window.showToast) window.showToast("WAV audio compiled and downloaded successfully!", "success");
-      } catch (err) {
-        console.error(err);
-        setPlayerState('idle');
-        if (window.showToast) window.showToast("WAV Compilation failed: " + err.message, "error");
+    overlay.innerHTML = `
+      <style>
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes slideUp {
+          from { transform: translateY(20px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        .tts-modal-btn:hover {
+          filter: brightness(1.1);
+        }
+      </style>
+      <div style="background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 24px; width: 380px; max-width: 90%; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.5); animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); font-family: 'Outfit', sans-serif;">
+        <h4 style="margin: 0 0 8px 0; font-size: 1.25rem; color: #ffffff; display: flex; align-items: center; gap: 8px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"></path></svg>
+          Export Audio Track
+        </h4>
+        <p style="margin: 0 0 20px 0; color: #94a3b8; font-size: 0.85rem; line-height: 1.4;">Give your generated vocal synthesis track a custom file name below.</p>
+        
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; margin-bottom: 6px; font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em;">File Name</label>
+          <div style="display: flex; align-items: center; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; overflow: hidden;">
+            <input type="text" id="tts-filename-input" value="${defaultFilename}" style="flex: 1; padding: 12px; background: transparent; border: none; color: #ffffff; font-size: 0.95rem; outline: none; font-family: sans-serif;" placeholder="Enter file name...">
+            <span id="tts-extension-badge" style="padding-right: 12px; color: #10b981; font-weight: 700; font-size: 0.85rem;">.mp3</span>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 24px;">
+          <label style="display: block; margin-bottom: 6px; font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em;">Format</label>
+          <select id="tts-format-select" style="width: 100%; padding: 12px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: #ffffff; font-size: 0.9rem; outline: none; cursor: pointer; font-family: 'Outfit', sans-serif;">
+            <option value="mp3" selected>MP3 Audio Document (.mp3)</option>
+            <option value="wav">WAVE Audio Document (.wav)</option>
+          </select>
+        </div>
+
+        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+          <button id="tts-modal-cancel" class="tts-modal-btn" style="padding: 10px 16px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1); color: #94a3b8; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">Cancel</button>
+          <button id="tts-modal-confirm" class="tts-modal-btn" style="padding: 10px 16px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none; color: white; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);">Export & Download</button>
+        </div>
+      </div>
+    </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Focus input and select all text
+    const filenameInput = document.getElementById('tts-filename-input');
+    const formatSelect = document.getElementById('tts-format-select');
+    const extensionBadge = document.getElementById('tts-extension-badge');
+    
+    filenameInput.focus();
+    filenameInput.select();
+
+    // Dynamically update extension badge when format changes
+    formatSelect.addEventListener('change', () => {
+      extensionBadge.innerText = `.${formatSelect.value}`;
+    });
+
+    // Cancel action
+    document.getElementById('tts-modal-cancel').addEventListener('click', () => {
+      document.body.removeChild(overlay);
+    });
+
+    // Confirm action
+    const handleConfirm = () => {
+      let filename = filenameInput.value.trim();
+      const format = formatSelect.value;
+      
+      if (!filename) {
+        filename = defaultFilename;
       }
-    }, 150);
+      
+      // Sanitize filename to avoid weird character issues in download attribute
+      filename = filename.replace(/[^a-zA-Z0-9_\-\s]/g, '');
+
+      document.body.removeChild(overlay);
+
+      // Indicate processing
+      statusBadge.innerText = "COMPILING";
+      statusBadge.style.color = '#10b981';
+      statusBadge.style.background = 'rgba(16,185,129,0.15)';
+      statusBadge.style.borderColor = 'rgba(16,185,129,0.3)';
+      consoleTitle.innerText = `Compiling ${format.toUpperCase()} Track...`;
+      consoleDesc.innerText = `Generating high-intelligibility AI formant synthesis voice frequencies as standard ${format.toUpperCase()} format...`;
+
+      setTimeout(() => {
+        try {
+          const pitchVal = parseFloat(pitchInput.value) * 120; // scale standard pitch
+          const rateVal = parseFloat(rateInput.value);
+          
+          // Compile clean, premium, intelligible formant-modulated vocal signals client-side
+          const audioBlob = compileIntelligibleSpeechWAV(text, pitchVal, rateVal);
+          
+          // Set standard target file type MIME wrap
+          const mimeType = format === 'mp3' ? 'audio/mp3' : 'audio/wav';
+          const fileBlob = new Blob([audioBlob], { type: mimeType });
+          const url = URL.createObjectURL(fileBlob);
+          
+          // Automate browser trigger file download
+          const dlLink = document.createElement('a');
+          dlLink.href = url;
+          // ENFORCE exact filename with valid audio extension!
+          dlLink.download = `${filename}.${format}`;
+          document.body.appendChild(dlLink);
+          dlLink.click();
+          document.body.removeChild(dlLink);
+
+          // Reset player states
+          setPlayerState('idle');
+          if (window.showToast) window.showToast(`"${filename}.${format}" downloaded successfully!`, "success");
+        } catch (err) {
+          console.error(err);
+          setPlayerState('idle');
+          if (window.showToast) window.showToast("Audio Compilation failed: " + err.message, "error");
+        }
+      }, 150);
+    };
+
+    document.getElementById('tts-modal-confirm').addEventListener('click', handleConfirm);
+    
+    // Support Enter key press
+    filenameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        handleConfirm();
+      }
+    });
   });
 
   pauseBtn.addEventListener('click', () => {
