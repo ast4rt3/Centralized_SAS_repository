@@ -3772,17 +3772,20 @@
     }
   </style>
 
-  <!-- Floating Progress Indicator (for background uploads) -->
-  <div id="floating-progress-indicator" class="floating-progress hidden">
-    <div class="fp-header">
-      <div class="fp-title-row">
-        <div class="fp-spinner"></div>
-        <span class="fp-title">Syncing with Supabase...</span>
+  <!-- Floating Progress Container (for background uploads) -->
+  <div id="floating-progress-container" class="floating-progress-container">
+    <!-- Static indicator for main post submissions -->
+    <div id="floating-progress-indicator" class="floating-progress hidden">
+      <div class="fp-header">
+        <div class="fp-title-row">
+          <div class="fp-spinner"></div>
+          <span class="fp-title">Syncing with Supabase...</span>
+        </div>
+        <span id="fp-percent" class="fp-percent">0%</span>
       </div>
-      <span id="fp-percent" class="fp-percent">0%</span>
-    </div>
-    <div class="fp-bar-bg">
-      <div id="fp-bar-fill" class="fp-bar-fill" style="width: 0%"></div>
+      <div class="fp-bar-bg">
+        <div id="fp-bar-fill" class="fp-bar-fill" style="width: 0%"></div>
+      </div>
     </div>
   </div>
 

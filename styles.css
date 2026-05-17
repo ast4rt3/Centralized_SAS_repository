@@ -6450,11 +6450,22 @@ body.lp-mode .main-wrapper {
 .modal-success-overlay p {
   color: var(--text-muted);
 }/* --- FLOATING PROGRESS INDICATOR --- */
-.floating-progress {
+.floating-progress-container {
   position: fixed;
   bottom: 30px;
   right: 30px;
   width: 320px;
+  z-index: 100000;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.floating-progress {
+  position: relative;
+  width: 100%;
+  pointer-events: auto;
   background: rgba(15, 23, 42, 0.95);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.1);

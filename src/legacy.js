@@ -1650,6 +1650,77 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   window.hideLoading = hideLoading;
 
+  async function runBackgroundTask(title, taskFn) {
+    const container = document.getElementById('floating-progress-container');
+    if (!container) return taskFn(); // Fallback if container is missing
+
+    const card = document.createElement('div');
+    card.className = 'floating-progress';
+    card.innerHTML = `
+      <div class="fp-header">
+        <div class="fp-title-row">
+          <div class="fp-spinner"></div>
+          <span class="fp-title"></span>
+        </div>
+        <span class="fp-percent">0%</span>
+      </div>
+      <div class="fp-bar-bg">
+        <div class="fp-bar-fill" style="width: 0%"></div>
+      </div>
+    `;
+
+    const titleEl = card.querySelector('.fp-title');
+    titleEl.textContent = title;
+    const fill = card.querySelector('.fp-bar-fill');
+    const perc = card.querySelector('.fp-percent');
+
+    container.appendChild(card);
+
+    let progress = 0;
+    let taskFinished = false;
+
+    const interval = setInterval(() => {
+      if (taskFinished) return;
+      if (progress < 90) {
+        const increment = progress < 40 ? 5 : progress < 70 ? 2 : 1;
+        progress += increment;
+        const rounded = Math.round(progress);
+        if (fill) fill.style.width = rounded + '%';
+        if (perc) perc.textContent = rounded + '%';
+      }
+    }, 200);
+
+    try {
+      const result = await taskFn((currentProgressPct) => {
+        if (currentProgressPct !== undefined) {
+          const rounded = Math.round(currentProgressPct);
+          progress = rounded;
+          if (fill) fill.style.width = rounded + '%';
+          if (perc) perc.textContent = rounded + '%';
+        }
+      });
+
+      taskFinished = true;
+      clearInterval(interval);
+
+      if (fill) fill.style.width = '100%';
+      if (perc) perc.textContent = '100%';
+
+      setTimeout(() => {
+        card.classList.add('hiding');
+        setTimeout(() => card.remove(), 500);
+      }, 1000);
+
+      return result;
+    } catch (error) {
+      taskFinished = true;
+      clearInterval(interval);
+      card.remove();
+      throw error;
+    }
+  }
+  window.runBackgroundTask = runBackgroundTask;
+
   function showConfirm(title, message, showPassword = false, type = 'info') {
     return new Promise((resolve) => {
       const modal = document.getElementById('confirm-modal');
@@ -4470,17 +4541,22 @@ document.addEventListener('DOMContentLoaded', () => {
               if (!sessionData) return;
               const userObj = JSON.parse(sessionData);
 
-              showLoading("Deleting post...");
-              try {
+              runBackgroundTask("Deleting post...", async () => {
                 const payload = { action: "deletePost", username: userObj.username, token: userObj.token, timestamp: post.timestamp, imageUrl: post.imageUrl };
                 console.log("[Diagnostic] Sending deletePost to GAS...", { ...payload, token: 'REDACTED' });
                 const r = await fetch(BACKEND_GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
                 const res = await r.json();
                 console.log("[Diagnostic] GAS Response for deletePost:", res);
-                if (res.success) { showToast(res.message, 'success'); fetchPosts(); }
-                else { showToast(res.message || "Failed to delete.", 'error'); }
-              } catch (e) { showToast("Network error.", 'error'); }
-              finally { hideLoading(); }
+                if (res.success) {
+                  showToast(res.message || "Post deleted successfully", 'success');
+                  fetchPosts();
+                } else {
+                  showToast(res.message || "Failed to delete.", 'error');
+                }
+              }).catch((e) => {
+                console.error("[Diagnostic] Error in delete background task:", e);
+                showToast("Network error.", 'error');
+              });
             };
             actionArea.appendChild(deleteBtn);
           }
