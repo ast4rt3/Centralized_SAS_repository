@@ -6813,7 +6813,8 @@ function renderLpActivities(activities, grid) {
     }
 
     const imgHtml = act.imageUrl
-      ? `<img class="lp-activity-img" src="${escapeHtml(act.imageUrl)}" alt="${escapeHtml(act.title)}" loading="lazy" onerror="this.parentNode.innerHTML='<div class=\'lp-activity-img-placeholder\'><i class=\'bx bx-image-alt\'></i></div>'">`
+      ? `<img class="lp-activity-img" src="${escapeHtml(act.imageUrl)}" alt="${escapeHtml(act.title)}" loading="lazy" onerror="this.style.display='none'; if (this.nextElementSibling) this.nextElementSibling.style.display='flex';">
+         <div class="lp-activity-img-placeholder" style="display: none;"><i class='bx bx-image-alt'></i></div>`
       : `<div class="lp-activity-img-placeholder"><i class='bx bx-image-alt'></i></div>`;
 
     card.innerHTML = `

@@ -271,7 +271,8 @@ import"./modulepreload-polyfill-iJ-6Fn-a.js";import{createClient as e}from"https
         <i class='bx bx-calendar-x'></i>
         <p>No activities yet. Check back soon!</p>
       </div>`;return}e.forEach((e,n)=>{let i=document.createElement(`article`);i.className=`lp-activity-card`,i.style.animationDelay=`${n*.08}s`;let a=e.date||``;if(a)try{a=new Date(a+`T00:00:00`).toLocaleDateString(`en-US`,{month:`long`,day:`numeric`,year:`numeric`})}catch{}i.innerHTML=`
-      ${e.imageUrl?`<img class="lp-activity-img" src="${r(e.imageUrl)}" alt="${r(e.title)}" loading="lazy" onerror="this.parentNode.innerHTML='<div class=\'lp-activity-img-placeholder\'><i class=\'bx bx-image-alt\'></i></div>'">`:`<div class="lp-activity-img-placeholder"><i class='bx bx-image-alt'></i></div>`}
+      ${e.imageUrl?`<img class="lp-activity-img" src="${r(e.imageUrl)}" alt="${r(e.title)}" loading="lazy" onerror="this.style.display='none'; if (this.nextElementSibling) this.nextElementSibling.style.display='flex';">
+         <div class="lp-activity-img-placeholder" style="display: none;"><i class='bx bx-image-alt'></i></div>`:`<div class="lp-activity-img-placeholder"><i class='bx bx-image-alt'></i></div>`}
       <div class="lp-activity-content">
         <span class="lp-activity-date"><i class='bx bx-calendar'></i> ${r(a)}</span>
         <h3 class="lp-activity-title">${r(e.title)}</h3>
