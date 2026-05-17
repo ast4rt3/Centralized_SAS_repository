@@ -6642,7 +6642,7 @@ body.lp-mode .main-wrapper {
 }
 
 #add-post-modal .modal-card {
-  background: rgba(255, 255, 255, 0.85);
+  background: #ffffff;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.5);
@@ -6656,7 +6656,7 @@ body.lp-mode .main-wrapper {
 }
 
 body.dark-theme #add-post-modal .modal-card {
-  background: rgba(30, 41, 59, 0.8);
+  background: #1e293b;
   border-color: rgba(255, 255, 255, 0.08);
   box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.5), 
               0 0 50px rgba(240, 173, 78, 0.02);
