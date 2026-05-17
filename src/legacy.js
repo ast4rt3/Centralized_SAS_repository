@@ -802,7 +802,7 @@ setInterval(() => {
   }
 }, 12 * 60 * 60 * 1000);
 
-console.log('--- SAS APP LOADING (v11 + Sidebar Fix) ---');
+// console.log('--- SAS APP LOADING (v11 + Sidebar Fix) ---');
 document.addEventListener('DOMContentLoaded', () => {
 
   // --- TV Clock Logic ---
@@ -1525,8 +1525,8 @@ document.addEventListener('DOMContentLoaded', () => {
       'default': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>`
     };
 
-    console.log('[Sidebar] User Role:', userRole);
-    console.log('[Sidebar] Total Systems in Config:', systems.length);
+    // console.log('[Sidebar] User Role:', userRole);
+    // console.log('[Sidebar] Total Systems in Config:', systems.length);
 
     // Filter systems based on role
     const allowedSystems = systems.filter(s => {
@@ -1537,7 +1537,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const hasAccess = allowedRoles.some(r => r.toLowerCase() === (userRole || '').toLowerCase());
       return hasAccess;
     });
-    console.log('[Sidebar] Allowed Systems for User:', allowedSystems.length);
+    // console.log('[Sidebar] Allowed Systems for User:', allowedSystems.length);
 
     var groups = groupBySection(allowedSystems);
     var sectionNames = Object.keys(groups).sort(function (a, b) { return a.localeCompare(b); });
@@ -1962,7 +1962,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const responseData = await r.json();
 
           if (responseData.success) {
-            console.log("[Auth] Login successful. Data received:", responseData);
+            // console.log("[Auth] Login successful. Data received:", responseData);
             const sessionObj = {
               username: responseData.username,
               role: responseData.role,
@@ -1971,7 +1971,7 @@ document.addEventListener('DOMContentLoaded', () => {
               profilePic: responseData.profilePic || "",
               theme: responseData.theme || "light"
             };
-            console.log("[Auth] Saving session object:", sessionObj);
+            // console.log("[Auth] Saving session object:", sessionObj);
             localStorage.setItem('sas_user_data', JSON.stringify(sessionObj));
 
             showAppUI(sessionObj);
@@ -2159,7 +2159,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (viewMenu) viewMenu.classList.remove('is-open');
       if (viewMenuBtn) viewMenuBtn.setAttribute('aria-expanded', 'false');
 
-      console.log(`[View] Mode set to: ${mode}`);
+      // console.log(`[View] Mode set to: ${mode}`);
 
       // Force layout recalculation for any potential issues
       window.dispatchEvent(new Event('resize'));
@@ -6363,7 +6363,7 @@ function initLpActivities() {
   if (!grid) return;
 
    const fetchActivities = async () => {
-     console.log('[LP Activities] Fetching from sas_activities...');
+     // console.log('[LP Activities] Fetching from sas_activities...');
      const { data, error } = await supabase
        .from('sas_activities')
        .select('*')
@@ -6955,7 +6955,7 @@ function initLpDocuments() {
 
    // Sync from Supabase (formerly Firebase)
    const fetchLpDocs = async () => {
-     console.log('[LP Docs] Fetching from sas_documents...');
+     // console.log('[LP Docs] Fetching from sas_documents...');
      const { data, error } = await supabase.from('sas_documents').select('*');
      if (error) {
        console.error('[LP Docs] Fetch failed:', error.message, error.details || error);
