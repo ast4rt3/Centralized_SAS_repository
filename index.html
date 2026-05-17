@@ -3025,7 +3025,7 @@
 
       <!-- File Converter Page -->
       <section id="converter" class="page" style="background: #0f172a; padding: 24px; min-height: 100%; display: flex; flex-direction: column; flex-grow: 1; flex-shrink: 0; box-sizing: border-box; color: #f8fafc;">
-        <div class="converter-header" style="margin-bottom: 30px;">
+        <div class="converter-header" style="margin-bottom: 24px; display: flex; flex-direction: row; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; width: 100%;">
           <div style="display: flex; align-items: center; gap: 12px;">
             <div style="background: linear-gradient(135deg, #ef4444 0%, #ec4899 100%); width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: white;">
@@ -3036,129 +3036,24 @@
               </svg>
             </div>
             <div>
-              <h2 style="font-size: 1.85rem; font-weight: 700; color: #ffffff; margin: 0; background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">NBSC Convert</h2>
-              <p style="font-size: 0.88rem; color: #94a3b8; margin: 2px 0 0 0;">Truly universal online file converter. 100% private and runs fully client-side.</p>
+              <h2 style="font-size: 1.85rem; font-weight: 700; color: #ffffff; margin: 0; background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-family: 'Outfit', sans-serif;">Converter</h2>
             </div>
+          </div>
+
+          <!-- Dynamic Search Input -->
+          <div style="position: relative; width: 100%; max-width: 320px;">
+            <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; display: flex; align-items: center;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+            </span>
+            <input type="text" id="converter-tool-search" style="width: 100%; padding: 10px 12px 10px 36px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #ffffff; font-size: 0.9rem; font-family: 'Outfit', sans-serif; box-sizing: border-box; outline: none; transition: all 0.3s ease; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);" placeholder="Search tools..." autocomplete="off">
           </div>
         </div>
 
-        <!-- Tool Selection Grid -->
-        <div id="converter-grid-view" class="converter-grid">
-          <!-- Card 1: Word to PDF (Featured) -->
-          <div class="converter-card" data-tool="word-pdf" style="--card-glow: #2563eb;">
-            <div class="converter-card-icon" style="background: rgba(37, 99, 235, 0.15); color: #2563eb;">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                <polyline points="14 2 14 8 20 8"></polyline>
-                <path d="M9 15h1.5a1.5 1.5 0 0 0 0-3H9v6"></path>
-                <path d="M12 12v6h1.5a1.5 1.5 0 0 0 0-3H12"></path>
-              </svg>
-            </div>
-            <h3>Word to PDF</h3>
-            <p>Directly convert Microsoft Word (.docx/.doc) or text documents into standard, printer-friendly PDF files offline.</p>
-            <span class="converter-card-badge" style="background: rgba(37, 99, 235, 0.2); color: #93c5fd; border-color: rgba(37, 99, 235, 0.3);">Featured</span>
-          </div>
-
-          <!-- Card 2: PDF to CSV Spreadsheet (Featured) -->
-          <div class="converter-card" data-tool="pdf-csv" style="--card-glow: #059669;">
-            <div class="converter-card-icon" style="background: rgba(5, 150, 105, 0.15); color: #059669;">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                <polyline points="14 2 14 8 20 8"></polyline>
-                <path d="M8 13h4M8 17h4"></path>
-              </svg>
-            </div>
-            <h3>PDF to CSV Spreadsheet</h3>
-            <p>Extract rows, grids, and tabular lists from PDF documents directly into clean CSV spreadsheets.</p>
-            <span class="converter-card-badge" style="background: rgba(5, 150, 105, 0.2); color: #a7f3d0; border-color: rgba(5, 150, 105, 0.3);">Featured</span>
-          </div>
-
-          <!-- Card 3: Text-to-Speech (Audio) -->
-          <div class="converter-card" data-tool="tts" style="--card-glow: #3b82f6;">
-            <div class="converter-card-icon" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6;">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-              </svg>
-            </div>
-            <h3>Audio Text-to-Speech</h3>
-            <p>Convert text or articles into high-fidelity voice tracks and download as WAV audio files.</p>
-            <span class="converter-card-badge">Audio</span>
-          </div>
-
-          <!-- Card 2: Image Format Converter -->
-          <div class="converter-card" data-tool="img-conv" style="--card-glow: #ec4899;">
-            <div class="converter-card-icon" style="background: rgba(236, 72, 153, 0.15); color: #ec4899;">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                <polyline points="21 15 16 10 5 21"></polyline>
-              </svg>
-            </div>
-            <h3>Image Converter</h3>
-            <p>Convert images between PNG, JPEG, WEBP, BMP, GIF, and ICO formats instantly in browser.</p>
-            <span class="converter-card-badge">Images</span>
-          </div>
-
-          <!-- Card 3: Image Compressor & Resizer -->
-          <div class="converter-card" data-tool="img-comp" style="--card-glow: #10b981;">
-            <div class="converter-card-icon" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7"></path>
-              </svg>
-            </div>
-            <h3>Image Compressor</h3>
-            <p>Reduce image size with adjustable quality slider and width/height scale percentage controls.</p>
-            <span class="converter-card-badge">Optimization</span>
-          </div>
-
-          <!-- Card 4: Document / Markdown to PDF/HTML -->
-          <div class="converter-card" data-tool="doc-conv" style="--card-glow: #eab308;">
-            <div class="converter-card-icon" style="background: rgba(234, 179, 8, 0.15); color: #eab308;">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                <polyline points="14 2 14 8 20 8"></polyline>
-                <line x1="16" y1="13" x2="8" y2="13"></line>
-                <line x1="16" y1="17" x2="8" y2="17"></line>
-                <polyline points="10 9 9 9 8 9"></polyline>
-              </svg>
-            </div>
-            <h3>Document & Markdown</h3>
-            <p>Compile custom text or rich Markdown segments into clean styled HTML or print to PDF files.</p>
-            <span class="converter-card-badge">Document</span>
-          </div>
-
-          <!-- Card 5: JSON & CSV wizard -->
-          <div class="converter-card" data-tool="csv-json" style="--card-glow: #8b5cf6;">
-            <div class="converter-card-icon" style="background: rgba(139, 92, 246, 0.15); color: #8b5cf6;">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14 3v4a1 1 0 0 0 1 1h4"></path>
-                <path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"></path>
-              </svg>
-            </div>
-            <h3>JSON / CSV Spreadsheet</h3>
-            <p>Convert JSON lists to standard CSV spreadsheet rows or parse CSV files back to clean JSON.</p>
-            <span class="converter-card-badge">Spreadsheet</span>
-          </div>
-
-          <!-- Card 6: QR Code Generator -->
-          <div class="converter-card" data-tool="qr-gen" style="--card-glow: #06b6d4;">
-            <div class="converter-card-icon" style="background: rgba(6, 182, 212, 0.15); color: #06b6d4;">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="3" width="7" height="7"></rect>
-                <rect x="14" y="3" width="7" height="7"></rect>
-                <rect x="3" y="14" width="7" height="7"></rect>
-                <path d="M14 14h3v3h-3z"></path>
-                <path d="M21 14h-3v3h3z"></path>
-                <path d="M14 21h3v-3h-3z"></path>
-                <path d="M17 17h4v4h-4z"></path>
-              </svg>
-            </div>
-            <h3>QR Code Generator</h3>
-            <p>Convert links, URLs, or plain text into a high-resolution QR Code image instantly.</p>
-            <span class="converter-card-badge" style="background: rgba(6, 182, 212, 0.2); color: #a5f3fc; border-color: rgba(6, 182, 212, 0.3);">Dynamic QR</span>
-          </div>
-        </div>
+        <!-- Dynamic Tool Selection Grid -->
+        <div id="converter-grid-view" class="converter-grid"></div>
 
         <!-- Dynamic Tool Workspace Area -->
         <div id="converter-workspace-view" class="converter-workspace hidden">
