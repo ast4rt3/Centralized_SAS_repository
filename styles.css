@@ -1100,6 +1100,33 @@ body.system-mode .content {
   background: rgba(227, 52, 47, 0.05);
 }
 
+.user-profile-btn,
+.user-settings-btn {
+  width: 100%;
+  padding: 10px 16px;
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  color: var(--text);
+  text-align: left;
+  transition: background 0.2s, color 0.2s;
+}
+
+.user-profile-btn:hover,
+.user-settings-btn:hover {
+  background: rgba(0, 74, 153, 0.05);
+}
+
+body.dark-theme .user-profile-btn:hover,
+body.dark-theme .user-settings-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
 /* View Menu Toggle */
 .view-menu {
   position: relative;

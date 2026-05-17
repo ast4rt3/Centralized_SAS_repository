@@ -1744,6 +1744,56 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
+  async function syncLoggedInUserMetadata(username) {
+    if (!username) return;
+    if (!window.supabaseFetch) {
+      setTimeout(() => syncLoggedInUserMetadata(username), 200);
+      return;
+    }
+    try {
+      const data = await window.supabaseFetch(`/rest/v1/sas_accounts?username=eq.${encodeURIComponent(username)}&select=display_name,profile_pic,theme,role`);
+      if (data && Array.isArray(data) && data.length > 0) {
+        const dbUser = data[0];
+        const sessionData = JSON.parse(localStorage.getItem('sas_user_data') || '{}');
+        if (sessionData && sessionData.username === username) {
+          let updated = false;
+          if (dbUser.display_name && sessionData.displayName !== dbUser.display_name) {
+            sessionData.displayName = dbUser.display_name;
+            updated = true;
+          }
+          const dbProfilePic = dbUser.profile_pic || "";
+          if (sessionData.profilePic !== dbProfilePic) {
+            sessionData.profilePic = dbProfilePic;
+            updated = true;
+          }
+          if (dbUser.theme && sessionData.theme !== dbUser.theme) {
+            sessionData.theme = dbUser.theme;
+            updated = true;
+          }
+          if (dbUser.role && sessionData.role !== dbUser.role) {
+            sessionData.role = dbUser.role;
+            updated = true;
+          }
+          
+          if (updated) {
+            console.log("[Auth] Syncing user data with database:", sessionData);
+            localStorage.setItem('sas_user_data', JSON.stringify(sessionData));
+            setupUserMenu(sessionData);
+            
+            const theme = sessionData.theme || 'light';
+            if (theme === 'dark') {
+              document.body.classList.add('dark-theme');
+            } else {
+              document.body.classList.remove('dark-theme');
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("[Auth] Failed to sync logged-in user metadata:", err);
+    }
+  }
+
   function showAppUI(userObj) {
     if (userObj && userObj.username) {
       myUsername = userObj.username;
@@ -1789,6 +1839,11 @@ document.addEventListener('DOMContentLoaded', () => {
     initSharedMessaging(); // Ensure real-time listeners start after identity is known
     initLpActivitiesAdmin(userObj); // Admin LP activities management
     initLpDocumentsAdmin(userObj);  // Admin LP documents management
+
+    // Sync user metadata from the database in the background to ensure it is always up-to-date
+    if (myUsername && myUsername !== 'Unknown') {
+      syncLoggedInUserMetadata(myUsername);
+    }
   }
 
 
@@ -2275,7 +2330,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Update Header Avatar
     const avatarSpan = document.querySelector('.user-menu-avatar');
     if (avatarSpan && userObj.profilePic && userObj.profilePic.startsWith('http')) {
-      avatarSpan.innerHTML = `<img src="${userObj.profilePic}" style="width:24px; height:24px; border-radius:50%; object-fit:cover; border: 1px solid rgba(255,255,255,0.2);">`;
+      const initial = (userObj.displayName || userObj.username || "?").charAt(0).toUpperCase();
+      avatarSpan.innerHTML = `<img src="${userObj.profilePic}" style="width:24px; height:24px; border-radius:50%; object-fit:cover; border: 1px solid rgba(255,255,255,0.2);" onerror="this.outerHTML='<div style=&quot;width:24px; height:24px; border-radius:50%; background:var(--nbsc-gold); color:var(--nbsc-blue); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800;&quot;>${initial}</div>';">`;
     } else if (avatarSpan) {
        const initial = (userObj.displayName || userObj.username || "?").charAt(0).toUpperCase();
        avatarSpan.innerHTML = `<div style="width:24px; height:24px; border-radius:50%; background:var(--nbsc-gold); color:var(--nbsc-blue); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800;">${initial}</div>`;
@@ -2285,38 +2341,58 @@ document.addEventListener('DOMContentLoaded', () => {
     const userBtn = userMenuBtn;
 
     if (userBtn && userMenu) {
-      userBtn.addEventListener('click', function (e) {
-        e.stopPropagation();
-        userMenu.classList.toggle('is-open');
-      });
-      document.addEventListener('click', function (e) {
-        if (!userMenu.contains(e.target)) {
-          userMenu.classList.remove('is-open');
+      if (!userMenu.classList.contains('listeners-bound')) {
+        userBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          userMenu.classList.toggle('is-open');
+        });
+        document.addEventListener('click', function (e) {
+          if (!userMenu.contains(e.target)) {
+            userMenu.classList.remove('is-open');
+          }
+        });
+        userMenu.classList.add('listeners-bound');
+      }
+
+      // Add Profile and Settings buttons if they don't exist yet
+      if (!userMenu.querySelector('.user-profile-btn')) {
+        // Add Profile button to dropdown
+        const profileBtn = document.createElement('button');
+        profileBtn.className = 'user-profile-btn';
+        profileBtn.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          Profile
+        `;
+        profileBtn.onclick = () => { userMenu.classList.remove('is-open'); openSettingsModal('profile'); };
+
+        const divider1 = document.createElement('div');
+        divider1.className = 'user-menu-divider';
+
+        // Add Settings button to dropdown
+        const settingsBtn = document.createElement('button');
+        settingsBtn.className = 'user-settings-btn';
+        settingsBtn.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          Settings
+        `;
+        settingsBtn.onclick = () => { userMenu.classList.remove('is-open'); openSettingsModal('account'); };
+
+        const divider2 = document.createElement('div');
+        divider2.className = 'user-menu-divider';
+
+        // Insert before logout button
+        if (logoutBtn && logoutBtn.parentNode) {
+          logoutBtn.parentNode.insertBefore(profileBtn, logoutBtn);
+          logoutBtn.parentNode.insertBefore(divider1, logoutBtn);
+          logoutBtn.parentNode.insertBefore(settingsBtn, logoutBtn);
+          logoutBtn.parentNode.insertBefore(divider2, logoutBtn);
         }
-      });
-
-      // Add Settings button to dropdown
-      const settingsBtn = document.createElement('button');
-      settingsBtn.className = 'user-settings-btn';
-      settingsBtn.innerHTML = `
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="3"></circle>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-        </svg>
-        Settings
-      `;
-      settingsBtn.style.cssText = 'width:100%; padding:10px 16px; background:none; border:none; display:flex; align-items:center; gap:10px; cursor:pointer; font-size:0.9rem; color:#1e293b; text-align:left;';
-      settingsBtn.onmouseover = () => settingsBtn.style.background = '#f1f5f9';
-      settingsBtn.onmouseout = () => settingsBtn.style.background = 'transparent';
-      settingsBtn.onclick = () => { userMenu.classList.remove('is-open'); openSettingsModal(); };
-
-      const divider = document.createElement('div');
-      divider.className = 'user-menu-divider';
-
-      // Insert before logout button
-      if (logoutBtn && logoutBtn.parentNode) {
-        logoutBtn.parentNode.insertBefore(settingsBtn, logoutBtn);
-        logoutBtn.parentNode.insertBefore(divider, logoutBtn);
       }
     }
 
@@ -5882,7 +5958,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // --- Settings Modal Functions ---
-  window.openSettingsModal = function () {
+  window.openSettingsModal = function (defaultTab = 'profile') {
     const modal = document.getElementById('settings-modal');
     if (!modal) return;
 
@@ -5902,10 +5978,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const displayName = user.displayName || user.username;
     const initial = (user.profilePic && user.profilePic.startsWith('http')) ? '' : displayName.charAt(0).toUpperCase();
+    const fallbackInitial = displayName.charAt(0).toUpperCase();
 
     if (user.profilePic && user.profilePic.startsWith('http')) {
-      profilePicPreview.innerHTML = `<img src="${user.profilePic}" alt="Profile">`;
-      previewAvatar.innerHTML = `<img src="${user.profilePic}" alt="Profile">`;
+      profilePicPreview.innerHTML = `<img src="${user.profilePic}" alt="Profile" onerror="this.outerHTML='<span>${fallbackInitial}</span>';">`;
+      previewAvatar.innerHTML = `<img src="${user.profilePic}" alt="Profile" onerror="this.outerHTML='<span>${fallbackInitial}</span>';">`;
     } else {
       profilePicPreview.innerHTML = `<span>${initial}</span>`;
       previewAvatar.innerHTML = `<span>${initial}</span>`;
@@ -5929,6 +6006,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // Hide messages
     document.getElementById('settings-error').classList.add('hidden');
     document.getElementById('settings-success').classList.add('hidden');
+
+    // Switch to requested tab
+    document.querySelectorAll('.settings-tab').forEach(t => {
+      const isMatch = t.getAttribute('data-tab') === defaultTab;
+      t.classList.toggle('active', isMatch);
+    });
+    document.querySelectorAll('.settings-tab-content').forEach(content => {
+      const isMatch = content.id === `settings-${defaultTab}`;
+      content.classList.toggle('hidden', !isMatch);
+    });
 
     modal.classList.remove('hidden');
   };
@@ -6015,9 +6102,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Also refresh the user's own preview in settings modal
         const settingsPreview = document.getElementById('settings-profile-pic-preview');
-        if (settingsPreview) settingsPreview.innerHTML = `<img src="${data.profilePic}" alt="Profile">`;
+        const fallbackInitial = (sessionData.displayName || sessionData.username || "?").charAt(0).toUpperCase();
+        if (settingsPreview) settingsPreview.innerHTML = `<img src="${data.profilePic}" alt="Profile" onerror="this.outerHTML='<span>${fallbackInitial}</span>';">`;
         const settingsAvatar = document.getElementById('settings-preview-avatar');
-        if (settingsAvatar) settingsAvatar.innerHTML = `<img src="${data.profilePic}" alt="Profile">`;
+        if (settingsAvatar) settingsAvatar.innerHTML = `<img src="${data.profilePic}" alt="Profile" onerror="this.outerHTML='<span>${fallbackInitial}</span>';">`;
 
         showToast('Profile picture updated!', 'success');
       } else {
