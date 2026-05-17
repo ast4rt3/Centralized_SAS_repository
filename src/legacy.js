@@ -51,6 +51,7 @@ function extractCloudinaryId(url) {
 // Global Cloudinary Utility: Sanitize disabled Cloudinary URLs to active one
 function sanitizeCloudinaryUrl(url) {
   if (!url || typeof url !== 'string') return url;
+  if (url.includes('kcxbdeqlwfkfan7nwodj')) return '';
   return url.replace(/dj8ugtlrl/gi, 'dbytj36mv');
 }
 

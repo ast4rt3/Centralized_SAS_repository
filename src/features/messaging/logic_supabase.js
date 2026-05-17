@@ -25,6 +25,7 @@ function optimizeText(text) {
 
 function sanitizeCloudinaryUrl(url) {
   if (!url || typeof url !== 'string') return url;
+  if (url.includes('kcxbdeqlwfkfan7nwodj')) return '';
   return url.replace(/dj8ugtlrl/gi, 'dbytj36mv');
 }
 
