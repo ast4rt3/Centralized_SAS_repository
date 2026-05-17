@@ -3237,6 +3237,17 @@ document.addEventListener('DOMContentLoaded', () => {
             lInput.dispatchEvent(new CustomEvent('input', { detail: { keepValues: true } }));
           }
         }
+
+        // Smoothly scroll the modal body so the selected panel is fully visible
+        const modalBody = btn.closest('.modal-body');
+        if (modalBody) {
+          setTimeout(() => {
+            const targetPanel = uploadPanels[effectivePanelId];
+            if (targetPanel) {
+              targetPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+          }, 100);
+        }
       });
     });
 
@@ -7084,7 +7095,6 @@ function initLpActivitiesAdmin(userObj) {
     if (e.target === modal) modal.classList.add('hidden');
   });
 
-  // ---- Tab Switching ----
   document.querySelectorAll('#lp-act-upload-tabs .upload-tab').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('#lp-act-upload-tabs .upload-tab').forEach(b => b.classList.remove('active'));
@@ -7093,6 +7103,17 @@ function initLpActivitiesAdmin(userObj) {
 
       document.getElementById('lp-act-panel-file').classList.toggle('hidden', activeLpTab !== 'file');
       document.getElementById('lp-act-panel-url').classList.toggle('hidden', activeLpTab !== 'url');
+
+      // Smoothly scroll the modal body so the selected panel is fully visible
+      const modalBody = btn.closest('.modal-body');
+      if (modalBody) {
+        setTimeout(() => {
+          const targetPanel = document.getElementById(activeLpTab === 'file' ? 'lp-act-panel-file' : 'lp-act-panel-url');
+          if (targetPanel) {
+            targetPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        }, 100);
+      }
     });
   });
 
