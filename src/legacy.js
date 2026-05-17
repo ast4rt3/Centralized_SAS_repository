@@ -1922,6 +1922,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function showDeviceChoiceModal() {
+    const modal = document.getElementById('device-choice-modal');
+    if (!modal) return;
+
+    const scannerBtn = document.getElementById('choice-scanner-btn');
+    const dashboardBtn = document.getElementById('choice-dashboard-btn');
+
+    modal.classList.remove('hidden');
+
+    if (scannerBtn) {
+      scannerBtn.onclick = () => {
+        modal.classList.add('hidden');
+        window.location.hash = 'attendance-scanner';
+      };
+    }
+
+    if (dashboardBtn) {
+      dashboardBtn.onclick = () => {
+        modal.classList.add('hidden');
+        window.location.hash = 'home';
+      };
+    }
+  }
+
   function showAppUI(userObj) {
     if (userObj && userObj.username) {
       myUsername = userObj.username;
@@ -1956,8 +1980,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (userMenuBtn) userMenuBtn.hidden = false;
 
-        if (window.location.hash === '#attendance-scanner') {
-          window.location.hash = 'home';
+        const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                               (window.matchMedia("(max-width: 1024px)").matches && ('ontouchstart' in window || navigator.maxTouchPoints > 0));
+
+        if (isMobileDevice && (role === 'admin' || role === 'superadmin') && sessionStorage.getItem('sas_just_logged_in') === 'true') {
+          sessionStorage.removeItem('sas_just_logged_in');
+          showDeviceChoiceModal();
+        } else {
+          if (window.location.hash === '#attendance-scanner') {
+            window.location.hash = 'home';
+          }
         }
       }
     }
@@ -2165,6 +2197,7 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             // console.log("[Auth] Saving session object:", sessionObj);
             localStorage.setItem('sas_user_data', JSON.stringify(sessionObj));
+            sessionStorage.setItem('sas_just_logged_in', 'true');
 
             showAppUI(sessionObj);
           } else {
