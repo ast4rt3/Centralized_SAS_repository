@@ -5133,7 +5133,9 @@ document.addEventListener('DOMContentLoaded', () => {
         videoEl.play().catch(e => console.error('Video play prevented:', e));
 
         videoEl.ontimeupdate = function () {
-          if (curEnd > 0 && videoEl.currentTime >= curEnd) {
+          // If fullscreen/theater mode is enabled, play at full length (ignore configured post end duration)
+          const activeEndVal = tvTheaterEnabled ? 0 : curEnd;
+          if (activeEndVal > 0 && videoEl.currentTime >= activeEndVal) {
             if (myGeneration === globalSlideGeneration && slides.length > 1) {
               videoEl.ontimeupdate = null; // Prevent double trigger
               next();
@@ -5179,10 +5181,16 @@ document.addEventListener('DOMContentLoaded', () => {
           }, 1000);
         }
 
-        // We rely on the native `onended` event for Cloudinary/direct videos instead of the slide timer.
-        // We set a very long 5-minute fallback just in case the browser hangs.
-        if (!isLive) start(300000);
-        else stop(); // For live, we strictly rely on the heartbeat/ended events
+        // We rely on the native `onended` event for Cloudinary/direct videos instead of the slide timer when fullscreen.
+        if (!isLive) {
+          if (tvTheaterEnabled) {
+            start(3600000); // 1 hour safety fallback for fullscreen play-to-end
+          } else {
+            start(startMs || 300000);
+          }
+        } else {
+          stop(); // For live, we strictly rely on the heartbeat/ended events
+        }
       } else if (iframeEl && window.YT && window.YT.Player) {
         const iframeId = iframeEl.id;
         const myPlayerId = iframeId;
@@ -5223,7 +5231,9 @@ document.addEventListener('DOMContentLoaded', () => {
               }
 
               // Advance if video is within 1.5s of end (not for live)
-              const effectiveEnd = (curEnd > 0) ? curEnd : duration;
+              // If theater/fullscreen mode is ON, ignore configured post end and play at full length
+              const activeEndVal = tvTheaterEnabled ? 0 : curEnd;
+              const effectiveEnd = (activeEndVal > 0) ? activeEndVal : duration;
               if (!isLive && (state === 0 || (effectiveEnd > 0 && currentTime >= (effectiveEnd - 1.5)))) {
                 console.log('YouTube auto-advancing slide:', myPlayerId);
                 clearInterval(checkInterval);
@@ -5285,8 +5295,15 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
         // Safety fallback (not for live)
-        if (!isLive) start(startMs || 300000);
-        else stop();
+        if (!isLive) {
+          if (tvTheaterEnabled) {
+            start(3600000); // 1 hour safety fallback for fullscreen play-to-end
+          } else {
+            start(startMs || 300000);
+          }
+        } else {
+          stop();
+        }
       } else if (activeSlide.querySelector('.fb-video-wrapper')) {
         // Facebook video via JS SDK
         const fbEl = activeSlide.querySelector('.fb-video-wrapper');
@@ -5355,7 +5372,9 @@ document.addEventListener('DOMContentLoaded', () => {
                       lastPos = pos;
                     }
 
-                    if (curEnd > 0 && pos >= curEnd) {
+                    // If theater/fullscreen mode is ON, ignore configured post end and play at full length
+                    const activeEndVal = tvTheaterEnabled ? 0 : curEnd;
+                    if (activeEndVal > 0 && pos >= activeEndVal) {
                       clearInterval(fbPoll);
                       next();
                     }
@@ -5370,8 +5389,15 @@ document.addEventListener('DOMContentLoaded', () => {
           }, 200);
         }
 
-        if (!isLive) start(startMs || 180000);
-        else stop();
+        if (!isLive) {
+          if (tvTheaterEnabled) {
+            start(3600000); // 1 hour safety fallback for fullscreen play-to-end
+          } else {
+            start(startMs || 180000);
+          }
+        } else {
+          stop();
+        }
       } else if (driveIframeEl) {
         // Drive video iframe — can't hook into events, use standard timer
         start(startMs);
