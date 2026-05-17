@@ -38,6 +38,15 @@ export function showPage(pageId) {
   const page = document.getElementById(pageId);
   if (page) page.classList.add('active');
   
+  const pageContent = document.getElementById('page-content');
+  if (pageContent) {
+    if (pageId === 'converter' || pageId === 'database') {
+      pageContent.style.setProperty('background', '#0f172a', 'important');
+    } else {
+      pageContent.style.background = '';
+    }
+  }
+
   // Close sidebar on mobile after navigation
   document.body.classList.remove('sidebar-open');
 }
@@ -119,7 +128,7 @@ export function syncFromHash(systems) {
   }
 
   // 1. Handle special non-system pages
-  if (pageId === 'home' || pageId === 'messages' || pageId === 'database' || pageId === 'loading' || pageId === 'service-viewer') {
+  if (pageId === 'home' || pageId === 'messages' || pageId === 'database' || pageId === 'converter' || pageId === 'loading' || pageId === 'service-viewer') {
     document.body.classList.remove('system-mode');
     if (pageId !== 'service-viewer') setActiveNav(pageId);
     
@@ -179,6 +188,13 @@ export function syncFromHash(systems) {
       
       if (pageId === 'messages' && userRole !== 'admin' && userRole !== 'superadmin') {
         console.warn(`[Security] ${userRole} attempted to access restricted messenger view.`);
+        if (window.showToast) window.showToast("Access Denied", "error");
+        window.location.hash = 'home';
+        return;
+      }
+
+      if (pageId === 'converter' && userRole !== 'admin' && userRole !== 'superadmin') {
+        console.warn(`[Security] ${userRole} attempted to access restricted converter view.`);
         if (window.showToast) window.showToast("Access Denied", "error");
         window.location.hash = 'home';
         return;

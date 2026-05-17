@@ -1398,6 +1398,15 @@ document.addEventListener('DOMContentLoaded', () => {
       ? homePage
       : (pageId === 'loading' ? loadingPage : (pageId === 'system-view' ? systemViewPage : (pageId === 'database' || pageId === 'messages' ? document.getElementById(pageId) : null)));
     if (page) page.classList.add('active');
+
+    const pageContent = document.getElementById('page-content');
+    if (pageContent) {
+      if (pageId === 'converter' || pageId === 'database') {
+        pageContent.style.setProperty('background', '#0f172a', 'important');
+      } else {
+        pageContent.style.background = '';
+      }
+    }
   }
 
   function getHashPageId() {
@@ -1572,7 +1581,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (navSession) {
       try {
         const userData = JSON.parse(navSession);
-        userRole = userData.role;
+        userRole = (userData.role || '').toLowerCase().trim();
       } catch (e) { }
     }
 
@@ -1589,9 +1598,6 @@ document.addEventListener('DOMContentLoaded', () => {
       'default': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>`
     };
 
-    // console.log('[Sidebar] User Role:', userRole);
-    // console.log('[Sidebar] Total Systems in Config:', systems.length);
-
     // Filter systems based on role
     const allowedSystems = systems.filter(s => {
       // Superadmin bypass: grant access to everything regardless of roles list
@@ -1601,7 +1607,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const hasAccess = allowedRoles.some(r => r.toLowerCase() === (userRole || '').toLowerCase());
       return hasAccess;
     });
-    // console.log('[Sidebar] Allowed Systems for User:', allowedSystems.length);
 
     var groups = groupBySection(allowedSystems);
     var sectionNames = Object.keys(groups).sort(function (a, b) { return a.localeCompare(b); });
@@ -1622,6 +1627,17 @@ document.addEventListener('DOMContentLoaded', () => {
             <a href="#home" class="nav-item" id="nav-toggle-tv" data-page="tv-view">
               <span class="nav-icon">${SYSTEM_ICONS['tv-view']}</span>
               <span class="nav-label">TV View</span>
+            </a>
+            <a href="#converter" class="nav-item" id="nav-converter" data-page="converter">
+              <span class="nav-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="17 1 21 5 17 9"></polyline>
+                  <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+                  <polyline points="7 23 3 19 7 15"></polyline>
+                  <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+                </svg>
+              </span>
+              <span class="nav-label">File Converter</span>
             </a>
           </div>
         </div>

@@ -4,6 +4,7 @@ import { initSharedMessaging } from "./features/messaging/logic_supabase.js";
 import "./features/messaging/ui.js";
 import { updateClock, updateWeather } from "./features/tv/clock.js";
 import { syncFromHash, ensureAppVisible } from "./ui/navigation.js";
+import { initFileConverter } from "./features/converter/logic.js";
 
 // 1. Immediate Auth Check
 performImmediateAuthCheck();
@@ -30,6 +31,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (myUsername !== 'Unknown') {
     initSharedMessaging();
   }
+
+  // Initialize File Converter
+  initFileConverter();
 
   // Initialize TV Features
   updateClock();
