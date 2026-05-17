@@ -3158,7 +3158,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const uploadPanels = {
       upload: document.getElementById('upload-tab-upload'),
       url: document.getElementById('upload-tab-url'),
-      live: document.getElementById('upload-tab-live')
+      live: document.getElementById('upload-tab-live'),
+      qr: document.getElementById('upload-tab-qr')
     };
     let activeUploadTab = 'upload'; // Default to file upload
 
@@ -3250,6 +3251,36 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
     });
+
+    // === QR CODE GENERATOR LIVE PREVIEW ===
+    const postQrUrl = document.getElementById('post-qr-url');
+    const postQrTitle = document.getElementById('post-qr-title');
+    const postQrDesc = document.getElementById('post-qr-desc');
+
+    const qrPreviewTitle = document.getElementById('qr-preview-title');
+    const qrPreviewDesc = document.getElementById('qr-preview-desc');
+    const qrPreviewImg = document.getElementById('qr-preview-img');
+
+    function updateQrPreview() {
+      const url = (postQrUrl?.value || '').trim();
+      const title = (postQrTitle?.value || '').trim();
+      const desc = (postQrDesc?.value || '').trim();
+
+      if (qrPreviewTitle) qrPreviewTitle.textContent = title || "Scan QR Code";
+      if (qrPreviewDesc) qrPreviewDesc.textContent = desc || "Scan to view link";
+
+      if (qrPreviewImg) {
+        if (url) {
+          qrPreviewImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}`;
+        } else {
+          qrPreviewImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https%3A%2F%2Fnbsc-sas.kesug.com`;
+        }
+      }
+    }
+
+    if (postQrUrl) postQrUrl.addEventListener('input', updateQrPreview);
+    if (postQrTitle) postQrTitle.addEventListener('input', updateQrPreview);
+    if (postQrDesc) postQrDesc.addEventListener('input', updateQrPreview);
 
     // === FILE INPUT + DRAG/DROP FEEDBACK ===
     const fileInput = document.getElementById('post-file');
@@ -3707,10 +3738,15 @@ document.addEventListener('DOMContentLoaded', () => {
       const uploadPanels = {
         upload: document.getElementById('upload-tab-upload'),
         url: document.getElementById('upload-tab-url'),
-        live: document.getElementById('upload-tab-live')
+        live: document.getElementById('upload-tab-live'),
+        qr: document.getElementById('upload-tab-qr')
       };
       Object.values(uploadPanels).forEach(p => p && p.classList.add('hidden'));
       if (uploadPanels['upload']) uploadPanels['upload'].classList.remove('hidden');
+
+      if (typeof updateQrPreview === 'function') {
+        updateQrPreview();
+      }
 
       // Reset Submit Button progress and state
       const sBtn = document.getElementById('submit-post-btn');
@@ -3782,6 +3818,12 @@ document.addEventListener('DOMContentLoaded', () => {
           imgUrl = imgInput.value.trim();
         } else if (activeUploadTab === 'live') {
           imgUrl = liveInput.value.trim();
+        } else if (activeUploadTab === 'qr') {
+          const qrLink = (document.getElementById('post-qr-url')?.value || '').trim();
+          if (!qrLink) {
+            if (window.showToast) window.showToast("Please provide a link for the QR Code", "error");
+            return;
+          }
         }
 
         if (activeEls.posInput) imgPos = activeEls.posInput.value || "0 0";
@@ -3875,7 +3917,90 @@ document.addEventListener('DOMContentLoaded', () => {
           let cloudinaryPublicId = "";
 
           // 2. Media Handling
-          if ((activeUploadTab === 'upload' || activeUploadTab === 'multi') && files.length > 0) {
+          if (activeUploadTab === 'qr') {
+            zzProgress.update(10);
+            const qrLink = (document.getElementById('post-qr-url')?.value || '').trim();
+            const qrTitle = (document.getElementById('post-qr-title')?.value || 'Scan QR Code').trim();
+            const qrDesc = (document.getElementById('post-qr-desc')?.value || '').trim();
+
+            const canvas = document.createElement('canvas');
+            canvas.width = 600;
+            canvas.height = 680;
+            const ctx = canvas.getContext('2d');
+
+            // Draw white background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, 600, 680);
+
+            // Draw Title
+            ctx.fillStyle = '#000000';
+            ctx.textAlign = 'center';
+            ctx.font = 'bold 36px "Outfit", "Inter", "Segoe UI", sans-serif';
+            ctx.fillText(qrTitle, 300, 65);
+
+            // Draw Subtitle
+            ctx.fillStyle = '#4b5563';
+            ctx.font = 'bold 22px "Outfit", "Inter", "Segoe UI", sans-serif';
+            ctx.fillText(qrDesc, 300, 105);
+
+            // Draw Rounded Dashed Box
+            const boxX = 80;
+            const boxY = 145;
+            const boxW = 440;
+            const boxH = 440;
+            const radius = 24;
+
+            ctx.strokeStyle = '#99e6ff';
+            ctx.lineWidth = 4;
+            ctx.setLineDash([10, 10]);
+
+            ctx.beginPath();
+            ctx.moveTo(boxX + radius, boxY);
+            ctx.lineTo(boxX + boxW - radius, boxY);
+            ctx.quadraticCurveTo(boxX + boxW, boxY, boxX + boxW, boxY + radius);
+            ctx.lineTo(boxX + boxW, boxY + boxH - radius);
+            ctx.quadraticCurveTo(boxX + boxW, boxY + boxH, boxX + boxW - radius, boxY + boxH);
+            ctx.lineTo(boxX + radius, boxY + boxH);
+            ctx.quadraticCurveTo(boxX, boxY + boxH, boxX, boxY + boxH - radius);
+            ctx.lineTo(boxX, boxY + radius);
+            ctx.quadraticCurveTo(boxX, boxY, boxX + radius, boxY);
+            ctx.closePath();
+            ctx.stroke();
+
+            // Reset dash line for subsequent drawings
+            ctx.setLineDash([]);
+
+            // Load QR Image safely
+            const qrImg = new Image();
+            qrImg.crossOrigin = "anonymous";
+            qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(qrLink)}`;
+
+            await new Promise((resolve, reject) => {
+              qrImg.onload = () => {
+                ctx.drawImage(qrImg, boxX + 24, boxY + 24, boxW - 48, boxH - 48);
+                resolve();
+              };
+              qrImg.onerror = () => reject(new Error("Failed to load QR code image."));
+            });
+
+            // Convert to Blob
+            const qrBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+            const file = new File([qrBlob], "qrcode.png", { type: "image/png" });
+
+            const fd = new FormData();
+            fd.append('file', file);
+            fd.append('upload_preset', window.ENV?.CLOUDINARY_UPLOAD_PRESET || 'sas_uploads');
+            const res = await fetch(`https://api.cloudinary.com/v1_1/${window.ENV?.CLOUDINARY_CLOUD_NAME || 'dbytj36mv'}/auto/upload`, { method: 'POST', body: fd });
+            const cloudData = await res.json();
+            
+            if (cloudData && cloudData.secure_url) {
+              cloudinaryUrl = cloudData.secure_url;
+              cloudinaryPublicId = cloudData.public_id || "";
+              zzProgress.update(90);
+            } else {
+              throw new Error("Failed to upload generated QR Code image to Cloudinary.");
+            }
+          } else if ((activeUploadTab === 'upload' || activeUploadTab === 'multi') && files.length > 0) {
             zzProgress.update(10);
 
             const uploadPromises = files.map(async (file, index) => {
