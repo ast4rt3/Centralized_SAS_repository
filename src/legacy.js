@@ -1609,7 +1609,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let adminTvNav = '';
     if (userRole === 'admin' || userRole === 'superadmin') {
       adminTvNav = `
-        <div class="nav-section" data-section-id="admin-tools">
+        <div class="nav-section collapsed" data-section-id="admin-tools">
           <div class="nav-section-header">
             <span class="nav-section-label">Admin Tools</span>
             <span class="nav-section-chevron">
@@ -1646,7 +1646,7 @@ document.addEventListener('DOMContentLoaded', () => {
           })
           .join('');
         return (
-          '<div class="nav-section" data-section-id="' + sectionSlug + '">' +
+          '<div class="nav-section collapsed" data-section-id="' + sectionSlug + '">' +
             '<div class="nav-section-header">' +
               '<span class="nav-section-label">' + escapeHtml(sectionName) + '</span>' +
               '<span class="nav-section-chevron">' +
@@ -1663,13 +1663,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Restore expand/collapse states from localStorage and bind toggle event listeners
     try {
-      const collapsedSections = JSON.parse(localStorage.getItem('sas_sidebar_collapsed_sections') || '[]');
+      const expandedSections = JSON.parse(localStorage.getItem('sas_sidebar_expanded_sections') || '[]');
       navDynamic.querySelectorAll('.nav-section').forEach(function (section) {
         const sectionId = section.getAttribute('data-section-id');
         const header = section.querySelector('.nav-section-header');
         
-        if (collapsedSections.indexOf(sectionId) > -1) {
-          section.classList.add('collapsed');
+        if (expandedSections.indexOf(sectionId) > -1) {
+          section.classList.remove('collapsed');
         }
         
         if (header) {
@@ -1679,18 +1679,18 @@ document.addEventListener('DOMContentLoaded', () => {
             
             section.classList.toggle('collapsed');
             
-            const currentCollapsed = JSON.parse(localStorage.getItem('sas_sidebar_collapsed_sections') || '[]');
-            if (section.classList.contains('collapsed')) {
-              if (currentCollapsed.indexOf(sectionId) === -1) {
-                currentCollapsed.push(sectionId);
+            const currentExpanded = JSON.parse(localStorage.getItem('sas_sidebar_expanded_sections') || '[]');
+            if (!section.classList.contains('collapsed')) {
+              if (currentExpanded.indexOf(sectionId) === -1) {
+                currentExpanded.push(sectionId);
               }
             } else {
-              const index = currentCollapsed.indexOf(sectionId);
+              const index = currentExpanded.indexOf(sectionId);
               if (index > -1) {
-                currentCollapsed.splice(index, 1);
+                currentExpanded.splice(index, 1);
               }
             }
-            localStorage.setItem('sas_sidebar_collapsed_sections', JSON.stringify(currentCollapsed));
+            localStorage.setItem('sas_sidebar_expanded_sections', JSON.stringify(currentExpanded));
           });
         }
       });
@@ -2499,6 +2499,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function setupUserMenu(userObj) {
+    if (!userObj) return;
+    const userRoleNormalized = (userObj.role || '').toLowerCase().trim();
 
     window.appLogout = function () {
       const btn = document.getElementById('logout-btn');
@@ -2512,7 +2514,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Adjust UI based on TV Mode
-    if (userObj.role === 'tv') {
+    if (userRoleNormalized === 'tv') {
       document.body.classList.add('tv-mode');
       if (tvSettingsBox) tvSettingsBox.classList.remove('hidden');
       if (btnAdminExitTv) btnAdminExitTv.classList.add('hidden');
@@ -2536,7 +2538,7 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         }
       } catch (err) { }
-    } else if (userObj.role === 'admin' || userObj.role === 'superadmin') {
+    } else if (userRoleNormalized === 'admin' || userRoleNormalized === 'superadmin') {
       const adminTvView = localStorage.getItem('sas_admin_tv_view') === 'true';
       if (adminTvView) {
         document.body.classList.add('tv-mode');
@@ -2569,7 +2571,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const navMessages = document.getElementById('nav-messages');
     const navDatabase = document.getElementById('nav-database');
-    if (userObj.role === 'admin' || userObj.role === 'superadmin') {
+    if (userRoleNormalized === 'admin' || userRoleNormalized === 'superadmin') {
       if (navMessages) {
         navMessages.style.display = 'flex';
         navMessages.classList.remove('hidden');
@@ -2582,7 +2584,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    if (userObj.role === 'superadmin') {
+    if (userRoleNormalized === 'superadmin') {
       if (navDatabase) {
         navDatabase.style.display = 'flex';
         navDatabase.classList.remove('hidden');
@@ -2601,13 +2603,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const displayStr = userObj.username;
     let roleBadge = '';
 
-    if (userObj.role === 'superadmin') {
+    if (userRoleNormalized === 'superadmin') {
       roleBadge = '<span style="background:#7c3aed; color:white; padding:2px 6px; border-radius:4px; font-size:0.7em; margin-left:8px;">SUPERADMIN</span>';
-    } else if (userObj.role === 'admin') {
+    } else if (userRoleNormalized === 'admin') {
       roleBadge = '<span style="background:var(--nbsc-gold); color:var(--nbsc-dark); padding:2px 6px; border-radius:4px; font-size:0.7em; margin-left:8px;">ADMIN</span>';
-    } else if (userObj.role === 'uploader') {
+    } else if (userRoleNormalized === 'uploader') {
       roleBadge = '<span style="background:#3b82f6; color:white; padding:2px 6px; border-radius:4px; font-size:0.7em; margin-left:8px;">UPLOADER</span>';
-    } else if (userObj.role === 'tv') {
+    } else if (userRoleNormalized === 'tv') {
       roleBadge = '<span style="background:#10b981; color:white; padding:2px 6px; border-radius:4px; font-size:0.7em; margin-left:8px;">TV</span>';
 
       // Trigger TV Mode DOM manipulation
@@ -2711,13 +2713,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Admin/Uploader/Superadmin check for "Add Post" button
     const addPostBtn = document.getElementById('add-post-btn');
-    if (addPostBtn && userObj && (userObj.role === 'admin' || userObj.role === 'uploader' || userObj.role === 'superadmin')) {
+    if (addPostBtn && userObj && (userRoleNormalized === 'admin' || userRoleNormalized === 'uploader' || userRoleNormalized === 'superadmin')) {
       addPostBtn.classList.remove('hidden');
     }
 
     // Superadmin-only: Clear Cache/Data button
     const clearCacheBtn = document.getElementById('clear-cache-btn');
-    if (clearCacheBtn && userObj && userObj.role === 'superadmin') {
+    if (clearCacheBtn && userObj && userRoleNormalized === 'superadmin') {
       clearCacheBtn.classList.remove('hidden');
       clearCacheBtn.addEventListener('click', async () => {
         const confirmed = await showConfirm(

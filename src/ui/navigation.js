@@ -57,14 +57,13 @@ export function setActiveNav(pageId) {
       if (parentSection && parentSection.classList.contains('collapsed')) {
         parentSection.classList.remove('collapsed');
         
-        // Remove from localStorage preference to persist the expanded state
+        // Add to localStorage preference to persist the expanded state
         try {
           const sectionId = parentSection.getAttribute('data-section-id');
-          const currentCollapsed = JSON.parse(localStorage.getItem('sas_sidebar_collapsed_sections') || '[]');
-          const index = currentCollapsed.indexOf(sectionId);
-          if (index > -1) {
-            currentCollapsed.splice(index, 1);
-            localStorage.setItem('sas_sidebar_collapsed_sections', JSON.stringify(currentCollapsed));
+          const currentExpanded = JSON.parse(localStorage.getItem('sas_sidebar_expanded_sections') || '[]');
+          if (currentExpanded.indexOf(sectionId) === -1) {
+            currentExpanded.push(sectionId);
+            localStorage.setItem('sas_sidebar_expanded_sections', JSON.stringify(currentExpanded));
           }
         } catch (e) {
           console.error('[Navigation] Failed to update collapsible state:', e);
@@ -168,6 +167,23 @@ export function syncFromHash(systems) {
     }
 
     if (session) {
+      let userRole = 'guest';
+      try { userRole = (JSON.parse(session).role || '').toLowerCase().trim(); } catch(e) {}
+
+      if (pageId === 'database' && userRole !== 'superadmin') {
+        console.warn(`[Security] ${userRole} attempted to access restricted database view.`);
+        if (window.showToast) window.showToast("Access Denied: Superadmin only", "error");
+        window.location.hash = 'home';
+        return;
+      }
+      
+      if (pageId === 'messages' && userRole !== 'admin' && userRole !== 'superadmin') {
+        console.warn(`[Security] ${userRole} attempted to access restricted messenger view.`);
+        if (window.showToast) window.showToast("Access Denied", "error");
+        window.location.hash = 'home';
+        return;
+      }
+
       showPage(pageId === 'loading' ? 'home' : pageId);
       ensureAppVisible();
       
