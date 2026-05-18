@@ -846,60 +846,7 @@ body.system-mode .content {
   border-radius: 4px;
   font-size: 0.85em;
 }
-  width: 100%;
-  aspect-ratio: 16 / 6.8;
-  /* Slightly taller aspect ratio */
-  overflow: hidden;
-  background-color: transparent;
-}
 
-.home-news-image,
-video.home-news-image,
-iframe.home-news-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.home-news-caption {
-  padding: 14px 16px 16px;
-  text-align: left;
-}
-
-.home-news-caption h3 {
-  margin: 0 0 4px;
-  font-size: 0.95rem;
-  font-weight: 700;
-}
-
-.home-news-caption p {
-  margin: 0;
-  font-size: 0.8rem;
-  opacity: 0.92;
-}
-
-.home-news-dots {
-  display: flex;
-  justify-content: center;
-  gap: 6px;
-  margin-top: 24px;
-}
-
-.home-news-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  border: 0;
-  background: rgba(255, 255, 255, 0.35);
-  cursor: pointer;
-  padding: 0;
-}
-
-.home-news-dot.is-active {
-  background: var(--nbsc-gold);
-  transform: scale(1.4);
-  box-shadow: 0 0 8px var(--nbsc-gold);
-}
 
 /* When viewing a system, show only the embedded HTML */
 body.system-mode .page-content {
@@ -7578,72 +7525,7 @@ body.dark-theme .qr-preview-wrapper-outer {
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-  outline: none;
-  border-color: #deae20;
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 0 15px rgba(222, 174, 32, 0.3);
-}
 
-.login-btn {
-  margin-top: 16px;
-  background: linear-gradient(135deg, #deae20 0%, #f59e0b 100%);
-  color: #001835;
-  border: none;
-  padding: 14px;
-  border-radius: 12px;
-  font-family: var(--font-sans);
-  font-weight: 800;
-  font-size: 0.95rem;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  cursor: pointer;
-  box-shadow: 0 8px 20px rgba(222, 174, 32, 0.25);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.login-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 25px rgba(222, 174, 32, 0.45);
-  filter: brightness(1.1);
-}
-
-.login-btn:active {
-  transform: translateY(0);
-}
-
-.secondary-btn {
-  width: 100%;
-  margin-top: 12px;
-  padding: 14px;
-  border: 1.5px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.03);
-  color: #ffffff;
-  font-weight: 700;
-  border-radius: 12px;
-  cursor: pointer;
-  font-family: var(--font-sans);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.secondary-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
-.login-error {
-  color: #ff4a4a;
-  background: rgba(255, 74, 74, 0.1);
-  border: 1px solid rgba(255, 74, 74, 0.2);
-  border-radius: 8px;
-  padding: 10px;
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
-.login-error.hidden {
-  display: none !important;
-}
 
 .qr-preview-title {
   font-family: "Outfit", "Inter", "Segoe UI", sans-serif;
@@ -7835,6 +7717,7 @@ body.dark-theme .qr-preview-wrapper-outer {
 /* Custom Styled Range sliders */
 input[type="range"] {
   -webkit-appearance: none;
+  appearance: none;
   background: rgba(255, 255, 255, 0.1);
   height: 6px;
   border-radius: 3px;
@@ -7843,6 +7726,7 @@ input[type="range"] {
 
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
+  appearance: none;
   width: 16px;
   height: 16px;
   border-radius: 50%;
