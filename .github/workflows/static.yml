@@ -204,15 +204,15 @@ jobs:
           ls -R dist
 
 
-      # - name: Setup Pages
-      #   uses: actions/configure-pages@v4
-      # - name: Upload Pages Artifact
-      #   uses: actions/upload-pages-artifact@v3
-      #   with:
-      #     path: './dist'
-      # - name: Deploy to GitHub Pages
-      #   id: deployment
-      #   uses: actions/deploy-pages@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './github-pages-redirect'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
 
       - name: Deploy to InfinityFree FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
