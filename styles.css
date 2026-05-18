@@ -1008,7 +1008,7 @@ body.system-mode .content {
 }
 
 .login-card {
-  background: rgba(0, 24, 53, 0.65);
+  background: #001835;
   backdrop-filter: blur(25px);
   -webkit-backdrop-filter: blur(25px);
   border: 1.5px solid rgba(222, 174, 32, 0.25);
@@ -7592,6 +7592,61 @@ body.dark-theme .qr-preview-wrapper-outer {
 
 #converter.page.active {
   display: flex !important;
+}
+
+/* Document Preview Styling */
+#word-pdf-preview h1,
+#word-pdf-preview h2,
+#word-pdf-preview h3,
+#word-pdf-preview h4,
+#word-pdf-preview h5,
+#word-pdf-preview h6 {
+  color: #ffffff;
+  margin-top: 16px;
+  margin-bottom: 8px;
+  font-family: 'Outfit', sans-serif;
+}
+
+#word-pdf-preview p {
+  color: #cbd5e1;
+  margin-bottom: 12px;
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+#word-pdf-preview table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 0.85rem;
+}
+
+#word-pdf-preview th,
+#word-pdf-preview td {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px;
+  text-align: left;
+}
+
+#word-pdf-preview th {
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+}
+
+#word-pdf-preview td {
+  color: #cbd5e1;
+}
+
+#word-pdf-preview ul,
+#word-pdf-preview ol {
+  margin-bottom: 16px;
+  padding-left: 20px;
+  color: #cbd5e1;
+}
+
+#word-pdf-preview li {
+  margin-bottom: 6px;
+  font-size: 0.9rem;
 }
 
 .converter-grid {

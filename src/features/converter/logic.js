@@ -1859,11 +1859,34 @@ function renderWordPDFWorkspace(container) {
       reader.onload = function(e) {
         try {
           const arrayBuffer = e.target.result;
-          // Simple client-side Docx reader (extracts string XML and matches runs)
+          
+          if (typeof mammoth !== 'undefined') {
+            mammoth.convertToHtml({ arrayBuffer: arrayBuffer })
+              .then(function(result) {
+                parsedText = result.value;
+                previewDiv.innerHTML = parsedText;
+                if (window.showToast) window.showToast("Word document parsed successfully!", "success");
+              })
+              .catch(function(err) {
+                console.error("Mammoth conversion failed: ", err);
+                fallbackParse(arrayBuffer);
+              });
+          } else {
+            console.warn("Mammoth library is not loaded. Falling back.");
+            fallbackParse(arrayBuffer);
+          }
+        } catch (err) {
+          console.error("Docx parsing setup failed: ", err);
+          parsedText = "Document contents parsed. Ready for PDF conversion.";
+          renderDocumentPreview(parsedText);
+        }
+      };
+      
+      const fallbackParse = (arrayBuffer) => {
+        try {
           const textDecoder = new TextDecoder('utf-8');
           const fullText = textDecoder.decode(new Uint8Array(arrayBuffer));
           
-          // Match all occurrences of XML text tags <w:t>...</w:t>
           const regex = /<w:t[^>]*>(.*?)<\/w:t>/g;
           let match;
           const runs = [];
@@ -1876,16 +1899,18 @@ function renderWordPDFWorkspace(container) {
             parsedText = runs.join(' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
             renderDocumentPreview(parsedText);
           } else {
-            const clean = fullText.replace(/[^ -~]+/g, ' ').replace(/\s+/g, ' ');
-            parsedText = clean.substring(0, 1000);
-            renderDocumentPreview(parsedText);
+            previewDiv.innerHTML = `<div style="color: #f87171; padding: 12px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); border-radius: 8px; font-size: 0.9rem;">
+              <strong style="display:block; margin-bottom: 4px; color: #fca5a5;">⚠ Docx Parsing Error</strong>
+              Unable to parse compressed .docx document offline without the parser engine loaded. Please connect to the internet or upload a plain text (.txt) document.
+            </div>`;
+            parsedText = "";
           }
         } catch (err) {
-          console.error("Docx parser failed: ", err);
-          parsedText = "Document contents parsed. Ready for PDF conversion.";
-          renderDocumentPreview(parsedText);
+          console.error("Docx fallback parser failed: ", err);
+          parsedText = "";
         }
       };
+      
       reader.readAsArrayBuffer(file);
     } else {
       // Treat as plain text
@@ -1937,13 +1962,169 @@ function renderWordPDFWorkspace(container) {
     if (e.dataTransfer.files.length > 0) loadFile(e.dataTransfer.files[0]);
   });
 
-  // Convert & Export PDF via Hidden Printing Frame
+  // Convert & Export PDF via Direct Download (with system printing fallback)
   execBtn.addEventListener('click', () => {
     if (!parsedText) return;
 
     const size = sizeSelect.value;
     const orient = orientSelect.value;
 
+    if (typeof html2pdf !== 'undefined') {
+      // 1. Direct High-Fidelity PDF Generation and Download
+      if (window.showToast) window.showToast("Compiling PDF document...", "info");
+      
+      const element = document.createElement('div');
+      element.style.position = 'absolute';
+      element.style.left = '-9999px';
+      element.style.top = '0';
+      
+      let pageWidth = '8.5in';
+      if (size === 'Letter' && orient === 'landscape') pageWidth = '11in';
+      else if (size === 'A4' && orient === 'portrait') pageWidth = '210mm';
+      else if (size === 'A4' && orient === 'landscape') pageWidth = '297mm';
+      
+      element.style.width = pageWidth;
+      element.style.background = '#ffffff';
+      element.style.color = '#000000';
+      element.style.padding = '0.8in';
+      element.style.boxSizing = 'border-box';
+      
+      element.innerHTML = `
+        <style>
+          .pdf-document-wrapper {
+            font-family: 'Times New Roman', Times, serif;
+            line-height: 1.6;
+            color: #000000;
+            background: #ffffff;
+            font-size: 12pt;
+          }
+          .pdf-header-meta {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-size: 8pt;
+            color: #666666;
+            border-bottom: 1.5px solid #000000;
+            padding-bottom: 6px;
+            margin-bottom: 24px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            justify-content: space-between;
+          }
+          .pdf-document-wrapper h1, 
+          .pdf-document-wrapper h2, 
+          .pdf-document-wrapper h3, 
+          .pdf-document-wrapper h4,
+          .pdf-document-wrapper h5,
+          .pdf-document-wrapper h6 {
+            font-family: 'Times New Roman', Times, serif;
+            color: #000000;
+            margin-top: 20px;
+            margin-bottom: 10px;
+          }
+          .pdf-document-wrapper h1 {
+            font-size: 20pt;
+            font-weight: bold;
+            text-align: center;
+            text-transform: uppercase;
+            margin-top: 10px;
+            margin-bottom: 20px;
+          }
+          .pdf-document-wrapper h2 {
+            font-size: 16pt;
+            border-bottom: 1px solid #000000;
+            padding-bottom: 4px;
+            margin-top: 24px;
+          }
+          .pdf-document-wrapper h3 {
+            font-size: 14pt;
+          }
+          .pdf-document-wrapper p {
+            margin-top: 0;
+            margin-bottom: 14px;
+            text-align: justify;
+          }
+          .pdf-document-wrapper table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 11pt;
+          }
+          .pdf-document-wrapper th, 
+          .pdf-document-wrapper td {
+            border: 1px solid #000000;
+            padding: 8px 10px;
+            text-align: left;
+          }
+          .pdf-document-wrapper th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+          }
+          .pdf-document-wrapper ul, 
+          .pdf-document-wrapper ol {
+            margin-top: 0;
+            margin-bottom: 16px;
+            padding-left: 24px;
+          }
+          .pdf-document-wrapper li {
+            margin-bottom: 6px;
+          }
+        </style>
+        <div class="pdf-document-wrapper">
+          <div class="pdf-header-meta">
+            <span>NBSC SAS Portal</span>
+            <span>Document Converter Output</span>
+          </div>
+          <div>
+            ${previewDiv.innerHTML.replace(/color:\s*white;/gi, '').replace(/color:\s*#cbd5e1;/gi, '')}
+          </div>
+        </div>
+      `;
+
+      const cleanBaseName = activeFile 
+        ? activeFile.name.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9_-]/g, "_")
+        : "document";
+      const safeFilename = `${cleanBaseName}_converted_${Date.now()}.pdf`;
+
+      const opt = {
+        margin:       0, // Margins are already handled precisely inside our element style's padding!
+        filename:     safeFilename,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, letterRendering: true, logging: false },
+        jsPDF:        { unit: 'in', format: size.toLowerCase(), orientation: orient },
+        pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
+      };
+
+      html2pdf().set(opt).from(element).output('blob')
+        .then((pdfBlob) => {
+          // Re-create the blob in the parent document context to bypass Chrome's cross-origin iframe security block!
+          const sameOriginBlob = new Blob([pdfBlob], { type: 'application/pdf' });
+          const url = URL.createObjectURL(sameOriginBlob);
+          
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = safeFilename;
+          document.body.appendChild(a);
+          a.click();
+          
+          setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          }, 150);
+
+          if (window.showToast) window.showToast("PDF downloaded directly to your device!", "success");
+        })
+        .catch((err) => {
+          console.error("Direct PDF compile failed: ", err);
+          if (window.showToast) window.showToast("Failed to compile PDF directly. Falling back to print wizard...", "warning");
+          triggerPrintFallback(size, orient);
+        });
+    } else {
+      // 2. Resilient Offline Printing Dialog Fallback
+      triggerPrintFallback(size, orient);
+    }
+  });
+
+  const triggerPrintFallback = (size, orient) => {
     const doc = printIframe.contentWindow.document;
     doc.open();
     doc.write(`
@@ -1953,7 +2134,7 @@ function renderWordPDFWorkspace(container) {
         <style>
           @page {
             size: ${size} ${orient};
-            margin: 1.5in;
+            margin: 1.2in;
           }
           body {
             font-family: 'Times New Roman', Times, serif;
@@ -1961,18 +2142,53 @@ function renderWordPDFWorkspace(container) {
             color: #000000;
             padding: 20px;
           }
-          h2 {
-            font-size: 1.6rem;
-            font-weight: bold;
+          h1, h2, h3, h4, h5, h6 {
+            font-family: 'Times New Roman', Times, serif;
+            color: #000000;
+            margin-top: 20px;
+            margin-bottom: 10px;
+          }
+          h1 {
+            font-size: 1.8rem;
             text-align: center;
-            margin-bottom: 24px;
             text-transform: uppercase;
+          }
+          h2 {
+            font-size: 1.5rem;
+            border-bottom: 1px solid #000000;
+            padding-bottom: 4px;
+            margin-top: 24px;
+          }
+          h3 {
+            font-size: 1.3rem;
           }
           p {
             font-size: 1.1rem;
-            margin-bottom: 16px;
-            text-indent: 0.5in;
+            margin-bottom: 14px;
             text-align: justify;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+          }
+          th, td {
+            border: 1px solid #000000;
+            padding: 8px;
+            text-align: left;
+            font-size: 1rem;
+          }
+          th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+          }
+          ul, ol {
+            margin-bottom: 16px;
+            padding-left: 24px;
+          }
+          li {
+            font-size: 1.1rem;
+            margin-bottom: 6px;
           }
         </style>
       </head>
@@ -1988,7 +2204,7 @@ function renderWordPDFWorkspace(container) {
       printIframe.contentWindow.print();
       if (window.showToast) window.showToast("PDF sheet successfully generated!", "success");
     }, 400);
-  });
+  };
 }
 
 /* ==========================================================================
