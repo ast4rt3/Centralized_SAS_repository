@@ -2083,6 +2083,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initSharedMessaging(); // Ensure real-time listeners start after identity is known
     initLpActivitiesAdmin(userObj); // Admin LP activities management
     initLpDocumentsAdmin(userObj);  // Admin LP documents management
+    initFileConverterShortcut(userObj); // Admin LP converter management
 
     // Sync user metadata from the database in the background to ensure it is always up-to-date
     if (myUsername && myUsername !== 'Unknown') {
@@ -7825,5 +7826,20 @@ function initLpDocumentsAdmin(userObj) {
   function lpShowConfirm(title, message) {
     if (typeof showConfirm === 'function') return showConfirm(title, message, false, 'danger');
     return Promise.resolve(window.confirm(message));
+  }
+}
+
+// ---- ADMIN: File Converter Shortcut ----
+function initFileConverterShortcut(userObj) {
+  if (!userObj) return;
+  const role = (userObj.role || '').toLowerCase();
+  if (role !== 'admin' && role !== 'superadmin') return;
+
+  const converterBtn = document.getElementById('home-converter-btn');
+  if (converterBtn) {
+    converterBtn.classList.remove('hidden');
+    converterBtn.onclick = () => {
+      window.location.hash = 'converter';
+    };
   }
 }
