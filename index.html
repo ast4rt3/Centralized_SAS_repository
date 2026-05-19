@@ -3315,6 +3315,212 @@
 
       <!-- File Converter Page -->
       <section id="converter" class="page">
+        <style>
+          /* Premium Converter Workspace Styles */
+          .converter-nav-tabs {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 6px;
+            border-radius: 14px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            width: fit-content;
+          }
+          
+          .converter-tab-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: #94a3b8;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            font-size: 0.92rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+          }
+          
+          .converter-tab-btn:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.04);
+          }
+          
+          .converter-tab-btn.active {
+            color: #ffffff;
+            background: linear-gradient(135deg, #ef4444 0%, #ec4899 100%);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+          }
+          
+          .converter-tab-content {
+            display: none;
+            animation: fadeIn 0.4s ease-out forwards;
+          }
+          
+          .converter-tab-content.active {
+            display: block;
+          }
+          
+          @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          
+          /* iLovePDF Iframe Workspace Styles */
+          .ilovepdf-iframe-container {
+            width: 100%;
+            height: calc(100vh - 280px);
+            min-height: 550px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            margin-top: 16px;
+          }
+          
+          .ilovepdf-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+          }
+          
+          .ilovepdf-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+          }
+          
+          .ilovepdf-toolbar-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #f1f5f9;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+          }
+          
+          .ilovepdf-toolbar-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+          }
+          
+          .ilovepdf-toolbar-btn.primary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+            border: none;
+          }
+          
+          /* Quick Launch Grid Styles */
+          .quick-launch-section {
+            margin-top: 32px;
+          }
+          
+          .quick-launch-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #f1f5f9;
+            margin: 0 0 16px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          }
+          
+          .quick-launch-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 16px;
+          }
+          
+          .quick-launch-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            position: relative;
+            overflow: hidden;
+          }
+          
+          .quick-launch-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, var(--glow-color) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 0;
+            pointer-events: none;
+          }
+          
+          .quick-launch-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--glow-color);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), 0 0 16px rgba(var(--glow-color-rgb), 0.15);
+          }
+          
+          .quick-launch-card:hover::before {
+            opacity: 0.1;
+          }
+          
+          .quick-launch-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            z-index: 1;
+          }
+          
+          .quick-launch-name {
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: #cbd5e1;
+            z-index: 1;
+            margin: 0;
+          }
+          
+          .quick-launch-card:hover .quick-launch-name {
+            color: #ffffff;
+          }
+        </style>
+
         <div class="converter-header" style="margin-bottom: 24px; display: flex; flex-direction: row; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; width: 100%;">
           <div style="display: flex; align-items: center; gap: 12px;">
             <div style="background: linear-gradient(135deg, #ef4444 0%, #ec4899 100%); width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);">
@@ -3326,42 +3532,93 @@
               </svg>
             </div>
             <div>
-              <h2 class="converter-title-gradient">Converter</h2>
+              <h2 class="converter-title-gradient">Document Hub & Suite</h2>
             </div>
           </div>
-
-          <!-- Dynamic Search Input -->
-          <div style="position: relative; width: 100%; max-width: 320px;">
-            <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; display: flex; align-items: center;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              </svg>
-            </span>
-            <input type="text" id="converter-tool-search" style="width: 100%; padding: 10px 12px 10px 36px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #ffffff; font-size: 0.9rem; font-family: 'Outfit', sans-serif; box-sizing: border-box; outline: none; transition: all 0.3s ease; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);" placeholder="Search tools..." autocomplete="off">
+          
+          <!-- Glowing Tab Bar Inside Header / Top Area -->
+          <div class="converter-nav-tabs" style="margin-bottom: 0;">
+            <button class="converter-tab-btn active" data-tab="ilovepdf">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+              iLovePDF Suite
+            </button>
+            <button class="converter-tab-btn" data-tab="tts">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+              Audio Text-to-Speech
+            </button>
+            <button class="converter-tab-btn" data-tab="qr-gen">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><path d="M14 14h3v3h-3z"></path><path d="M21 14h-3v3h3z"></path><path d="M14 21h3v-3h-3z"></path><path d="M17 17h4v4h-4z"></path></svg>
+              Link to QR Code
+            </button>
           </div>
         </div>
 
-        <!-- Dynamic Tool Selection Grid -->
-        <div id="converter-grid-view" class="converter-grid"></div>
-
-        <!-- Dynamic Tool Workspace Area -->
-        <div id="converter-workspace-view" class="converter-workspace hidden">
-          <div class="workspace-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 16px;">
-            <button id="converter-back-btn" class="workspace-back-btn" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #ffffff; padding: 8px 16px; font-size: 0.88rem; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s ease;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="19" y1="12" x2="5" y2="12"></line>
-                <polyline points="12 19 5 12 12 5"></polyline>
-              </svg>
-              Back to Tools
-            </button>
-            <h3 id="workspace-tool-title" style="margin: 0; font-size: 1.25rem; font-weight: 600; color: #ffffff;">Tool Title</h3>
+        <!-- ========================================== -->
+        <!-- TAB 1: iLovePDF Cloud Suite                -->
+        <!-- ========================================== -->
+        <div id="converter-tab-content-ilovepdf" class="converter-tab-content active">
+          <div class="ilovepdf-toolbar" style="display: flex; gap: 16px; flex-wrap: wrap; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 12px; flex-grow: 1; flex-wrap: wrap;">
+              <span style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 5px 12px; border-radius: 12px; font-size: 0.78rem; font-weight: 700; font-family: 'Outfit', sans-serif;">iLOVEPDF LAUNCHPAD</span>
+              
+              <!-- Real-time search inside toolbar -->
+              <div style="position: relative; width: 100%; max-width: 280px; min-width: 200px;">
+                <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; display: flex; align-items: center; pointer-events: none;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                </span>
+                <input type="text" id="ilovepdf-search-input" style="width: 100%; padding: 8px 12px 8px 34px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: #ffffff; font-size: 0.85rem; font-family: 'Outfit', sans-serif; box-sizing: border-box; outline: none; transition: all 0.3s ease; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);" placeholder="Search 20+ PDF tools..." autocomplete="off">
+              </div>
+            </div>
+            
+            <div style="display: flex; gap: 10px;">
+              <a href="https://www.ilovepdf.com/" target="_blank" rel="noopener" class="ilovepdf-toolbar-btn primary" style="text-decoration: none;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"></path></svg>
+                Open iLovePDF Home
+              </a>
+            </div>
           </div>
-
-          <div class="workspace-body">
-            <!-- Dynamic Workspaces Injected by logic.js -->
-            <div id="workspace-content-container"></div>
+          
+          <!-- Premium Launchpad Viewport -->
+          <div class="ilovepdf-dashboard-container" style="background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 16px; padding: 24px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4); margin-top: 16px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 14px; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+              <div>
+                <h3 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 1.15rem; color: #ffffff; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                  iLovePDF Desktop Cloud Suite
+                </h3>
+                <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.8rem;">Click any tool to launch its secure cloud workspace in a new workspace window.</p>
+              </div>
+              
+              <!-- Quick filter buttons -->
+              <div id="ilovepdf-category-filters" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="converter-tab-btn active" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px;" data-filter="all">All Tools</button>
+                <button class="converter-tab-btn" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px;" data-filter="convert">Convert</button>
+                <button class="converter-tab-btn" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px;" data-filter="optimize">Optimize</button>
+                <button class="converter-tab-btn" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px;" data-filter="edit">Edit & Secure</button>
+              </div>
+            </div>
+            
+            <!-- Dynamic Grid Viewport -->
+            <div id="ilovepdf-grid-dashboard" class="quick-launch-grid" style="grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px;">
+              <!-- Dynamically populated in logic.js -->
+            </div>
           </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- TAB 2: Audio Text-to-Speech                -->
+        <!-- ========================================== -->
+        <div id="converter-tab-content-tts" class="converter-tab-content">
+          <!-- Dynamically Injected by logic.js -->
+          <div id="tts-workspace-container"></div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- TAB 3: Link to QR Code                     -->
+        <!-- ========================================== -->
+        <div id="converter-tab-content-qr-gen" class="converter-tab-content">
+          <!-- Dynamically Injected by logic.js -->
+          <div id="qr-workspace-container"></div>
         </div>
       </section>
     </div>

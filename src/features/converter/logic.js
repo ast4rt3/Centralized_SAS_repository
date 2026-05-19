@@ -4,295 +4,351 @@
 
 import { getEl } from "../../utils/dom.js";
 
-// Active tool workspace state
-let currentTool = null;
-
-// Database of all supported converters, sorted from most useful to least useful.
-// Hidden tools (visible: false) are only revealed when searched by the user!
-const ALL_TOOLS = [
+// iLovePDF Cloud Suite Tools Database (21 Premium Tools)
+const ILOVEPDF_TOOLS = [
   {
-    id: 'word-pdf',
-    title: 'Word to PDF',
-    desc: 'Directly convert Microsoft Word (.docx/.doc) or text documents into standard, printer-friendly PDF files offline.',
-    badge: 'Featured',
-    badgeStyle: 'background: rgba(37, 99, 235, 0.2); color: #93c5fd; border-color: rgba(37, 99, 235, 0.3);',
-    glow: '#2563eb',
-    icon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-      <polyline points="14 2 14 8 20 8"></polyline>
-      <path d="M9 15h1.5a1.5 1.5 0 0 0 0-3H9v6"></path>
-      <path d="M12 12v6h1.5a1.5 1.5 0 0 0 0-3H12"></path>
-    </svg>`,
-    visible: true
+    id: 'merge',
+    title: 'Merge PDF',
+    desc: 'Combine PDFs in the order you want with the easiest PDF merger.',
+    url: 'https://www.ilovepdf.com/merge_pdf',
+    glow: '#ef4444',
+    glowRgb: '239, 68, 68',
+    category: 'optimize',
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"></path></svg>`
+  },
+  {
+    id: 'split',
+    title: 'Split PDF',
+    desc: 'Extract pages from your PDF or convert each page to a separate PDF.',
+    url: 'https://www.ilovepdf.com/split_pdf',
+    glow: '#f97316',
+    glowRgb: '249, 115, 22',
+    category: 'optimize',
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="3" x2="12" y2="21"></line></svg>`
+  },
+  {
+    id: 'compress',
+    title: 'Compress PDF',
+    desc: 'Reduce file size while optimizing for maximal PDF quality.',
+    url: 'https://www.ilovepdf.com/compress_pdf',
+    glow: '#3b82f6',
+    glowRgb: '59, 130, 246',
+    category: 'optimize',
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7"></path></svg>`
   },
   {
     id: 'pdf-word',
     title: 'PDF to Word',
-    desc: 'Extract formatted text and layouts from PDF documents and compile them into editable Microsoft Word (.docx) files offline.',
-    badge: 'Secret Tool',
-    badgeStyle: 'background: rgba(236, 72, 153, 0.2); color: #fbcfe8; border-color: rgba(236, 72, 153, 0.3);',
-    glow: '#db2777',
-    icon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-      <polyline points="14 2 14 8 20 8"></polyline>
-      <line x1="16" y1="13" x2="8" y2="13"></line>
-      <line x1="16" y1="17" x2="8" y2="17"></line>
-      <polyline points="10 9 9 9 8 9"></polyline>
-    </svg>`,
-    visible: false // Secret search-only tool!
+    desc: 'Convert your PDF to Word documents with incredible accuracy.',
+    url: 'https://www.ilovepdf.com/pdf_to_word',
+    glow: '#0ea5e9',
+    glowRgb: '14, 165, 233',
+    category: 'convert',
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>`
   },
   {
-    id: 'pdf-csv',
-    title: 'PDF to CSV Spreadsheet',
-    desc: 'Extract rows, grids, and tabular lists from PDF documents directly into clean CSV spreadsheets.',
-    badge: 'Featured',
-    badgeStyle: 'background: rgba(5, 150, 105, 0.2); color: #a7f3d0; border-color: rgba(5, 150, 105, 0.3);',
-    glow: '#059669',
-    icon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-      <polyline points="14 2 14 8 20 8"></polyline>
-      <path d="M8 13h4M8 17h4"></path>
-    </svg>`,
-    visible: true
+    id: 'word-pdf',
+    title: 'Word to PDF',
+    desc: 'Make DOC and DOCX files easy to read by converting them to PDF.',
+    url: 'https://www.ilovepdf.com/word_to_pdf',
+    glow: '#2563eb',
+    glowRgb: '37, 99, 235',
+    category: 'convert',
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="9" y1="15" x2="15" y2="15"></line></svg>`
   },
   {
-    id: 'img-conv',
-    title: 'Image Converter',
-    desc: 'Convert images between PNG, JPEG, WEBP, BMP, GIF, and ICO formats instantly in browser.',
-    badge: 'Images',
-    badgeStyle: '',
-    glow: '#ec4899',
-    icon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-      <circle cx="8.5" cy="8.5" r="1.5"></circle>
-      <polyline points="21 15 16 10 5 21"></polyline>
-    </svg>`,
-    visible: true
-  },
-  {
-    id: 'img-comp',
-    title: 'Image Compressor',
-    desc: 'Reduce image size with adjustable quality slider and width/height scale percentage controls.',
-    badge: 'Optimization',
-    badgeStyle: '',
+    id: 'pdf-excel',
+    title: 'PDF to Excel',
+    desc: 'Extract tabular data from PDFs to Excel spreadsheets in seconds.',
+    url: 'https://www.ilovepdf.com/pdf_to_excel',
     glow: '#10b981',
-    icon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7"></path>
-    </svg>`,
-    visible: true
+    glowRgb: '16, 185, 129',
+    category: 'convert',
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line></svg>`
   },
   {
-    id: 'csv-json',
-    title: 'JSON / CSV Spreadsheet',
-    desc: 'Convert JSON lists to standard CSV spreadsheet rows or parse CSV files back to clean JSON.',
-    badge: 'Spreadsheet',
-    badgeStyle: '',
-    glow: '#8b5cf6',
-    icon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M14 3v4a1 1 0 0 0 1 1h4"></path>
-      <path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"></path>
-    </svg>`,
-    visible: true
+    id: 'excel-pdf',
+    title: 'Excel to PDF',
+    desc: 'Convert Excel spreadsheets to clean PDF documents.',
+    url: 'https://www.ilovepdf.com/excel_to_pdf',
+    glow: '#059669',
+    glowRgb: '5, 150, 105',
+    category: 'convert',
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M8 13h8v5H8z"></path></svg>`
   },
   {
-    id: 'doc-conv',
-    title: 'Document & Markdown',
-    desc: 'Compile custom text or rich Markdown segments into clean styled HTML or print to PDF files.',
-    badge: 'Document',
-    badgeStyle: '',
+    id: 'pdf-ppt',
+    title: 'PDF to PowerPoint',
+    desc: 'Turn your PDF files into easy-to-edit PowerPoint slideshows.',
+    url: 'https://www.ilovepdf.com/pdf_to_powerpoint',
+    glow: '#f43f5e',
+    glowRgb: '244, 63, 94',
+    category: 'convert',
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4h16v12H4V4zm0 16h16v-2H4v2z"></path></svg>`
+  },
+  {
+    id: 'ppt-pdf',
+    title: 'PowerPoint to PDF',
+    desc: 'Convert PowerPoint presentations to PDF online.',
+    url: 'https://www.ilovepdf.com/powerpoint_to_pdf',
+    glow: '#e11d48',
+    glowRgb: '225, 29, 72',
+    category: 'convert',
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 20h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"></path></svg>`
+  },
+  {
+    id: 'pdf-jpg',
+    title: 'PDF to JPG',
+    desc: 'Convert each page of a PDF into a JPG image.',
+    url: 'https://www.ilovepdf.com/pdf_to_jpg',
     glow: '#eab308',
-    icon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-      <polyline points="14 2 14 8 20 8"></polyline>
-      <line x1="16" y1="13" x2="8" y2="13"></line>
-      <line x1="16" y1="17" x2="8" y2="17"></line>
-      <polyline points="10 9 9 9 8 9"></polyline>
-    </svg>`,
-    visible: true
+    glowRgb: '234, 179, 8',
+    category: 'convert',
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>`
   },
   {
-    id: 'qr-gen',
-    title: 'QR Code Generator',
-    desc: 'Convert links, URLs, or plain text into a high-resolution QR Code image instantly.',
-    badge: 'Dynamic QR',
-    badgeStyle: 'background: rgba(6, 182, 212, 0.2); color: #a5f3fc; border-color: rgba(6, 182, 212, 0.3);',
+    id: 'jpg-pdf',
+    title: 'JPG to PDF',
+    desc: 'Convert JPG, PNG, and other images to PDF in seconds.',
+    url: 'https://www.ilovepdf.com/jpg_to_pdf',
+    glow: '#a855f7',
+    glowRgb: '168, 85, 247',
+    category: 'convert',
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"></path></svg>`
+  },
+  {
+    id: 'html-pdf',
+    title: 'HTML to PDF',
+    desc: 'Convert webpages in HTML to PDF with a simple click.',
+    url: 'https://www.ilovepdf.com/html_to_pdf',
     glow: '#06b6d4',
-    icon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="3" y="3" width="7" height="7"></rect>
-      <rect x="14" y="3" width="7" height="7"></rect>
-      <rect x="3" y="14" width="7" height="7"></rect>
-      <path d="M14 14h3v3h-3z"></path>
-      <path d="M21 14h-3v3h3z"></path>
-      <path d="M14 21h3v-3h-3z"></path>
-      <path d="M17 17h4v4h-4z"></path>
-    </svg>`,
-    visible: true
+    glowRgb: '6, 182, 212',
+    category: 'convert',
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line></svg>`
   },
   {
-    id: 'tts',
-    title: 'Audio Text-to-Speech',
-    desc: 'Convert text or articles into high-fidelity voice tracks and download as WAV audio files.',
-    badge: 'Audio',
-    badgeStyle: '',
-    glow: '#3b82f6',
-    icon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-      <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-    </svg>`,
-    visible: true
+    id: 'edit',
+    title: 'Edit PDF',
+    desc: 'Add text, shapes, images, and annotations to your PDF online.',
+    url: 'https://www.ilovepdf.com/edit-pdf',
+    glow: '#f43f5e',
+    glowRgb: '244, 63, 94',
+    category: 'edit',
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4z"></path></svg>`
+  },
+  {
+    id: 'organize',
+    title: 'Organize PDF',
+    desc: 'Sort, add, delete, and rotate PDF pages visually.',
+    url: 'https://www.ilovepdf.com/organize-pdf',
+    glow: '#6366f1',
+    glowRgb: '99, 102, 241',
+    category: 'edit',
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>`
+  },
+  {
+    id: 'rotate',
+    title: 'Rotate PDF',
+    desc: 'Rotate your PDFs. Rotate multiple files at once!',
+    url: 'https://www.ilovepdf.com/rotate_pdf',
+    glow: '#d97706',
+    glowRgb: '217, 119, 6',
+    category: 'edit',
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>`
+  },
+  {
+    id: 'pagenumber',
+    title: 'Add Page Numbers',
+    desc: 'Add numbers to PDF documents. Choose position, layout, & style.',
+    url: 'https://www.ilovepdf.com/add_pdf_page_number',
+    glow: '#84cc16',
+    glowRgb: '132, 204, 22',
+    category: 'edit',
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v8M8 12h8"></path></svg>`
+  },
+  {
+    id: 'watermark',
+    title: 'Add Watermark',
+    desc: 'Stamp an image or text over your PDF in seconds.',
+    url: 'https://www.ilovepdf.com/pdf_add_watermark',
+    glow: '#a855f7',
+    glowRgb: '168, 85, 247',
+    category: 'edit',
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><path d="M12 3v18M3 12h18"></path></svg>`
+  },
+  {
+    id: 'unlock',
+    title: 'Unlock PDF',
+    desc: 'Remove PDF password security to edit, copy, or print freely.',
+    url: 'https://www.ilovepdf.com/unlock_pdf',
+    glow: '#ec4899',
+    glowRgb: '236, 72, 153',
+    category: 'edit',
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`
+  },
+  {
+    id: 'protect',
+    title: 'Protect PDF',
+    desc: 'Encrypt your PDF files with a secure password.',
+    url: 'https://www.ilovepdf.com/protect_pdf',
+    glow: '#14b8a6',
+    glowRgb: '20, 184, 166',
+    category: 'edit',
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>`
+  },
+  {
+    id: 'sign',
+    title: 'Sign PDF',
+    desc: 'Sign documents and request electronic signatures from others.',
+    url: 'https://www.ilovepdf.com/sign-pdf',
+    glow: '#22c55e',
+    glowRgb: '34, 197, 94',
+    category: 'edit',
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>`
+  },
+  {
+    id: 'repair',
+    title: 'Repair PDF',
+    desc: 'Upload a corrupt PDF and recover its format or contents.',
+    url: 'https://www.ilovepdf.com/repair-pdf',
+    glow: '#78716c',
+    glowRgb: '120, 113, 108',
+    category: 'optimize',
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94Z"></path></svg>`
   }
 ];
-
-// Helper to convert hex colors to rgb values
-function hexToRgba(hex, alpha) {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
 
 // Initialize file converter
 export function initFileConverter() {
   const converterSection = document.getElementById('converter');
   if (!converterSection) return;
 
-  const gridView = document.getElementById('converter-grid-view');
-  const workspaceView = document.getElementById('converter-workspace-view');
-  const backBtn = document.getElementById('converter-back-btn');
-  const toolTitle = document.getElementById('workspace-tool-title');
-  const workspaceContent = document.getElementById('workspace-content-container');
-  const searchInput = document.getElementById('converter-tool-search');
+  const tabButtons = document.querySelectorAll('.converter-tab-btn');
+  const tabContents = document.querySelectorAll('.converter-tab-content');
+  const ilovepdfSearch = document.getElementById('ilovepdf-search-input');
+  const ilovepdfGrid = document.getElementById('ilovepdf-grid-dashboard');
+  const filterBtns = document.querySelectorAll('#ilovepdf-category-filters .converter-tab-btn');
 
-  // Dynamic cards rendering logic with real-time text input matching
-  const renderCardsGrid = (query = '') => {
-    if (!gridView) return;
-    const lowercaseQuery = query.toLowerCase().trim();
-    gridView.innerHTML = '';
+  let activeCategory = 'all';
+  let searchQuery = '';
 
-    // Filter tools (hidden ones become visible when search query matches)
-    let filteredTools = [];
-    if (lowercaseQuery === '') {
-      filteredTools = ALL_TOOLS.filter(t => t.visible);
-    } else {
-      filteredTools = ALL_TOOLS.filter(t => 
-        t.title.toLowerCase().includes(lowercaseQuery) || 
-        t.desc.toLowerCase().includes(lowercaseQuery)
-      );
-    }
+  // Function to render iLovePDF launchpad cards
+  const renderLaunchpad = () => {
+    if (!ilovepdfGrid) return;
+    ilovepdfGrid.innerHTML = '';
 
-    if (filteredTools.length === 0) {
-      gridView.innerHTML = `
-        <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #94a3b8; font-size: 0.95rem; font-family: 'Outfit', sans-serif;">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: #64748b; margin-bottom: 12px;">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-          </svg>
-          <p style="margin: 0; font-weight: 500;">No tools matching "${query}" found.</p>
-          <span style="font-size: 0.8rem; color: #64748b; margin-top: 4px; display: block;">Try searching for "Word", "PDF", "CSV", "Image", or "Secret"</span>
-        </div>
-      `;
-      return;
-    }
-
-    filteredTools.forEach(tool => {
-      const card = document.createElement('div');
-      card.className = 'converter-card';
-      card.setAttribute('data-tool', tool.id);
-      card.style.setProperty('--card-glow', tool.glow);
-
-      let badgeHTML = '';
-      if (tool.badge) {
-        badgeHTML = `<span class="converter-card-badge" style="${tool.badgeStyle || ''}">${tool.badge}</span>`;
-      }
+    ILOVEPDF_TOOLS.forEach(tool => {
+      const card = document.createElement('a');
+      card.href = tool.url;
+      card.target = '_blank';
+      card.rel = 'noopener';
+      card.className = 'quick-launch-card';
+      card.style.setProperty('--glow-color', tool.glow);
+      card.style.setProperty('--glow-color-rgb', tool.glowRgb);
+      card.style.display = 'flex';
+      card.style.flexDirection = 'column';
+      card.style.alignItems = 'flex-start';
+      card.style.textAlign = 'left';
+      card.style.padding = '20px';
+      card.style.textDecoration = 'none';
+      card.style.height = '100%';
+      card.style.boxSizing = 'border-box';
+      card.setAttribute('data-category', tool.category);
 
       card.innerHTML = `
-        <div class="converter-card-icon" style="background: ${hexToRgba(tool.glow, 0.15)}; color: ${tool.glow};">
+        <div class="quick-launch-icon" style="background: rgba(${tool.glowRgb}, 0.15); color: ${tool.glow}; margin-bottom: 12px; width: 44px; height: 44px; border-radius: 10px;">
           ${tool.icon}
         </div>
-        <h3>${tool.title}</h3>
-        <p>${tool.desc}</p>
-        ${badgeHTML}
+        <h4 style="margin: 0 0 6px 0; font-family: 'Outfit', sans-serif; font-size: 0.95rem; font-weight: 700; color: #ffffff;">${tool.title}</h4>
+        <p style="margin: 0; font-size: 0.78rem; color: #94a3b8; line-height: 1.4; font-family: sans-serif;">${tool.desc}</p>
       `;
 
-      card.addEventListener('click', () => {
-        gridView.classList.add('hidden');
-        workspaceView.classList.remove('hidden');
-        if (toolTitle) toolTitle.innerText = tool.title;
-        currentTool = tool.id;
-        renderToolWorkspace(tool.id, workspaceContent);
-      });
-
-      gridView.appendChild(card);
+      ilovepdfGrid.appendChild(card);
     });
   };
 
-  // Handle back button click
-  if (backBtn) {
-    backBtn.addEventListener('click', () => {
-      // Cancel active voice synthesis immediately!
-      if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
+  // Filter launchpad cards
+  const applyFilters = () => {
+    const cards = ilovepdfGrid.querySelectorAll('.quick-launch-card');
+    cards.forEach((card, index) => {
+      const tool = ILOVEPDF_TOOLS[index];
+      const matchesCategory = activeCategory === 'all' || tool.category === activeCategory;
+      const matchesSearch = tool.title.toLowerCase().includes(searchQuery) || tool.desc.toLowerCase().includes(searchQuery);
+
+      if (matchesCategory && matchesSearch) {
+        card.style.display = 'flex';
+      } else {
+        card.style.display = 'none';
       }
-      workspaceView.classList.add('hidden');
-      gridView.classList.remove('hidden');
-      workspaceContent.innerHTML = '';
-      currentTool = null;
-      if (searchInput) {
-        searchInput.value = '';
-      }
-      renderCardsGrid('');
+    });
+  };
+
+  // Render launchpad initially
+  renderLaunchpad();
+
+  // Bind Search Input
+  if (ilovepdfSearch) {
+    ilovepdfSearch.addEventListener('input', (e) => {
+      searchQuery = e.target.value.toLowerCase().trim();
+      applyFilters();
     });
   }
 
-  // Bind real-time search events
-  if (searchInput) {
-    searchInput.addEventListener('input', (e) => {
-      renderCardsGrid(e.target.value);
+  // Bind Category Filters
+  filterBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation(); // Avoid triggering tab triggers
+      filterBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeCategory = btn.getAttribute('data-filter');
+      applyFilters();
     });
-    // Render initially
-    renderCardsGrid('');
-  } else {
-    renderCardsGrid('');
-  }
-}
+  });
 
-/**
- * Route tool workspace renderers
- */
-function renderToolWorkspace(toolId, container) {
-  container.innerHTML = ''; // Reset container
+  // Handle Tab Switching
+  tabButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      // Don't switch if click was on category filters
+      if (btn.closest('#ilovepdf-category-filters')) return;
 
-  switch (toolId) {
-    case 'word-pdf':
-      renderWordPDFWorkspace(container);
-      break;
-    case 'pdf-word':
-      renderPDFWordWorkspace(container);
-      break;
-    case 'pdf-csv':
-      renderPDFCSVWorkspace(container);
-      break;
-    case 'tts':
-      renderTTSWorkspace(container);
-      break;
-    case 'img-conv':
-      renderImageConverterWorkspace(container);
-      break;
-    case 'img-comp':
-      renderImageCompressorWorkspace(container);
-      break;
-    case 'doc-conv':
-      renderDocConverterWorkspace(container);
-      break;
-    case 'csv-json':
-      renderCSVJSONWorkspace(container);
-      break;
-    case 'qr-gen':
-      renderQRWorkspace(container);
-      break;
-    default:
-      container.innerHTML = '<p style="color: #94a3b8;">Work in progress...</p>';
-  }
+      const tabId = btn.getAttribute('data-tab');
+      
+      // Update active button state
+      tabButtons.forEach(b => {
+        if (!b.closest('#ilovepdf-category-filters')) {
+          b.classList.remove('active');
+        }
+      });
+      btn.classList.add('active');
+
+      // Update active content state
+      tabContents.forEach(content => content.classList.remove('active'));
+      const activeContent = document.getElementById(`converter-tab-content-${tabId}`);
+      if (activeContent) {
+        activeContent.classList.add('active');
+      }
+
+      // Handle lazy loading of tool workspaces
+      if (tabId === 'tts') {
+        const ttsContainer = document.getElementById('tts-workspace-container');
+        if (ttsContainer && ttsContainer.children.length === 0) {
+          renderTTSWorkspace(ttsContainer);
+        }
+      } else if (tabId === 'qr-gen') {
+        const qrContainer = document.getElementById('qr-workspace-container');
+        if (qrContainer && qrContainer.children.length === 0) {
+          renderQRWorkspace(qrContainer);
+        }
+      }
+
+      // Cancel Speech Synthesis if moving away from TTS tab
+      if (tabId !== 'tts') {
+        if (window.speechSynthesis) {
+          window.speechSynthesis.cancel();
+        }
+      }
+    });
+  });
 }
 
 /* ==========================================================================
