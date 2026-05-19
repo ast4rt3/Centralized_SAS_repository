@@ -7624,6 +7624,108 @@ function initLpDocuments() {
   const yearSelect = document.getElementById('lp-docs-year');
   if (!grid) return;
 
+  let _prevOverviewCounts = { total: -1, memos: -1, lostFound: -1, forms: -1 };
+  let _lostFoundStats = null;
+
+  const updateLfNavStats = () => {
+    if (!_lostFoundStats) return;
+    const found   = document.getElementById('lf-nav-found');
+    const lost    = document.getElementById('lf-nav-lost');
+    const claims  = document.getElementById('lf-nav-claims');
+    const claimed = document.getElementById('lf-nav-claimed');
+    if (found)   found.textContent   = _lostFoundStats.foundItems   || 0;
+    if (lost)    lost.textContent    = _lostFoundStats.lostItems    || 0;
+    if (claims)  claims.textContent  = _lostFoundStats.totalClaims  || 0;
+    if (claimed) claimed.textContent = _lostFoundStats.claimedItems || 0;
+  };
+
+  const fetchLostFoundStats = async () => {
+    try {
+      if (!window.ENV || !window.ENV.BACKEND_GAS_URL) return;
+      const res = await fetch(window.ENV.BACKEND_GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'getLostFoundStats' })
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          _lostFoundStats = json.data;
+          updateLpOverviewSummary();
+          updateLfNavStats();
+        }
+      }
+    } catch (e) {
+      console.warn('[Lost & Found Stats] Fetch failed via GAS proxy:', e);
+    }
+  };
+
+  fetchLostFoundStats();
+
+  window.openLostFoundViewer = () => {
+    const viewer  = document.getElementById('lost-found-viewer');
+    const content = document.getElementById('lp-main-content');
+    const iframe  = document.getElementById('lf-analytics-iframe');
+    const navbar  = document.querySelector('.lp-navbar');
+    const unauth  = document.getElementById('lf-unauth-overlay');
+    
+    if (!viewer) return;
+
+    const rawData = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
+    if (rawData) {
+      // User is logged in! Hide unauth overlay and load iframe with token query parameters
+      if (unauth) unauth.classList.add('hidden');
+      if (iframe) {
+        try {
+          const userData = JSON.parse(rawData);
+          const currentUser = userData.username || '';
+          const currentToken = userData.token || userData.jwt || '';
+          if (currentUser && currentToken) {
+            iframe.src = `https://lost-and-found-liart-seven.vercel.app/dashboard/analytics?portalUser=${encodeURIComponent(currentUser)}&portalToken=${encodeURIComponent(currentToken)}`;
+          } else {
+            iframe.src = 'https://lost-and-found-liart-seven.vercel.app/dashboard/analytics';
+          }
+        } catch (e) {
+          iframe.src = 'https://lost-and-found-liart-seven.vercel.app/dashboard/analytics';
+        }
+      }
+    } else {
+      // User is logged out! Show unauth overlay and clear the iframe src
+      if (unauth) unauth.classList.remove('hidden');
+      if (iframe) iframe.src = '';
+    }
+
+    if (content) content.style.display = 'none';
+    if (navbar) navbar.classList.add('scrolled');
+    viewer.classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  window.closeLostFoundViewer = () => {
+    const viewer  = document.getElementById('lost-found-viewer');
+    const content = document.getElementById('lp-main-content');
+    const navbar  = document.querySelector('.lp-navbar');
+    if (viewer)  viewer.classList.add('hidden');
+    if (content) content.style.display = '';
+    if (navbar && window.scrollY < 40) {
+      navbar.classList.remove('scrolled');
+    }
+    const section = document.getElementById('lp-lost-found');
+    if (section) section.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  window.openLfLogin = () => {
+    window.closeLostFoundViewer();
+    const lo = document.getElementById('login-overlay');
+    if (lo) {
+      lo.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+  };
+
+  window.openLfStatsModal  = window.openLostFoundViewer;
+  window.closeLfStatsModal = window.closeLostFoundViewer;
+
    // Sync from Supabase (formerly Firebase)
    const fetchLpDocs = async () => {
      // console.log('[LP Docs] Fetching from sas_documents...');
@@ -7703,6 +7805,7 @@ function initLpDocuments() {
   }
 
   function renderLpDocuments() {
+    updateLpOverviewSummary();
     grid.innerHTML = '';
 
     const filtered = _lpAllDocuments.filter(doc => {
@@ -7766,6 +7869,75 @@ function initLpDocuments() {
     });
   }
 
+  function updateLpOverviewSummary() {
+    const publicDocs = _lpAllDocuments.filter(doc => {
+      if (doc.description && doc.description.startsWith('[vault:')) {
+        const parts = doc.description.match(/^\[vault:([^:]+):([^:]+):([^\]]+)\]/);
+        if (parts) {
+          return parts[2] === 'true';
+        }
+      }
+      return true;
+    });
+
+    const totalCount = publicDocs.length;
+    const memosCount = publicDocs.filter(d => d.category === 'Memo' || d.category === 'Advisory').length;
+    const formsCount = publicDocs.filter(d => d.category === 'Form').length;
+    
+    let lostFoundCount = publicDocs.filter(d => d.category === 'Lost & Found').length;
+    if (_lostFoundStats) {
+      lostFoundCount = (_lostFoundStats.lostItems || 0) + (_lostFoundStats.foundItems || 0);
+    }
+
+    if (totalCount !== _prevOverviewCounts.total) {
+      animateValue('stat-total-docs', _prevOverviewCounts.total === -1 ? 0 : _prevOverviewCounts.total, totalCount, 600);
+      _prevOverviewCounts.total = totalCount;
+    }
+    if (memosCount !== _prevOverviewCounts.memos) {
+      animateValue('stat-memos-docs', _prevOverviewCounts.memos === -1 ? 0 : _prevOverviewCounts.memos, memosCount, 600);
+      _prevOverviewCounts.memos = memosCount;
+    }
+    if (lostFoundCount !== _prevOverviewCounts.lostFound) {
+      animateValue('stat-lost-found-docs', _prevOverviewCounts.lostFound === -1 ? 0 : _prevOverviewCounts.lostFound, lostFoundCount, 600);
+      _prevOverviewCounts.lostFound = lostFoundCount;
+    }
+    if (formsCount !== _prevOverviewCounts.forms) {
+      animateValue('stat-forms-docs', _prevOverviewCounts.forms === -1 ? 0 : _prevOverviewCounts.forms, formsCount, 600);
+      _prevOverviewCounts.forms = formsCount;
+    }
+
+    // Update subtext label dynamically
+    const subTextObj = document.getElementById('stat-lost-found-sub');
+    if (subTextObj) {
+      if (_lostFoundStats) {
+        const activeLost = (_lostFoundStats.lostItems || 0) - (_lostFoundStats.resolvedLostItems || 0);
+        const claimableFound = (_lostFoundStats.foundItems || 0) - (_lostFoundStats.claimedItems || 0);
+        subTextObj.innerHTML = `<span class="lp-sub-stat">${activeLost} Lost</span> &bull; <span class="lp-sub-stat">${claimableFound} Claimable</span>`;
+      } else {
+        subTextObj.textContent = 'Document Count';
+      }
+    }
+  }
+
+  function animateValue(id, start, end, duration) {
+    const obj = document.getElementById(id);
+    if (!obj) return;
+    if (end === 0) {
+      obj.textContent = "0";
+      return;
+    }
+    let startTimestamp = null;
+    const step = (timestamp) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+      obj.textContent = Math.floor(progress * (end - start) + start);
+      if (progress < 1) {
+        window.requestAnimationFrame(step);
+      }
+    };
+    window.requestAnimationFrame(step);
+  }
+
   function getDocIcon(cat) {
     switch (cat) {
       case 'Memo': return 'bx-file';
@@ -7773,6 +7945,7 @@ function initLpDocuments() {
       case 'Form': return 'bx-edit-alt';
       case 'Resolution': return 'bx-badge-check';
       case 'Issuance': return 'bx-certification';
+      case 'Lost & Found': return 'bx-search-alt-2';
       default: return 'bx-file';
     }
   }

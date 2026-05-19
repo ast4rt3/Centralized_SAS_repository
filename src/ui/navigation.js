@@ -88,6 +88,27 @@ export function setActiveNav(pageId) {
 export function syncFromHash(systems) {
   const hash = (window.location.hash || '#home').replace('#', '');
   const pageId = hash || 'home';
+
+  // Close any full-screen landing overlays on hash change/navigation
+  const lfViewer = document.getElementById('lost-found-viewer');
+  const lpMainContent = document.getElementById('lp-main-content');
+  if (lfViewer && !lfViewer.classList.contains('hidden')) {
+    lfViewer.classList.add('hidden');
+    if (lpMainContent) {
+      lpMainContent.style.display = '';
+    }
+    const navbar = document.querySelector('.lp-navbar');
+    if (navbar && window.scrollY < 40) {
+      navbar.classList.remove('scrolled');
+    }
+  }
+
+  const allActPage = document.getElementById('lp-all-activities-page');
+  if (allActPage && allActPage.classList.contains('lp-all-act-open')) {
+    allActPage.classList.remove('lp-all-act-open');
+    allActPage.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
   
   const systemsData = systems || [];
 

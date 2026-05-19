@@ -1618,6 +1618,7 @@
               </ul>
             </li>
             <li><a href="#lp-documents">Documents</a></li>
+            <li><a href="#lp-lost-found">Lost &amp; Found</a></li>
             <li><a href="#lp-activities">Recent Activities</a></li>
           </ul>
 
@@ -2040,12 +2041,114 @@
         </div>
       </section>
 
+      <!-- Lost & Found Section -->
+      <section id="lp-lost-found" class="lp-section">
+        <div class="lp-container">
+          <div class="lp-section-header">
+            <h2>Lost &amp; Found</h2>
+            <p>Report, find, and track lost items across the NBSC campus. Powered by the NBSC Lost &amp; Found system.</p>
+          </div>
+
+          <div class="lp-lf-cards-grid">
+
+            <div class="lp-lf-card" onclick="openLostFoundViewer()" style="cursor:pointer;">
+              <div class="lp-lf-card-icon" style="background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%);">
+                <i class='bx bx-line-chart'></i>
+              </div>
+              <div class="lp-lf-card-body">
+                <h3>Analytics Dashboard</h3>
+                <p>View live statistics — total found items, lost reports, claims, and monthly trends.</p>
+                <div class="lp-lf-stat-row" id="lf-nav-stat-row">
+                  <div class="lp-lf-stat">
+                    <span class="lp-lf-stat-val" id="lf-nav-found">—</span>
+                    <span class="lp-lf-stat-lbl">Found</span>
+                  </div>
+                  <div class="lp-lf-stat">
+                    <span class="lp-lf-stat-val" id="lf-nav-lost">—</span>
+                    <span class="lp-lf-stat-lbl">Lost</span>
+                  </div>
+                  <div class="lp-lf-stat">
+                    <span class="lp-lf-stat-val" id="lf-nav-claims">—</span>
+                    <span class="lp-lf-stat-lbl">Claims</span>
+                  </div>
+                  <div class="lp-lf-stat">
+                    <span class="lp-lf-stat-val" id="lf-nav-claimed">—</span>
+                    <span class="lp-lf-stat-lbl">Claimed</span>
+                  </div>
+                </div>
+              </div>
+              <div class="lp-lf-card-arrow"><i class='bx bx-right-arrow-alt'></i> View Analytics</div>
+            </div>
+
+            <div class="lp-lf-card" onclick="window.open('https://lost-and-found-liart-seven.vercel.app/reportLostItem','_blank')" style="cursor:pointer;">
+              <div class="lp-lf-card-icon" style="background: linear-gradient(135deg, #f43f5e 0%, #fb7185 100%);">
+                <i class='bx bx-search-alt-2'></i>
+              </div>
+              <div class="lp-lf-card-body">
+                <h3>Report a Lost Item</h3>
+                <p>Lost something on campus? Submit a report and get notified when it's found.</p>
+              </div>
+              <div class="lp-lf-card-arrow"><i class='bx bx-right-arrow-alt'></i> Report Now</div>
+            </div>
+
+            <div class="lp-lf-card" onclick="window.open('https://lost-and-found-liart-seven.vercel.app/foundItems','_blank')" style="cursor:pointer;">
+              <div class="lp-lf-card-icon" style="background: linear-gradient(135deg, #10b981 0%, #34d399 100%);">
+                <i class='bx bx-box'></i>
+              </div>
+              <div class="lp-lf-card-body">
+                <h3>Browse Found Items</h3>
+                <p>Check the list of items that have been turned in and are waiting to be claimed.</p>
+              </div>
+              <div class="lp-lf-card-arrow"><i class='bx bx-right-arrow-alt'></i> Browse Items</div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+
       <!-- Documents Section -->
       <section id="lp-documents" class="lp-section">
         <div class="lp-container">
           <div class="lp-section-header">
             <h2>Official Documents</h2>
             <p>Signed issuances, memos, advisories, forms, and resolutions from SASDD-NBSC.</p>
+          </div>
+
+          <!-- Overview Summary Grid -->
+          <div class="lp-overview-summary-grid">
+            <div class="lp-overview-card">
+              <div class="lp-overview-icon"><i class='bx bx-cabinet'></i></div>
+              <div class="lp-overview-details">
+                <div class="lp-overview-value" id="stat-total-docs">0</div>
+                <div class="lp-overview-label">Total Vaulted</div>
+                <div class="lp-overview-sub">Directives & resources</div>
+              </div>
+            </div>
+            <div class="lp-overview-card">
+              <div class="lp-overview-icon"><i class='bx bx-bell'></i></div>
+              <div class="lp-overview-details">
+                <div class="lp-overview-value" id="stat-memos-docs">0</div>
+                <div class="lp-overview-label">Memos & Advisories</div>
+                <div class="lp-overview-sub">Official publications</div>
+              </div>
+            </div>
+            <div class="lp-overview-card">
+              <div class="lp-overview-icon"><i class='bx bx-cloud-upload'></i></div>
+              <div class="lp-overview-details">
+                <div class="lp-overview-value" id="stat-hub-docs">0</div>
+                <div class="lp-overview-label">Hub Files</div>
+                <div class="lp-overview-sub">Shared via File Hub</div>
+              </div>
+            </div>
+            <div class="lp-overview-card">
+              <div class="lp-overview-icon"><i class='bx bx-file-blank'></i></div>
+              <div class="lp-overview-details">
+                <div class="lp-overview-value" id="stat-forms-docs">0</div>
+                <div class="lp-overview-label">Student Forms</div>
+                <div class="lp-overview-sub">Downloadable templates</div>
+              </div>
+            </div>
           </div>
 
           <!-- Filter Bar -->
@@ -2128,7 +2231,38 @@
           </div>
         </div>
       </section>
-    </div> <!-- /lp-main-content --> <!-- Service Explorer View -->
+    </div> <!-- /lp-main-content -->
+
+    <!-- Lost & Found Full Viewer (iframe page) -->
+    <div id="lost-found-viewer" class="lp-fullview hidden">
+      <div class="lp-fullview-body">
+        <div class="lf-iframe-clipper">
+          <iframe id="lf-analytics-iframe"
+                  src=""
+                  frameborder="0"
+                  allowfullscreen>
+          </iframe>
+        </div>
+        <!-- Modern Unauthorized/Login Required Overlay -->
+        <div id="lf-unauth-overlay" class="lf-unauth-view hidden">
+          <div class="lf-unauth-card">
+            <div class="lf-unauth-icon">
+              <i class='bx bx-lock-alt'></i>
+            </div>
+            <h2>Authentication Required</h2>
+            <p>To access the real-time Lost &amp; Found analytics dashboard, please log in with your SAS Portal account.</p>
+            <div class="lf-unauth-actions">
+              <button class="lf-btn lf-btn-primary" onclick="openLfLogin()">
+                <i class='bx bx-log-in'></i> Log In Now
+              </button>
+              <button class="lf-btn lf-btn-secondary" onclick="closeLostFoundViewer()">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div> <!-- Service Explorer View -->
     <div id="lp-service-explorer-view" style="display:none;">
       <div class="lp-container">
 
@@ -4462,6 +4596,7 @@
                 <option value="Form">Form</option>
                 <option value="Resolution">Resolution</option>
                 <option value="Issuance">Issuance</option>
+                <option value="Lost & Found">Lost & Found</option>
               </select>
             </div>
             <div class="input-group">
@@ -4486,6 +4621,52 @@
               style="width:100%; background:#6d28d9;">Add Document</button>
           </div>
         </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOST & FOUND STATS MODAL (IFRAME CROP HACK) -->
+  <div class="modal-overlay" id="lp-lf-stats-modal" style="display: none;">
+    <div class="modal-container" style="max-width: 95%; width: 1200px; height: 85vh; background: #0B0E14; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); display: flex; flex-direction: column;">
+      
+      <div class="modal-header" style="background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05); padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; z-index: 10; position: relative;">
+        <h2 class="modal-title" style="margin: 0; font-size: 1.25rem; font-weight: 600; color: #f8fafc; display: flex; align-items: center; gap: 10px;">
+          <i class='bx bx-line-chart' style="color: #0ea5e9;"></i> Lost & Found Analytics
+        </h2>
+        <button class="modal-close" onclick="closeLfStatsModal()" style="background: transparent; border: none; color: #94a3b8; cursor: pointer; font-size: 1.5rem; transition: color 0.2s;"><i class='bx bx-x'></i></button>
+      </div>
+      
+      <!-- iframe container with CSS clipping trick -->
+      <div class="iframe-clipper" style="flex: 1; position: relative; overflow: hidden; background: #0B0E14;">
+        <style>
+          .analytics-iframe {
+            position: absolute;
+            border: none;
+          }
+          /* Desktop: Sidebar is visible (~256px) and Top Nav is visible (~72px) */
+          @media (min-width: 1024px) {
+            .analytics-iframe {
+              top: -72px;
+              left: -256px;
+              width: calc(100% + 256px);
+              height: calc(100% + 72px);
+            }
+          }
+          /* Mobile/Tablet: Sidebar hides into hamburger, Top Nav might be thinner (~64px) */
+          @media (max-width: 1023px) {
+            .analytics-iframe {
+              top: -64px;
+              left: 0;
+              width: 100%;
+              height: calc(100% + 64px);
+            }
+          }
+        </style>
+        <iframe src="https://lost-and-found-liart-seven.vercel.app/dashboard/analytics" 
+                class="analytics-iframe"
+                frameborder="0"
+                allowfullscreen>
+        </iframe>
       </div>
     </div>
   </div>
