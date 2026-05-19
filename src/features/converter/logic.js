@@ -364,6 +364,11 @@ export function initFileConverter() {
           globalSearch.disabled = true;
           globalSearch.style.opacity = '0.5';
           globalSearch.style.pointerEvents = 'none';
+        } else if (tabId === 'font-gen') {
+          globalSearch.placeholder = "Search not applicable here";
+          globalSearch.disabled = true;
+          globalSearch.style.opacity = '0.5';
+          globalSearch.style.pointerEvents = 'none';
         }
       }
 
@@ -377,6 +382,11 @@ export function initFileConverter() {
         const qrContainer = document.getElementById('qr-workspace-container');
         if (qrContainer && qrContainer.children.length === 0) {
           renderQRWorkspace(qrContainer);
+        }
+      } else if (tabId === 'font-gen') {
+        const fontContainer = document.getElementById('font-workspace-container');
+        if (fontContainer && fontContainer.children.length === 0) {
+          renderFontWorkspace(fontContainer);
         }
       }
 
@@ -3018,5 +3028,72 @@ function renderPDFWordWorkspace(container) {
     link.click();
     if (window.showToast) window.showToast("Word DOCX exported successfully!", "success");
   });
+}
+
+/**
+ * renderFontWorkspace — Renders Online Fonts Generator Workspace
+ */
+export function renderFontWorkspace(container) {
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="font-workspace-wrapper" style="background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 16px; padding: 24px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4); margin-top: 16px;">
+      
+      <!-- Workspace Interactive Header -->
+      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 16px; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+        <div>
+          <h3 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 1.15rem; color: #ffffff; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2.5"><path d="M4 7V4h16v3M9 20h6M12 4v16"></path></svg>
+            Online Fonts Generator
+          </h3>
+          <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.8rem;">Design dynamic text, generate custom font styles, and copy them instantly.</p>
+        </div>
+        
+        <div style="display: flex; gap: 10px;">
+          <a href="https://onlinefontsgenerator.com/" target="_blank" rel="noopener" class="ilovepdf-toolbar-btn primary" style="text-decoration: none; background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%); border: none; box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3); padding: 8px 16px; border-radius: 8px; font-weight: 600; display: flex; align-items: center; gap: 8px; color: #ffffff; font-size: 0.85rem; font-family: 'Outfit', sans-serif; transition: all 0.3s ease;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"></path></svg>
+            Open in New Window
+          </a>
+        </div>
+      </div>
+
+      <!-- High-Fidelity Nesting Frame Viewport -->
+      <div style="position: relative; width: 100%; height: 720px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.06); background: #0b0f19; box-shadow: inset 0 4px 20px rgba(0,0,0,0.6);">
+        <!-- Loader Skeleton -->
+        <div id="font-iframe-loader" style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #0b0f19; z-index: 2; transition: opacity 0.5s ease; gap: 16px;">
+          <div style="width: 40px; height: 40px; border: 3px solid rgba(236, 72, 153, 0.1); border-top-color: #ec4899; border-radius: 50%; animation: font-spin 1.2s linear infinite;"></div>
+          <style>
+            @keyframes font-spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          </style>
+          <p style="color: #64748b; font-family: 'Outfit', sans-serif; font-size: 0.85rem; margin: 0;">Securing premium iframe workspace connection...</p>
+        </div>
+        
+        <!-- Iframe with 80% Scale Zoom -->
+        <iframe 
+          src="https://onlinefontsgenerator.com/" 
+          style="width: 125%; height: 125%; border: none; background: #ffffff; transform: scale(0.8); transform-origin: 0 0;"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+          loading="lazy"
+          id="font-workspace-iframe"
+        ></iframe>
+      </div>
+      
+    </div>
+  `;
+
+  // Hide loader once the iframe has completed loading
+  const iframe = container.querySelector('#font-workspace-iframe');
+  const loader = container.querySelector('#font-iframe-loader');
+  if (iframe && loader) {
+    iframe.addEventListener('load', () => {
+      loader.style.opacity = '0';
+      setTimeout(() => {
+        loader.style.display = 'none';
+      }, 500);
+    });
+  }
 }
 
