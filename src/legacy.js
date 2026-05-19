@@ -514,12 +514,14 @@ function initFullMessenger() {
     const scrollPos = contactsList.scrollTop;
     contactsList.innerHTML = '';
 
-    // FILTER: Only show users with history OR forced active
+    // FILTER: Only show users with history OR forced active OR admin-group
     const sorted = Object.keys(contactsMap).filter(user => {
       const info = contactsMap[user];
       const hasHistory = info.history && info.history.length > 0;
-      return hasHistory || user === activeMessengerUser;
+      return hasHistory || user === activeMessengerUser || user === 'admin-group';
     }).sort((a, b) => {
+      if (a === 'admin-group') return -1;
+      if (b === 'admin-group') return 1;
       const aOnline = contactsMap[a].isOnline ? 1 : 0;
       const bOnline = contactsMap[b].isOnline ? 1 : 0;
       return bOnline - aOnline;
@@ -539,17 +541,21 @@ function initFullMessenger() {
 
       const displayName = info.displayName || user;
       const initial = displayName.charAt(0).toUpperCase();
-      const profilePicHtml = info.profilePic && info.profilePic.startsWith('http')
-        ? `<img src="${info.profilePic}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`
-        : `<span>${initial}</span>`;
+      let profilePicHtml = `<span>${initial}</span>`;
+      if (info.profilePic === 'group') {
+        profilePicHtml = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: white;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`;
+      } else if (info.profilePic && info.profilePic.startsWith('http')) {
+        profilePicHtml = `<img src="${info.profilePic}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+      }
 
       const lastMsg = info.history && info.history.length > 0 ? info.history[info.history.length - 1].text : 'No messages yet';
       const unread = info.unread || 0;
+      const isOnline = user === 'admin-group' ? true : info.isOnline;
 
       card.innerHTML = `
         <div class="contact-avatar" style="width:48px; height:48px; background:linear-gradient(135deg, #1e40af, #1e3a8a); color:white; border-radius:12px; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.1rem; position:relative; flex-shrink:0;">
           ${profilePicHtml}
-          <span class="contact-status-dot ${info.isOnline ? 'online' : ''}" style="position:absolute; bottom:-2px; right:-2px; width:12px; height:12px; border-radius:50%; border:2px solid #0f172a; background:#94a3b8;"></span>
+          <span class="contact-status-dot ${isOnline ? 'online' : ''}" style="position:absolute; bottom:-2px; right:-2px; width:12px; height:12px; border-radius:50%; border:2px solid #0f172a; background:#94a3b8;"></span>
         </div>
         <div class="contact-info">
           <span class="contact-name">${displayName}</span>
@@ -574,16 +580,23 @@ function initFullMessenger() {
     if (activeName) activeName.textContent = displayName;
     if (activeAvatar) {
       const initial = displayName.charAt(0).toUpperCase();
-      if (info && info.profilePic && info.profilePic.startsWith('http')) {
+      if (user === 'admin-group') {
+        activeAvatar.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: white;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`;
+      } else if (info && info.profilePic && info.profilePic.startsWith('http')) {
         activeAvatar.innerHTML = `<img src="${info.profilePic}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
       } else {
         activeAvatar.textContent = initial;
       }
     }
     if (activeStatus) {
-      const isOnline = info ? info.isOnline : false;
-      activeStatus.textContent = isOnline ? 'Active Now' : 'Offline';
-      activeStatus.className = isOnline ? 'status-online' : 'status-offline';
+      if (user === 'admin-group') {
+        activeStatus.textContent = 'Admin Broadcast & Chat';
+        activeStatus.className = 'status-online';
+      } else {
+        const isOnline = info ? info.isOnline : false;
+        activeStatus.textContent = isOnline ? 'Active Now' : 'Offline';
+        activeStatus.className = isOnline ? 'status-online' : 'status-offline';
+      }
     }
 
     // Badge Sync Logic
@@ -610,7 +623,15 @@ function initFullMessenger() {
       const bubble = document.createElement('div');
       bubble.className = `msg-bubble ${isMe ? 'msg-bubble-me' : 'msg-bubble-other'}`;
       const time = data.timestamp ? new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+      
+      let senderHeader = '';
+      if (activeMessengerUser === 'admin-group' && !isMe) {
+        const senderName = contactsMap[data.sender]?.displayName || data.sender;
+        senderHeader = `<div style="font-size: 0.72rem; color: #ec4899; font-weight: 700; margin-bottom: 4px; display: block; filter: brightness(1.2);">${escapeHtml(senderName)}</div>`;
+      }
+
       bubble.innerHTML = `
+        ${senderHeader}
         <div class="msg-text">${escapeHtml(data.text || '')}</div>
         <span class="msg-time">${time}</span>
       `;
@@ -710,15 +731,23 @@ function initFullMessenger() {
         
         const displayName = info.displayName || user;
         const initial = displayName.charAt(0).toUpperCase();
-        const avatarHtml = info.profilePic && info.profilePic.startsWith('http')
-          ? `<img src="${info.profilePic}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`
-          : `<span>${initial}</span>`;
+        let avatarHtml = `<span>${initial}</span>`;
+        let avatarBg = "background:#003366;";
+        let statusText = info.isOnline ? 'Online' : 'Offline';
+
+        if (user === 'admin-group' || info.profilePic === 'group') {
+          avatarHtml = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: white;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`;
+          avatarBg = "background:linear-gradient(135deg, #1e40af, #1e3a8a);";
+          statusText = 'Admin Broadcast & Chat';
+        } else if (info.profilePic && info.profilePic.startsWith('http')) {
+          avatarHtml = `<img src="${info.profilePic}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+        }
 
         item.innerHTML = `
-          <div style="width:36px; height:36px; background:#003366; color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.9rem; font-weight:800; flex-shrink:0; overflow:hidden;">${avatarHtml}</div>
+          <div style="width:36px; height:36px; ${avatarBg} color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.9rem; font-weight:800; flex-shrink:0; overflow:hidden;">${avatarHtml}</div>
           <div style="display:flex; flex-direction:column;">
             <span style="font-weight:700; color:#1e293b;">${displayName}</span>
-            <span style="font-size:0.7rem; color:#94a3b8;">${info.isOnline ? 'Online' : 'Offline'}</span>
+            <span style="font-size:0.7rem; color:#94a3b8;">${statusText}</span>
           </div>
         `;
         item.onclick = () => { selectContact(user); closeNewMessageModal(); };

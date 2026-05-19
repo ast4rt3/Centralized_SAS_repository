@@ -1,7 +1,7 @@
 import { supabase } from "../../core/supabase.js";
 import { state } from "./state.js";
 import { updateUnreadBadges } from "./ui.js";
-import { getMyUsername } from "../../core/auth.js";
+import { getMyUsername, getUserData } from "../../core/auth.js";
 
 /**
  * Text optimization to keep messages "light"
@@ -29,15 +29,13 @@ function sanitizeCloudinaryUrl(url) {
   return url.replace(/dj8ugtlrl/gi, 'dbytj36mv');
 }
 
-/**
- * Synchronize user metadata (Display names and Profile pics) from Supabase
- */
 async function syncUserMetadata() {
   try {
+    const { contactsMap } = state;
     const users = await fetchAllUsers();
     users.forEach(user => {
-      if (!state.contactsMap[user.username]) {
-        state.contactsMap[user.username] = {
+      if (!contactsMap[user.username]) {
+        contactsMap[user.username] = {
           unread: 0,
           history: [],
           isOnline: false
@@ -46,6 +44,21 @@ async function syncUserMetadata() {
       contactsMap[user.username].displayName = user.display_name;
       contactsMap[user.username].profilePic = user.profile_pic ? sanitizeCloudinaryUrl(user.profile_pic) : '';
     });
+    
+    // Add Broadcast if current user is an admin or superadmin
+    const myData = getUserData();
+    const myRole = myData?.role?.toLowerCase()?.trim() || 'guest';
+    if (myRole === 'admin' || myRole === 'superadmin') {
+      if (!contactsMap['admin-group']) {
+        contactsMap['admin-group'] = {
+          unread: 0,
+          history: [],
+          isOnline: true,
+          displayName: "Broadcast",
+          profilePic: "group"
+        };
+      }
+    }
     
     // Refresh UI if necessary
     if (typeof window.refreshFullMessengerUI === 'function') {
@@ -108,8 +121,26 @@ export async function initSharedMessaging(onMessageReceived) {
     });
 
   // 3. Subscribe to new messages
-  const messageChannel = supabase
-    .channel('public:user_messages')
+  const myData = getUserData();
+  const myRole = myData?.role?.toLowerCase()?.trim() || 'guest';
+  const isAdmin = myRole === 'admin' || myRole === 'superadmin';
+
+  let messageChannel = supabase.channel('public:user_messages');
+
+  if (isAdmin) {
+    messageChannel = messageChannel.on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'user_messages',
+        filter: 'receiver=eq.admin-group'
+      },
+      (payload) => handleIncomingMessage(payload.new, onMessageReceived)
+    );
+  }
+
+  messageChannel
     .on(
       'postgres_changes',
       {
@@ -148,10 +179,17 @@ export async function initSharedMessaging(onMessageReceived) {
 async function loadInitialHistory(myUsername, onMessageReceived) {
   // console.log(`[Messaging] Loading history for ${myUsername}...`);
   try {
+    const myData = getUserData();
+    const myRole = myData?.role?.toLowerCase()?.trim() || 'guest';
+    const isAdmin = myRole === 'admin' || myRole === 'superadmin';
+    const queryFilter = isAdmin 
+      ? `sender.eq.${myUsername},receiver.eq.${myUsername},receiver.eq.admin-group` 
+      : `sender.eq.${myUsername},receiver.eq.${myUsername}`;
+
     const { data, error } = await supabase
       .from('user_messages')
       .select('*')
-      .or(`sender.eq.${myUsername},receiver.eq.${myUsername}`)
+      .or(queryFilter)
       .order('timestamp', { ascending: true })
       .limit(500); // Keep it light
 
@@ -177,7 +215,7 @@ async function loadInitialHistory(myUsername, onMessageReceived) {
 function handleIncomingMessage(data, onMessageReceived, notify = true) {
   if (!data) return;
   const myUsername = getMyUsername();
-  const otherUser = data.sender === myUsername ? data.receiver : data.sender;
+  const otherUser = data.receiver === 'admin-group' ? 'admin-group' : (data.sender === myUsername ? data.receiver : data.sender);
   const { contactsMap } = state;
 
   if (!contactsMap[otherUser]) {
@@ -189,7 +227,8 @@ function handleIncomingMessage(data, onMessageReceived, notify = true) {
 
   contactsMap[otherUser].history.push(data);
 
-  if (data.sender === otherUser && !data.read) {
+  const isIncoming = data.receiver === 'admin-group' ? (data.sender !== myUsername) : (data.sender === otherUser);
+  if (isIncoming && !data.read) {
     contactsMap[otherUser].unread++;
   }
   if (notify) {
@@ -200,7 +239,7 @@ function handleIncomingMessage(data, onMessageReceived, notify = true) {
         // Only show toast if chat is not active
         const currentChat = window.activeChatUser || window.activeMessengerUser;
         // console.log(`[Messaging] Checking notify: currentChat=${currentChat}, otherUser=${otherUser}, sender=${data.sender}`);
-        if (currentChat !== otherUser && data.sender === otherUser) {
+        if (currentChat !== otherUser && isIncoming) {
           // console.log(`[Messaging] SUCCESS: Triggering notification for ${otherUser}`);
           window.showNotification(otherUser, data.text, (sender) => {
              if (typeof window.selectContact === 'function') {
@@ -233,7 +272,7 @@ function handleIncomingMessage(data, onMessageReceived, notify = true) {
 function handleMessageUpdate(data) {
   if (!data) return;
   const myUsername = getMyUsername();
-  const otherUser = data.sender === myUsername ? data.receiver : data.sender;
+  const otherUser = data.receiver === 'admin-group' ? 'admin-group' : (data.sender === myUsername ? data.receiver : data.sender);
   const { contactsMap } = state;
 
   if (contactsMap[otherUser]) {
@@ -293,12 +332,17 @@ export async function syncUnreadCountFromDb(myUsername) {
   }
 }
 
-/**
- * Mark messages as read
- */
 export async function markMessagesAsRead(otherUser) {
   const myUsername = getMyUsername();
   if (!supabase || !myUsername || !otherUser) return;
+
+  if (otherUser === 'admin-group') {
+    const { contactsMap } = state;
+    if (contactsMap['admin-group']) contactsMap['admin-group'].unread = 0;
+    if (window.contactsMap && window.contactsMap['admin-group']) window.contactsMap['admin-group'].unread = 0;
+    updateUnreadBadges();
+    return;
+  }
 
   try {
     const { error } = await supabase
