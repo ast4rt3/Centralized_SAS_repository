@@ -472,18 +472,26 @@ function initFullMessenger() {
     fetchSpreadsheetUsers();
     renderFullContacts();
 
-    // AUTO-SELECT: Find the user with the most recent message
+    // AUTO-SELECT: Default to 'admin-group' if exists, otherwise find the user with the most recent message
     setTimeout(() => {
-      let latestUser = null;
-      let latestTime = 0;
+      if (activeMessengerUser || window.activeMessengerUser) {
+        // A specific thread was already selected (e.g., clicked via pop-up or notification)
+        return;
+      }
 
-      for (const user in contactsMap) {
-        const history = contactsMap[user].history || [];
-        if (history.length > 0) {
-          const lastMsgTime = new Date(history[history.length - 1].timestamp).getTime();
-          if (lastMsgTime > latestTime) {
-            latestTime = lastMsgTime;
-            latestUser = user;
+      let latestUser = null;
+      if (contactsMap['admin-group']) {
+        latestUser = 'admin-group';
+      } else {
+        let latestTime = 0;
+        for (const user in contactsMap) {
+          const history = contactsMap[user].history || [];
+          if (history.length > 0) {
+            const lastMsgTime = new Date(history[history.length - 1].timestamp).getTime();
+            if (lastMsgTime > latestTime) {
+              latestTime = lastMsgTime;
+              latestUser = user;
+            }
           }
         }
       }
