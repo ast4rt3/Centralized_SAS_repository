@@ -2623,8 +2623,21 @@ document.addEventListener('DOMContentLoaded', () => {
       if (sidebar) sidebar.style.display = '';
     }
 
+    const navDocuments = document.getElementById('nav-documents');
     const navMessages = document.getElementById('nav-messages');
     const navDatabase = document.getElementById('nav-database');
+
+    if (userRoleNormalized === 'admin' || userRoleNormalized === 'superadmin' || userRoleNormalized === 'user' || userRoleNormalized === 'uploader') {
+      if (navDocuments) {
+        navDocuments.style.display = 'flex';
+        navDocuments.classList.remove('hidden');
+      }
+    } else {
+      if (navDocuments) {
+        navDocuments.style.display = 'none';
+        navDocuments.classList.add('hidden');
+      }
+    }
     if (userRoleNormalized === 'admin' || userRoleNormalized === 'superadmin') {
       if (navMessages) {
         navMessages.style.display = 'flex';

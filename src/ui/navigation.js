@@ -128,7 +128,7 @@ export function syncFromHash(systems) {
   }
 
   // 1. Handle special non-system pages
-  if (pageId === 'home' || pageId === 'messages' || pageId === 'database' || pageId === 'converter' || pageId === 'loading' || pageId === 'service-viewer') {
+  if (pageId === 'home' || pageId === 'messages' || pageId === 'database' || pageId === 'converter' || pageId === 'loading' || pageId === 'service-viewer' || pageId === 'documents') {
     document.body.classList.remove('system-mode');
     if (pageId !== 'service-viewer') setActiveNav(pageId);
     
@@ -200,8 +200,34 @@ export function syncFromHash(systems) {
         return;
       }
 
+      if (pageId === 'documents' && 
+          userRole !== 'admin' && 
+          userRole !== 'superadmin' && 
+          userRole !== 'user' && 
+          userRole !== 'uploader') {
+        console.warn(`[Security] ${userRole} attempted to access restricted documents view.`);
+        if (window.showToast) window.showToast("Access Denied: Documents require authorization", "error");
+        window.location.hash = 'home';
+        return;
+      }
+
       showPage(pageId === 'loading' ? 'home' : pageId);
       ensureAppVisible();
+
+      if (pageId === 'documents') {
+        const docsFrame = document.getElementById('documents-frame');
+        if (docsFrame && (!docsFrame.src || docsFrame.src === 'about:blank' || docsFrame.src === '')) {
+          const rawData = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data') || '{}';
+          let currentUser = 'Unknown';
+          let currentToken = '';
+          try {
+            const userData = JSON.parse(rawData);
+            currentUser = userData.username || 'Unknown';
+            currentToken = userData.token || userData.jwt || '';
+          } catch(e) {}
+          docsFrame.src = 'apps/docs/index.html?portalUser=' + encodeURIComponent(currentUser) + '&portalToken=' + encodeURIComponent(currentToken);
+        }
+      }
       
       // If an authenticated user wants to view the service explorer natively
       if (pageId === 'service-viewer') {
