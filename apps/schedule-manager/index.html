@@ -159,10 +159,6 @@
                     <input type="text" id="eventName" placeholder="e.g. Foundation Day" required>
                 </div>
                 <div class="form-group">
-                    <label>Event Date</label>
-                    <input type="date" id="eventDate" required>
-                </div>
-                <div class="form-group">
                     <label>Description (optional)</label>
                     <input type="text" id="eventDesc" placeholder="Brief description...">
                 </div>
@@ -177,8 +173,9 @@
     <!-- Window Modal -->
     <div id="windowModalOverlay" class="modal-overlay">
         <div class="modal">
-            <h2 style="margin-bottom: 24px; font-weight: 800;">Create Scanning Window</h2>
+            <h2 id="windowModalTitle" style="margin-bottom: 24px; font-weight: 800;">Create Scanning Window</h2>
             <form id="windowForm" class="modal-form">
+                <input type="hidden" id="windowId">
                 <div class="form-group">
                     <label>Window Name</label>
                     <input type="text" id="windowLabel" placeholder="e.g. Morning Parade" required>
@@ -234,6 +231,7 @@
     <script>
         let supabaseClient;
         let allEventsCache = [];
+        let allSchedulesCache = [];
         const els = {
             container: document.getElementById('eventsContainer'),
             emptyState: document.getElementById('emptyState'),
@@ -246,8 +244,13 @@
             confirmMessage: document.getElementById('confirmMessage'),
             confirmOkBtn: document.getElementById('confirmOkBtn'),
             confirmCancelBtn: document.getElementById('confirmCancelBtn'),
+            windowId: document.getElementById('windowId'),
+            windowLabel: document.getElementById('windowLabel'),
             windowDate: document.getElementById('windowDate'),
+            startTime: document.getElementById('startTime'),
+            endTime: document.getElementById('endTime'),
             windowEventSelect: document.getElementById('windowEventSelect'),
+            windowModalTitle: document.getElementById('windowModalTitle'),
             loading: document.getElementById('loadingOverlay'),
             stats: document.getElementById('statsText')
         };
@@ -295,6 +298,7 @@
                 const eventsMap = allEventsCache.reduce((acc, e) => { acc[e.id] = e; return acc; }, {});
 
                 const { data: schedules } = await supabaseClient.from('sas_schedules').select('*').order('date', { ascending: false }).order('start_time', { ascending: false });
+                allSchedulesCache = schedules || [];
                 
                 const merged = (schedules || []).map(s => ({
                     ...s,
@@ -338,7 +342,7 @@
                 .forEach(group => {
                 const event = group.event;
                 const card = document.createElement('div');
-                card.className = 'event-card';
+                card.className = 'event-card collapsed';
                 card.innerHTML = `
                     <div class="event-header" onclick="toggleEvent(this)">
                         <div class="event-header-left">
@@ -346,7 +350,6 @@
                             <div>
                                 <h3 class="event-title">${escapeHtml(event.name || 'No Event')}</h3>
                                 <div class="event-meta">
-                                    <span><i class='bx bx-calendar'></i> ${formatDate(event.event_date)}</span>
                                     <span class="event-badge"><i class='bx bx-windows'></i> ${group.schedules.length} Windows</span>
                                 </div>
                             </div>
@@ -371,9 +374,14 @@
                                     <button class="btn btn-outline" onclick="toggleStatus('${sched.id}', ${sched.is_active})">
                                         ${sched.is_active ? 'Deactivate' : 'Activate'}
                                     </button>
-                                    <button class="btn btn-outline btn-icon" onclick="deleteSchedule('${sched.id}')" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.2);">
-                                        <i class='bx bx-trash'></i>
-                                    </button>
+                                    <div style="display: flex; gap: 8px;">
+                                        <button class="btn btn-outline btn-icon" onclick="editSchedule('${sched.id}')" style="color: var(--nbsc-gold); border-color: rgba(240, 173, 78, 0.2);">
+                                            <i class='bx bx-edit'></i>
+                                        </button>
+                                        <button class="btn btn-outline btn-icon" onclick="deleteSchedule('${sched.id}')" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.2);">
+                                            <i class='bx bx-trash'></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         `).join('')}
@@ -394,10 +402,11 @@
 
         async function handleWindowFormSubmit(e) {
             e.preventDefault();
-            const label = document.getElementById('windowLabel').value;
-            const date = document.getElementById('windowDate').value;
-            const start_time = document.getElementById('startTime').value;
-            const end_time = document.getElementById('endTime').value;
+            const id = els.windowId.value;
+            const label = els.windowLabel.value;
+            const date = els.windowDate.value;
+            const start_time = els.startTime.value;
+            const end_time = els.endTime.value;
             const event_id = els.windowEventSelect.value;
 
             try {
@@ -412,9 +421,18 @@
                     target_event_id = newEvt.id;
                 }
 
-                const { error } = await supabaseClient.from('sas_schedules').insert([{
-                    label, date, start_time, end_time, is_active: true, event_id: target_event_id
-                }]);
+                let error;
+                if (id) {
+                    const res = await supabaseClient.from('sas_schedules').update({
+                        label, date, start_time, end_time, event_id: target_event_id
+                    }).eq('id', id);
+                    error = res.error;
+                } else {
+                    const res = await supabaseClient.from('sas_schedules').insert([{
+                        label, date, start_time, end_time, is_active: true, event_id: target_event_id
+                    }]);
+                    error = res.error;
+                }
 
                 if (error) throw error;
                 closeWindowModal();
@@ -427,7 +445,7 @@
         async function handleEventFormSubmit(e) {
             e.preventDefault();
             const name = document.getElementById('eventName').value;
-            const event_date = document.getElementById('eventDate').value;
+            const event_date = new Date().toISOString().split('T')[0]; // Default to today to avoid DB constraint issues
             const description = document.getElementById('eventDesc').value;
 
             try {
@@ -463,6 +481,8 @@
         function closeEventModal() { els.eventModal.style.display = 'none'; els.eventForm.reset(); }
         
         async function openWindowModal(eventId = null, eventDate = null) {
+            els.windowId.value = '';
+            els.windowModalTitle.innerText = 'Create Scanning Window';
             if (eventDate) els.windowDate.value = eventDate;
             else els.windowDate.value = new Date().toISOString().split('T')[0];
             
@@ -473,14 +493,29 @@
 
         function closeWindowModal() { els.windowModal.style.display = 'none'; els.windowForm.reset(); }
 
+        async function editSchedule(id) {
+            const sched = allSchedulesCache.find(s => s.id === id);
+            if (!sched) return;
+            
+            els.windowId.value = sched.id;
+            els.windowLabel.value = sched.label;
+            els.windowDate.value = sched.date;
+            els.startTime.value = sched.start_time;
+            els.endTime.value = sched.end_time;
+            els.windowModalTitle.innerText = 'Edit Scanning Window';
+            
+            els.windowModal.style.display = 'flex';
+            await loadEventsForDate();
+            els.windowEventSelect.value = sched.event_id || '';
+        }
+
         async function loadEventsForDate() {
             const date = els.windowDate.value;
-            const filtered = allEventsCache.filter(e => e.event_date === date);
             let options = '<option value="" disabled selected>-- Select Event --</option>';
-            if (filtered.length === 0) {
-                options = `<option value="__new__" selected>✦ Create new event for ${date}</option>`;
+            if (allEventsCache.length === 0) {
+                options = `<option value="__new__" selected>✦ Create new event</option>`;
             } else {
-                filtered.forEach(e => options += `<option value="${e.id}">${escapeHtml(e.name)}</option>`);
+                allEventsCache.forEach(e => options += `<option value="${e.id}">${escapeHtml(e.name)}</option>`);
                 options += `<option value="__new__">✦ Create new event</option>`;
             }
             els.windowEventSelect.innerHTML = options;
