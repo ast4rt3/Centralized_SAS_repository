@@ -2718,11 +2718,30 @@
         async function getSupabaseEvents() {
             const client = await initSupabase();
             if (!client) return [];
+
+            const now = new Date();
+            const todayStr = now.toLocaleDateString('en-CA');
+
+            // Fetch active schedules for today to only show events with active windows
+            const { data: activeSchedules, error: schedErr } = await client
+                .from('sas_schedules')
+                .select('event_id')
+                .eq('is_active', true)
+                .eq('date', todayStr);
+            
+            if (schedErr) { console.error("Schedule Fetch Error:", schedErr); return []; }
+            
+            const activeEventIds = [...new Set(activeSchedules.map(s => s.event_id))];
+            
+            if (activeEventIds.length === 0) return [];
+
             const { data, error } = await client
                 .from('sas_events')
                 .select('*')
+                .in('id', activeEventIds)
                 .order('event_date', { ascending: true })
                 .limit(20);
+
             if (error) { console.error("Supabase Events Error:", error); return []; }
             return data || [];
         }
