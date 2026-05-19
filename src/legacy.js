@@ -1637,7 +1637,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
                 </svg>
               </span>
-              <span class="nav-label">File Converter</span>
+              <span class="nav-label">Tools</span>
             </a>
           </div>
         </div>

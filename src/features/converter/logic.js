@@ -3071,11 +3071,12 @@ export function renderFontWorkspace(container) {
           <p style="color: #64748b; font-family: 'Outfit', sans-serif; font-size: 0.85rem; margin: 0;">Securing premium iframe workspace connection...</p>
         </div>
         
-        <!-- Iframe with 80% Scale Zoom -->
+        <!-- Iframe with 80% Scale Zoom and Clipboard Permissions -->
         <iframe 
           src="https://onlinefontsgenerator.com/" 
           style="width: 125%; height: 125%; border: none; background: #ffffff; transform: scale(0.8); transform-origin: 0 0;"
           sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+          allow="clipboard-write; clipboard-read"
           loading="lazy"
           id="font-workspace-iframe"
         ></iframe>
