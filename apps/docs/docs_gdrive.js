@@ -1,25 +1,80 @@
-// Documents App - GDrive Adapter & Backend Proxy
+// Documents App - Direct Supabase & GDrive Adapter
 let docsAllFiles = [];
 let docsCurrentFilter = 'all';
 
+function mapDatabaseRowToFile(row) {
+    let username = 'Anonymous';
+    let isPublic = false;
+    let driveFileId = '';
+    let descriptionText = '';
+
+    const desc = row.description || '';
+    if (desc.startsWith('[vault:')) {
+        const parts = desc.match(/^\[vault:([^:]+):([^:]+):([^\]]+)\]\s*(.*)$/);
+        if (parts) {
+            username = parts[1];
+            isPublic = parts[2] === 'true';
+            driveFileId = parts[3];
+            descriptionText = parts[4];
+        }
+    } else {
+        // Fallback for legacy landing page documents
+        descriptionText = desc;
+        isPublic = true;
+        const url = row.url || '';
+        const driveMatch = url.match(/\/file\/d\/([^\/]+)/) || url.match(/id=([^\&]+)/);
+        if (driveMatch) {
+            driveFileId = driveMatch[1];
+        }
+    }
+
+    return {
+        id: row.id,
+        file_name: row.title || 'Untitled',
+        category: row.category || 'Personal',
+        created_at: row.created_at || row.date || new Date().toISOString(),
+        file_url: row.url || '',
+        drive_file_id: driveFileId,
+        is_public: isPublic,
+        description: descriptionText,
+        username: username,
+        size: 0
+    };
+}
+
 function docsLoadFiles() {
-    if (!window.ENV || !window.ENV.BACKEND_GAS_URL) {
+    if (!window.ENV || !window.ENV.SUPABASE_URL || !window.ENV.SUPABASE_ANON_KEY) {
         setTimeout(docsLoadFiles, 1000);
         return;
     }
 
-    fetch(window.ENV.BACKEND_GAS_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'getDocuments', username: window.docsState?.currentUser })
+    const headers = {
+        "apikey": window.ENV.SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${window.ENV.SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json"
+    };
+
+    fetch(`${window.ENV.SUPABASE_URL}/rest/v1/sas_documents?order=created_at.desc`, {
+        method: 'GET',
+        headers: headers
     })
     .then(res => res.json())
     .then(data => {
-        if (data.success) {
-            docsAllFiles = data.documents || [];
+        if (Array.isArray(data)) {
+            const mapped = data.map(mapDatabaseRowToFile);
+            const user = window.docsState.currentUser || 'Anonymous';
+            const userRole = (window.docsState.currentUserRole || '').toLowerCase();
+
+            docsAllFiles = mapped.filter(file => {
+                if (userRole === 'admin' || userRole === 'superadmin') {
+                    return true;
+                }
+                return file.is_public || file.username === user;
+            });
             window.docsState.allFiles = docsAllFiles;
             docsRenderFiles();
         } else {
-            console.error("Backend Error:", data.message);
+            console.error("Backend Error:", data);
         }
     })
     .catch(err => {
@@ -176,8 +231,8 @@ function docsShowDocDetails(file) {
 
     const details = [
         { label: "Type", value: file.category || "Document" },
-        { label: "Size", value: file.size ? formatBytes(file.size) : "Unknown" },
         { label: "Location", value: "SAS Portal Documents" },
+        { label: "Owner", value: file.username || "Unknown" },
         { label: "Modified", value: new Date(file.created_at).toLocaleString() },
         { label: "Status", value: file.is_public ? "Publicly Shared" : "Private Vault" }
     ];
@@ -218,43 +273,66 @@ async function docsDeleteDocument(id, driveId) {
     if (!confirmed) return;
 
     try {
-        const res = await fetch(window.ENV.BACKEND_GAS_URL, {
+        // 1. Delete metadata from Supabase
+        const headers = {
+            "apikey": window.ENV.SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${window.ENV.SUPABASE_ANON_KEY}`,
+            "Content-Type": "application/json"
+        };
+        const sbRes = await fetch(`${window.ENV.SUPABASE_URL}/rest/v1/sas_documents?id=eq.${id}`, {
+            method: 'DELETE',
+            headers: headers
+        });
+
+        // 2. Delete file from Google Drive via GAS proxy
+        const gasRes = await fetch(window.ENV.BACKEND_GAS_URL, {
             method: 'POST',
             body: JSON.stringify({
-                action: 'deleteDocument',
+                action: 'deleteFileFromDrive',
                 id: id,
                 driveFileId: driveId
             })
         });
-        const data = await res.json();
-        if (data.success) {
-            docsLoadFiles();
-            showToast("Document deleted successfully", "success");
-        } else {
-            showToast("Error: " + data.message, "error");
-        }
+
+        docsLoadFiles();
+        showToast("Document deleted successfully", "success");
+        const panel = document.getElementById('details-panel');
+        if (panel) panel.style.display = 'none';
     } catch (err) {
         console.error("Delete Error:", err);
-        showToast("Connection failed", "error");
+        showToast("Deletion failed", "error");
     }
 }
 
 async function docsToggleDocVisibility(id, makePublic) {
+    const file = docsAllFiles.find(f => f.id === id);
+    if (!file) return;
+
     try {
-        const res = await fetch(window.ENV.BACKEND_GAS_URL, {
-            method: 'POST',
+        const headers = {
+            "apikey": window.ENV.SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${window.ENV.SUPABASE_ANON_KEY}`,
+            "Content-Type": "application/json"
+        };
+
+        const newMetadata = `[vault:${file.username}:${makePublic}:${file.drive_file_id}] ${file.description || ''}`;
+
+        const res = await fetch(`${window.ENV.SUPABASE_URL}/rest/v1/sas_documents?id=eq.${id}`, {
+            method: 'PATCH',
+            headers: headers,
             body: JSON.stringify({
-                action: 'toggleDocVisibility',
-                id: id,
-                isPublic: makePublic
+                description: newMetadata
             })
         });
-        const data = await res.json();
-        if (data.success) {
-            docsLoadFiles();
-            showToast(`Document ${makePublic ? 'made public' : 'made private'}`, "success");
-        }
+
+        docsLoadFiles();
+        showToast(`Document ${makePublic ? 'made public' : 'made private'}`, "success");
+        
+        // Refresh detail panel
+        file.is_public = makePublic;
+        docsShowDocDetails(file);
     } catch (err) {
+        console.error("Toggle visibility failed:", err);
         showToast("Failed to update visibility", "error");
     }
 }
@@ -266,22 +344,36 @@ async function docsEditDescription(id) {
     const newDesc = prompt("Edit description:", file.description || '');
     if (newDesc === null) return;
 
-    window.docsState.currentSelectedFile.description = newDesc;
     docsSaveDescription(id, newDesc);
 }
 
 async function docsSaveDescription(id, description) {
+    const file = docsAllFiles.find(f => f.id === id);
+    if (!file) return;
+
     try {
-        await fetch(window.ENV.BACKEND_GAS_URL, {
-            method: 'POST',
+        const headers = {
+            "apikey": window.ENV.SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${window.ENV.SUPABASE_ANON_KEY}`,
+            "Content-Type": "application/json"
+        };
+
+        const newMetadata = `[vault:${file.username}:${file.is_public}:${file.drive_file_id}] ${description}`;
+
+        await fetch(`${window.ENV.SUPABASE_URL}/rest/v1/sas_documents?id=eq.${id}`, {
+            method: 'PATCH',
+            headers: headers,
             body: JSON.stringify({
-                action: 'editDocDesc',
-                id: id,
-                description: description
+                description: newMetadata
             })
         });
+
+        file.description = description;
+        docsLoadFiles();
+        docsShowDocDetails(file);
         showToast("Description updated", "success");
     } catch (err) {
+        console.error("Update description failed:", err);
         showToast("Failed to update description", "error");
     }
 }

@@ -7706,6 +7706,15 @@ function initLpDocuments() {
     grid.innerHTML = '';
 
     const filtered = _lpAllDocuments.filter(doc => {
+      // Filter out private vault documents
+      if (doc.description && doc.description.startsWith('[vault:')) {
+        const parts = doc.description.match(/^\[vault:([^:]+):([^:]+):([^\]]+)\]/);
+        if (parts) {
+          const isPublic = parts[2] === 'true';
+          if (!isPublic) return false;
+        }
+      }
+
       const matchCat = !_lpDocFilterCat || doc.category === _lpDocFilterCat;
       const matchYear = !_lpDocFilterYear || new Date(doc.date).getFullYear().toString() === _lpDocFilterYear;
       return matchCat && matchYear;
@@ -7726,6 +7735,15 @@ function initLpDocuments() {
       const dateObj = new Date(doc.date);
       const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
+      // Clean the metadata prefix from description
+      let cleanDesc = doc.description || '';
+      if (cleanDesc.startsWith('[vault:')) {
+        const tagEndIdx = cleanDesc.indexOf(']');
+        if (tagEndIdx !== -1) {
+          cleanDesc = cleanDesc.substring(tagEndIdx + 1).trim();
+        }
+      }
+
       card.innerHTML = `
         <div class="lp-doc-card-top">
           <div class="lp-doc-icon">
@@ -7739,7 +7757,7 @@ function initLpDocuments() {
             </div>
           </div>
         </div>
-        ${doc.description ? `<p class="lp-doc-desc">${escapeHtml(doc.description)}</p>` : '<div style="flex:1"></div>'}
+        ${cleanDesc ? `<p class="lp-doc-desc">${escapeHtml(cleanDesc)}</p>` : '<div style="flex:1"></div>'}
         <a href="${doc.url}" target="_blank" rel="noopener" class="lp-doc-view-btn">
           <i class='bx bx-show-alt'></i> View Document
         </a>
@@ -7799,7 +7817,24 @@ function initLpDocumentsAdmin(userObj) {
         return;
       }
 
-      data.forEach(doc => {
+      // Filter out private vault documents
+      const activeDocs = data.filter(doc => {
+        if (doc.description && doc.description.startsWith('[vault:')) {
+          const parts = doc.description.match(/^\[vault:([^:]+):([^:]+):([^\]]+)\]/);
+          if (parts) {
+            const isPublic = parts[2] === 'true';
+            if (!isPublic) return false;
+          }
+        }
+        return true;
+      });
+
+      if (activeDocs.length === 0) {
+        currentList.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8;font-size:0.85rem;">No documents found.</div>';
+        return;
+      }
+
+      activeDocs.forEach(doc => {
         const row = document.createElement('div');
         row.className = 'lp-doc-item';
         row.innerHTML = `

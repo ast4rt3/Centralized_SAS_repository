@@ -3,6 +3,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const user = getCurrentUser();
     window.docsState.currentUser = user;
+    window.docsState.currentUserRole = getCurrentUserRole();
     
     // Set UI to Connected (since GDrive is accessed via server-side GAS proxy)
     const statusPill = document.getElementById('status-pill');
@@ -30,6 +31,17 @@ function getCurrentUser() {
         } catch (e) {}
     }
     return 'Anonymous';
+}
+
+function getCurrentUserRole() {
+    const savedUser = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
+    if (savedUser) {
+        try {
+            const data = JSON.parse(savedUser);
+            return data.role || 'user';
+        } catch (e) {}
+    }
+    return 'user';
 }
 
 function docsInitListeners() {
@@ -86,6 +98,7 @@ async function docsHandleUpload(e) {
         console.log(`Compression: ${formatBytes(originalSize)} → ${formatBytes(compressedSize)} (${ratio}% reduction)`);
 
         try {
+            // 1. Upload file content to Google Drive via GAS proxy
             const uploadRes = await fetch(window.ENV.BACKEND_GAS_URL, {
                 method: 'POST',
                 body: JSON.stringify({
@@ -100,20 +113,35 @@ async function docsHandleUpload(e) {
 
             if (!uploadResult.success) throw new Error(uploadResult.message);
 
-            const gasPayload = {
-                action: 'uploadDocument',
-                username: window.docsState.currentUser,
-                fileName: file.name,
-                driveFileId: uploadResult.fileId,
-                fileUrl: uploadResult.fileUrl,
-                isPublic: isPublic,
-                category: category
+            // 2. Direct POST to Supabase REST API
+            const username = window.docsState.currentUser || 'Anonymous';
+            const metadata = `[vault:${username}:${isPublic}:${uploadResult.fileId}]`;
+            
+            const headers = {
+                "apikey": window.ENV.SUPABASE_ANON_KEY,
+                "Authorization": `Bearer ${window.ENV.SUPABASE_ANON_KEY}`,
+                "Content-Type": "application/json",
+                "Prefer": "return=representation"
             };
 
-            await fetch(window.ENV.BACKEND_GAS_URL, {
+            const dbPayload = {
+                title: file.name,
+                category: category,
+                date: new Date().toISOString().split('T')[0],
+                url: uploadResult.fileUrl,
+                description: metadata
+            };
+
+            const sbRes = await fetch(`${window.ENV.SUPABASE_URL}/rest/v1/sas_documents`, {
                 method: 'POST',
-                body: JSON.stringify(gasPayload)
+                headers: headers,
+                body: JSON.stringify(dbPayload)
             });
+
+            if (!sbRes.ok) {
+                const errText = await sbRes.text();
+                throw new Error("Supabase insert failed: " + errText);
+            }
 
             document.getElementById('upload-modal').style.display = 'none';
             e.target.reset();
@@ -179,6 +207,7 @@ function compressAndUpload(file) {
 
 function showToast(message, type = 'success') {
     const container = document.getElementById('toast-container');
+    if (!container) return;
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     toast.innerHTML = `

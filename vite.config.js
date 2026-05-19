@@ -12,6 +12,7 @@ export default defineConfig({
         accountManager: resolve(__dirname, 'apps/account-manager/index.html'),
         attendanceScanner: resolve(__dirname, 'apps/attendance-scanner/index.html'),
         attendanceViewer: resolve(__dirname, 'apps/attendance-viewer/index.html'),
+        documents: resolve(__dirname, 'apps/docs/index.html'),
         fileHub: resolve(__dirname, 'apps/file-hub/index.html'),
         landingTemplate: resolve(__dirname, 'apps/landing-template/index.html'),
         mailer: resolve(__dirname, 'apps/mailer/index.html'),

@@ -225,7 +225,7 @@ export function syncFromHash(systems) {
             currentUser = userData.username || 'Unknown';
             currentToken = userData.token || userData.jwt || '';
           } catch(e) {}
-          docsFrame.src = 'apps/docs/index.html?portalUser=' + encodeURIComponent(currentUser) + '&portalToken=' + encodeURIComponent(currentToken);
+          docsFrame.src = 'apps/docs/index.html?portalUser=' + encodeURIComponent(currentUser) + '&token=' + encodeURIComponent(currentToken) + '&portalToken=' + encodeURIComponent(currentToken);
         }
       }
       
