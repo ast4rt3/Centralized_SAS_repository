@@ -341,8 +341,9 @@
                 .sort((a, b) => new Date(b.event.event_date || 0) - new Date(a.event.event_date || 0))
                 .forEach(group => {
                 const event = group.event;
+                const hasActiveWindow = group.schedules.some(s => s.is_active);
                 const card = document.createElement('div');
-                card.className = 'event-card collapsed';
+                card.className = hasActiveWindow ? 'event-card' : 'event-card collapsed';
                 card.innerHTML = `
                     <div class="event-header" onclick="toggleEvent(this)">
                         <div class="event-header-left">
