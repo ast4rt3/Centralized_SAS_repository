@@ -1252,9 +1252,6 @@
                     <div style="padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; background: #fff;">
                         <div class="manual-label" style="margin-bottom: 0;">Scanner</div>
                         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                            <button id="requestPermBtn" class="camera-toggle-btn" style="background: var(--nbsc-gold); color: var(--nbsc-dark);" onclick="requestCameraPermission()" title="Request Permission">
-                                <i class='bx bx-lock-open-alt'></i> Fix Camera
-                            </button>
                             <button id="flipCameraBtn" class="flip-camera-btn" onclick="flipCamera()" title="Cycle Camera">
                                 <i class='bx bx-refresh'></i>
                             </button>
@@ -1301,6 +1298,45 @@
         </div>
     </div>
 
+    <div id="settingsScreen" class="screen">
+        <div class="banner-container">
+            <div style="padding: 20px; color: white;">
+                <h2 style="font-weight: 800; text-transform: uppercase; font-size: 1.2rem;">Scanner Settings</h2>
+            </div>
+        </div>
+        <div class="scanner-content" style="display: flex; flex-direction: column; gap: 16px; padding: 20px;">
+            <div class="data-card" style="flex-direction: column; align-items: stretch; gap: 16px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div class="data-icon" style="background: #fff7ed; color: #ea580c">
+                        <i class='bx bx-camera'></i>
+                    </div>
+                    <div class="data-info">
+                        <div class="data-title">Camera Troubleshooting</div>
+                        <div class="data-sub">Reset camera access permissions or cycle device lenses if the camera view fails to load.</div>
+                    </div>
+                </div>
+                <button class="camera-toggle-btn" style="background: var(--nbsc-gold); color: var(--nbsc-dark); font-weight: 700; width: 100%; border: none; padding: 12px; border-radius: 8px; font-family: Montserrat, sans-serif; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;" onclick="requestCameraPermission()">
+                    <i class='bx bx-lock-open-alt' style="font-size: 1.1rem;"></i> Fix Camera
+                </button>
+            </div>
+
+            <div class="data-card" style="flex-direction: column; align-items: stretch; gap: 16px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div class="data-icon" style="background: #e1effe; color: #1e429f">
+                        <i class='bx bx-cloud-download'></i>
+                    </div>
+                    <div class="data-info">
+                        <div class="data-title">Offline Synchronization</div>
+                        <div class="data-sub">Download the student masterlist locally to allow full offline ticket and student verification.</div>
+                    </div>
+                </div>
+                <button class="submit-token-btn" style="background: #1e429f; color: white; width: 100%; border: none; padding: 12px; border-radius: 8px; font-family: Montserrat, sans-serif; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;" onclick="downloadMasterlist()">
+                    <i class='bx bx-sync' style="font-size: 1.1rem;"></i> Update Offline Data
+                </button>
+            </div>
+        </div>
+    </div>
+
     <nav class="bottom-nav">
         <div class="nav-item active" id="nav-barcode" onclick="setScanMode('barcode', this)">
             <i class='bx bx-barcode'></i>
@@ -1317,6 +1353,10 @@
         <div class="nav-item" onclick="switchScreen('queueScreen', this)">
             <i class='bx bx-cloud-upload'></i>
             <span id="queueCountLabel">Queue</span>
+        </div>
+        <div class="nav-item" onclick="switchScreen('settingsScreen', this)">
+            <i class='bx bx-cog'></i>
+            <span>Settings</span>
         </div>
     </nav>
     <script>
@@ -1887,7 +1927,28 @@
 
         function initScanner() {
             if (!html5QrCode) {
-                html5QrCode = new Html5Qrcode("reader");
+                let config = {};
+                try {
+                    if (typeof Html5QrcodeSupportedFormats !== 'undefined') {
+                        config = {
+                            formatsToSupport: [
+                                Html5QrcodeSupportedFormats.QR_CODE,
+                                Html5QrcodeSupportedFormats.CODE_128,
+                                Html5QrcodeSupportedFormats.CODE_39,
+                                Html5QrcodeSupportedFormats.CODE_93,
+                                Html5QrcodeSupportedFormats.CODABAR,
+                                Html5QrcodeSupportedFormats.EAN_13,
+                                Html5QrcodeSupportedFormats.EAN_8,
+                                Html5QrcodeSupportedFormats.UPC_A,
+                                Html5QrcodeSupportedFormats.UPC_E,
+                                Html5QrcodeSupportedFormats.ITF
+                            ]
+                        };
+                    }
+                } catch (e) {
+                    console.warn("Could not set custom barcode formats:", e);
+                }
+                html5QrCode = new Html5Qrcode("reader", config);
             }
             loadCameras();
         }
@@ -1898,12 +1959,26 @@
             
             const screenWidth = window.innerWidth || document.documentElement.clientWidth;
             const boxWidth = currentScanMode === 'barcode' ? Math.min(screenWidth - 40, 320) : 250;
-            const boxHeight = currentScanMode === 'barcode' ? 150 : 250;
+            const boxHeight = currentScanMode === 'barcode' ? 160 : 250;
+
+            // Smart camera configuration: Default to back camera (environment) if no specific camera selected
+            const cameraConfig = cameraId ? cameraId : { facingMode: "environment" };
+
+            // Request HD video resolution constraints for sharp lines to ensure excellent 1D barcode scanning on iOS
+            const config = {
+                fps: 20,
+                qrbox: { width: boxWidth, height: boxHeight },
+                videoConstraints: {
+                    facingMode: "environment",
+                    width: { min: 640, ideal: 1280, max: 1920 },
+                    height: { min: 480, ideal: 720, max: 1080 }
+                }
+            };
 
             try {
                 await html5QrCode.start(
-                    cameraId,
-                    { fps: 15, qrbox: { width: boxWidth, height: boxHeight } },
+                    cameraConfig,
+                    config,
                     processToken
                 );
                 isScannerStarted = true;
@@ -1911,6 +1986,18 @@
                 if (cameraId) localStorage.setItem('lastPreferredCameraId', cameraId);
             } catch (err) {
                 console.error("Start fail:", err);
+                // Fallback to standard start without constraints
+                try {
+                    await html5QrCode.start(
+                        cameraConfig,
+                        { fps: 15, qrbox: { width: boxWidth, height: boxHeight } },
+                        processToken
+                    );
+                    isScannerStarted = true;
+                    userCameraOff = false;
+                } catch (fallbackErr) {
+                    console.error("Fallback start fail:", fallbackErr);
+                }
             }
         }
 
@@ -1950,11 +2037,8 @@
             const scannerUser = getCurrentUser();
             const scanMode = currentScanMode; // Capture current mode
 
-            // Stop the scanner explicitly to avoid background processing
-            if (html5QrCode && isScannerStarted) { 
-                html5QrCode.stop().catch(e => { }); 
-                isScannerStarted = false;
-            }
+            // Keep camera track active between scans to prevent Safari from prompting for permissions again.
+            // We visually hide the manualEntryDiv during result card display, keeping the stream hot.
             
             manualEntryDiv.style.display = 'none';
             resultDiv.style.display = 'block';
