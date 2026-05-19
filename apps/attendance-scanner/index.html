@@ -454,23 +454,22 @@
             width: 100%;
         }
 
-        .qr-wrapper {
-            background: white;
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
-        }
-
-        .qr-wrapper #reader {
+        #reader {
             border: none !important;
             padding-bottom: 10px !important;
-        }
-
-        .qr-wrapper #reader__scan_region {
+            min-height: 160px;
             background: #000;
+            border-radius: 12px;
+            overflow: hidden;
         }
 
-        .qr-wrapper #reader__dashboard {
+        #reader__scan_region {
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        #reader__dashboard {
             padding: 14px 16px !important;
         }
 
@@ -543,14 +542,17 @@
             box-shadow: none;
         }
 
-        .qr-wrapper #reader {
+        #reader {
             border: none !important;
             padding: 0 !important;
             margin: 0 !important;
             background: #000;
+            min-height: 160px;
+            border-radius: 12px;
+            overflow: hidden;
         }
 
-        .qr-wrapper #reader__dashboard_section select {
+        #reader__dashboard_section select {
             padding: 14px 16px !important;
             width: 92% !important;
             border-radius: 10px !important;
@@ -563,8 +565,8 @@
             color: var(--nbsc-dark) !important;
         }
 
-        .qr-wrapper #reader__dashboard_section span,
-        .qr-wrapper #reader__dashboard_section a {
+        #reader__dashboard_section span,
+        #reader__dashboard_section a {
             font-family: 'Montserrat', sans-serif !important;
             font-size: 13px !important;
             color: var(--nbsc-blue) !important;
@@ -573,7 +575,7 @@
             text-decoration: none !important;
         }
 
-        .qr-wrapper #reader__dashboard_section_csr span {
+        #reader__dashboard_section_csr span {
             color: red !important;
             font-weight: bold !important;
         }
@@ -1238,30 +1240,29 @@
 
         <div class="scanner-content">
             <div id="scanner-inputs">
-                <div id="manual-entry">
-                    <div class="manual-card">
-                        <div class="manual-label">Manual Entry</div>
+                <div class="manual-card">
+                    <div id="manualCardHeader" class="manual-label">Manual Entry</div>
+                    
+                    <div id="manualEntryControls">
                         <input type="text" id="tokenInput" class="token-input" placeholder="Enter Token Manually">
                         <button class="submit-token-btn" onclick="submitManualToken()">Submit</button>
                     </div>
-                </div>
 
-                <div class="section-divider"></div>
-
-                <div class="qr-wrapper">
-                    <div style="padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; background: #fff;">
-                        <div class="manual-label" style="margin-bottom: 0;">Scanner</div>
-                        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                    <!-- Unified Scanner Area (Hidden by default until scanning starts) -->
+                    <div id="unifiedScannerArea" style="display: none; flex-direction: column; gap: 12px; margin-top: 12px;">
+                        <div id="reader" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"></div>
+                        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; margin-top: 8px;">
                             <button id="flipCameraBtn" class="flip-camera-btn" onclick="flipCamera()" title="Cycle Camera">
                                 <i class='bx bx-refresh'></i>
                             </button>
                             <select id="cameraSelector" class="camera-select" onchange="onCameraChange()" title="Select Camera">
                                 <option value="">Detecting...</option>
                             </select>
-                            <button id="customToggle" class="camera-toggle-btn" onclick="toggleCameraState()">Start Scanning</button>
                         </div>
                     </div>
-                    <div id="reader"></div>
+
+                    <!-- Scan Trigger Toggle Button -->
+                    <button id="customToggle" class="camera-toggle-btn btn-start" style="margin-top: 16px; width: 100%; padding: 16px; font-size: 0.85rem; min-height: 56px; border-radius: 12px;" onclick="toggleCameraState()">Start Scanning</button>
                 </div>
             </div>
             <div id="result"></div>
@@ -1824,12 +1825,22 @@
             const customBtn = document.getElementById('customToggle');
             if (!customBtn) return;
 
+            const manualControls = document.getElementById('manualEntryControls');
+            const unifiedScanner = document.getElementById('unifiedScannerArea');
+            const manualLabel = document.getElementById('manualCardHeader');
+
             if (isScannerStarted) {
                 customBtn.innerText = "Stop Scanning";
                 customBtn.className = "camera-toggle-btn btn-stop";
+                if (manualControls) manualControls.style.display = 'none';
+                if (unifiedScanner) unifiedScanner.style.display = 'flex';
+                if (manualLabel) manualLabel.innerText = "Scanner Active";
             } else {
                 customBtn.innerText = "Start Scanning";
                 customBtn.className = "camera-toggle-btn btn-start";
+                if (manualControls) manualControls.style.display = 'block';
+                if (unifiedScanner) unifiedScanner.style.display = 'none';
+                if (manualLabel) manualLabel.innerText = "Manual Entry";
             }
         }
 
@@ -1919,10 +1930,23 @@
 
             if (isScannerStarted) {
                 await stopScanner();
+                syncToggleBtn();
             } else {
-                await startScanner();
+                // Instantly display the scanner container so that html5-qrcode
+                // can accurately measure dimensions on initialization.
+                const manualControls = document.getElementById('manualEntryControls');
+                const unifiedScanner = document.getElementById('unifiedScannerArea');
+                const manualLabel = document.getElementById('manualCardHeader');
+
+                if (manualControls) manualControls.style.display = 'none';
+                if (unifiedScanner) unifiedScanner.style.display = 'flex';
+                if (manualLabel) manualLabel.innerText = "Scanner Active";
+
+                setTimeout(async () => {
+                    await startScanner();
+                    syncToggleBtn();
+                }, 50);
             }
-            syncToggleBtn();
         }
 
         function initScanner() {
@@ -1956,6 +1980,10 @@
         async function startScanner() {
             if (!html5QrCode) initScanner();
             const cameraId = document.getElementById('cameraSelector').value;
+            
+            // Guarantee container is visible for size calculations
+            const unifiedScanner = document.getElementById('unifiedScannerArea');
+            if (unifiedScanner) unifiedScanner.style.display = 'flex';
             
             const screenWidth = window.innerWidth || document.documentElement.clientWidth;
             const boxWidth = currentScanMode === 'barcode' ? Math.min(screenWidth - 40, 320) : 250;
