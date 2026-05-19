@@ -3536,6 +3536,14 @@
             </div>
           </div>
           
+          <!-- Global Search Input in Header -->
+          <div id="converter-search-container" style="position: relative; width: 100%; max-width: 280px; min-width: 200px; margin-left: auto; transition: all 0.3s ease;">
+            <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; display: flex; align-items: center; pointer-events: none;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            </span>
+            <input type="text" id="converter-global-search" style="width: 100%; padding: 9px 12px 9px 34px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: #ffffff; font-size: 0.85rem; font-family: 'Outfit', sans-serif; box-sizing: border-box; outline: none; transition: all 0.3s ease; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);" placeholder="Search 20+ PDF tools..." autocomplete="off">
+          </div>
+
           <!-- Glowing Tab Bar Inside Header / Top Area -->
           <div class="converter-nav-tabs" style="margin-bottom: 0;">
             <button class="converter-tab-btn active" data-tab="ilovepdf">
@@ -3560,14 +3568,6 @@
           <div class="ilovepdf-toolbar" style="display: flex; gap: 16px; flex-wrap: wrap; justify-content: space-between; align-items: center;">
             <div style="display: flex; align-items: center; gap: 12px; flex-grow: 1; flex-wrap: wrap;">
               <span style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 5px 12px; border-radius: 12px; font-size: 0.78rem; font-weight: 700; font-family: 'Outfit', sans-serif;">iLOVEPDF LAUNCHPAD</span>
-              
-              <!-- Real-time search inside toolbar -->
-              <div style="position: relative; width: 100%; max-width: 280px; min-width: 200px;">
-                <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; display: flex; align-items: center; pointer-events: none;">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                </span>
-                <input type="text" id="ilovepdf-search-input" style="width: 100%; padding: 8px 12px 8px 34px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: #ffffff; font-size: 0.85rem; font-family: 'Outfit', sans-serif; box-sizing: border-box; outline: none; transition: all 0.3s ease; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);" placeholder="Search 20+ PDF tools..." autocomplete="off">
-              </div>
             </div>
             
             <div style="display: flex; gap: 10px;">

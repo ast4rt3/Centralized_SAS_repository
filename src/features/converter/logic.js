@@ -225,12 +225,13 @@ export function initFileConverter() {
 
   const tabButtons = document.querySelectorAll('.converter-tab-btn');
   const tabContents = document.querySelectorAll('.converter-tab-content');
-  const ilovepdfSearch = document.getElementById('ilovepdf-search-input');
+  const globalSearch = document.getElementById('converter-global-search');
   const ilovepdfGrid = document.getElementById('ilovepdf-grid-dashboard');
   const filterBtns = document.querySelectorAll('#ilovepdf-category-filters .converter-tab-btn');
 
   let activeCategory = 'all';
   let searchQuery = '';
+  let currentTab = 'ilovepdf';
 
   // Function to render iLovePDF launchpad cards
   const renderLaunchpad = () => {
@@ -269,6 +270,7 @@ export function initFileConverter() {
 
   // Filter launchpad cards
   const applyFilters = () => {
+    if (!ilovepdfGrid) return;
     const cards = ilovepdfGrid.querySelectorAll('.quick-launch-card');
     cards.forEach((card, index) => {
       const tool = ILOVEPDF_TOOLS[index];
@@ -286,11 +288,18 @@ export function initFileConverter() {
   // Render launchpad initially
   renderLaunchpad();
 
-  // Bind Search Input
-  if (ilovepdfSearch) {
-    ilovepdfSearch.addEventListener('input', (e) => {
+  // Bind Global Search Input
+  if (globalSearch) {
+    globalSearch.addEventListener('input', (e) => {
       searchQuery = e.target.value.toLowerCase().trim();
-      applyFilters();
+      
+      if (currentTab === 'ilovepdf') {
+        applyFilters();
+      } else if (currentTab === 'tts') {
+        // Dispatch custom event to trigger voice search in TTS component
+        const voiceFilterEvent = new CustomEvent('tts-filter-voices', { detail: searchQuery });
+        document.dispatchEvent(voiceFilterEvent);
+      }
     });
   }
 
@@ -312,6 +321,7 @@ export function initFileConverter() {
       if (btn.closest('#ilovepdf-category-filters')) return;
 
       const tabId = btn.getAttribute('data-tab');
+      currentTab = tabId;
       
       // Update active button state
       tabButtons.forEach(b => {
@@ -326,6 +336,35 @@ export function initFileConverter() {
       const activeContent = document.getElementById(`converter-tab-content-${tabId}`);
       if (activeContent) {
         activeContent.classList.add('active');
+      }
+
+      // Reset search value on tab switch
+      if (globalSearch) {
+        globalSearch.value = '';
+        searchQuery = '';
+        
+        // Update placeholder and enabled/disabled status
+        if (tabId === 'ilovepdf') {
+          globalSearch.placeholder = "Search 20+ PDF tools...";
+          globalSearch.disabled = false;
+          globalSearch.style.opacity = '1';
+          globalSearch.style.pointerEvents = 'auto';
+          applyFilters();
+        } else if (tabId === 'tts') {
+          globalSearch.placeholder = "Search narrator voices...";
+          globalSearch.disabled = false;
+          globalSearch.style.opacity = '1';
+          globalSearch.style.pointerEvents = 'auto';
+          
+          // Re-populate voices with empty filter to reset
+          const voiceFilterEvent = new CustomEvent('tts-filter-voices', { detail: '' });
+          document.dispatchEvent(voiceFilterEvent);
+        } else if (tabId === 'qr-gen') {
+          globalSearch.placeholder = "Search not applicable here";
+          globalSearch.disabled = true;
+          globalSearch.style.opacity = '0.5';
+          globalSearch.style.pointerEvents = 'none';
+        }
       }
 
       // Handle lazy loading of tool workspaces
@@ -506,10 +545,16 @@ function renderTTSWorkspace(container) {
     animationFrameId = requestAnimationFrame(drawVisualizer);
   }
 
+  let lastVoiceQuery = '';
+
   // Populate dynamic narrator voices
-  function populateVoices() {
+  function populateVoices(filterQuery = '') {
     if (!voiceSelect) return;
     const voices = window.speechSynthesis.getVoices();
+    
+    // Remember current selection
+    const previousSelection = voiceSelect.value;
+    
     voiceSelect.innerHTML = '';
     
     if (voices.length === 0) {
@@ -517,43 +562,46 @@ function renderTTSWorkspace(container) {
       return;
     }
 
+    const filtered = voices.filter(v => {
+      const q = filterQuery.toLowerCase();
+      return v.name.toLowerCase().includes(q) || v.lang.toLowerCase().includes(q);
+    });
+
+    if (filtered.length === 0) {
+      voiceSelect.innerHTML = '<option value="">No voices match your search</option>';
+      return;
+    }
+
     // Determine the best default voice
     let defaultVoiceIndex = -1;
     
-    // Pass 1: Try to find 'Google US English'
-    defaultVoiceIndex = voices.findIndex(v => v.name.includes("Google US English"));
-    
-    // Pass 2: Try to find any 'Google' + 'en-US' voice
-    if (defaultVoiceIndex === -1) {
-      defaultVoiceIndex = voices.findIndex(v => v.name.includes("Google") && v.lang.includes("en-US"));
+    if (previousSelection) {
+      defaultVoiceIndex = filtered.findIndex(v => v.name === previousSelection);
     }
     
-    // Pass 3: Try to find 'Microsoft Zira' (highly natural, clear Windows female voice)
     if (defaultVoiceIndex === -1) {
-      defaultVoiceIndex = voices.findIndex(v => v.name.includes("Zira"));
+      defaultVoiceIndex = filtered.findIndex(v => v.name.includes("Google US English"));
     }
-    
-    // Pass 4: Try to find 'Wilson' (alternative custom en-US voice)
     if (defaultVoiceIndex === -1) {
-      defaultVoiceIndex = voices.findIndex(v => v.name.includes("Wilson"));
+      defaultVoiceIndex = filtered.findIndex(v => v.name.includes("Google") && v.lang.includes("en-US"));
     }
-    
-    // Pass 5: Try to find any other 'en-US' voice
     if (defaultVoiceIndex === -1) {
-      defaultVoiceIndex = voices.findIndex(v => v.lang.includes("en-US"));
+      defaultVoiceIndex = filtered.findIndex(v => v.name.includes("Zira"));
     }
-    
-    // Pass 6: Fallback to system default voice
     if (defaultVoiceIndex === -1) {
-      defaultVoiceIndex = voices.findIndex(v => v.default);
+      defaultVoiceIndex = filtered.findIndex(v => v.name.includes("Wilson"));
     }
-    
-    // Pass 7: Absolute fallback to the first voice
+    if (defaultVoiceIndex === -1) {
+      defaultVoiceIndex = filtered.findIndex(v => v.lang.includes("en-US"));
+    }
+    if (defaultVoiceIndex === -1) {
+      defaultVoiceIndex = filtered.findIndex(v => v.default);
+    }
     if (defaultVoiceIndex === -1) {
       defaultVoiceIndex = 0;
     }
 
-    voices.forEach((voice, index) => {
+    filtered.forEach((voice, index) => {
       const option = document.createElement('option');
       option.value = voice.name;
       option.innerText = `${voice.name} (${voice.lang})${voice.default ? ' [Default]' : ''}`;
@@ -564,10 +612,22 @@ function renderTTSWorkspace(container) {
     });
   }
 
+  // Listen for global voice searches
+  const onVoiceFilter = (e) => {
+    lastVoiceQuery = e.detail;
+    populateVoices(lastVoiceQuery);
+  };
+  document.addEventListener('tts-filter-voices', onVoiceFilter);
+  
+  if (container._voiceFilterCleanup) {
+    document.removeEventListener('tts-filter-voices', container._voiceFilterCleanup);
+  }
+  container._voiceFilterCleanup = onVoiceFilter;
+
   // Bind async voice events
   populateVoices();
   if (window.speechSynthesis && window.speechSynthesis.onvoiceschanged !== undefined) {
-    window.speechSynthesis.onvoiceschanged = populateVoices;
+    window.speechSynthesis.onvoiceschanged = () => populateVoices(lastVoiceQuery);
   }
 
   // Value slider displays
