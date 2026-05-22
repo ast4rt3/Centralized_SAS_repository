@@ -5175,7 +5175,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 action: "toggleTvVisible",
                 username: userObj.username,
                 token: userObj.token,
-                timestamp: post.timestamp
+                timestamp: post.timestamp,
+                imageUrl: post.imageUrl || "",
+                externalId: post.externalId || ""
               };
 
               const r = await fetch(BACKEND_GAS_URL, {
