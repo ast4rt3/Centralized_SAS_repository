@@ -1582,8 +1582,10 @@ document.addEventListener('DOMContentLoaded', () => {
     showPage('system-view');
     if (systemFrame) {
       const glue = sys.url.includes('?') ? '&' : '?';
-      const currentUser = JSON.parse(localStorage.getItem('sas_user_data') || '{}').username || 'Unknown';
-      systemFrame.src = sys.url + glue + 'portalUser=' + encodeURIComponent(currentUser);
+      const userObj = JSON.parse(localStorage.getItem('sas_user_data') || '{}');
+      const currentUser = userObj.username || 'Unknown';
+      const currentToken = userObj.token || userObj.jwt || '';
+      systemFrame.src = sys.url + glue + 'portalUser=' + encodeURIComponent(currentUser) + (currentToken ? '&portalToken=' + encodeURIComponent(currentToken) : '');
     }
   }
 
