@@ -2597,7 +2597,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (adminTvView) {
         document.body.classList.add('tv-mode');
         document.body.classList.remove('dashboard-backdrop');
-        if (btnAdminExitTv) btnAdminExitTv.classList.add('hidden'); // Toggle visibility fixed
+        if (btnAdminExitTv) btnAdminExitTv.classList.remove('hidden'); // Toggle visibility fixed
         if (navToggle) navToggle.classList.add('hidden');
         if (sidebar) sidebar.style.display = 'none';
         if (btnTvHeaderToggle) btnTvHeaderToggle.classList.remove('hidden');
