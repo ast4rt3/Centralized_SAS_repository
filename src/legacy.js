@@ -19,6 +19,93 @@ import { supabase } from "./core/supabase.js";
 
 const BACKEND_GAS_URL = window.ENV?.BACKEND_GAS_URL || "YOUR_NEW_BACKEND_GAS_URL_HERE";
 
+// --- sasSmartFetch: Request Coalescing & SWR Caching ---
+const originalFetch = window.fetch;
+const fetchCache = new Map();
+const inFlightRequests = new Map();
+
+window.fetch = async function(resource, options) {
+  const url = typeof resource === 'string' ? resource : (resource instanceof Request ? resource.url : '');
+  
+  if (!url.includes(BACKEND_GAS_URL)) {
+    return originalFetch.apply(this, arguments);
+  }
+
+  const method = (options?.method || 'GET').toUpperCase();
+  let payloadStr = "";
+  let action = "";
+
+  if (options && options.body) {
+    if (typeof options.body === 'string') {
+      payloadStr = options.body;
+      try {
+        const parsed = JSON.parse(payloadStr);
+        action = parsed.action || '';
+      } catch (e) {}
+    } else if (options.body instanceof URLSearchParams) {
+      payloadStr = options.body.toString();
+      action = options.body.get('action') || '';
+    } else if (options.body instanceof FormData) {
+      action = options.body.get('action') || 'upload'; 
+    }
+  } else if (url.includes('?')) {
+    const searchParams = new URL(url).searchParams;
+    action = searchParams.get('action') || '';
+  }
+
+  const isMutatingAction = ['login', 'register', 'deletePost', 'createPost', 'updatePost', 'deleteMultimedia', 'flushMultimedia', 'updateUserSettings'].includes(action);
+  const isUpload = options?.body instanceof FormData;
+
+  if (isMutatingAction || isUpload || !action) {
+    return originalFetch.apply(this, arguments);
+  }
+
+  const cacheKey = `${method}_${url}_${payloadStr}`;
+
+  if (inFlightRequests.has(cacheKey)) {
+    console.log(`[SmartFetch] Coalescing request: ${action}`);
+    return inFlightRequests.get(cacheKey).then(res => res.clone()); 
+  }
+
+  if (fetchCache.has(cacheKey)) {
+    const cachedData = fetchCache.get(cacheKey);
+    const age = Date.now() - cachedData.timestamp;
+    
+    if (age < 300000) {
+      console.log(`[SmartFetch] Cache hit: ${action} (${age}ms)`);
+      if (age > 10000) {
+        originalFetch.apply(window, arguments).then(async (bgRes) => {
+          if (bgRes.ok) {
+            const clone = bgRes.clone();
+            const rawText = await clone.text();
+            fetchCache.set(cacheKey, { timestamp: Date.now(), responseText: rawText, status: bgRes.status, headers: [...bgRes.headers] });
+          }
+        }).catch(e => console.warn("[SmartFetch] Background update failed", e));
+      }
+      return new Response(cachedData.responseText, {
+        status: cachedData.status,
+        headers: cachedData.headers
+      });
+    }
+  }
+
+  const fetchPromise = originalFetch.apply(this, arguments).then(async (res) => {
+    if (res.ok) {
+      const clone = res.clone();
+      const rawText = await clone.text();
+      fetchCache.set(cacheKey, { timestamp: Date.now(), responseText: rawText, status: res.status, headers: [...res.headers] });
+    }
+    inFlightRequests.delete(cacheKey);
+    return res;
+  }).catch(err => {
+    inFlightRequests.delete(cacheKey);
+    throw err;
+  });
+
+  inFlightRequests.set(cacheKey, fetchPromise);
+  return fetchPromise.then(res => res.clone());
+}
+
 // Global Utility: Escape HTML to prevented XSS
 const escapeHtml = (text) => {
   if (typeof text !== 'string') return text;
