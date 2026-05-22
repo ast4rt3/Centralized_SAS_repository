@@ -7674,11 +7674,10 @@ function initLpDocuments() {
     if (!viewer) return;
 
     const rawData = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
-    if (rawData) {
-      // User is logged in! Hide unauth overlay and load iframe with token query parameters
-      if (unauth) unauth.classList.add('hidden');
-      if (iframe) {
-        try {
+    if (unauth) unauth.classList.add('hidden');
+    if (iframe) {
+      try {
+        if (rawData) {
           const userData = JSON.parse(rawData);
           const currentUser = userData.username || '';
           const currentToken = userData.token || userData.jwt || '';
@@ -7687,20 +7686,19 @@ function initLpDocuments() {
           } else {
             iframe.src = 'https://lost-and-found-liart-seven.vercel.app/dashboard/analytics';
           }
-        } catch (e) {
+        } else {
           iframe.src = 'https://lost-and-found-liart-seven.vercel.app/dashboard/analytics';
         }
+      } catch (e) {
+        iframe.src = 'https://lost-and-found-liart-seven.vercel.app/dashboard/analytics';
       }
-    } else {
-      // User is logged out! Show unauth overlay and clear the iframe src
-      if (unauth) unauth.classList.remove('hidden');
-      if (iframe) iframe.src = '';
     }
 
     if (content) content.style.display = 'none';
-    if (navbar) navbar.classList.add('scrolled');
+    if (navbar) navbar.classList.remove('scrolled');
+    document.body.classList.remove('scrolled');
     viewer.classList.remove('hidden');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo(0, 0);
   };
 
   window.closeLostFoundViewer = () => {

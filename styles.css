@@ -8596,33 +8596,16 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 .lf-iframe-clipper {
   position: absolute;
-  inset: 0;
+  inset: 93px 0 0 0;
   overflow: hidden;
 }
 
 .lf-iframe-clipper iframe {
   position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   border: none;
-}
-
-/* Desktop: sidebar ~256px, topnav ~72px */
-@media (min-width: 1024px) {
-  .lf-iframe-clipper iframe {
-    top: -72px;
-    left: -256px;
-    width: calc(100% + 256px);
-    height: calc(100% + 72px);
-  }
-}
-
-/* Mobile/tablet: no sidebar, topnav ~64px */
-@media (max-width: 1023px) {
-  .lf-iframe-clipper iframe {
-    top: -64px;
-    left: 0;
-    width: 100%;
-    height: calc(100% + 64px);
-  }
 }
 
 /* --- Lost & Found Unauth / Guest Lock Overlay --- */

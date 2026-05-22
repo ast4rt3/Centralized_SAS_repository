@@ -1618,7 +1618,7 @@
               </ul>
             </li>
             <li><a href="#lp-documents">Documents</a></li>
-            <li><a href="#lp-lost-found">Lost &amp; Found</a></li>
+            <li><a href="#" onclick="openLostFoundViewer(); return false;">Lost &amp; Found</a></li>
             <li><a href="#lp-activities">Recent Activities</a></li>
           </ul>
 
@@ -2041,70 +2041,6 @@
         </div>
       </section>
 
-      <!-- Lost & Found Section -->
-      <section id="lp-lost-found" class="lp-section">
-        <div class="lp-container">
-          <div class="lp-section-header">
-            <h2>Lost &amp; Found</h2>
-            <p>Report, find, and track lost items across the NBSC campus. Powered by the NBSC Lost &amp; Found system.</p>
-          </div>
-
-          <div class="lp-lf-cards-grid">
-
-            <div class="lp-lf-card" onclick="openLostFoundViewer()" style="cursor:pointer;">
-              <div class="lp-lf-card-icon" style="background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%);">
-                <i class='bx bx-line-chart'></i>
-              </div>
-              <div class="lp-lf-card-body">
-                <h3>Analytics Dashboard</h3>
-                <p>View live statistics — total found items, lost reports, claims, and monthly trends.</p>
-                <div class="lp-lf-stat-row" id="lf-nav-stat-row">
-                  <div class="lp-lf-stat">
-                    <span class="lp-lf-stat-val" id="lf-nav-found">—</span>
-                    <span class="lp-lf-stat-lbl">Found</span>
-                  </div>
-                  <div class="lp-lf-stat">
-                    <span class="lp-lf-stat-val" id="lf-nav-lost">—</span>
-                    <span class="lp-lf-stat-lbl">Lost</span>
-                  </div>
-                  <div class="lp-lf-stat">
-                    <span class="lp-lf-stat-val" id="lf-nav-claims">—</span>
-                    <span class="lp-lf-stat-lbl">Claims</span>
-                  </div>
-                  <div class="lp-lf-stat">
-                    <span class="lp-lf-stat-val" id="lf-nav-claimed">—</span>
-                    <span class="lp-lf-stat-lbl">Claimed</span>
-                  </div>
-                </div>
-              </div>
-              <div class="lp-lf-card-arrow"><i class='bx bx-right-arrow-alt'></i> View Analytics</div>
-            </div>
-
-            <div class="lp-lf-card" onclick="window.open('https://lost-and-found-liart-seven.vercel.app/reportLostItem','_blank')" style="cursor:pointer;">
-              <div class="lp-lf-card-icon" style="background: linear-gradient(135deg, #f43f5e 0%, #fb7185 100%);">
-                <i class='bx bx-search-alt-2'></i>
-              </div>
-              <div class="lp-lf-card-body">
-                <h3>Report a Lost Item</h3>
-                <p>Lost something on campus? Submit a report and get notified when it's found.</p>
-              </div>
-              <div class="lp-lf-card-arrow"><i class='bx bx-right-arrow-alt'></i> Report Now</div>
-            </div>
-
-            <div class="lp-lf-card" onclick="window.open('https://lost-and-found-liart-seven.vercel.app/foundItems','_blank')" style="cursor:pointer;">
-              <div class="lp-lf-card-icon" style="background: linear-gradient(135deg, #10b981 0%, #34d399 100%);">
-                <i class='bx bx-box'></i>
-              </div>
-              <div class="lp-lf-card-body">
-                <h3>Browse Found Items</h3>
-                <p>Check the list of items that have been turned in and are waiting to be claimed.</p>
-              </div>
-              <div class="lp-lf-card-arrow"><i class='bx bx-right-arrow-alt'></i> Browse Items</div>
-            </div>
-
-          </div>
-        </div>
-      </section>
 
 
       <!-- Documents Section -->
