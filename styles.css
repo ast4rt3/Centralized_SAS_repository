@@ -5210,7 +5210,7 @@ body.lp-mode .main-wrapper {
 
 .lp-nav-links {
   display: flex;
-  gap: 30px;
+  gap: 20px;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -5222,7 +5222,7 @@ body.lp-mode .main-wrapper {
 .lp-nav-links a {
   font-weight: 700;
   color: rgba(255, 255, 255, 0.9);
-  font-size: 0.95rem;
+  font-size: 0.825rem;
   transition: 0.3s;
   text-decoration: none;
   position: relative;

@@ -7765,22 +7765,7 @@ function initLpDocuments() {
     const rawData = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
     if (unauth) unauth.classList.add('hidden');
     if (iframe) {
-      try {
-        if (rawData) {
-          const userData = JSON.parse(rawData);
-          const currentUser = userData.username || '';
-          const currentToken = userData.token || userData.jwt || '';
-          if (currentUser && currentToken) {
-            iframe.src = `https://lost-and-found-liart-seven.vercel.app/dashboard/analytics?portalUser=${encodeURIComponent(currentUser)}&portalToken=${encodeURIComponent(currentToken)}`;
-          } else {
-            iframe.src = 'https://lost-and-found-liart-seven.vercel.app/dashboard/analytics';
-          }
-        } else {
-          iframe.src = 'https://lost-and-found-liart-seven.vercel.app/dashboard/analytics';
-        }
-      } catch (e) {
-        iframe.src = 'https://lost-and-found-liart-seven.vercel.app/dashboard/analytics';
-      }
+      iframe.src = 'https://lost-and-found-liart-seven.vercel.app/dashboard/analytics?source=sas-portal-public';
     }
 
     if (content) content.style.display = 'none';
