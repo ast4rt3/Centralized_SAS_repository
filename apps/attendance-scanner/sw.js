@@ -1,8 +1,6 @@
-const CACHE_NAME = 'nbsc-sas-v12';
+const CACHE_NAME = 'nbsc-sas-v13';
 
 const PRECACHE = [
-  './',
-  './index.html',
   './stylesheet.css',
   './manifest.json'
 ];
@@ -37,10 +35,13 @@ self.addEventListener('fetch', (event) => {
   if (url.origin === self.location.origin && (url.pathname.endsWith('.html') || url.pathname.endsWith('.css') || url.pathname.endsWith('.json') || url.pathname === '/' || url.pathname === '')) {
     event.respondWith(
       fetch(event.request).then((networkResponse) => {
-        return caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, networkResponse.clone());
-          return networkResponse;
-        });
+        const cloneForCheck = networkResponse.clone();
+        cloneForCheck.text().then(text => {
+          if (!text.includes('Cookies are not enabled') && !text.includes('aes.js')) {
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse.clone()));
+          }
+        }).catch(e => console.error(e));
+        return networkResponse;
       }).catch(() => {
         return caches.match(event.request).then(cached => {
           if (cached) return cached;

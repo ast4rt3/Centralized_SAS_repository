@@ -4,14 +4,12 @@
 // No buttons required — runs invisibly in the background
 // ================================================================
 
-const CACHE_VERSION = 'sas-tv-v86';
+const CACHE_VERSION = 'sas-tv-v87';
 const CACHE_POST_DATA = 'sas-posts-v2';
 const CACHE_MEDIA = 'sas-media-v2';
 
 // App shell — files to cache immediately on install
 const APP_SHELL = [
-  './',
-  './index.html',
   './manifest.webmanifest',
   './styles.css'
 ];
@@ -60,8 +58,17 @@ self.addEventListener('fetch', event => {
       fetch(req)
         .then(res => {
           if (!res || !res.ok) return res;
-          const clone = res.clone();
-          caches.open(CACHE_VERSION).then(cache => cache.put(req, clone));
+          
+          const cloneForCache = res.clone();
+          const cloneForCheck = res.clone();
+          
+          cloneForCheck.text().then(text => {
+            // Prevent caching InfinityFree's security challenge page
+            if (!text.includes('Cookies are not enabled') && !text.includes('aes.js')) {
+              caches.open(CACHE_VERSION).then(cache => cache.put(req, cloneForCache));
+            }
+          }).catch(e => console.error(e));
+          
           return res;
         })
         .catch(() => caches.match(req).then(cached => cached || caches.match('./index.html')))
