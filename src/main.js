@@ -5,6 +5,10 @@ import "./features/messaging/ui.js";
 import { updateClock, updateWeather } from "./features/tv/clock.js";
 import { syncFromHash, ensureAppVisible } from "./ui/navigation.js";
 import { initFileConverter } from "./features/converter/logic.js";
+import { initErrorMonitor } from "./core/error-monitor.js";
+
+// 0. Initialize On-Screen Error Monitor
+initErrorMonitor();
 
 // 1. Immediate Auth Check
 performImmediateAuthCheck();

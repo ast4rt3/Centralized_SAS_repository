@@ -34,5 +34,26 @@ export function getMyUsername() {
 export function logout() {
   localStorage.removeItem('sas_user_data');
   sessionStorage.removeItem('sas_user_data');
-  window.location.reload();
+  
+  try {
+    // 1. Post message to all active iframes
+    document.querySelectorAll('iframe').forEach(iframe => {
+      if (iframe.contentWindow) {
+        iframe.contentWindow.postMessage({ action: 'logout' }, '*');
+      }
+    });
+
+    // 2. Create a hidden iframe to force-clear the external Vercel app session
+    const lfIframe = document.createElement('iframe');
+    lfIframe.style.display = 'none';
+    lfIframe.src = 'https://lost-and-found-liart-seven.vercel.app/logout';
+    document.body.appendChild(lfIframe);
+  } catch (e) {
+    console.error('Cross-domain logout logic failed:', e);
+  }
+
+  // Delay reload slightly to allow external requests to process
+  setTimeout(() => {
+    window.location.reload();
+  }, 1000);
 }

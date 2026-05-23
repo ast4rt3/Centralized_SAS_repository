@@ -418,12 +418,27 @@ async function fetchGenericData(eventId) {
   }
 
   // 3. Fetch Logs for these schedules
-  const { data: logs, error: logErr } = await supabaseClient
-    .from('sas_attendance_logs')
-    .select('student_id, schedule_id, scanned_at, status, scanner_user, flag_reason')
-    .in('schedule_id', scheduleIds);
+  let logs = [];
+  let logFrom = 0;
+  let logStep = 1000;
+  let keepFetchingLogs = true;
 
-  if (logErr) throw logErr;
+  while (keepFetchingLogs) {
+    const { data: logsChunk, error: logErr } = await supabaseClient
+      .from('sas_attendance_logs')
+      .select('student_id, schedule_id, scanned_at, status, scanner_user, flag_reason')
+      .in('schedule_id', scheduleIds)
+      .range(logFrom, logFrom + logStep - 1);
+
+    if (logErr) throw logErr;
+    if (logsChunk && logsChunk.length > 0) {
+      logs = logs.concat(logsChunk);
+      logFrom += logStep;
+      if (logsChunk.length < logStep) keepFetchingLogs = false;
+    } else {
+      keepFetchingLogs = false;
+    }
+  }
 
   // 4. Pivot Data
   // Map logs: student_id -> { schedule_id -> logEntry }
