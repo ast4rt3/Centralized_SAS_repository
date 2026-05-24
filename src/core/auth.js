@@ -43,14 +43,15 @@ export function logout() {
       }
     });
 
-    // 2. Trigger external logout via background fetch instead of iframe
-    // An iframe causes InfinityFree to trigger its bot protection when the Vercel app redirects back to kesug.com.
-    fetch('https://lost-and-found-liart-seven.vercel.app/logout', {
-      method: 'GET',
-      mode: 'no-cors',
-      credentials: 'omit' // We just hit the endpoint, but wait, if it needs cookies to log out, we might need 'include'.
-      // Actually, since SameSite restricts cross-origin cookies, postMessage is the only reliable way.
-    }).catch(() => {});
+    // 2. Trigger external logout via a tightly sandboxed hidden iframe
+    // The sandbox strictly blocks 'allow-top-navigation'. This allows the Vercel app
+    // to run its logout scripts, but prevents the InfinityFree bot protection from 
+    // hijacking the entire browser tab if the Vercel app redirects back to kesug.com.
+    const lfIframe = document.createElement('iframe');
+    lfIframe.style.display = 'none';
+    lfIframe.sandbox = 'allow-scripts allow-same-origin'; // Critical: omitting allow-top-navigation
+    lfIframe.src = 'https://lost-and-found-liart-seven.vercel.app/logout';
+    document.body.appendChild(lfIframe);
 
   } catch (e) {
     console.error('Cross-domain logout logic failed:', e);

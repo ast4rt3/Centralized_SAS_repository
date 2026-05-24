@@ -2853,9 +2853,12 @@ document.addEventListener('DOMContentLoaded', () => {
       logoutBtn.addEventListener('click', function () {
         localStorage.clear();
         sessionStorage.clear();
-        // Clear cookies if any
+        // Clear cookies if any (except the __test security cookie used by InfinityFree)
         document.cookie.split(";").forEach((cookie) => {
-          document.cookie = cookie.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+          const name = cookie.split("=")[0].trim();
+          if (name !== "__test") {
+            document.cookie = name + "=;expires=" + new Date().toUTCString() + ";path=/";
+          }
         });
         // Hide all pages and show loading first to prevent flash of unauthorized content
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
