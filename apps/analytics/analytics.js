@@ -943,6 +943,7 @@ async function loadJobVacancyData() {
   const elPh = document.getElementById('vacancies-placeholder');
 
   if (!sb) {
+    console.warn("[Job Vacancies Debug] Supabase client is null. Is supabase-js loaded?");
     if (elPh) elPh.classList.remove('hidden');
     setText('kv-vacancies', '—');
     renderEmptyChart('vacanciesChart', 'doughnut');
@@ -961,6 +962,9 @@ async function loadJobVacancyData() {
         if (sf.files) sf.files.forEach(file => liveDriveIds.push(file.id));
       });
     });
+
+    console.log("[Job Vacancies Debug] Drive Response:", driveRes);
+    console.log("[Job Vacancies Debug] Found Live IDs:", liveDriveIds.length);
 
     // 2. Fetch OCR text from Supabase
     const { data: cachedTexts, error } = await sb.from('sas_job_vacancies').select('*');
