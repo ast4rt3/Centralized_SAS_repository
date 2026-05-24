@@ -99,6 +99,14 @@
             <div class="an-kpi-sub">Attendance Records</div>
           </div>
         </div>
+        <div class="an-kpi-card" id="kpi-vacancies">
+          <div class="an-kpi-icon" style="--kpi-color: #06b6d4;"><i class='bx bx-briefcase'></i></div>
+          <div class="an-kpi-content">
+            <div class="an-kpi-value" id="kv-vacancies">—</div>
+            <div class="an-kpi-label">Job Vacancies Tracked</div>
+            <div class="an-kpi-sub">Career & Placement</div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -340,6 +348,39 @@
       <div class="an-data-placeholder hidden" id="attendance-placeholder">
         <i class='bx bx-plug'></i>
         <p>Attendance data will load from the SAS Masterlist.</p>
+      </div>
+    </section>
+
+    <!-- Job Vacancies OCR Section -->
+    <section class="an-section">
+      <div class="an-section-header">
+        <h2 class="an-section-title"><i class='bx bx-briefcase'></i> Job Vacancies</h2>
+        <span class="an-section-subtitle">Career opportunities from PESO & partner companies</span>
+      </div>
+
+      <div class="an-chart-row">
+        <div class="an-chart-card an-chart-md">
+          <div class="an-chart-card-header">
+            <h3>Vacancies by Industry</h3>
+          </div>
+          <div class="an-chart-wrap">
+            <canvas id="vacanciesChart"></canvas>
+          </div>
+        </div>
+        <div class="an-chart-card an-chart-md">
+          <div class="an-kpi-list" id="vacancies-roles-list">
+            <div class="an-kpi-list-header">Top Roles Hiring Now</div>
+            <div class="an-kpi-list-body" id="top-roles-body">
+              <div class="an-loading-row"><i class='bx bx-loader-alt bx-spin'></i> Loading...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="an-data-placeholder hidden" id="vacancies-placeholder">
+        <i class='bx bx-plug'></i>
+        <p>Job Vacancies data will load automatically from Google Drive.</p>
+        <span>Posters are scanned using OCR to extract and categorize job roles.</span>
       </div>
     </section>
 

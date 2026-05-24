@@ -51,6 +51,7 @@ async function loadAllData() {
   await Promise.allSettled([
     loadLostFoundData(),
     loadAttendanceData(),
+    loadJobVacancyData(),
   ]);
   loadBorrowersData();  // graceful — no await
   loadSurveyData();
@@ -88,7 +89,10 @@ function makeChart(id, config) {
 // ─── SECTION 1: Lost & Found ─────────────────────────
 async function loadLostFoundData() {
   // Uses existing Backend.gs proxy endpoint: getLostFoundStats
-  const data = await safeFetch(BACKEND_URL + '?action=getLostFoundStats');
+  const data = await safeFetch(BACKEND_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'getLostFoundStats' })
+  });
   if (!data || !data.success) {
     // Try direct API as fallback
     const direct = await safeFetch(LF_API_BASE + '/admin/stats');
@@ -102,8 +106,8 @@ async function loadLostFoundData() {
 function renderLFData(d) {
   if (!d) { renderLFPlaceholder(); return; }
 
-  const totalFound    = d.totalFoundItems   ?? d.total_found   ?? 0;
-  const totalLost     = d.totalLostItems    ?? d.total_lost    ?? 0;
+  const totalFound    = d.foundItems   ?? d.totalFoundItems   ?? d.total_found   ?? 0;
+  const totalLost     = d.lostItems    ?? d.totalLostItems    ?? d.total_lost    ?? 0;
   const claimed       = d.claimedItems      ?? d.claimed       ?? 0;
   const active        = d.activeItems       ?? d.active        ?? (totalFound - claimed);
   const totalClaims   = d.totalClaims       ?? d.claims_count  ?? claimed;
@@ -155,7 +159,14 @@ function renderLFData(d) {
   });
 
   // ── Bar: Category breakdown
-  const cats    = d.categoryBreakdown ?? d.categories ?? sampleCategories();
+  let cats = d.categoryBreakdown ?? d.categories;
+  if (Array.isArray(cats)) {
+    const cObj = {};
+    cats.forEach(c => cObj[c.name || c.category] = c.found ?? c.total ?? 0);
+    cats = cObj;
+  }
+  if (!cats) cats = sampleCategories();
+
   const catKeys = Object.keys(cats).slice(0, 8);
   const catVals = catKeys.map(k => cats[k]);
 
@@ -182,7 +193,13 @@ function renderLFData(d) {
   });
 
   // ── Line: Monthly Reports
-  const monthly = d.monthlyTrend ?? d.monthly ?? sampleMonthly();
+  let monthly = d.monthlyTrend ?? d.monthly;
+  if (!monthly && d.monthlyStats) {
+    monthly = {};
+    d.monthlyStats.forEach(m => monthly[m.month || m.name] = m.found ?? m.total ?? 0);
+  }
+  if (!monthly) monthly = sampleMonthly();
+
   const months  = Object.keys(monthly);
   const mVals   = Object.values(monthly);
 
@@ -522,29 +539,54 @@ async function loadAttendanceData() {
   }
 
   try {
-    // Fetch all events, schedules, and logs paginated to bypass 1000 row limits
+    // Fetch all events and schedules
     const events = await fetchAll(sb, 'sas_events', 'id, name');
     const schedules = await fetchAll(sb, 'sas_schedules', 'id, event_id');
-    const logs = await fetchAll(sb, 'sas_attendance_logs', 'student_id, schedule_id');
 
-    // Map attendees to events
+    // Map schedules to events
     const schedToEvent = {};
     schedules.forEach(s => schedToEvent[s.id] = s.event_id);
 
-    const eventAttendees = {}; // event_id -> Set of student_ids
+    // Pre-build attendance sets per event
+    const eventAttendees = {};
     events.forEach(e => eventAttendees[e.id] = new Set());
-    
+
     const allUniqueAttendees = new Set();
     const attendeeStudentIds = new Set();
 
-    logs.forEach(l => {
-      const evId = schedToEvent[l.schedule_id];
-      if (evId && eventAttendees[evId]) {
-        eventAttendees[evId].add(l.student_id);
-        allUniqueAttendees.add(l.student_id);
+    // Fetch logs FILTERED by schedule IDs (much faster than full table scan)
+    const scheduleIds = schedules.map(s => s.id);
+    if (scheduleIds.length > 0) {
+      // Chunk the schedule IDs to avoid URL length limits
+      for (let i = 0; i < scheduleIds.length; i += 200) {
+        const chunk = scheduleIds.slice(i, i + 200);
+        let from = 0;
+        const step = 1000;
+        let keepGoing = true;
+        while (keepGoing) {
+          const { data: logsChunk, error: logErr } = await sb
+            .from('sas_attendance_logs')
+            .select('student_id, schedule_id')
+            .in('schedule_id', chunk)
+            .range(from, from + step - 1);
+          if (logErr) throw logErr;
+          if (logsChunk && logsChunk.length > 0) {
+            logsChunk.forEach(l => {
+              const evId = schedToEvent[l.schedule_id];
+              if (evId && eventAttendees[evId]) {
+                eventAttendees[evId].add(l.student_id);
+                allUniqueAttendees.add(l.student_id);
+              }
+              attendeeStudentIds.add(l.student_id);
+            });
+            from += step;
+            if (logsChunk.length < step) keepGoing = false;
+          } else {
+            keepGoing = false;
+          }
+        }
       }
-      attendeeStudentIds.add(l.student_id);
-    });
+    }
 
     // -- LEGACY DATA INTEGRATION --
     const legacyColsFd = [
@@ -622,7 +664,8 @@ async function loadAttendanceData() {
     let totalEventAttendees = 0;
     const sortedEvents = [];
     events.forEach(e => {
-      const count = eventAttendees[e.id].size;
+      const slot = eventAttendees[e.id];
+      const count = slot ? (slot instanceof Set ? slot.size : (slot.size ?? 0)) : 0;
       totalEventAttendees += count;
       if (count > 0) {
         sortedEvents.push([e.name, count]);
@@ -734,7 +777,7 @@ async function loadAttendanceData() {
     renderEmptyTopEvents(sortedEvents.slice(0, 5));
 
   } catch (err) {
-    console.error('[Analytics] Supabase attendance error:', err);
+    console.error('[Analytics] Supabase attendance error:', err?.message ?? err, err?.stack);
     if (elPh) elPh.classList.remove('hidden');
     setText('kv-attendance', '—');
     renderEmptyChart('attendanceEventChart',  'bar');
@@ -882,4 +925,143 @@ function sampleMonthly() {
 // ─── Print ────────────────────────────────────────────
 function printReport() {
   window.print();
+}
+
+// ─── SECTION 8: Job Vacancies OCR Analytics ───────────
+const JOB_DICTIONARY = {
+  "Skilled Trades": ["CARPENTER", "ELECTRICIAN", "WELDER", "PLUMBER", "MECHANIC", "TECHNICIAN"],
+  "Manufacturing & Logistics": ["PRODUCTION", "FORKLIFT", "WAREHOUSE", "DRIVER", "DELIVERY", "OPERATOR"],
+  "Hospitality & Food": ["KITCHEN", "DINING", "COOK", "WAITER", "BARISTA", "HOTEL", "RESTAURANT", "CREW"],
+  "Retail & Sales": ["SALES", "CASHIER", "MERCHANDISER", "AGENT", "CLERK", "PROMO"],
+  "Business & Admin": ["MANAGER", "ADMIN", "ASSISTANT", "SECRETARY", "HR", "STAFF"],
+  "IT & Tech": ["DEVELOPER", "PROGRAMMER", "SOFTWARE", "IT", "NETWORK"],
+  "Education": ["TEACHER", "INSTRUCTOR", "PROFESSOR", "TUTOR"]
+};
+
+async function loadJobVacancyData() {
+  const sb = getSupabase();
+  const elPh = document.getElementById('vacancies-placeholder');
+
+  if (!sb) {
+    if (elPh) elPh.classList.remove('hidden');
+    setText('kv-vacancies', '—');
+    renderEmptyChart('vacanciesChart', 'doughnut');
+    return;
+  }
+
+  try {
+    // 1. Fetch live file IDs from Google Drive
+    const driveRes = await safeFetch(`${BACKEND_URL}?action=getDriveVacancies`);
+    if (!driveRes || !driveRes.success) throw new Error("Could not fetch Drive folders");
+    
+    let liveDriveIds = [];
+    driveRes.folders.forEach(f => {
+      if (f.files) f.files.forEach(file => liveDriveIds.push(file.id));
+      if (f.subfolders) f.subfolders.forEach(sf => {
+        if (sf.files) sf.files.forEach(file => liveDriveIds.push(file.id));
+      });
+    });
+
+    // 2. Fetch OCR text from Supabase
+    const { data: cachedTexts, error } = await sb.from('sas_job_vacancies').select('*');
+    if (error) throw error;
+
+    const cachedIds = new Set((cachedTexts || []).map(r => r.drive_file_id));
+    const missingIds = liveDriveIds.filter(id => !cachedIds.has(id));
+
+    // 3. Trigger OCR sync for missing files
+    if (missingIds.length > 0) {
+      console.log(`[Job Vacancies] Syncing ${missingIds.length} missing files for OCR...`);
+      const syncRes = await fetch(`${BACKEND_URL}?action=syncVacancyOCR`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ fileIds: missingIds.join(',') })
+      }).then(r => r.json());
+      
+      if (syncRes && syncRes.success && syncRes.processed) {
+        syncRes.processed.forEach(p => {
+          cachedTexts.push({ drive_file_id: p.id, extracted_text: p.text });
+        });
+      }
+    }
+
+    // 4. Run Analytics on Text
+    const industryCounts = {};
+    const exactRoles = {};
+
+    (cachedTexts || []).forEach(row => {
+      const text = String(row.extracted_text || "").toUpperCase();
+      let matchedIndustry = "Others";
+      
+      // Match against dictionary
+      for (const [industry, keywords] of Object.entries(JOB_DICTIONARY)) {
+        for (const kw of keywords) {
+          if (text.includes(kw)) {
+            matchedIndustry = industry;
+            // Record exact role matched
+            exactRoles[kw] = (exactRoles[kw] || 0) + 1;
+            break; // Move to next industry or break if we only want 1 category per image
+          }
+        }
+        if (matchedIndustry !== "Others") break; // Found primary industry
+      }
+      
+      industryCounts[matchedIndustry] = (industryCounts[matchedIndustry] || 0) + 1;
+    });
+
+    setText('kv-vacancies', cachedTexts.length);
+
+    // Sort exact roles for top list
+    const topRoles = Object.entries(exactRoles)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+
+    renderTopRoles(topRoles);
+
+    // Chart
+    const labels = Object.keys(industryCounts);
+    const data = Object.values(industryCounts);
+
+    if (labels.length === 0) {
+      renderEmptyChart('vacanciesChart', 'doughnut');
+    } else {
+      makeChart('vacanciesChart', {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: data,
+            backgroundColor: PALETTE_LIST,
+            borderWidth: 2,
+            hoverOffset: 6
+          }]
+        },
+        options: { cutout: '60%', plugins: { legend: { position: 'bottom' } } }
+      });
+    }
+
+    if (elPh) elPh.classList.add('hidden');
+  } catch (err) {
+    console.error('[Job Vacancies OCR Error]:', err);
+    if (elPh) elPh.classList.remove('hidden');
+    setText('kv-vacancies', '—');
+    renderEmptyChart('vacanciesChart', 'doughnut');
+  }
+}
+
+function renderTopRoles(roles) {
+  const body = document.getElementById('top-roles-body');
+  if (!body) return;
+
+  if (!roles || !roles.length) {
+    body.innerHTML = '<div class="an-loading-row">No specific roles detected yet.</div>';
+    return;
+  }
+
+  body.innerHTML = roles.map(([name, count], i) => `
+    <div class="an-kpi-list-row">
+      <span class="an-kpi-list-rank">#${i + 1}</span>
+      <span class="an-kpi-list-name" style="text-transform: capitalize;">${name.toLowerCase()}</span>
+      <span class="an-kpi-list-val">${count}</span>
+    </div>`).join('');
 }
