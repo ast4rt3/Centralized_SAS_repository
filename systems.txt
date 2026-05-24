@@ -112,5 +112,17 @@
     "roles": [
       "admin"
     ]
+  },
+  {
+    "id": "analytics",
+    "name": "Analytics Dashboard",
+    "description": "Analytics dashboard showing SAS service utilization and impact.",
+    "url": "apps/analytics/",
+    "external": false,
+    "section": "Data Management",
+    "roles": [
+      "admin",
+      "superadmin"
+    ]
   }
 ]

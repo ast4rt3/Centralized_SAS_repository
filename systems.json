@@ -9,5 +9,6 @@
   { "id": "account-manager", "name": "Account Approvals", "url": "apps/account-manager/index.html", "section": "Data Management", "roles": ["admin"] },
   { "id": "file-hub", "name": "File Hub", "url": "apps/file-hub/index.html", "section": "Personal", "roles": ["admin", "user", "scanner", "uploader", "superadmin"] },
   { "id": "uploader-management", "name": "Content Upload", "url": "#uploader-management", "section": "Data Management", "roles": ["admin", "superadmin", "uploader"] },
-  { "id": "service-manager", "name": "Service Manager", "url": "apps/service-manager/index.html", "section": "Data Management", "roles": ["admin"] }
+  { "id": "service-manager", "name": "Service Manager", "url": "apps/service-manager/index.html", "section": "Data Management", "roles": ["admin"] },
+  { "id": "analytics", "name": "Analytics Dashboard", "url": "apps/analytics/index.html", "section": "Data Management", "roles": ["admin", "superadmin"] }
 ]

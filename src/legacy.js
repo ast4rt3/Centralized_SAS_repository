@@ -1726,6 +1726,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Filter systems based on role
     const allowedSystems = systems.filter(s => {
+      // Exclude analytics from dynamic menu rendering since it is statically placed below Home
+      if (s.id === 'analytics') return false;
+
       // Superadmin bypass: grant access to everything regardless of roles list
       if (userRole === 'superadmin') return true;
 
@@ -2715,6 +2718,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const navDocuments = document.getElementById('nav-documents');
     const navMessages = document.getElementById('nav-messages');
     const navDatabase = document.getElementById('nav-database');
+    const navAnalytics = document.getElementById('nav-analytics');
 
     if (userRoleNormalized === 'admin' || userRoleNormalized === 'superadmin' || userRoleNormalized === 'user' || userRoleNormalized === 'uploader') {
       if (navDocuments) {
@@ -2749,6 +2753,18 @@ document.addEventListener('DOMContentLoaded', () => {
       if (navDatabase) {
         navDatabase.style.display = 'none';
         navDatabase.classList.add('hidden');
+      }
+    }
+
+    if (userRoleNormalized === 'admin' || userRoleNormalized === 'superadmin') {
+      if (navAnalytics) {
+        navAnalytics.style.display = 'flex';
+        navAnalytics.classList.remove('hidden');
+      }
+    } else {
+      if (navAnalytics) {
+        navAnalytics.style.display = 'none';
+        navAnalytics.classList.add('hidden');
       }
     }
 

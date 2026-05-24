@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>
+    (function() {
+      const url = new URL(window.location.href);
+      if (!url.pathname.endsWith('/') && !url.pathname.endsWith('.html')) {
+        url.pathname += '/';
+        window.location.replace(url.toString());
+      }
+    })();
+  </script>
+  <title>Analytics Dashboard — NBSC SAS</title>
+  <meta name="description" content="Analytics dashboard showing SAS service utilization, satisfaction rates, and student reach for Northern Bukidnon State College.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="analytics.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="an-header">
+    <div class="an-header-brand">
+      <img src="../../assets/sas_logo.png" alt="NBSC SAS" class="an-logo">
+      <div>
+        <h1 class="an-header-title">SAS Analytics</h1>
+        <p class="an-header-sub">Service Utilization Report</p>
+      </div>
+    </div>
+    <div class="an-header-actions">
+      <div class="an-semester-badge" id="semesterBadge">AY 2025–2026</div>
+      <button class="an-btn an-btn-outline" id="refreshBtn" onclick="loadAllData()">
+        <i class='bx bx-refresh'></i> Refresh
+      </button>
+      <button class="an-btn an-btn-primary" onclick="printReport()">
+        <i class='bx bx-printer'></i> Print Report
+      </button>
+    </div>
+  </header>
+
+  <main class="an-main" id="printArea">
+
+    <!-- Impact Summary Cards -->
+    <section class="an-section">
+      <div class="an-section-header">
+        <h2 class="an-section-title"><i class='bx bx-bar-chart-square'></i> SAS Impact at a Glance</h2>
+        <span class="an-section-subtitle">Key performance indicators for service evaluation</span>
+      </div>
+      <div class="an-kpi-grid">
+        <div class="an-kpi-card" id="kpi-lf-total">
+          <div class="an-kpi-icon" style="--kpi-color: #6366f1;"><i class='bx bx-search-alt'></i></div>
+          <div class="an-kpi-content">
+            <div class="an-kpi-value" id="kv-lf-total">—</div>
+            <div class="an-kpi-label">Items Reported</div>
+            <div class="an-kpi-sub">Lost & Found</div>
+          </div>
+        </div>
+        <div class="an-kpi-card" id="kpi-lf-recovered">
+          <div class="an-kpi-icon" style="--kpi-color: #10b981;"><i class='bx bx-check-circle'></i></div>
+          <div class="an-kpi-content">
+            <div class="an-kpi-value" id="kv-lf-recovered">—</div>
+            <div class="an-kpi-label">Items Recovered</div>
+            <div class="an-kpi-sub" id="kv-lf-rate">Recovery Rate</div>
+          </div>
+        </div>
+        <div class="an-kpi-card" id="kpi-borrowers">
+          <div class="an-kpi-icon" style="--kpi-color: #f59e0b;"><i class='bx bx-package'></i></div>
+          <div class="an-kpi-content">
+            <div class="an-kpi-value" id="kv-borrowers">—</div>
+            <div class="an-kpi-label">Borrowing Transactions</div>
+            <div class="an-kpi-sub">Borrowers Log</div>
+          </div>
+        </div>
+        <div class="an-kpi-card" id="kpi-pantry">
+          <div class="an-kpi-icon" style="--kpi-color: #ec4899;"><i class='bx bx-dish'></i></div>
+          <div class="an-kpi-content">
+            <div class="an-kpi-value" id="kv-pantry">—</div>
+            <div class="an-kpi-label">Pantry Beneficiaries</div>
+            <div class="an-kpi-sub">Student Welfare</div>
+          </div>
+        </div>
+        <div class="an-kpi-card" id="kpi-survey">
+          <div class="an-kpi-icon" style="--kpi-color: #3b82f6;"><i class='bx bx-star'></i></div>
+          <div class="an-kpi-content">
+            <div class="an-kpi-value" id="kv-survey-score">—</div>
+            <div class="an-kpi-label">Satisfaction Score</div>
+            <div class="an-kpi-sub" id="kv-survey-count">Client Surveys</div>
+          </div>
+        </div>
+        <div class="an-kpi-card" id="kpi-attendance">
+          <div class="an-kpi-icon" style="--kpi-color: #8b5cf6;"><i class='bx bx-group'></i></div>
+          <div class="an-kpi-content">
+            <div class="an-kpi-value" id="kv-attendance">—</div>
+            <div class="an-kpi-label">Event Attendees</div>
+            <div class="an-kpi-sub">Attendance Records</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Lost & Found Section -->
+    <section class="an-section">
+      <div class="an-section-header">
+        <h2 class="an-section-title"><i class='bx bx-search-alt'></i> Lost & Found</h2>
+        <span class="an-section-subtitle">Item reporting and recovery tracking</span>
+      </div>
+      <div class="an-chart-row">
+        <div class="an-chart-card an-chart-md">
+          <div class="an-chart-card-header">
+            <h3>Recovery Rate</h3>
+            <span class="an-chart-badge" id="lf-rate-badge">Loading...</span>
+          </div>
+          <div class="an-chart-wrap an-chart-sm-h">
+            <canvas id="lfRecoveryChart"></canvas>
+          </div>
+        </div>
+        <div class="an-chart-card an-chart-lg">
+          <div class="an-chart-card-header">
+            <h3>Items by Category</h3>
+          </div>
+          <div class="an-chart-wrap">
+            <canvas id="lfCategoryChart"></canvas>
+          </div>
+        </div>
+        <div class="an-chart-card an-chart-md">
+          <div class="an-chart-card-header">
+            <h3>Monthly Reports</h3>
+          </div>
+          <div class="an-chart-wrap">
+            <canvas id="lfMonthlyChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- LF Stats table -->
+      <div class="an-stat-row">
+        <div class="an-stat-item">
+          <span class="an-stat-label">Total Found Items</span>
+          <span class="an-stat-value" id="st-lf-found">—</span>
+        </div>
+        <div class="an-stat-item">
+          <span class="an-stat-label">Total Lost Items Reported</span>
+          <span class="an-stat-value" id="st-lf-lost">—</span>
+        </div>
+        <div class="an-stat-item">
+          <span class="an-stat-label">Claimed / Returned</span>
+          <span class="an-stat-value an-stat-success" id="st-lf-claimed">—</span>
+        </div>
+        <div class="an-stat-item">
+          <span class="an-stat-label">Active (Awaiting Claim)</span>
+          <span class="an-stat-value an-stat-warn" id="st-lf-active">—</span>
+        </div>
+        <div class="an-stat-item">
+          <span class="an-stat-label">Total Claims Submitted</span>
+          <span class="an-stat-value" id="st-lf-claims">—</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Borrowers Log Section -->
+    <section class="an-section">
+      <div class="an-section-header">
+        <h2 class="an-section-title"><i class='bx bx-package'></i> Borrowers Log</h2>
+        <span class="an-section-subtitle">Equipment and facility utilization</span>
+      </div>
+      <div class="an-chart-row">
+        <div class="an-chart-card an-chart-lg">
+          <div class="an-chart-card-header">
+            <h3>Most Borrowed Items</h3>
+          </div>
+          <div class="an-chart-wrap">
+            <canvas id="borrowerItemsChart"></canvas>
+          </div>
+        </div>
+        <div class="an-chart-card an-chart-md">
+          <div class="an-chart-card-header">
+            <h3>Borrower Type</h3>
+          </div>
+          <div class="an-chart-wrap an-chart-sm-h">
+            <canvas id="borrowerTypeChart"></canvas>
+          </div>
+        </div>
+        <div class="an-chart-card an-chart-md">
+          <div class="an-chart-card-header">
+            <h3>Monthly Transactions</h3>
+          </div>
+          <div class="an-chart-wrap">
+            <canvas id="borrowerMonthlyChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="an-data-placeholder" id="borrowers-placeholder">
+        <i class='bx bx-plug'></i>
+        <p>Borrowers Log data is ready to connect.</p>
+        <span>Once the Borrowers Log Vercel API is accessible, charts will populate automatically.</span>
+      </div>
+    </section>
+
+    <!-- Client Satisfaction Section -->
+    <section class="an-section">
+      <div class="an-section-header">
+        <h2 class="an-section-title"><i class='bx bx-star'></i> Client Satisfaction Surveys</h2>
+        <span class="an-section-subtitle">Student feedback on SAS services</span>
+      </div>
+
+      <div class="an-chart-row">
+        <div class="an-chart-card an-chart-md">
+          <div class="an-chart-card-header">
+            <h3>Overall Satisfaction</h3>
+          </div>
+          <div class="an-gauge-wrap">
+            <canvas id="satisfactionGauge"></canvas>
+            <div class="an-gauge-label">
+              <div class="an-gauge-score" id="gauge-score">—</div>
+              <div class="an-gauge-max">out of 5.0</div>
+            </div>
+          </div>
+        </div>
+        <div class="an-chart-card an-chart-lg">
+          <div class="an-chart-card-header">
+            <h3>Rating Breakdown by Service</h3>
+          </div>
+          <div class="an-chart-wrap">
+            <canvas id="surveyServiceChart"></canvas>
+          </div>
+        </div>
+        <div class="an-chart-card an-chart-md">
+          <div class="an-chart-card-header">
+            <h3>Surveys per Month</h3>
+          </div>
+          <div class="an-chart-wrap">
+            <canvas id="surveyMonthlyChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="an-data-placeholder" id="survey-placeholder">
+        <i class='bx bx-spreadsheet'></i>
+        <p>Connect your Google Sheet to activate this section.</p>
+        <span>Create a Google Sheet for Client Satisfaction Survey results and paste the Sheet ID below.</span>
+        <div class="an-input-row">
+          <input type="text" id="surveySheetId" class="an-input" placeholder="Google Sheet ID (from the URL)">
+          <button class="an-btn an-btn-primary" onclick="saveSurveySheetId()">Connect</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pantry Logbook Section -->
+    <section class="an-section">
+      <div class="an-section-header">
+        <h2 class="an-section-title"><i class='bx bx-dish'></i> Pantry Logbook</h2>
+        <span class="an-section-subtitle">Student welfare & food assistance program reach</span>
+      </div>
+
+      <div class="an-chart-row">
+        <div class="an-chart-card an-chart-md">
+          <div class="an-chart-card-header">
+            <h3>Students Served / Month</h3>
+          </div>
+          <div class="an-chart-wrap">
+            <canvas id="pantryMonthlyChart"></canvas>
+          </div>
+        </div>
+        <div class="an-chart-card an-chart-md">
+          <div class="an-chart-card-header">
+            <h3>By Course / Program</h3>
+          </div>
+          <div class="an-chart-wrap">
+            <canvas id="pantryCourseChart"></canvas>
+          </div>
+        </div>
+        <div class="an-chart-card an-chart-md">
+          <div class="an-chart-card-header">
+            <h3>By Year Level</h3>
+          </div>
+          <div class="an-chart-wrap an-chart-sm-h">
+            <canvas id="pantryYearChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="an-data-placeholder" id="pantry-placeholder">
+        <i class='bx bx-spreadsheet'></i>
+        <p>Connect your Pantry Logbook Google Sheet.</p>
+        <span>Paste the Google Sheet ID from your pantry logbook spreadsheet URL.</span>
+        <div class="an-input-row">
+          <input type="text" id="pantrySheetId" class="an-input" placeholder="Google Sheet ID (from the URL)">
+          <button class="an-btn an-btn-primary" onclick="savePantrySheetId()">Connect</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Event Attendance Section -->
+    <section class="an-section">
+      <div class="an-section-header">
+        <h2 class="an-section-title"><i class='bx bx-calendar-event'></i> Event Attendance</h2>
+        <span class="an-section-subtitle">Student participation in SAS-organized events</span>
+      </div>
+      <div class="an-chart-row">
+        <div class="an-chart-card an-chart-full">
+          <div class="an-chart-card-header">
+            <h3>Attendance per Event</h3>
+          </div>
+          <div class="an-chart-wrap">
+            <canvas id="attendanceEventChart"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="an-chart-row">
+        <div class="an-chart-card an-chart-md">
+          <div class="an-chart-card-header">
+            <h3>By Course / Program</h3>
+          </div>
+          <div class="an-chart-wrap">
+            <canvas id="attendanceCourseChart"></canvas>
+          </div>
+        </div>
+        <div class="an-chart-card an-chart-md">
+          <div class="an-chart-card-header">
+            <h3>By Year Level</h3>
+          </div>
+          <div class="an-chart-wrap an-chart-sm-h">
+            <canvas id="attendanceYearChart"></canvas>
+          </div>
+        </div>
+        <div class="an-chart-card an-chart-md">
+          <div class="an-kpi-list" id="attendance-event-list">
+            <div class="an-kpi-list-header">Top Events by Attendance</div>
+            <div class="an-kpi-list-body" id="top-events-body">
+              <div class="an-loading-row"><i class='bx bx-loader-alt bx-spin'></i> Loading...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="an-data-placeholder hidden" id="attendance-placeholder">
+        <i class='bx bx-plug'></i>
+        <p>Attendance data will load from the SAS Masterlist.</p>
+      </div>
+    </section>
+
+    <!-- Other Services Section (Manual Entry) -->
+    <section class="an-section">
+      <div class="an-section-header">
+        <h2 class="an-section-title"><i class='bx bx-plus-medical'></i> Other Services</h2>
+        <span class="an-section-subtitle">Manual data entry for services not yet digitized</span>
+      </div>
+
+      <div class="an-manual-grid" id="manualServicesGrid">
+        <!-- Cards rendered by JS -->
+      </div>
+
+      <button class="an-btn an-btn-outline an-btn-add" onclick="addManualService()">
+        <i class='bx bx-plus'></i> Add Service
+      </button>
+    </section>
+
+  </main>
+
+  <!-- Print footer -->
+  <div class="an-print-footer" id="printFooter">
+    <p>Northern Bukidnon State College — Student Affairs and Services</p>
+    <p>Service Utilization Report — Generated: <span id="printDate"></span></p>
+  </div>
+
+  <script src="../../env.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="analytics.js"></script>
+</body>
+</html>
