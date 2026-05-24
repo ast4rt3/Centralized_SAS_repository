@@ -343,3 +343,51 @@ export function syncFromHash(systems) {
   }
 }
 
+/**
+ * Initialize instant hover prefetching for dynamic sub-apps and vaults
+ */
+export function initLinkPrefetcher(systems) {
+  const sidebar = document.querySelector('.sidebar');
+  if (!sidebar) return;
+
+  sidebar.addEventListener('mouseenter', (e) => {
+    const navItem = e.target.closest('.nav-item');
+    if (!navItem) return;
+
+    const pageId = navItem.getAttribute('data-page');
+    if (!pageId) return;
+
+    let urlToPrefetch = '';
+    
+    if (systems && Array.isArray(systems)) {
+      const sys = systems.find(s => s.id === pageId);
+      if (sys && !sys.external) {
+        urlToPrefetch = sys.url;
+      }
+    }
+    
+    if (pageId === 'documents') {
+      urlToPrefetch = 'apps/docs/index.html';
+    } else if (pageId === 'service-viewer') {
+      urlToPrefetch = 'apps/service-viewer/index.html';
+    }
+    
+    if (urlToPrefetch) {
+      if (!urlToPrefetch.includes('.') && !urlToPrefetch.endsWith('/')) {
+        urlToPrefetch += '/';
+      }
+      
+      const absoluteUrl = new URL(urlToPrefetch, window.location.origin + window.location.pathname).toString();
+      
+      const existing = document.querySelector(`link[href="${absoluteUrl}"]`);
+      if (!existing) {
+        console.log(`[Prefetch] Pre-warming connection and prefetching sub-app on hover: ${pageId} (${urlToPrefetch})`);
+        const link = document.createElement('link');
+        link.rel = 'prefetch';
+        link.href = absoluteUrl;
+        document.head.appendChild(link);
+      }
+    }
+  }, true);
+}
+

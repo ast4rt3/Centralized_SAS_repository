@@ -3,7 +3,7 @@ import { performImmediateAuthCheck, getMyUsername } from "./core/auth.js";
 import { initSharedMessaging } from "./features/messaging/logic_supabase.js";
 import "./features/messaging/ui.js";
 import { updateClock, updateWeather } from "./features/tv/clock.js";
-import { syncFromHash, ensureAppVisible } from "./ui/navigation.js";
+import { syncFromHash, ensureAppVisible, initLinkPrefetcher } from "./ui/navigation.js";
 import { initFileConverter } from "./features/converter/logic.js";
 import { initErrorMonitor } from "./core/error-monitor.js";
 
@@ -21,6 +21,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const systems = await fetchSystems();
   if (window.ENV) window.ENV.systems = systems; // Sync back to global ENV for legacy.js compatibility
   syncFromHash(systems);
+  
+  // 1.5. Enable instant link prefetching on hover
+  initLinkPrefetcher(systems);
 
   const sessionData = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
   if (sessionData) {
