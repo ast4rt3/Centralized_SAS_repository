@@ -167,7 +167,7 @@ async function compressImage(base64Data, mimeType) {
             canvas.width = img.width;
             canvas.height = img.height;
             ctx.drawImage(img, 0, 0);
-            const compressed = canvas.toDataURL('image/jpeg', 0.72);
+            const compressed = canvas.toDataURL('image/webp', 0.72);
             resolve(compressed);
         };
         img.src = base64Data;

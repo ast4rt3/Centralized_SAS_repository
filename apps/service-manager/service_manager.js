@@ -200,7 +200,7 @@ function renderOfficeGrid() {
                 <div class="action-btn" onclick="event.stopPropagation(); editOffice('${o.id}')" title="Edit Office"><i class='bx bx-edit-alt'></i></div>
                 <div class="action-btn delete" onclick="event.stopPropagation(); deleteOffice('${o.id}')" title="Delete Office"><i class='bx bx-trash'></i></div>
             </div>
-            <img class="office-card-img" src="${o.cover_url || '../../assets/SAS_landing_page_header.jpg'}" alt="${o.name}">
+            <img class="office-card-img" src="${o.cover_url || '../../assets/SAS_landing_page_header.jpg'}" alt="${o.name}" loading="lazy">
             <div class="office-card-body">
                 <h3>${o.name}</h3>
                 <p>${o.info || 'No information available.'}</p>

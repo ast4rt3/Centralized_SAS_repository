@@ -5451,6 +5451,8 @@ body.lp-mode .main-wrapper {
 .lp-hero-banner-img {
   width: 100%;
   height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
   display: block;
 }
 

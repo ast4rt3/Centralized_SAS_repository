@@ -75,7 +75,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     grid.innerHTML = offices.map(o => `
       <div class="office-card" data-id="${o.id}" data-name="${o.name}">
-        <img class="office-card-img" src="${o.cover_url || '../../assets/SAS_landing_page_header.jpg'}" alt="${o.name}">
+        <img class="office-card-img" src="${o.cover_url || '../../assets/SAS_landing_page_header.jpg'}" alt="${o.name}" loading="lazy">
         <div class="office-card-body">
           <h3>${o.name}</h3>
           <p>${o.info || 'No information available.'}</p>
