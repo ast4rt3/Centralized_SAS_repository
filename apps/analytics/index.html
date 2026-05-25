@@ -213,48 +213,158 @@
     <section class="an-section">
       <div class="an-section-header">
         <h2 class="an-section-title"><i class='bx bx-star'></i> Client Satisfaction Surveys</h2>
-        <span class="an-section-subtitle">Student feedback on SAS services</span>
+        <span class="an-section-subtitle">Student feedback on SASDD services</span>
       </div>
 
-      <div class="an-chart-row">
-        <div class="an-chart-card an-chart-md">
-          <div class="an-chart-card-header">
-            <h3>Overall Satisfaction</h3>
+      <!-- Always-visible connect bar -->
+      <div class="an-survey-connect-bar">
+        <div class="an-survey-connect-left">
+          <i class='bx bx-link-alt'></i>
+          <span>Google Sheet</span>
+          <span class="an-survey-status-dot" id="surveyStatusDot"></span>
+          <span class="an-survey-status-text" id="surveyStatusText">Not connected</span>
+        </div>
+        <div class="an-survey-connect-right">
+          <input type="text" id="surveySheetId" class="an-input an-input-sm" placeholder="Paste Sheet ID here…">
+          <button class="an-btn an-btn-primary an-btn-sm" onclick="saveSurveySheetId()">
+            <i class='bx bx-plug'></i> Connect
+          </button>
+          <button class="an-btn an-btn-outline an-btn-sm" id="surveyRefreshBtn" onclick="refreshSurveyNow()" title="Refresh now" style="display:none;">
+            <i class='bx bx-refresh'></i>
+          </button>
+          <button class="an-btn an-btn-ghost an-btn-sm" id="surveyDisconnectBtn" onclick="disconnectSurvey()" title="Disconnect" style="display:none;">
+            <i class='bx bx-x'></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Charts (hidden until connected) -->
+      <div id="survey-charts-area" class="hidden">
+
+        <!-- Row 1: KPI strip -->
+        <div class="an-stat-row" id="survey-kpi-strip">
+          <div class="an-stat-item">
+            <span class="an-stat-label">Total Responses</span>
+            <span class="an-stat-value" id="sv-total">—</span>
           </div>
-          <div class="an-gauge-wrap">
-            <canvas id="satisfactionGauge"></canvas>
-            <div class="an-gauge-label">
-              <div class="an-gauge-score" id="gauge-score">—</div>
-              <div class="an-gauge-max">out of 5.0</div>
+          <div class="an-stat-item">
+            <span class="an-stat-label">Overall Avg Score</span>
+            <span class="an-stat-value an-stat-success" id="sv-overall">—</span>
+          </div>
+          <div class="an-stat-item">
+            <span class="an-stat-label">Aware of Services</span>
+            <span class="an-stat-value" id="sv-aware">—</span>
+          </div>
+          <div class="an-stat-item">
+            <span class="an-stat-label">Availed This Semester</span>
+            <span class="an-stat-value" id="sv-availed">—</span>
+          </div>
+          <div class="an-stat-item">
+            <span class="an-stat-label">Last Updated</span>
+            <span class="an-stat-value" id="sv-updated" style="font-size:0.85rem;">—</span>
+          </div>
+        </div>
+
+        <!-- Row 2: Gauge + Service breakdown + Monthly -->
+        <div class="an-chart-row">
+          <div class="an-chart-card an-chart-md">
+            <div class="an-chart-card-header">
+              <h3>Overall Satisfaction</h3>
+              <span class="an-chart-badge" id="sv-score-badge">—</span>
+            </div>
+            <div class="an-gauge-wrap">
+              <canvas id="satisfactionGauge"></canvas>
+              <div class="an-gauge-label">
+                <div class="an-gauge-score" id="gauge-score">—</div>
+                <div class="an-gauge-max">out of 5.0</div>
+              </div>
+            </div>
+          </div>
+          <div class="an-chart-card an-chart-lg">
+            <div class="an-chart-card-header">
+              <h3>Average Score by Service Group</h3>
+            </div>
+            <div class="an-chart-wrap">
+              <canvas id="surveyServiceChart"></canvas>
+            </div>
+          </div>
+          <div class="an-chart-card an-chart-md">
+            <div class="an-chart-card-header">
+              <h3>Responses per Month</h3>
+            </div>
+            <div class="an-chart-wrap">
+              <canvas id="surveyMonthlyChart"></canvas>
             </div>
           </div>
         </div>
-        <div class="an-chart-card an-chart-lg">
-          <div class="an-chart-card-header">
-            <h3>Rating Breakdown by Service</h3>
+
+        <!-- Row 3: Per-service detail + Rating distribution -->
+        <div class="an-chart-row">
+          <div class="an-chart-card an-chart-lg">
+            <div class="an-chart-card-header">
+              <h3>Score per Question</h3>
+              <span class="an-chart-badge" style="background:rgba(139,92,246,0.15);color:#8b5cf6;border-color:rgba(139,92,246,0.3);">Detailed</span>
+            </div>
+            <div class="an-chart-wrap" style="height:260px;">
+              <canvas id="surveyDetailChart"></canvas>
+            </div>
           </div>
-          <div class="an-chart-wrap">
-            <canvas id="surveyServiceChart"></canvas>
+          <div class="an-chart-card an-chart-md">
+            <div class="an-chart-card-header">
+              <h3>Rating Distribution (1–5)</h3>
+            </div>
+            <div class="an-chart-wrap">
+              <canvas id="surveyDistChart"></canvas>
+            </div>
           </div>
         </div>
-        <div class="an-chart-card an-chart-md">
-          <div class="an-chart-card-header">
-            <h3>Surveys per Month</h3>
+
+        <!-- Row 4: Awareness + By Institute -->
+        <div class="an-chart-row">
+          <div class="an-chart-card an-chart-md">
+            <div class="an-chart-card-header">
+              <h3>Service Awareness</h3>
+            </div>
+            <div class="an-chart-wrap" style="height:220px;">
+              <canvas id="surveyAwarenessChart"></canvas>
+            </div>
           </div>
-          <div class="an-chart-wrap">
-            <canvas id="surveyMonthlyChart"></canvas>
+          <div class="an-chart-card an-chart-md">
+            <div class="an-chart-card-header">
+              <h3>Responses by Institute</h3>
+            </div>
+            <div class="an-chart-wrap an-chart-sm-h">
+              <canvas id="surveyInstituteChart"></canvas>
+            </div>
+          </div>
+          <div class="an-chart-card an-chart-md">
+            <div class="an-chart-card-header">
+              <h3>Availed vs Not Availed</h3>
+            </div>
+            <div class="an-chart-wrap an-chart-sm-h">
+              <canvas id="surveyAvailedChart"></canvas>
+            </div>
           </div>
         </div>
+
+        <!-- Row 5: Comments -->
+        <div class="an-chart-card an-chart-full">
+          <div class="an-chart-card-header">
+            <h3>Recent Comments</h3>
+            <span class="an-chart-badge" id="sv-comments-count" style="background:rgba(16,185,129,0.15);color:#10b981;border-color:rgba(16,185,129,0.3);">0</span>
+          </div>
+          <div class="an-comments-list" id="surveyCommentsList">
+            <div class="an-loading-row"><i class='bx bx-loader-alt bx-spin'></i> Loading comments…</div>
+          </div>
+        </div>
+
       </div>
 
+      <!-- No-data placeholder (shown when not connected) -->
       <div class="an-data-placeholder" id="survey-placeholder">
         <i class='bx bx-spreadsheet'></i>
         <p>Connect your Google Sheet to activate this section.</p>
-        <span>Create a Google Sheet for Client Satisfaction Survey results and paste the Sheet ID below.</span>
-        <div class="an-input-row">
-          <input type="text" id="surveySheetId" class="an-input" placeholder="Google Sheet ID (from the URL)">
-          <button class="an-btn an-btn-primary" onclick="saveSurveySheetId()">Connect</button>
-        </div>
+        <span>Paste the Sheet ID from your Google Form responses spreadsheet URL above, then click Connect.</span>
       </div>
     </section>
 

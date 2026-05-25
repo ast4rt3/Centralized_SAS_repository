@@ -567,6 +567,134 @@ body {
 }
 .an-manual-input-row button:hover { background: #2563eb; }
 
+/* ── Survey Connect Bar ── */
+.an-survey-connect-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 18px;
+  flex-wrap: wrap;
+}
+
+.an-survey-connect-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.an-survey-connect-left i {
+  font-size: 1rem;
+  color: var(--accent-blue);
+}
+
+.an-survey-connect-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.an-input-sm {
+  width: 280px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+}
+
+.an-btn-sm {
+  padding: 6px 12px;
+  font-size: 0.78rem;
+}
+
+.an-btn-ghost {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+.an-btn-ghost:hover { background: rgba(239,68,68,0.1); color: #ef4444; border-color: rgba(239,68,68,0.3); }
+
+/* Survey status dot */
+.an-survey-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--text-muted);
+}
+.an-survey-dot-ok      { background: #10b981; box-shadow: 0 0 6px rgba(16,185,129,0.5); }
+.an-survey-dot-loading { background: #f59e0b; animation: an-pulse 1s infinite; }
+.an-survey-dot-error   { background: #ef4444; }
+.an-survey-dot-warn    { background: #f59e0b; }
+.an-survey-dot-off     { background: var(--text-muted); }
+
+@keyframes an-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+.an-survey-status-text {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* ── Comments ── */
+.an-comments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.an-comments-list::-webkit-scrollbar { width: 4px; }
+.an-comments-list::-webkit-scrollbar-track { background: transparent; }
+.an-comments-list::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 2px; }
+
+.an-comment-item {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.an-comment-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.an-comment-name {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.an-comment-course {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+.an-comment-text {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
 /* ── Print ── */
 .an-print-footer { display: none; }
 

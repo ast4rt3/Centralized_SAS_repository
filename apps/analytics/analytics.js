@@ -44,6 +44,10 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   renderManualServices();
   loadAllData();
+  // Start survey polling if a sheet was previously connected
+  if (localStorage.getItem('sas_survey_sheet_id')) {
+    startSurveyPolling();
+  }
 });
 
 async function loadAllData() {
@@ -327,56 +331,386 @@ function renderBorrowersData(d) {
 }
 
 // ─── SECTION 3: Client Satisfaction Surveys ──────────
-function loadSurveyData() {
-  const sheetId = localStorage.getItem('sas_survey_sheet_id');
-  const el = document.getElementById('survey-placeholder');
+// Reads directly from the Google Sheet public CSV export.
+// No backend proxy needed — works as long as the sheet is shared
+// with "Anyone with the link can view".
 
-  if (!sheetId) {
-    if (el) el.classList.remove('hidden');
-    renderEmptyChart('satisfactionGauge', 'doughnut');
-    renderEmptyChart('surveyServiceChart', 'bar');
-    renderEmptyChart('surveyMonthlyChart', 'bar');
-    return;
+const SURVEY_POLL_INTERVAL = 5 * 60 * 1000; // 5 minutes
+let surveyPollTimer = null;
+let surveyLastRowCount = 0;
+
+// Column index map (0-based) matching the exact sheet structure described:
+// 0  Timestamp
+// 1  Email Address
+// 2  Name
+// 3  Course and Year
+// 4  Institute
+// 5  Aware of services (checkbox, comma-separated)
+// 6  Availed any service? (Yes/No)
+// 7–11   Information & Orientation (5 questions, 1-5)
+// 12–16  Guidance Service (5 questions, 1-5)
+// 17–21  Counseling Service (5 questions, 1-5)
+// 22–26  Appraisal Service (5 questions, 1-5)
+// 27–28  Job Placement (2 questions, 1-5)
+// 29+    Comments / open-ended (remaining columns)
+
+// Column index map (0-based) matching the actual 152-column sheet structure.
+// The sheet has 20+ service groups with ~5 questions each (1-5 rating scale).
+// We're focusing on the first 5 core SASDD services for this dashboard.
+// Columns 0-6: Metadata (Timestamp, Email, Name, Course, Institute, Awareness, Availed)
+// Columns 7-31: Information & Orientation (5q), Guidance (5q), Counseling (5q), Appraisal (5q), Job Placement (2q)
+// Columns 32-148: Additional services (not mapped here for performance)
+// Columns 149-151: Open-ended comments
+
+const SURVEY_SERVICES = [
+  {
+    key: 'orientation',
+    label: 'Information & Orientation',
+    color: '#3b82f6',
+    colStart: 8,
+    colEnd: 12,
+    questions: [
+      'Orientation provided clear information',
+      'Helped understand policies',
+      'Information provided timely',
+      'Addressed questions effectively',
+      'Overall satisfaction'
+    ]
+  },
+  {
+    key: 'guidance',
+    label: 'Guidance Service',
+    color: '#8b5cf6',
+    colStart: 13,
+    colEnd: 17,
+    questions: [
+      'Service available when needed',
+      'Helped clarify concerns',
+      'Counselors approachable',
+      'Confidentiality maintained',
+      'Overall satisfaction'
+    ]
+  },
+  {
+    key: 'counseling',
+    label: 'Counseling Service',
+    color: '#10b981',
+    colStart: 18,
+    colEnd: 22,
+    questions: [
+      'Easy to schedule',
+      'Sessions met expectations',
+      'Counselor skilled',
+      'Positive impact on well-being',
+      'Overall satisfaction'
+    ]
+  },
+  {
+    key: 'appraisal',
+    label: 'Appraisal Service',
+    color: '#f59e0b',
+    colStart: 23,
+    colEnd: 27,
+    questions: [
+      'Aware of services',
+      'Results relevant',
+      'Feedback timely',
+      'Helped guide decisions',
+      'Overall satisfaction'
+    ]
+  },
+  {
+    key: 'placement',
+    label: 'Job Placement',
+    color: '#ec4899',
+    colStart: 28,
+    colEnd: 32,
+    questions: [
+      'Resources accessible',
+      'Sufficient opportunities',
+      'Workshops effective',
+      'Prepared for employment',
+      'Overall satisfaction'
+    ]
   }
+];
 
-  if (el) el.classList.add('hidden');
-  
-  safeFetch(BACKEND_URL + '?action=getSurveyStats&sheetId=' + encodeURIComponent(sheetId)).then(res => {
-    if (res && res.success) {
-      renderSurveyRealData(res);
-    } else {
-      renderEmptyChart('satisfactionGauge', 'doughnut');
-      renderEmptyChart('surveyServiceChart', 'bar');
-      renderEmptyChart('surveyMonthlyChart', 'bar');
+// Derive the comment column start (first column after all rating columns)
+const SURVEY_COMMENT_COL_START = 29;
+
+// Uses the Google Visualization / gviz/tq endpoint.
+// The response is always wrapped as:
+//   google.visualization.Query.setResponse({...})
+// So we temporarily override that function to capture the data.
+async function fetchSurveySheet(sheetId) {
+  return new Promise((resolve) => {
+    let settled = false;
+
+    const timeout = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      console.warn('[Survey] Sheet fetch timed out');
+      resolve(null);
+    }, 15000);
+
+    function cleanup() {
+      clearTimeout(timeout);
+      const s = document.getElementById('_surveyScript');
+      if (s) s.remove();
+      // Restore google.visualization namespace if we stomped it
+      try {
+        if (window.google && window.google.visualization) {
+          delete window.google.visualization.Query;
+        }
+      } catch(e) {}
     }
+
+    // Ensure the google.visualization.Query.setResponse path exists
+    window.google = window.google || {};
+    window.google.visualization = window.google.visualization || {};
+    window.google.visualization.Query = window.google.visualization.Query || {};
+    window.google.visualization.Query.setResponse = function(raw) {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      try {
+        resolve(parseGvizResponse(raw));
+      } catch (e) {
+        console.warn('[Survey] Parse error:', e.message);
+        resolve(null);
+      }
+    };
+
+    const script = document.createElement('script');
+    script.id  = '_surveyScript';
+    
+    // Check if running on localhost — use CORS proxy if so
+    const isLocalhost = window.location.hostname === 'localhost' || 
+                        window.location.hostname === '127.0.0.1' ||
+                        window.location.protocol === 'file:';
+    
+    let url = `https://docs.google.com/spreadsheets/d/${encodeURIComponent(sheetId)}/gviz/tq?tqx=out:json`;
+    
+    // On localhost, Google may block the request — use a CORS proxy
+    if (isLocalhost) {
+      console.warn('[Survey] Running on localhost — using CORS proxy (may be slower)');
+      url = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+    }
+    
+    script.src = url;
+    script.onerror = (e) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      console.error('[Survey] Script load failed. URL:', url);
+      console.error('[Survey] Error event:', e);
+      if (isLocalhost) {
+        console.error('[Survey] Localhost detected — Google Sheets may block localhost requests.');
+        console.error('[Survey] Deploy to a real domain (GitHub Pages) to test, or use the CORS proxy fallback.');
+      } else {
+        console.error('[Survey] Check: 1) Sheet is shared as "Anyone with the link" 2) Sheet ID is correct');
+      }
+      resolve(null);
+    };
+    document.head.appendChild(script);
+    console.log('[Survey] Loading sheet:', sheetId, '| Localhost:', isLocalhost, '| URL:', url);
   });
 }
 
-function saveSurveySheetId() {
-  const val = document.getElementById('surveySheetId')?.value?.trim();
-  if (!val) return;
-  localStorage.setItem('sas_survey_sheet_id', val);
-  loadSurveyData();
+// Convert the gviz DataTable response into a 2-D array of strings
+// (same shape as the old CSV parser output: rows[0] = headers, rows[1..] = data)
+function parseGvizResponse(raw) {
+  const table = raw.table;
+  if (!table) throw new Error('No table in gviz response');
+
+  // Build header row from column labels
+  const headers = (table.cols || []).map(c => c.label || '');
+
+  // Build data rows
+  const dataRows = (table.rows || []).map(r =>
+    (r.c || []).map(cell => {
+      if (!cell || cell.v === null || cell.v === undefined) return '';
+      // Dates come as Date(year,month,day,...) objects — convert to readable string
+      if (typeof cell.v === 'string' && cell.v.startsWith('Date(')) {
+        const parts = cell.v.slice(5, -1).split(',').map(Number);
+        // parts: [year, month(0-based), day, hour, min, sec]
+        const d = new Date(parts[0], parts[1], parts[2] || 1,
+                           parts[3] || 0, parts[4] || 0, parts[5] || 0);
+        // Format as M/D/YYYY to match the timestamp parser downstream
+        return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
+      }
+      // Use formatted value if available (preserves original text for dropdowns/checkboxes)
+      return cell.f !== undefined && cell.f !== null ? String(cell.f) : String(cell.v);
+    })
+  );
+
+  return [headers, ...dataRows];
 }
 
-function renderSurveyRealData(d) {
-  const score = d.score || 0;
-  setText('kv-survey-score', score.toFixed(1) + ' ★');
-  setText('gauge-score', score.toFixed(1));
-  setText('kv-survey-count', (d.count || 0) + ' surveys collected');
+function parseSurveyRows(rows) {
+  // rows[0] is the header — skip it
+  const data = rows.slice(1).filter(row => {
+    // Skip completely empty rows or rows with only timestamp
+    return row.length > 5 && row.slice(2).some(c => c && c.trim());
+  });
 
+  const result = {
+    total: data.length,
+    monthly: {},
+    byInstitute: {},
+    awarenessCount: {},
+    availedYes: 0,
+    availedNo: 0,
+    services: {},
+    allQuestions: [],
+    ratingDist: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+    comments: []
+  };
+
+  // Init service accumulators
+  SURVEY_SERVICES.forEach(svc => {
+    result.services[svc.key] = { label: svc.label, color: svc.color, scores: [], avg: 0 };
+  });
+
+  // Process in batches to avoid blocking
+  const BATCH_SIZE = 200;
+  for (let i = 0; i < data.length; i += BATCH_SIZE) {
+    const batch = data.slice(i, i + BATCH_SIZE);
+    
+    batch.forEach(row => {
+      // Monthly (col 0 = Timestamp)
+      const ts = row[0] || '';
+      const dateMatch = ts.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if (dateMatch) {
+        const d = new Date(parseInt(dateMatch[3]), parseInt(dateMatch[1]) - 1, parseInt(dateMatch[2]));
+        const key = d.toLocaleString('en-PH', { month: 'short', year: '2-digit' });
+        result.monthly[key] = (result.monthly[key] || 0) + 1;
+      }
+
+      // Institute (col 4)
+      const inst = (row[4] || 'Unknown').trim();
+      if (inst && inst !== 'Unknown') result.byInstitute[inst] = (result.byInstitute[inst] || 0) + 1;
+
+      // Awareness (col 5 — comma-separated checkbox values)
+      const aware = (row[5] || '').split(',');
+      aware.forEach(a => {
+        const s = a.trim();
+        if (s && s.length > 3) result.awarenessCount[s] = (result.awarenessCount[s] || 0) + 1;
+      });
+
+      // Availed (col 6)
+      const availed = (row[6] || '').trim().toLowerCase();
+      if (availed === 'yes') result.availedYes++;
+      else if (availed === 'no') result.availedNo++;
+
+      // Rating columns per service
+      SURVEY_SERVICES.forEach(svc => {
+        let svcSum = 0;
+        let svcCount = 0;
+        for (let c = svc.colStart; c <= svc.colEnd; c++) {
+          const v = parseFloat(row[c]);
+          if (!isNaN(v) && v >= 1 && v <= 5) {
+            svcSum += v;
+            svcCount++;
+            result.ratingDist[Math.round(v)] = (result.ratingDist[Math.round(v)] || 0) + 1;
+          }
+        }
+        if (svcCount > 0) {
+          result.services[svc.key].scores.push(svcSum / svcCount);
+        }
+      });
+
+      // Comments (last 3 columns: 149, 150, 151)
+      const commentParts = [row[149], row[150], row[151]].filter(c => c && c.trim().length > 2);
+      if (commentParts.length > 0) {
+        result.comments.push({
+          name: (row[2] || 'Anonymous').trim(),
+          course: (row[3] || '').trim(),
+          text: commentParts.join(' | ')
+        });
+      }
+    });
+  }
+
+  // Compute averages
+  let grandSum = 0;
+  let grandCount = 0;
+  SURVEY_SERVICES.forEach(svc => {
+    const s = result.services[svc.key];
+    if (s.scores.length > 0) {
+      s.avg = s.scores.reduce((a, b) => a + b, 0) / s.scores.length;
+      grandSum += s.avg;
+      grandCount++;
+    }
+  });
+  result.overallAvg = grandCount > 0 ? grandSum / grandCount : 0;
+
+  // Build flat question averages (sample first 1000 rows for speed)
+  const sampleData = data.slice(0, 1000);
+  SURVEY_SERVICES.forEach(svc => {
+    const colCount = svc.colEnd - svc.colStart + 1;
+    for (let qi = 0; qi < colCount; qi++) {
+      const colIdx = svc.colStart + qi;
+      const vals = sampleData.map(r => parseFloat(r[colIdx])).filter(v => !isNaN(v) && v >= 1 && v <= 5);
+      const avg = vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+      result.allQuestions.push({
+        label: svc.questions[qi] || `Q${qi + 1}`,
+        svcLabel: svc.label,
+        color: svc.color,
+        avg
+      });
+    }
+  });
+
+  return result;
+}
+
+function renderSurveyData(parsed) {
+  if (!parsed || parsed.total === 0) {
+    setSurveyStatus('warn', 'Sheet connected but no data rows found');
+    return;
+  }
+
+  setSurveyStatus('ok', `${parsed.total} responses · auto-refreshes every 5 min`);
+
+  // KPI strip
+  setText('sv-total', parsed.total);
+  setText('sv-overall', parsed.overallAvg.toFixed(2) + ' / 5');
+  const awareCount = Object.values(parsed.awarenessCount).reduce((a, b) => a + b, 0);
+  const awareUniq = parsed.total > 0 ? Math.round((Object.keys(parsed.awarenessCount).length > 0 ? parsed.availedYes + parsed.availedNo : 0) / parsed.total * 100) : 0;
+  setText('sv-aware', Object.keys(parsed.awarenessCount).length + ' services mentioned');
+  const availedPct = parsed.total > 0 ? Math.round((parsed.availedYes / parsed.total) * 100) : 0;
+  setText('sv-availed', `${parsed.availedYes} (${availedPct}%)`);
+  setText('sv-updated', new Date().toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' }));
+
+  // KPI card update
+  setText('kv-survey-score', parsed.overallAvg.toFixed(1) + ' ★');
+  setText('kv-survey-count', parsed.total + ' surveys collected');
+
+  // Score badge color
+  const badge = document.getElementById('sv-score-badge');
+  if (badge) {
+    badge.textContent = parsed.overallAvg.toFixed(2);
+    const good = parsed.overallAvg >= 4;
+    badge.style.background = good ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)';
+    badge.style.color = good ? '#10b981' : '#f59e0b';
+    badge.style.borderColor = good ? 'rgba(16,185,129,0.3)' : 'rgba(245,158,11,0.3)';
+  }
+
+  // ── Gauge
   const maxDeg = 180;
-  const pct    = (score / 5) * maxDeg;
-
+  const pct = (parsed.overallAvg / 5) * maxDeg;
+  setText('gauge-score', parsed.overallAvg.toFixed(1));
   makeChart('satisfactionGauge', {
     type: 'doughnut',
     data: {
       datasets: [{
         data: [pct, maxDeg - pct, maxDeg],
-        backgroundColor: ['#f59e0b','#1f2a42','transparent'],
+        backgroundColor: ['#f59e0b', '#1f2a42', 'transparent'],
         borderWidth: 0,
         circumference: 180,
-        rotation: 270,
+        rotation: 270
       }]
     },
     options: {
@@ -385,42 +719,42 @@ function renderSurveyRealData(d) {
     }
   });
 
-  const bySvc = d.byService || {};
-  const svcKeys = Object.keys(bySvc);
-
+  // ── Service group bar
+  const svcKeys = SURVEY_SERVICES.map(s => s.key).filter(k => parsed.services[k].scores.length > 0);
   makeChart('surveyServiceChart', {
     type: 'bar',
     data: {
-      labels: svcKeys.length ? svcKeys : ['No data'],
+      labels: svcKeys.map(k => parsed.services[k].label),
       datasets: [{
-        label: 'Avg Rating',
-        data: svcKeys.length ? svcKeys.map(k => bySvc[k]) : [0],
-        backgroundColor: PALETTE_LIST,
+        label: 'Avg Score',
+        data: svcKeys.map(k => +parsed.services[k].avg.toFixed(2)),
+        backgroundColor: svcKeys.map(k => parsed.services[k].color),
         borderRadius: 6,
-        borderSkipped: false,
+        borderSkipped: false
       }]
     },
     options: {
       plugins: { legend: { display: false } },
       scales: {
         y: { min: 1, max: 5, ticks: { stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.04)' } },
-        x: { grid: { display: false } }
+        x: { grid: { display: false }, ticks: { font: { size: 11 } } }
       }
     }
   });
 
-  const monthly = d.monthly || {};
+  // ── Monthly
+  const months = Object.keys(parsed.monthly);
   makeChart('surveyMonthlyChart', {
     type: 'bar',
     data: {
-      labels: Object.keys(monthly).length ? Object.keys(monthly) : ['No data'],
+      labels: months.length ? months : ['No data'],
       datasets: [{
-        label: 'Surveys',
-        data: Object.keys(monthly).length ? Object.values(monthly) : [0],
+        label: 'Responses',
+        data: months.length ? Object.values(parsed.monthly) : [0],
         backgroundColor: 'rgba(59,130,246,0.7)',
-        borderColor: PALETTE.blue,
+        borderColor: '#3b82f6',
         borderWidth: 1.5,
-        borderRadius: 5,
+        borderRadius: 5
       }]
     },
     options: {
@@ -431,7 +765,270 @@ function renderSurveyRealData(d) {
       }
     }
   });
+
+  // ── Per-question detail (horizontal bar)
+  const qLabels = parsed.allQuestions.map(q => q.label);
+  const qAvgs   = parsed.allQuestions.map(q => +q.avg.toFixed(2));
+  const qColors = parsed.allQuestions.map(q => q.color);
+  makeChart('surveyDetailChart', {
+    type: 'bar',
+    data: {
+      labels: qLabels,
+      datasets: [{
+        label: 'Avg Score',
+        data: qAvgs,
+        backgroundColor: qColors,
+        borderRadius: 4,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { min: 1, max: 5, ticks: { stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.04)' } },
+        y: { grid: { display: false }, ticks: { font: { size: 10 } } }
+      }
+    }
+  });
+
+  // ── Rating distribution
+  const distLabels = ['1 ★', '2 ★', '3 ★', '4 ★', '5 ★'];
+  const distVals   = [1, 2, 3, 4, 5].map(n => parsed.ratingDist[n] || 0);
+  const distColors = ['#ef4444', '#f59e0b', '#eab308', '#10b981', '#3b82f6'];
+  makeChart('surveyDistChart', {
+    type: 'bar',
+    data: {
+      labels: distLabels,
+      datasets: [{
+        label: 'Count',
+        data: distVals,
+        backgroundColor: distColors,
+        borderRadius: 6,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false } },
+        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } }
+      }
+    }
+  });
+
+  // ── Awareness horizontal bar
+  const awKeys = Object.keys(parsed.awarenessCount).slice(0, 10);
+  const awVals = awKeys.map(k => parsed.awarenessCount[k]);
+  makeChart('surveyAwarenessChart', {
+    type: 'bar',
+    data: {
+      labels: awKeys.length ? awKeys : ['No data'],
+      datasets: [{
+        label: 'Respondents',
+        data: awKeys.length ? awVals : [0],
+        backgroundColor: '#6366f1',
+        borderRadius: 4,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } },
+        y: { grid: { display: false }, ticks: { font: { size: 10 } } }
+      }
+    }
+  });
+
+  // ── By Institute doughnut
+  const instKeys = Object.keys(parsed.byInstitute);
+  makeChart('surveyInstituteChart', {
+    type: 'doughnut',
+    data: {
+      labels: instKeys.length ? instKeys : ['No data'],
+      datasets: [{
+        data: instKeys.length ? instKeys.map(k => parsed.byInstitute[k]) : [1],
+        backgroundColor: instKeys.length ? PALETTE_LIST : ['rgba(255,255,255,0.05)'],
+        borderWidth: instKeys.length ? 2 : 0,
+        hoverOffset: 6
+      }]
+    },
+    options: {
+      cutout: '60%',
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } }
+    }
+  });
+
+  // ── Availed doughnut
+  makeChart('surveyAvailedChart', {
+    type: 'doughnut',
+    data: {
+      labels: ['Availed', 'Not Availed'],
+      datasets: [{
+        data: [parsed.availedYes, parsed.availedNo],
+        backgroundColor: ['#10b981', '#1f2a42'],
+        borderColor: ['#10b981', '#374151'],
+        borderWidth: 2,
+        hoverOffset: 6
+      }]
+    },
+    options: {
+      cutout: '65%',
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } }
+    }
+  });
+
+  // ── Comments
+  renderSurveyComments(parsed.comments);
+
+  // Show charts area
+  const chartsArea = document.getElementById('survey-charts-area');
+  const placeholder = document.getElementById('survey-placeholder');
+  if (chartsArea) chartsArea.classList.remove('hidden');
+  if (placeholder) placeholder.classList.add('hidden');
 }
+
+function renderSurveyComments(comments) {
+  const list = document.getElementById('surveyCommentsList');
+  const countBadge = document.getElementById('sv-comments-count');
+  if (!list) return;
+
+  const recent = comments.slice(-20).reverse(); // show last 20, newest first
+  if (countBadge) countBadge.textContent = comments.length;
+
+  if (!recent.length) {
+    list.innerHTML = '<div class="an-loading-row">No open-ended comments found.</div>';
+    return;
+  }
+
+  list.innerHTML = recent.map(c => `
+    <div class="an-comment-item">
+      <div class="an-comment-meta">
+        <span class="an-comment-name">${escHtml(c.name)}</span>
+        ${c.course ? `<span class="an-comment-course">${escHtml(c.course)}</span>` : ''}
+      </div>
+      <p class="an-comment-text">${escHtml(c.text)}</p>
+    </div>`).join('');
+}
+
+function setSurveyStatus(state, msg) {
+  const dot  = document.getElementById('surveyStatusDot');
+  const text = document.getElementById('surveyStatusText');
+  if (dot)  dot.className  = 'an-survey-status-dot an-survey-dot-' + state;
+  if (text) text.textContent = msg;
+}
+
+async function loadSurveyData() {
+  const sheetId = localStorage.getItem('sas_survey_sheet_id');
+
+  // Restore the saved ID into the input so it's always visible
+  const input = document.getElementById('surveySheetId');
+  if (input && sheetId && !input.value) input.value = sheetId;
+
+  const refreshBtn    = document.getElementById('surveyRefreshBtn');
+  const disconnectBtn = document.getElementById('surveyDisconnectBtn');
+
+  if (!sheetId) {
+    setSurveyStatus('off', 'Not connected');
+    if (refreshBtn)    refreshBtn.style.display    = 'none';
+    if (disconnectBtn) disconnectBtn.style.display = 'none';
+    document.getElementById('survey-charts-area')?.classList.add('hidden');
+    document.getElementById('survey-placeholder')?.classList.remove('hidden');
+    return;
+  }
+
+  if (refreshBtn)    refreshBtn.style.display    = 'inline-flex';
+  if (disconnectBtn) disconnectBtn.style.display = 'inline-flex';
+
+  setSurveyStatus('loading', 'Fetching sheet (large dataset, may take 10–30s)…');
+
+  const startTime = Date.now();
+  const rows = await fetchSurveySheet(sheetId);
+  const fetchDuration = ((Date.now() - startTime) / 1000).toFixed(1);
+  
+  if (!rows) {
+    setSurveyStatus('error', 'Could not load sheet — open the sheet → Share → Anyone with the link → Viewer');
+    document.getElementById('survey-charts-area')?.classList.add('hidden');
+    document.getElementById('survey-placeholder')?.classList.remove('hidden');
+    return;
+  }
+
+  // Check if data changed (by row count) to avoid unnecessary re-renders
+  const dataRows = rows.length - 1; // minus header
+  if (dataRows === surveyLastRowCount && surveyLastRowCount > 0) {
+    setSurveyStatus('ok', `${dataRows} responses · no changes · checked ${new Date().toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })}`);
+    return;
+  }
+  surveyLastRowCount = dataRows;
+
+  setSurveyStatus('loading', `Parsing ${dataRows} responses (fetched in ${fetchDuration}s)…`);
+
+  // Parse in next tick to avoid blocking UI
+  setTimeout(() => {
+    const parsed = parseSurveyRows(rows);
+    renderSurveyData(parsed);
+  }, 50);
+}
+
+function saveSurveySheetId() {
+  let val = document.getElementById('surveySheetId')?.value?.trim();
+  if (!val) return;
+  
+  // Extract Sheet ID from various URL formats:
+  // https://docs.google.com/spreadsheets/d/SHEET_ID/edit#gid=0
+  // https://docs.google.com/spreadsheets/d/SHEET_ID/edit
+  // SHEET_ID (raw)
+  const match = val.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if (match) {
+    val = match[1];
+  } else if (val.includes('/')) {
+    alert('Invalid Sheet ID or URL. Please paste the full Google Sheets URL or just the Sheet ID.');
+    return;
+  }
+  
+  // Update the input to show the cleaned ID
+  const input = document.getElementById('surveySheetId');
+  if (input) input.value = val;
+  
+  localStorage.setItem('sas_survey_sheet_id', val);
+  surveyLastRowCount = 0; // force re-render
+  loadSurveyData();
+  startSurveyPolling();
+}
+
+function refreshSurveyNow() {
+  surveyLastRowCount = 0;
+  loadSurveyData();
+}
+
+function disconnectSurvey() {
+  if (!confirm('Disconnect this Google Sheet?')) return;
+  localStorage.removeItem('sas_survey_sheet_id');
+  surveyLastRowCount = 0;
+  stopSurveyPolling();
+  const input = document.getElementById('surveySheetId');
+  if (input) input.value = '';
+  document.getElementById('survey-charts-area')?.classList.add('hidden');
+  document.getElementById('survey-placeholder')?.classList.remove('hidden');
+  setSurveyStatus('off', 'Not connected');
+  const refreshBtn    = document.getElementById('surveyRefreshBtn');
+  const disconnectBtn = document.getElementById('surveyDisconnectBtn');
+  if (refreshBtn)    refreshBtn.style.display    = 'none';
+  if (disconnectBtn) disconnectBtn.style.display = 'none';
+}
+
+function startSurveyPolling() {
+  stopSurveyPolling();
+  surveyPollTimer = setInterval(loadSurveyData, SURVEY_POLL_INTERVAL);
+}
+
+function stopSurveyPolling() {
+  if (surveyPollTimer) { clearInterval(surveyPollTimer); surveyPollTimer = null; }
+}
+
+function renderSurveyRealData() {} // kept as no-op for backward compat
 
 // ─── SECTION 4: Pantry Logbook ───────────────────────
 function loadPantryData() {
