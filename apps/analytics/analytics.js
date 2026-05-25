@@ -804,16 +804,23 @@ function renderSurveyData(parsed) {
     }
   });
 
-  // ── Rating distribution
+  // ── Rating distribution (as percentages)
   const distLabels = ['1 ★', '2 ★', '3 ★', '4 ★', '5 ★'];
-  const distVals   = [1, 2, 3, 4, 5].map(n => parsed.ratingDist[n] || 0);
+  const distCounts = [1, 2, 3, 4, 5].map(n => parsed.ratingDist[n] || 0);
+  const totalRatings = distCounts.reduce((a, b) => a + b, 0);
+  
+  // Convert to percentages
+  const distVals = distCounts.map(count => 
+    totalRatings > 0 ? ((count / totalRatings) * 100) : 0
+  );
+  
   const distColors = ['#ef4444', '#f59e0b', '#eab308', '#10b981', '#3b82f6'];
   makeChart('surveyDistChart', {
     type: 'bar',
     data: {
       labels: distLabels,
       datasets: [{
-        label: 'Count',
+        label: 'Percentage',
         data: distVals,
         backgroundColor: distColors,
         borderRadius: 6,
@@ -821,10 +828,29 @@ function renderSurveyData(parsed) {
       }]
     },
     options: {
-      plugins: { legend: { display: false } },
+      plugins: { 
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              const pct = ctx.parsed.y.toFixed(1);
+              const count = distCounts[ctx.dataIndex];
+              return ` ${pct}% (${count.toLocaleString()} ratings)`;
+            }
+          }
+        }
+      },
       scales: {
         x: { grid: { display: false } },
-        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } }
+        y: { 
+          grid: { color: 'rgba(255,255,255,0.04)' }, 
+          ticks: { 
+            callback: function(value) {
+              return value.toFixed(0) + '%';
+            }
+          },
+          max: 100
+        }
       }
     }
   });
