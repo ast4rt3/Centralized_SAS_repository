@@ -17,7 +17,8 @@ export default defineConfig({
         landingTemplate: resolve(__dirname, 'apps/landing-template/index.html'),
         mailer: resolve(__dirname, 'apps/mailer/index.html'),
         masterlistManager: resolve(__dirname, 'apps/masterlist-manager/index.html'),
-        scheduleManager: resolve(__dirname, 'apps/schedule-manager/index.html')
+        scheduleManager: resolve(__dirname, 'apps/schedule-manager/index.html'),
+        analytics: resolve(__dirname, 'apps/analytics/index.html')
       }
     }
   },
