@@ -18,7 +18,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <link rel="stylesheet" href="analytics.css">
+  <link rel="stylesheet" href="/apps/analytics/analytics.css">
 </head>
 <body>
 
@@ -107,105 +107,6 @@
             <div class="an-kpi-sub">Career & Placement</div>
           </div>
         </div>
-      </div>
-    </section>
-
-    <!-- Lost & Found Section -->
-    <section class="an-section">
-      <div class="an-section-header">
-        <h2 class="an-section-title"><i class='bx bx-search-alt'></i> Lost & Found</h2>
-        <span class="an-section-subtitle">Item reporting and recovery tracking</span>
-      </div>
-      <div class="an-chart-row">
-        <div class="an-chart-card an-chart-md">
-          <div class="an-chart-card-header">
-            <h3>Recovery Rate</h3>
-            <span class="an-chart-badge" id="lf-rate-badge">Loading...</span>
-          </div>
-          <div class="an-chart-wrap an-chart-sm-h">
-            <canvas id="lfRecoveryChart"></canvas>
-          </div>
-        </div>
-        <div class="an-chart-card an-chart-lg">
-          <div class="an-chart-card-header">
-            <h3>Items by Category</h3>
-          </div>
-          <div class="an-chart-wrap">
-            <canvas id="lfCategoryChart"></canvas>
-          </div>
-        </div>
-        <div class="an-chart-card an-chart-md">
-          <div class="an-chart-card-header">
-            <h3>Monthly Reports</h3>
-          </div>
-          <div class="an-chart-wrap">
-            <canvas id="lfMonthlyChart"></canvas>
-          </div>
-        </div>
-      </div>
-
-      <!-- LF Stats table -->
-      <div class="an-stat-row">
-        <div class="an-stat-item">
-          <span class="an-stat-label">Total Found Items</span>
-          <span class="an-stat-value" id="st-lf-found">—</span>
-        </div>
-        <div class="an-stat-item">
-          <span class="an-stat-label">Total Lost Items Reported</span>
-          <span class="an-stat-value" id="st-lf-lost">—</span>
-        </div>
-        <div class="an-stat-item">
-          <span class="an-stat-label">Claimed / Returned</span>
-          <span class="an-stat-value an-stat-success" id="st-lf-claimed">—</span>
-        </div>
-        <div class="an-stat-item">
-          <span class="an-stat-label">Active (Awaiting Claim)</span>
-          <span class="an-stat-value an-stat-warn" id="st-lf-active">—</span>
-        </div>
-        <div class="an-stat-item">
-          <span class="an-stat-label">Total Claims Submitted</span>
-          <span class="an-stat-value" id="st-lf-claims">—</span>
-        </div>
-      </div>
-    </section>
-
-    <!-- Borrowers Log Section -->
-    <section class="an-section">
-      <div class="an-section-header">
-        <h2 class="an-section-title"><i class='bx bx-package'></i> Borrowers Log</h2>
-        <span class="an-section-subtitle">Equipment and facility utilization</span>
-      </div>
-      <div class="an-chart-row">
-        <div class="an-chart-card an-chart-lg">
-          <div class="an-chart-card-header">
-            <h3>Most Borrowed Items</h3>
-          </div>
-          <div class="an-chart-wrap">
-            <canvas id="borrowerItemsChart"></canvas>
-          </div>
-        </div>
-        <div class="an-chart-card an-chart-md">
-          <div class="an-chart-card-header">
-            <h3>Borrower Type</h3>
-          </div>
-          <div class="an-chart-wrap an-chart-sm-h">
-            <canvas id="borrowerTypeChart"></canvas>
-          </div>
-        </div>
-        <div class="an-chart-card an-chart-md">
-          <div class="an-chart-card-header">
-            <h3>Monthly Transactions</h3>
-          </div>
-          <div class="an-chart-wrap">
-            <canvas id="borrowerMonthlyChart"></canvas>
-          </div>
-        </div>
-      </div>
-
-      <div class="an-data-placeholder" id="borrowers-placeholder">
-        <i class='bx bx-plug'></i>
-        <p>Borrowers Log data is ready to connect.</p>
-        <span>Once the Borrowers Log Vercel API is accessible, charts will populate automatically.</span>
       </div>
     </section>
 
@@ -368,6 +269,105 @@
       </div>
     </section>
 
+    <!-- Lost & Found Section -->
+    <section class="an-section">
+      <div class="an-section-header">
+        <h2 class="an-section-title"><i class='bx bx-search-alt'></i> Lost & Found</h2>
+        <span class="an-section-subtitle">Item reporting and recovery tracking</span>
+      </div>
+      <div class="an-chart-row">
+        <div class="an-chart-card an-chart-md">
+          <div class="an-chart-card-header">
+            <h3>Recovery Rate</h3>
+            <span class="an-chart-badge" id="lf-rate-badge">Loading...</span>
+          </div>
+          <div class="an-chart-wrap an-chart-sm-h">
+            <canvas id="lfRecoveryChart"></canvas>
+          </div>
+        </div>
+        <div class="an-chart-card an-chart-lg">
+          <div class="an-chart-card-header">
+            <h3>Items by Category</h3>
+          </div>
+          <div class="an-chart-wrap">
+            <canvas id="lfCategoryChart"></canvas>
+          </div>
+        </div>
+        <div class="an-chart-card an-chart-md">
+          <div class="an-chart-card-header">
+            <h3>Monthly Reports</h3>
+          </div>
+          <div class="an-chart-wrap">
+            <canvas id="lfMonthlyChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- LF Stats table -->
+      <div class="an-stat-row">
+        <div class="an-stat-item">
+          <span class="an-stat-label">Total Found Items</span>
+          <span class="an-stat-value" id="st-lf-found">—</span>
+        </div>
+        <div class="an-stat-item">
+          <span class="an-stat-label">Total Lost Items Reported</span>
+          <span class="an-stat-value" id="st-lf-lost">—</span>
+        </div>
+        <div class="an-stat-item">
+          <span class="an-stat-label">Claimed / Returned</span>
+          <span class="an-stat-value an-stat-success" id="st-lf-claimed">—</span>
+        </div>
+        <div class="an-stat-item">
+          <span class="an-stat-label">Active (Awaiting Claim)</span>
+          <span class="an-stat-value an-stat-warn" id="st-lf-active">—</span>
+        </div>
+        <div class="an-stat-item">
+          <span class="an-stat-label">Total Claims Submitted</span>
+          <span class="an-stat-value" id="st-lf-claims">—</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Borrowers Log Section -->
+    <section class="an-section">
+      <div class="an-section-header">
+        <h2 class="an-section-title"><i class='bx bx-package'></i> Borrowers Log</h2>
+        <span class="an-section-subtitle">Equipment and facility utilization</span>
+      </div>
+      <div class="an-chart-row">
+        <div class="an-chart-card an-chart-lg">
+          <div class="an-chart-card-header">
+            <h3>Most Borrowed Items</h3>
+          </div>
+          <div class="an-chart-wrap">
+            <canvas id="borrowerItemsChart"></canvas>
+          </div>
+        </div>
+        <div class="an-chart-card an-chart-md">
+          <div class="an-chart-card-header">
+            <h3>Borrower Type</h3>
+          </div>
+          <div class="an-chart-wrap an-chart-sm-h">
+            <canvas id="borrowerTypeChart"></canvas>
+          </div>
+        </div>
+        <div class="an-chart-card an-chart-md">
+          <div class="an-chart-card-header">
+            <h3>Monthly Transactions</h3>
+          </div>
+          <div class="an-chart-wrap">
+            <canvas id="borrowerMonthlyChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="an-data-placeholder" id="borrowers-placeholder">
+        <i class='bx bx-plug'></i>
+        <p>Borrowers Log data is ready to connect.</p>
+        <span>Once the Borrowers Log Vercel API is accessible, charts will populate automatically.</span>
+      </div>
+    </section>
+
     <!-- Pantry Logbook Section -->
     <section class="an-section">
       <div class="an-section-header">
@@ -520,6 +520,6 @@
 
   <script src="../../env.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="analytics.js"></script>
+  <script src="/apps/analytics/analytics.js"></script>
 </body>
 </html>
