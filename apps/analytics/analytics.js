@@ -37,15 +37,27 @@ let charts = {};
 let manualServices = JSON.parse(localStorage.getItem('sas_manual_services') || '[]');
 
 // ─── Init ─────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('semesterBadge').textContent = SEMESTER_LABEL;
   document.getElementById('printDate').textContent = new Date().toLocaleDateString('en-PH', {
     year: 'numeric', month: 'long', day: 'numeric'
   });
   renderManualServices();
   loadAllData();
-  // Start survey polling if a sheet was previously connected
-  if (localStorage.getItem('sas_survey_sheet_id')) {
+  
+  // Start survey polling if a sheet was previously connected OR if global default exists
+  const hasLocalSheet = !!localStorage.getItem('sas_survey_sheet_id');
+  let hasGlobalDefault = false;
+  
+  if (!hasLocalSheet) {
+    // Check if there's a global default
+    const defaultData = await safeFetch(BACKEND_URL + '?action=getDefaultSurveySheet');
+    if (defaultData && defaultData.success && defaultData.sheetId) {
+      hasGlobalDefault = true;
+    }
+  }
+  
+  if (hasLocalSheet || hasGlobalDefault) {
     startSurveyPolling();
   }
 });
@@ -921,9 +933,19 @@ function setSurveyStatus(state, msg) {
 }
 
 async function loadSurveyData() {
-  const sheetId = localStorage.getItem('sas_survey_sheet_id');
+  let sheetId = localStorage.getItem('sas_survey_sheet_id');
+  
+  // If no saved sheet ID, fetch the global default from backend
+  if (!sheetId) {
+    const defaultData = await safeFetch(BACKEND_URL + '?action=getDefaultSurveySheet');
+    if (defaultData && defaultData.success && defaultData.sheetId) {
+      sheetId = defaultData.sheetId;
+      // Don't save to localStorage yet — let user see it's the global default
+      // They can click Connect to save it permanently to their browser
+    }
+  }
 
-  // Restore the saved ID into the input so it's always visible
+  // Restore the saved/default ID into the input so it's always visible
   const input = document.getElementById('surveySheetId');
   if (input && sheetId && !input.value) input.value = sheetId;
 
@@ -992,7 +1014,22 @@ function saveSurveySheetId() {
   const input = document.getElementById('surveySheetId');
   if (input) input.value = val;
   
+  // Save to localStorage for this user
   localStorage.setItem('sas_survey_sheet_id', val);
+  
+  // Save to backend as the global default for ALL users
+  setSurveyStatus('loading', 'Saving as default for all users…');
+  safeFetch(BACKEND_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'setDefaultSurveySheet', sheetId: val })
+  }).then(result => {
+    if (result && result.success) {
+      console.log('[Survey] Saved as global default:', result.message);
+    } else {
+      console.warn('[Survey] Failed to save global default:', result?.message);
+    }
+  });
+  
   surveyLastRowCount = 0; // force re-render
   loadSurveyData();
   startSurveyPolling();
