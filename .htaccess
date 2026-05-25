@@ -4,19 +4,31 @@ AddType application/javascript .mjs
 AddType application/manifest+json .webmanifest
 AddType text/css .css
 
-<IfModule mod_rewrite.c>
-  RewriteEngine On
-  RewriteBase /
-  
-  # 1. If the file exists in assets/, serve it directly and stop
-  RewriteCond %{REQUEST_FILENAME} -f
-  RewriteRule ^assets/(.*) - [L]
+# Enable directory access for apps
+<Directory "apps">
+   Options Indexes FollowSymLinks
+   AllowOverride None
+   Require all granted
+</Directory>
 
-  # 2. SPA Routing: Redirect everything else to index.html
-  RewriteRule ^index\.html$ - [L]
-  RewriteCond %{REQUEST_FILENAME} !-f
-  RewriteCond %{REQUEST_FILENAME} !-d
-  RewriteRule . /index.html [L]
+<IfModule mod_rewrite.c>
+   RewriteEngine On
+   RewriteBase /
+   
+   # 1. If the file exists, serve it directly and stop
+   RewriteCond %{REQUEST_FILENAME} -f
+   RewriteRule ^ - [L]
+
+   # 2. Redirect directories without trailing slash
+   RewriteCond %{REQUEST_FILENAME} -d
+   RewriteCond %{REQUEST_URI} !/$
+   RewriteRule ^(.*)$ $1/ [L]
+
+   # 3. SPA Routing: Redirect everything else to index.html
+   RewriteRule ^index\.html$ - [L]
+   RewriteCond %{REQUEST_FILENAME} !-f
+   RewriteCond %{REQUEST_FILENAME} !-d
+   RewriteRule . /index.html [L]
 </IfModule>
 
 # Prevent caching of the environment config
