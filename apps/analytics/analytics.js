@@ -2344,129 +2344,96 @@ function printReport() {
   window.print();
 }
 
-// ─── SECTION 8: Job Vacancies OCR Analytics ───────────
-const JOB_DICTIONARY = {
-  "Skilled Trades": ["CARPENTER", "ELECTRICIAN", "WELDER", "PLUMBER", "MECHANIC", "TECHNICIAN"],
-  "Manufacturing & Logistics": ["PRODUCTION", "FORKLIFT", "WAREHOUSE", "DRIVER", "DELIVERY", "OPERATOR"],
-  "Hospitality & Food": ["KITCHEN", "DINING", "COOK", "WAITER", "BARISTA", "HOTEL", "RESTAURANT", "CREW"],
-  "Retail & Sales": ["SALES", "CASHIER", "MERCHANDISER", "AGENT", "CLERK", "PROMO"],
-  "Business & Admin": ["MANAGER", "ADMIN", "ASSISTANT", "SECRETARY", "HR", "STAFF"],
-  "IT & Tech": ["DEVELOPER", "PROGRAMMER", "SOFTWARE", "IT", "NETWORK"],
-  "Education": ["TEACHER", "INSTRUCTOR", "PROFESSOR", "TUTOR"]
-};
+// ─── SECTION 8: Job Vacancies Analytics ──────────────────
+// Reads pre-processed structured data from Supabase (sas_job_vacancies).
+// Data is populated by running: node scripts/sync-vacancies.js
+// This function does NOT trigger OCR — it only reads what's already stored.
 
 async function loadJobVacancyData() {
-  const sb = getSupabase();
   const elPh = document.getElementById('vacancies-placeholder');
 
-  if (!sb) {
-    console.warn("[Job Vacancies Debug] Supabase client is null. Is supabase-js loaded?");
-    if (elPh) elPh.classList.remove('hidden');
-    setText('kv-vacancies', '—');
-    renderEmptyChart('vacanciesChart', 'doughnut');
-    return;
-  }
-
   try {
-    // 1. Fetch live file IDs from Google Drive
-    const driveRes = await safeFetch(`${BACKEND_URL}?action=getDriveVacancies`);
-    if (!driveRes || !driveRes.success) throw new Error("Could not fetch Drive folders");
-    
-    let liveDriveIds = [];
-    driveRes.folders.forEach(f => {
-      if (f.files) f.files.forEach(file => liveDriveIds.push(file.id));
-      if (f.subfolders) f.subfolders.forEach(sf => {
-        if (sf.files) sf.files.forEach(file => liveDriveIds.push(file.id));
-      });
-    });
+    // Read structured vacancy data from GAS (which proxies Supabase)
+    // Only fetches non-low-content records (skips QR/image-only posters)
+    const res = await safeFetch(`${BACKEND_URL}?action=getVacancyData`);
 
-    console.log("[Job Vacancies Debug] Drive Response:", driveRes);
-    console.log("[Job Vacancies Debug] Found Live IDs:", liveDriveIds.length);
-
-    // 2. Fetch OCR text from Supabase
-    const { data: cachedTexts, error } = await sb.from('sas_job_vacancies').select('*');
-    if (error) throw error;
-
-    const cachedIds = new Set((cachedTexts || []).map(r => r.drive_file_id));
-    const missingIds = liveDriveIds.filter(id => !cachedIds.has(id));
-
-    // 3. Trigger OCR sync for missing files
-    if (missingIds.length > 0) {
-      console.log(`[Job Vacancies] Syncing ${missingIds.length} missing files for OCR...`);
-      const syncRes = await fetch(`${BACKEND_URL}?action=syncVacancyOCR`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ fileIds: missingIds.join(',') })
-      }).then(r => r.json());
-      
-      if (syncRes && syncRes.success && syncRes.processed) {
-        syncRes.processed.forEach(p => {
-          cachedTexts.push({ drive_file_id: p.id, extracted_text: p.text });
-        });
-      }
+    if (!res || !res.success) {
+      console.warn('[Job Vacancies] getVacancyData failed:', res?.message);
+      throw new Error(res?.message || 'Failed to load vacancy data');
     }
 
-    // 4. Run Analytics on Text
-    const industryCounts = {};
-    const exactRoles = {};
+    const vacancies = res.vacancies || [];
+    setText('kv-vacancies', res.total || vacancies.length);
 
-    (cachedTexts || []).forEach(row => {
-      const text = String(row.extracted_text || "").toUpperCase();
-      let matchedIndustry = "Others";
-      
-      // Match against dictionary
-      for (const [industry, keywords] of Object.entries(JOB_DICTIONARY)) {
-        for (const kw of keywords) {
-          if (text.includes(kw)) {
-            matchedIndustry = industry;
-            // Record exact role matched
-            exactRoles[kw] = (exactRoles[kw] || 0) + 1;
-            break; // Move to next industry or break if we only want 1 category per image
-          }
-        }
-        if (matchedIndustry !== "Others") break; // Found primary industry
-      }
-      
-      industryCounts[matchedIndustry] = (industryCounts[matchedIndustry] || 0) + 1;
-    });
-
-    setText('kv-vacancies', cachedTexts.length);
-
-    // Sort exact roles for top list
-    const topRoles = Object.entries(exactRoles)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5);
-
-    renderTopRoles(topRoles);
-
-    // Chart
-    const labels = Object.keys(industryCounts);
-    const data = Object.values(industryCounts);
-
-    if (labels.length === 0) {
+    if (vacancies.length === 0) {
       renderEmptyChart('vacanciesChart', 'doughnut');
-    } else {
-      makeChart('vacanciesChart', {
-        type: 'doughnut',
-        data: {
-          labels: labels,
-          datasets: [{
-            data: data,
-            backgroundColor: PALETTE_LIST,
-            borderWidth: 2,
-            hoverOffset: 6
-          }]
-        },
-        options: { cutout: '60%', plugins: { legend: { position: 'bottom' } } }
-      });
+      renderTopRoles([]);
+      if (elPh) {
+        elPh.classList.remove('hidden');
+        elPh.querySelector('p').textContent = 'No vacancy data yet. Run the sync script to process posters.';
+        const span = elPh.querySelector('span');
+        if (span) span.textContent = 'node scripts/sync-vacancies.js';
+      }
+      return;
     }
 
     if (elPh) elPh.classList.add('hidden');
+
+    // ── Industry breakdown ──
+    const industryCounts = {};
+    vacancies.forEach(v => {
+      const bucket = v.industry || 'Others';
+      industryCounts[bucket] = (industryCounts[bucket] || 0) + 1;
+    });
+
+    const chartEntries = Object.entries(industryCounts)
+      .filter(([k]) => k !== 'Others')
+      .sort((a, b) => b[1] - a[1]);
+    if (industryCounts['Others']) chartEntries.push(['Others', industryCounts['Others']]);
+
+    makeChart('vacanciesChart', {
+      type: 'doughnut',
+      data: {
+        labels: chartEntries.map(e => e[0]),
+        datasets: [{
+          data: chartEntries.map(e => e[1]),
+          backgroundColor: PALETTE_LIST,
+          borderWidth: 2,
+          hoverOffset: 6
+        }]
+      },
+      options: {
+        cutout: '60%',
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+          tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} poster${ctx.parsed !== 1 ? 's' : ''}` } }
+        }
+      }
+    });
+
+    // ── Top positions (from structured positions[] array) ──
+    const positionCounts = {};
+    vacancies.forEach(v => {
+      if (Array.isArray(v.positions)) {
+        v.positions.forEach(p => {
+          const key = p.trim();
+          if (key.length > 1) positionCounts[key] = (positionCounts[key] || 0) + 1;
+        });
+      }
+    });
+
+    const topRoles = Object.entries(positionCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8);
+
+    renderTopRoles(topRoles);
+
   } catch (err) {
-    console.error('[Job Vacancies OCR Error]:', err);
+    console.error('[Job Vacancies] Error:', err);
     if (elPh) elPh.classList.remove('hidden');
     setText('kv-vacancies', '—');
     renderEmptyChart('vacanciesChart', 'doughnut');
+    renderTopRoles([]);
   }
 }
 
@@ -2475,14 +2442,14 @@ function renderTopRoles(roles) {
   if (!body) return;
 
   if (!roles || !roles.length) {
-    body.innerHTML = '<div class="an-loading-row">No specific roles detected yet.</div>';
+    body.innerHTML = '<div class="an-loading-row" style="color:var(--an-text-muted,#64748b);">No roles detected yet — OCR data may still be processing.</div>';
     return;
   }
 
   body.innerHTML = roles.map(([name, count], i) => `
     <div class="an-kpi-list-row">
       <span class="an-kpi-list-rank">#${i + 1}</span>
-      <span class="an-kpi-list-name" style="text-transform: capitalize;">${name.toLowerCase()}</span>
+      <span class="an-kpi-list-name" style="text-transform:capitalize;">${escHtml(name.toLowerCase())}</span>
       <span class="an-kpi-list-val">${count}</span>
     </div>`).join('');
 }

@@ -61,3 +61,5 @@ docs/25-26 FEEDBACK MECHANISM ON THE EFFECTIVENESS OF STUDENT AFFAIRS AND SERVIC
 apps/analytics/README_DEFAULT_SHEET.md
 package-lock.json
 .kiro/settings/mcp.json
+
+scripts/vacancy-table.sql
