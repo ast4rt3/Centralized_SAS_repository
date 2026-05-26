@@ -1639,35 +1639,29 @@ let sdLastRowCount = 0;
 
 // ─── Normalization helpers ────────────────────────────
 
-// Year level: collapses all free-text variants into canonical labels
+// Year level: collapses ALL free-text variants into canonical labels
+// Handles: "1st Year", "1ST YEAR", "1st year", "First Year", "1", "BSIT 2", "Year 3", etc.
 function sdNormalizeYear(raw) {
   if (!raw) return 'Not stated';
+  // Normalize to lowercase, collapse separators
   const s = String(raw).trim().toLowerCase()
-    .replace(/[.\-_]/g, ' ')   // dots, dashes, underscores → space
-    .replace(/\s+/g, ' ');     // collapse whitespace
+    .replace(/[.\-_\/]/g, ' ')
+    .replace(/\s+/g, ' ');
 
-  // Numeric-only: "1", "2", "3", "4", "5"
-  if (/^1$/.test(s) || /^1st/.test(s) || /^first/.test(s) || /year\s*1$/.test(s) || /grade\s*1$/.test(s)) return '1st Year';
-  if (/^2$/.test(s) || /^2nd/.test(s) || /^second/.test(s) || /year\s*2$/.test(s)) return '2nd Year';
-  if (/^3$/.test(s) || /^3rd/.test(s) || /^third/.test(s)  || /year\s*3$/.test(s)) return '3rd Year';
-  if (/^4$/.test(s) || /^4th/.test(s) || /^fourth/.test(s) || /year\s*4$/.test(s)) return '4th Year';
-  if (/^5$/.test(s) || /^5th/.test(s) || /^fifth/.test(s)  || /year\s*5$/.test(s)) return '5th Year';
+  // Direct ordinal matches (covers "1st year", "1st Year", "1ST YEAR", "1st")
+  if (/\b1st\b/.test(s) || /\bfirst\b/.test(s) || /\byear\s*1\b/.test(s) || /^1$/.test(s)) return '1st Year';
+  if (/\b2nd\b/.test(s) || /\bsecond\b/.test(s) || /\byear\s*2\b/.test(s) || /^2$/.test(s)) return '2nd Year';
+  if (/\b3rd\b/.test(s) || /\bthird\b/.test(s)  || /\byear\s*3\b/.test(s) || /^3$/.test(s)) return '3rd Year';
+  if (/\b4th\b/.test(s) || /\bfourth\b/.test(s) || /\byear\s*4\b/.test(s) || /^4$/.test(s)) return '4th Year';
+  if (/\b5th\b/.test(s) || /\bfifth\b/.test(s)  || /\byear\s*5\b/.test(s) || /^5$/.test(s)) return '5th Year';
 
-  // Embedded in course string e.g. "BSIT 1", "BSIT-2", "IT 3rd"
-  const embedded = s.match(/\b([1-5])(st|nd|rd|th)?\s*year\b/) || s.match(/\byear\s*([1-5])\b/) || s.match(/\b([1-5])\s*(st|nd|rd|th)\b/);
-  if (embedded) {
-    const n = parseInt(embedded[1]);
-    return ['1st Year','2nd Year','3rd Year','4th Year','5th Year'][n - 1] || raw;
+  // Digit anywhere in string (e.g. "BSIT 2", "BSN3", "IT-1")
+  const anyDigit = s.match(/\b([1-5])\b/);
+  if (anyDigit) {
+    return ['1st Year','2nd Year','3rd Year','4th Year','5th Year'][parseInt(anyDigit[1]) - 1];
   }
 
-  // Trailing digit: "BSIT 2", "BSN3"
-  const trailing = s.match(/\s([1-5])$/) || s.match(/([1-5])$/);
-  if (trailing) {
-    const n = parseInt(trailing[1]);
-    return ['1st Year','2nd Year','3rd Year','4th Year','5th Year'][n - 1] || raw;
-  }
-
-  return raw.trim() || 'Not stated';
+  return 'Not stated';
 }
 
 // Course: collapses common NBSC program name variants into canonical abbreviations
@@ -1800,13 +1794,16 @@ function sdNormalizeLearningMode(raw) {
 }
 
 // Internet access: normalize yes/no/sometimes variants
+// Also handles reliability-style answers that may appear in this column
 function sdNormalizeInternet(raw) {
   if (!raw) return 'Not stated';
   const s = String(raw).trim().toLowerCase();
   if (s === 'yes' || s === 'y') return 'Yes';
   if (s === 'no'  || s === 'n') return 'No';
+  if (s.startsWith('yes')) return 'Yes';
+  if (s.startsWith('no'))  return 'No';
   if (s.includes('sometimes') || s.includes('limited') || s.includes('intermittent')) return 'Sometimes';
-  return raw.trim() || 'Not stated';
+  return 'Not stated'; // don't pass through garbage values
 }
 
 function parseStudentDatasetRows(rows) {
@@ -1849,7 +1846,7 @@ function parseStudentDatasetRows(rows) {
     result.bySex[sex] = (result.bySex[sex] || 0) + 1;
 
     // Civil status — normalized
-    const civil = sdNormalizeCivilStatus(get(85));
+    const civil = sdNormalizeCivilStatus(get(89));
     result.byCivilStatus[civil] = (result.byCivilStatus[civil] || 0) + 1;
 
     // Residence type  normalized
@@ -1864,27 +1861,27 @@ function parseStudentDatasetRows(rows) {
     result.byIncome[bracket] = (result.byIncome[bracket] || 0) + 1;
 
     // Commute duration — normalized
-    const commute = sdNormalizeCommute(get(50));
+    const commute = sdNormalizeCommute(get(51));
     result.byCommute[commute] = (result.byCommute[commute] || 0) + 1;
 
     // Learning mode  normalized
-    const learn = sdNormalizeLearningMode(get(84));
+    const learn = sdNormalizeLearningMode(get(88));
     result.byLearningMode[learn] = (result.byLearningMode[learn] || 0) + 1;
 
     // Internet access  normalized
-    const inet = sdNormalizeInternet(get(76));
+    const inet = sdNormalizeInternet(get(80));
     result.byInternet[inet] = (result.byInternet[inet] || 0) + 1;
 
     // All Yes/No fields — normalized
-    const schol = sdNormalizeYesNo(get(91));
+    const schol = sdNormalizeYesNo(get(95));
     if (schol === 'Yes') result.byScholarship.Yes++;
     else if (schol === 'No') result.byScholarship.No++;
 
-    const emp = sdNormalizeYesNo(get(71));
+    const emp = sdNormalizeYesNo(get(75));
     if (emp === 'Yes') result.byEmployed.Yes++;
     else if (emp === 'No') result.byEmployed.No++;
 
-    const fin = sdNormalizeYesNo(get(95));
+    const fin = sdNormalizeYesNo(get(99));
     if (fin === 'Yes') result.byFinancialDifficulty.Yes++;
     else if (fin === 'No') result.byFinancialDifficulty.No++;
 
@@ -1905,12 +1902,30 @@ function parseStudentDatasetRows(rows) {
     if (solo === 'Yes') result.bySoloParent.Yes++;
     else if (solo === 'No') result.bySoloParent.No++;
 
-    // Support needed (multi-select, comma-separated)
-    const support = get(96);
+    // Support needed (multi-select, semicolon or comma separated)
+    // Normalize common support type labels to avoid fragmentation
+    const support = get(100);
     if (support) {
-      support.split(',').forEach(s => {
+      // Split on comma or semicolon
+      support.split(/[,;]/).forEach(s => {
         const t = s.trim();
-        if (t.length > 2) result.supportNeeded[t] = (result.supportNeeded[t] || 0) + 1;
+        if (t.length < 3) return;
+        // Normalize to canonical labels
+        const tl = t.toLowerCase();
+        let label = t;
+        if (tl.includes('financial') || tl.includes('monetary') || tl.includes('allowance')) label = 'Financial Assistance';
+        else if (tl.includes('scholar') || tl.includes('stipend') || tl.includes('grant')) label = 'Scholarship/Stipend';
+        else if (tl.includes('food') || tl.includes('meal') || tl.includes('pantry') || tl.includes('nutrition')) label = 'Food Assistance';
+        else if (tl.includes('transport') || tl.includes('fare') || tl.includes('commut')) label = 'Transportation Support';
+        else if (tl.includes('mental') || tl.includes('counsel') || tl.includes('psycho')) label = 'Mental Health/Counseling';
+        else if (tl.includes('medical') || tl.includes('health') || tl.includes('clinic')) label = 'Medical/Health Support';
+        else if (tl.includes('housing') || tl.includes('dorm') || tl.includes('boarding') || tl.includes('shelter')) label = 'Housing/Accommodation';
+        else if (tl.includes('gadget') || tl.includes('device') || tl.includes('laptop') || tl.includes('computer')) label = 'Gadget/Device Access';
+        else if (tl.includes('internet') || tl.includes('wifi') || tl.includes('data') || tl.includes('connect')) label = 'Internet/Connectivity';
+        else if (tl.includes('tuition') || tl.includes('fee') || tl.includes('enroll')) label = 'Tuition/School Fees';
+        else if (tl.includes('book') || tl.includes('module') || tl.includes('material') || tl.includes('supply')) label = 'Learning Materials';
+        else if (tl.includes('job') || tl.includes('employ') || tl.includes('work') || tl.includes('livelihood')) label = 'Employment/Livelihood';
+        result.supportNeeded[label] = (result.supportNeeded[label] || 0) + 1;
       });
     }
   });
