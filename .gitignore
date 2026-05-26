@@ -63,3 +63,4 @@ package-lock.json
 .kiro/settings/mcp.json
 
 scripts/vacancy-table.sql
+apps/analytics/README_UX_REDESIGN.md

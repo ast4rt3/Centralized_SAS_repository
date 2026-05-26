@@ -42,6 +42,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('printDate').textContent = new Date().toLocaleDateString('en-PH', {
     year: 'numeric', month: 'long', day: 'numeric'
   });
+  
+  // Initialize dashboard view
+  initializeDashboardView();
+  
   renderManualServices();
   loadAllData();
   
@@ -77,6 +81,50 @@ document.addEventListener('DOMContentLoaded', async () => {
     startStudentDatasetPolling();
   }
 });
+
+// ─── Dashboard View Management ───────────────────────
+function initializeDashboardView() {
+  // Load saved dashboard preference or default to overview
+  const savedDashboard = localStorage.getItem('sas_active_dashboard') || 'overview';
+  showDashboard(savedDashboard);
+}
+
+function showDashboard(dashboardId) {
+  // Hide all dashboards
+  document.querySelectorAll('.an-dashboard').forEach(d => {
+    d.classList.add('hidden');
+  });
+  
+  // Remove active state from all buttons
+  document.querySelectorAll('.an-selector-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  
+  // Show selected dashboard
+  const targetDashboard = document.getElementById(`dashboard-${dashboardId}`);
+  if (targetDashboard) {
+    targetDashboard.classList.remove('hidden');
+  }
+  
+  // Activate corresponding button
+  const targetBtn = document.querySelector(`.an-selector-btn[data-dashboard="${dashboardId}"]`);
+  if (targetBtn) {
+    targetBtn.classList.add('active');
+    // Scroll button into view if needed
+    targetBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }
+  
+  // Save preference
+  localStorage.setItem('sas_active_dashboard', dashboardId);
+  
+  // Scroll to top
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function toggleCustomizeMode() {
+  // Future feature: Allow users to customize which metrics appear in overview
+  alert('Customize mode coming soon! You\'ll be able to pin your favorite metrics to the Overview dashboard.');
+}
 
 async function loadAllData() {
   showRefreshSpin(true);

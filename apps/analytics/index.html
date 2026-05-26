@@ -36,14 +36,61 @@
       <button class="an-btn an-btn-outline" id="refreshBtn" onclick="loadAllData()">
         <i class='bx bx-refresh'></i> Refresh
       </button>
+      <button class="an-btn an-btn-outline" id="customizeBtn" onclick="toggleCustomizeMode()">
+        <i class='bx bx-customize'></i> Customize
+      </button>
       <button class="an-btn an-btn-primary" onclick="printReport()">
         <i class='bx bx-printer'></i> Print Report
       </button>
     </div>
   </header>
 
+  <!-- Dashboard Selector -->
+  <div class="an-dashboard-selector">
+    <div class="an-selector-container">
+      <button class="an-selector-btn active" onclick="showDashboard('overview')" data-dashboard="overview">
+        <i class='bx bx-grid-alt'></i>
+        <span>Overview</span>
+      </button>
+      <button class="an-selector-btn" onclick="showDashboard('student-dataset')" data-dashboard="student-dataset">
+        <i class='bx bx-group'></i>
+        <span>Student Dataset</span>
+      </button>
+      <button class="an-selector-btn" onclick="showDashboard('satisfaction')" data-dashboard="satisfaction">
+        <i class='bx bx-star'></i>
+        <span>Satisfaction</span>
+      </button>
+      <button class="an-selector-btn" onclick="showDashboard('lost-found')" data-dashboard="lost-found">
+        <i class='bx bx-search-alt'></i>
+        <span>Lost & Found</span>
+      </button>
+      <button class="an-selector-btn" onclick="showDashboard('borrowers')" data-dashboard="borrowers">
+        <i class='bx bx-package'></i>
+        <span>Borrowers</span>
+      </button>
+      <button class="an-selector-btn" onclick="showDashboard('pantry')" data-dashboard="pantry">
+        <i class='bx bx-dish'></i>
+        <span>Pantry</span>
+      </button>
+      <button class="an-selector-btn" onclick="showDashboard('attendance')" data-dashboard="attendance">
+        <i class='bx bx-calendar-event'></i>
+        <span>Attendance</span>
+      </button>
+      <button class="an-selector-btn" onclick="showDashboard('vacancies')" data-dashboard="vacancies">
+        <i class='bx bx-briefcase'></i>
+        <span>Job Vacancies</span>
+      </button>
+      <button class="an-selector-btn" onclick="showDashboard('other')" data-dashboard="other">
+        <i class='bx bx-plus-medical'></i>
+        <span>Other Services</span>
+      </button>
+    </div>
+  </div>
+
   <main class="an-main" id="printArea">
 
+    <!-- Overview Dashboard -->
+    <div class="an-dashboard" id="dashboard-overview" data-dashboard="overview">
     <!-- Impact Summary Cards -->
     <section class="an-section">
       <div class="an-section-header">
@@ -117,7 +164,10 @@
         </div>
       </div>
     </section>
+    </div>
 
+    <!-- Student Dataset Dashboard -->
+    <div class="an-dashboard hidden" id="dashboard-student-dataset" data-dashboard="student-dataset">
     <!-- Student Dataset Section -->
     <section class="an-section">
       <div class="an-section-header">
@@ -270,7 +320,10 @@
         <span>Paste the Sheet URL or ID from your Google Form responses spreadsheet above, then click Connect.</span>
       </div>
     </section>
+    </div>
 
+    <!-- Satisfaction Dashboard -->
+    <div class="an-dashboard hidden" id="dashboard-satisfaction" data-dashboard="satisfaction">
     <!-- Client Satisfaction Section -->
     <section class="an-section">
       <div class="an-section-header">
@@ -429,7 +482,10 @@
         <span>Paste the Sheet ID from your Google Form responses spreadsheet URL above, then click Connect.</span>
       </div>
     </section>
+    </div>
 
+    <!-- Lost & Found Dashboard -->
+    <div class="an-dashboard hidden" id="dashboard-lost-found" data-dashboard="lost-found">
     <!-- Lost & Found Section -->
     <section class="an-section">
       <div class="an-section-header">
@@ -488,7 +544,10 @@
         </div>
       </div>
     </section>
+    </div>
 
+    <!-- Borrowers Dashboard -->
+    <div class="an-dashboard hidden" id="dashboard-borrowers" data-dashboard="borrowers">
     <!-- Borrowers Log Section -->
     <section class="an-section">
       <div class="an-section-header">
@@ -528,7 +587,10 @@
         <span>Once the Borrowers Log Vercel API is accessible, charts will populate automatically.</span>
       </div>
     </section>
+    </div>
 
+    <!-- Pantry Dashboard -->
+    <div class="an-dashboard hidden" id="dashboard-pantry" data-dashboard="pantry">
     <!-- Pantry Logbook Section -->
     <section class="an-section">
       <div class="an-section-header">
@@ -573,7 +635,10 @@
         </div>
       </div>
     </section>
+    </div>
 
+    <!-- Attendance Dashboard -->
+    <div class="an-dashboard hidden" id="dashboard-attendance" data-dashboard="attendance">
     <!-- Event Attendance Section -->
     <section class="an-section">
       <div class="an-section-header">
@@ -621,7 +686,10 @@
         <p>Attendance data will load from the SAS Masterlist.</p>
       </div>
     </section>
+    </div>
 
+    <!-- Job Vacancies Dashboard -->
+    <div class="an-dashboard hidden" id="dashboard-vacancies" data-dashboard="vacancies">
     <!-- Job Vacancies OCR Section -->
     <section class="an-section">
       <div class="an-section-header">
@@ -654,7 +722,10 @@
         <span>Posters are scanned using OCR to extract and categorize job roles.</span>
       </div>
     </section>
+    </div>
 
+    <!-- Other Services Dashboard -->
+    <div class="an-dashboard hidden" id="dashboard-other" data-dashboard="other">
     <!-- Other Services Section (Manual Entry) -->
     <section class="an-section">
       <div class="an-section-header">
@@ -670,6 +741,7 @@
         <i class='bx bx-plus'></i> Add Service
       </button>
     </section>
+    </div>
 
   </main>
 
