@@ -60,6 +60,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (hasLocalSheet || hasGlobalDefault) {
     startSurveyPolling();
   }
+
+  // Start student dataset polling if a sheet was previously connected OR if global default exists
+  const hasLocalSDSheet = !!localStorage.getItem('sas_student_dataset_sheet_id');
+  let hasGlobalSDDefault = false;
+
+  if (!hasLocalSDSheet) {
+    const sdDefaultData = await safeFetch(BACKEND_URL + '?action=getDefaultStudentDatasetSheet');
+    if (sdDefaultData && sdDefaultData.success && sdDefaultData.sheetId) {
+      hasGlobalSDDefault = true;
+    }
+  }
+
+  loadStudentDatasetData();
+  if (hasLocalSDSheet || hasGlobalSDDefault) {
+    startStudentDatasetPolling();
+  }
 });
 
 async function loadAllData() {
@@ -1532,6 +1548,593 @@ function deleteManualService(id) {
   manualServices = manualServices.filter(s => s.id !== id);
   localStorage.setItem('sas_manual_services', JSON.stringify(manualServices));
   renderManualServices();
+}
+
+// ─── SECTION: Student Dataset ────────────────────────
+// Reads directly from a Google Sheet (gviz/tq) — same mechanism as client satisfaction survey.
+// Column map (0-based) for the student dataset form:
+//  0  Timestamp
+//  1  Email Address
+//  2  FIRST NAME
+//  3  MIDDLE NAME
+//  4  LAST NAME
+//  5  COURSE
+//  6  YEAR
+//  7  CELLPHONE/CONTACT NUMBER
+//  8  BIRTHDAY
+//  9  ASSIGNED SEX AT BIRTH
+// 10  CITIZENSHIP
+// 11  RELIGION
+// 12  PUROK NO./HOUSE NO.
+// 13  BARANGGAY
+// 14  CITY/MUNICIPALITY
+// 15  PROVINCE
+// 16  FATHER'S FULLNAME
+// 17  WHICH COUNTRY DOES YOUR FATHER WORK?
+// 18  FATHER'S OCCUPATION
+// 19  Father's Estimated Monthly Income
+// 20  Is your father deprived of liberty?
+// 21  Is your father a rebel returnee?
+// 22  Is your father a PWD?
+// 23  MOTHER'S FULLNAME
+// 24  WHICH COUNTRY DOES YOUR MOTHER WORK?
+// 25  MOTHER'S OCCUPATION
+// 26  Mother's Estimated Monthly Income
+// 27  Is your mother deprived of liberty?
+// 28  Is your mother a rebel returnee?
+// 29  Is your mother a PWD?
+// 30  Were you raised by a solo parent?
+// 31  Number of Siblings
+// 32  Are you a beneficiary of 4Ps?
+// 33  Do you identify as a member of an IP?
+// 34  Which Indigenous group/Tribe?
+// 35  How would you identify your Indigenous heritage?
+// 36  Did any parents/siblings attend college?
+// 37  Do you identify as a person with special needs?
+// 38  Type of special need/s
+// 39  Was your condition clinically diagnosed?
+// 40  Do you identify as a person with a disability?
+// 41  What type(s) of disability?
+// 42  Do you have a government-issued PWD ID?
+// 43  PWD ID Number
+// 44  What type of residence are you currently living in?
+// 45–48  Residence address fields
+// 49  Daily mode of transportation
+// 50  How long is your one-way commute?
+// 51  Total daily fare cost
+// 52  Monthly rent
+// 53–57  Rented place address + travel info
+// 58–65  Staying elsewhere address + travel info
+// 66–70  Own vehicle + address
+// 71  Are you currently employed while studying?
+// 72  Type of work
+// 73  Company/business name
+// 74  Work description
+// 75  Hours per day working
+// 76  Do you have regular access to the internet at home?
+// 77  Type of internet connection
+// 78  Monthly cost for Home Wifi
+// 79  Monthly cost for mobile data
+// 80  How reliable is your internet connection?
+// 81  Device(s) used for online learning
+// 82  Do you have access to your device anytime?
+// 83  Are you able to regularly join online classes?
+// 84  Which mode of learning do you prefer?
+// 85  Current civil status
+// 86  Do you have any children or dependents?
+// 87  Which of the following applies to you?
+// 88  How many children or dependents?
+// 89  Birthdays of children
+// 90  Are you the primary caregiver?
+// 91  Are you currently receiving any form of scholarship?
+// 92  What type of scholarship?
+// 93  What kind of support does your scholarship provide?
+// 94  Is the scholarship sufficient?
+// 95  Do you currently experience financial difficulties?
+// 96  What kind of support would be most helpful?
+
+const SD_POLL_INTERVAL = 5 * 60 * 1000; // 5 minutes
+let sdPollTimer = null;
+let sdLastRowCount = 0;
+
+// Income bracket helper
+function sdIncomeBracket(raw) {
+  if (!raw) return 'Not stated';
+  const cleaned = String(raw).replace(/[₱,\s]/g, '').replace(/\.00$/, '');
+  const n = parseFloat(cleaned);
+  if (isNaN(n) || n <= 0) return 'Not stated';
+  if (n < 5000)  return 'Below ₱5,000';
+  if (n < 10000) return '₱5,000–9,999';
+  if (n < 15000) return '₱10,000–14,999';
+  if (n < 20000) return '₱15,000–19,999';
+  if (n < 30000) return '₱20,000–29,999';
+  if (n < 50000) return '₱30,000–49,999';
+  return '₱50,000+';
+}
+
+function parseStudentDatasetRows(rows) {
+  const data = rows.slice(1).filter(r => r.length > 5 && r.slice(2).some(c => c && c.trim()));
+
+  const result = {
+    total: data.length,
+    byCourse: {},
+    byYear: {},
+    bySex: {},
+    byCivilStatus: {},
+    byResidence: {},
+    byIncome: {},
+    byCommute: {},
+    byLearningMode: {},
+    byInternet: {},
+    byScholarship: { Yes: 0, No: 0 },
+    byEmployed: { Yes: 0, No: 0 },
+    byFinancialDifficulty: { Yes: 0, No: 0 },
+    by4ps: { Yes: 0, No: 0 },
+    byIP: { Yes: 0, No: 0 },
+    byPWD: { Yes: 0, No: 0 },
+    bySoloParent: { Yes: 0, No: 0 },
+    supportNeeded: {},
+  };
+
+  data.forEach(row => {
+    const get = (i) => (row[i] || '').trim();
+
+    // Course
+    const course = get(5) || 'Unknown';
+    const uCourse = course.toUpperCase();
+    let cat = 'Other';
+    if (uCourse.includes('INFORMATION TECHNOLOGY')) cat = 'BSIT';
+    else if (uCourse.includes('BUSINESS ADMINISTRATION')) cat = 'BSBA';
+    else if (uCourse.includes('EARLY CHILDHOOD')) cat = 'BECED';
+    else if (uCourse.includes('SECONDARY')) cat = 'BSED';
+    else if (uCourse.includes('ELEMENTARY')) cat = 'BEED';
+    else if (uCourse.includes('TEACHER EDUCATION')) cat = 'BSTE';
+    else if (uCourse.includes('TOURISM')) cat = 'BST';
+    else if (course.length > 0 && course !== 'Unknown') {
+      const words = uCourse.split(/\s+/).filter(w => !['OF','IN','THE','AND'].includes(w));
+      cat = words.map(w => w[0]).join('').substring(0, 5) || course.split(' ')[0];
+    }
+    result.byCourse[cat] = (result.byCourse[cat] || 0) + 1;
+
+    // Year level
+    const yr = get(6) || 'Unknown';
+    result.byYear[yr] = (result.byYear[yr] || 0) + 1;
+
+    // Sex
+    const sex = get(9) || 'Not stated';
+    result.bySex[sex] = (result.bySex[sex] || 0) + 1;
+
+    // Civil status
+    const civil = get(85) || 'Not stated';
+    result.byCivilStatus[civil] = (result.byCivilStatus[civil] || 0) + 1;
+
+    // Residence type
+    const res = get(44) || 'Not stated';
+    result.byResidence[res] = (result.byResidence[res] || 0) + 1;
+
+    // Combined family income (father + mother)
+    const fIncome = parseFloat(String(get(19)).replace(/[₱,\s]/g, '').replace(/\.00$/, '')) || 0;
+    const mIncome = parseFloat(String(get(26)).replace(/[₱,\s]/g, '').replace(/\.00$/, '')) || 0;
+    const combined = fIncome + mIncome;
+    const bracket = combined > 0 ? sdIncomeBracket(String(combined)) : sdIncomeBracket(get(19) || get(26));
+    result.byIncome[bracket] = (result.byIncome[bracket] || 0) + 1;
+
+    // Commute duration
+    const commute = get(50) || 'Not stated';
+    result.byCommute[commute] = (result.byCommute[commute] || 0) + 1;
+
+    // Learning mode
+    const learn = get(84) || 'Not stated';
+    result.byLearningMode[learn] = (result.byLearningMode[learn] || 0) + 1;
+
+    // Internet access
+    const inet = get(76) || 'Not stated';
+    result.byInternet[inet] = (result.byInternet[inet] || 0) + 1;
+
+    // Scholarship
+    const schol = get(91).toLowerCase();
+    if (schol === 'yes') result.byScholarship.Yes++;
+    else if (schol === 'no') result.byScholarship.No++;
+
+    // Employed
+    const emp = get(71).toLowerCase();
+    if (emp === 'yes') result.byEmployed.Yes++;
+    else if (emp === 'no') result.byEmployed.No++;
+
+    // Financial difficulty
+    const fin = get(95).toLowerCase();
+    if (fin === 'yes') result.byFinancialDifficulty.Yes++;
+    else if (fin === 'no') result.byFinancialDifficulty.No++;
+
+    // 4Ps
+    const fps = get(32).toLowerCase();
+    if (fps === 'yes') result.by4ps.Yes++;
+    else if (fps === 'no') result.by4ps.No++;
+
+    // IP
+    const ip = get(33).toLowerCase();
+    if (ip === 'yes') result.byIP.Yes++;
+    else if (ip === 'no') result.byIP.No++;
+
+    // PWD
+    const pwd = get(40).toLowerCase();
+    if (pwd === 'yes') result.byPWD.Yes++;
+    else if (pwd === 'no') result.byPWD.No++;
+
+    // Solo parent
+    const solo = get(30).toLowerCase();
+    if (solo.startsWith('yes')) result.bySoloParent.Yes++;
+    else if (solo === 'no') result.bySoloParent.No++;
+
+    // Support needed (multi-select, comma-separated)
+    const support = get(96);
+    if (support) {
+      support.split(',').forEach(s => {
+        const t = s.trim();
+        if (t.length > 2) result.supportNeeded[t] = (result.supportNeeded[t] || 0) + 1;
+      });
+    }
+  });
+
+  return result;
+}
+
+function renderStudentDatasetCharts(parsed) {
+  if (!parsed || parsed.total === 0) {
+    setSDStatus('warn', 'Sheet connected but no data rows found');
+    return;
+  }
+
+  setSDStatus('ok', `${parsed.total} respondents · auto-refreshes every 5 min`);
+
+  // KPI strip
+  setText('sd-total', parsed.total);
+  setText('sd-4ps', parsed.by4ps.Yes);
+  setText('sd-solo', parsed.bySoloParent.Yes);
+  setText('sd-scholarship', parsed.byScholarship.Yes);
+  setText('sd-updated', new Date().toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' }));
+
+  // Global KPI card
+  setText('kv-sd-total', parsed.total);
+  setText('kv-sd-sub', `${parsed.by4ps.Yes} on 4Ps`);
+
+  // ── Course (horizontal bar, top 10)
+  const courseEntries = Object.entries(parsed.byCourse).sort((a,b) => b[1]-a[1]).slice(0,10);
+  makeChart('sdCourseChart', {
+    type: 'bar',
+    data: {
+      labels: courseEntries.map(e => e[0]),
+      datasets: [{ label: 'Students', data: courseEntries.map(e => e[1]),
+        backgroundColor: PALETTE_LIST, borderRadius: 5, borderSkipped: false }]
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } },
+        y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+      }
+    }
+  });
+
+  // ── Sex at birth (doughnut)
+  const sexKeys = Object.keys(parsed.bySex);
+  makeChart('sdSexChart', {
+    type: 'doughnut',
+    data: {
+      labels: sexKeys.length ? sexKeys : ['No data'],
+      datasets: [{ data: sexKeys.length ? sexKeys.map(k => parsed.bySex[k]) : [1],
+        backgroundColor: sexKeys.length ? [PALETTE.blue, PALETTE.pink, PALETTE.purple] : ['rgba(255,255,255,0.05)'],
+        borderWidth: 2, hoverOffset: 6 }]
+    },
+    options: { cutout: '65%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+  });
+
+  // ── Year level (bar)
+  const yearOrder = ['1st Year','2nd Year','3rd Year','4th Year','5th Year'];
+  const yearKeys = [...new Set([...yearOrder, ...Object.keys(parsed.byYear)])].filter(k => parsed.byYear[k]);
+  makeChart('sdYearChart', {
+    type: 'bar',
+    data: {
+      labels: yearKeys.length ? yearKeys : ['No data'],
+      datasets: [{ label: 'Students', data: yearKeys.map(k => parsed.byYear[k] || 0),
+        backgroundColor: [PALETTE.blue, PALETTE.purple, PALETTE.green, PALETTE.gold, PALETTE.pink],
+        borderRadius: 5, borderSkipped: false }]
+    },
+    options: { plugins: { legend: { display: false } },
+      scales: { x: { grid: { display: false } }, y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } } } }
+  });
+
+  // ── Income brackets (bar)
+  const incomeOrder = ['Below ₱5,000','₱5,000–9,999','₱10,000–14,999','₱15,000–19,999','₱20,000–29,999','₱30,000–49,999','₱50,000+','Not stated'];
+  const incomeKeys = incomeOrder.filter(k => parsed.byIncome[k]);
+  makeChart('sdIncomeChart', {
+    type: 'bar',
+    data: {
+      labels: incomeKeys.length ? incomeKeys : ['No data'],
+      datasets: [{ label: 'Families', data: incomeKeys.map(k => parsed.byIncome[k] || 0),
+        backgroundColor: PALETTE.green, borderRadius: 5, borderSkipped: false }]
+    },
+    options: { plugins: { legend: { display: false } },
+      scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } } } }
+  });
+
+  // ── Employed (doughnut)
+  makeChart('sdEmployedChart', {
+    type: 'doughnut',
+    data: {
+      labels: ['Employed', 'Not Employed'],
+      datasets: [{ data: [parsed.byEmployed.Yes, parsed.byEmployed.No],
+        backgroundColor: [PALETTE.gold, '#1f2a42'], borderWidth: 2, hoverOffset: 6 }]
+    },
+    options: { cutout: '65%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+  });
+
+  // ── Residence type (doughnut)
+  const resKeys = Object.keys(parsed.byResidence);
+  makeChart('sdResidenceChart', {
+    type: 'doughnut',
+    data: {
+      labels: resKeys.length ? resKeys : ['No data'],
+      datasets: [{ data: resKeys.length ? resKeys.map(k => parsed.byResidence[k]) : [1],
+        backgroundColor: resKeys.length ? PALETTE_LIST : ['rgba(255,255,255,0.05)'],
+        borderWidth: 2, hoverOffset: 6 }]
+    },
+    options: { cutout: '60%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+  });
+
+  // ── 4Ps (doughnut)
+  makeChart('sd4psChart', {
+    type: 'doughnut',
+    data: {
+      labels: ['4Ps Beneficiary', 'Not 4Ps'],
+      datasets: [{ data: [parsed.by4ps.Yes, parsed.by4ps.No],
+        backgroundColor: [PALETTE.indigo, '#1f2a42'], borderWidth: 2, hoverOffset: 6 }]
+    },
+    options: { cutout: '65%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+  });
+
+  // ── IP (doughnut)
+  makeChart('sdIpChart', {
+    type: 'doughnut',
+    data: {
+      labels: ['IP Member', 'Non-IP'],
+      datasets: [{ data: [parsed.byIP.Yes, parsed.byIP.No],
+        backgroundColor: [PALETTE.cyan, '#1f2a42'], borderWidth: 2, hoverOffset: 6 }]
+    },
+    options: { cutout: '65%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+  });
+
+  // ── PWD / Special needs (doughnut)
+  makeChart('sdPwdChart', {
+    type: 'doughnut',
+    data: {
+      labels: ['PWD / Special Needs', 'None'],
+      datasets: [{ data: [parsed.byPWD.Yes, parsed.byPWD.No],
+        backgroundColor: [PALETTE.red, '#1f2a42'], borderWidth: 2, hoverOffset: 6 }]
+    },
+    options: { cutout: '65%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+  });
+
+  // ── Civil status (doughnut)
+  const civilKeys = Object.keys(parsed.byCivilStatus);
+  makeChart('sdCivilChart', {
+    type: 'doughnut',
+    data: {
+      labels: civilKeys.length ? civilKeys : ['No data'],
+      datasets: [{ data: civilKeys.length ? civilKeys.map(k => parsed.byCivilStatus[k]) : [1],
+        backgroundColor: civilKeys.length ? PALETTE_LIST : ['rgba(255,255,255,0.05)'],
+        borderWidth: 2, hoverOffset: 6 }]
+    },
+    options: { cutout: '60%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+  });
+
+  // ── Internet access (doughnut)
+  const inetKeys = Object.keys(parsed.byInternet);
+  makeChart('sdInternetChart', {
+    type: 'doughnut',
+    data: {
+      labels: inetKeys.length ? inetKeys : ['No data'],
+      datasets: [{ data: inetKeys.length ? inetKeys.map(k => parsed.byInternet[k]) : [1],
+        backgroundColor: inetKeys.length ? [PALETTE.green, PALETTE.red, PALETTE.gold] : ['rgba(255,255,255,0.05)'],
+        borderWidth: 2, hoverOffset: 6 }]
+    },
+    options: { cutout: '65%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+  });
+
+  // ── Learning mode (doughnut)
+  const learnKeys = Object.keys(parsed.byLearningMode);
+  makeChart('sdLearningChart', {
+    type: 'doughnut',
+    data: {
+      labels: learnKeys.length ? learnKeys : ['No data'],
+      datasets: [{ data: learnKeys.length ? learnKeys.map(k => parsed.byLearningMode[k]) : [1],
+        backgroundColor: learnKeys.length ? PALETTE_LIST : ['rgba(255,255,255,0.05)'],
+        borderWidth: 2, hoverOffset: 6 }]
+    },
+    options: { cutout: '60%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+  });
+
+  // ── Commute duration (bar)
+  const commuteEntries = Object.entries(parsed.byCommute).sort((a,b) => b[1]-a[1]).slice(0,8);
+  makeChart('sdCommuteChart', {
+    type: 'bar',
+    data: {
+      labels: commuteEntries.length ? commuteEntries.map(e => e[0]) : ['No data'],
+      datasets: [{ label: 'Students', data: commuteEntries.length ? commuteEntries.map(e => e[1]) : [0],
+        backgroundColor: PALETTE.cyan, borderRadius: 5, borderSkipped: false }]
+    },
+    options: { plugins: { legend: { display: false } },
+      scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } } } }
+  });
+
+  // ── Scholarship (doughnut)
+  makeChart('sdScholarshipChart', {
+    type: 'doughnut',
+    data: {
+      labels: ['With Scholarship', 'No Scholarship'],
+      datasets: [{ data: [parsed.byScholarship.Yes, parsed.byScholarship.No],
+        backgroundColor: [PALETTE.green, '#1f2a42'], borderWidth: 2, hoverOffset: 6 }]
+    },
+    options: { cutout: '65%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+  });
+
+  // ── Financial difficulty (doughnut)
+  makeChart('sdFinancialChart', {
+    type: 'doughnut',
+    data: {
+      labels: ['With Difficulty', 'No Difficulty'],
+      datasets: [{ data: [parsed.byFinancialDifficulty.Yes, parsed.byFinancialDifficulty.No],
+        backgroundColor: [PALETTE.red, '#1f2a42'], borderWidth: 2, hoverOffset: 6 }]
+    },
+    options: { cutout: '65%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+  });
+
+  // ── Support needed (horizontal bar, top 8)
+  const supportEntries = Object.entries(parsed.supportNeeded).sort((a,b) => b[1]-a[1]).slice(0,8);
+  makeChart('sdSupportChart', {
+    type: 'bar',
+    data: {
+      labels: supportEntries.length ? supportEntries.map(e => e[0]) : ['No data'],
+      datasets: [{ label: 'Respondents', data: supportEntries.length ? supportEntries.map(e => e[1]) : [0],
+        backgroundColor: PALETTE.purple, borderRadius: 4, borderSkipped: false }]
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } },
+        y: { grid: { display: false }, ticks: { font: { size: 10 } } }
+      }
+    }
+  });
+
+  // Show charts area
+  document.getElementById('sd-charts-area')?.classList.remove('hidden');
+  document.getElementById('sd-placeholder')?.classList.add('hidden');
+}
+
+function setSDStatus(state, msg) {
+  const dot  = document.getElementById('sdStatusDot');
+  const text = document.getElementById('sdStatusText');
+  if (dot)  dot.className  = 'an-survey-status-dot an-survey-dot-' + state;
+  if (text) text.textContent = msg;
+}
+
+async function loadStudentDatasetData() {
+  let sheetId = localStorage.getItem('sas_student_dataset_sheet_id');
+
+  if (!sheetId) {
+    const defaultData = await safeFetch(BACKEND_URL + '?action=getDefaultStudentDatasetSheet');
+    if (defaultData && defaultData.success && defaultData.sheetId) {
+      sheetId = defaultData.sheetId;
+    }
+  }
+
+  const input = document.getElementById('sdSheetId');
+  if (input && sheetId && !input.value) input.value = sheetId;
+
+  const refreshBtn    = document.getElementById('sdRefreshBtn');
+  const disconnectBtn = document.getElementById('sdDisconnectBtn');
+
+  if (!sheetId) {
+    setSDStatus('off', 'Not connected');
+    if (refreshBtn)    refreshBtn.style.display    = 'none';
+    if (disconnectBtn) disconnectBtn.style.display = 'none';
+    document.getElementById('sd-charts-area')?.classList.add('hidden');
+    document.getElementById('sd-placeholder')?.classList.remove('hidden');
+    return;
+  }
+
+  if (refreshBtn)    refreshBtn.style.display    = 'inline-flex';
+  if (disconnectBtn) disconnectBtn.style.display = 'inline-flex';
+
+  setSDStatus('loading', 'Fetching sheet…');
+
+  const rows = await fetchSurveySheet(sheetId); // reuse the same gviz fetcher
+  if (!rows) {
+    setSDStatus('error', 'Could not load sheet — make sure it is shared as "Anyone with the link → Viewer"');
+    document.getElementById('sd-charts-area')?.classList.add('hidden');
+    document.getElementById('sd-placeholder')?.classList.remove('hidden');
+    return;
+  }
+
+  const dataRows = rows.length - 1;
+  if (dataRows === sdLastRowCount && sdLastRowCount > 0) {
+    setSDStatus('ok', `${dataRows} respondents · no changes · checked ${new Date().toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })}`);
+    return;
+  }
+  sdLastRowCount = dataRows;
+
+  setSDStatus('loading', `Parsing ${dataRows} respondents…`);
+  setTimeout(() => {
+    const parsed = parseStudentDatasetRows(rows);
+    renderStudentDatasetCharts(parsed);
+  }, 50);
+}
+
+function saveStudentDatasetSheetId() {
+  let val = document.getElementById('sdSheetId')?.value?.trim();
+  if (!val) return;
+
+  const match = val.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if (match) {
+    val = match[1];
+  } else if (val.includes('/')) {
+    alert('Invalid Sheet ID or URL. Please paste the full Google Sheets URL or just the Sheet ID.');
+    return;
+  }
+
+  const input = document.getElementById('sdSheetId');
+  if (input) input.value = val;
+
+  localStorage.setItem('sas_student_dataset_sheet_id', val);
+
+  setSDStatus('loading', 'Saving as default for all users…');
+  safeFetch(BACKEND_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'setDefaultStudentDatasetSheet', sheetId: val })
+  }).then(result => {
+    if (result && result.success) {
+      console.log('[StudentDataset] Saved as global default:', result.message);
+    } else {
+      console.warn('[StudentDataset] Failed to save global default:', result?.message);
+    }
+  });
+
+  sdLastRowCount = 0;
+  loadStudentDatasetData();
+  startStudentDatasetPolling();
+}
+
+function refreshStudentDatasetNow() {
+  sdLastRowCount = 0;
+  loadStudentDatasetData();
+}
+
+function disconnectStudentDataset() {
+  if (!confirm('Disconnect this Google Sheet?')) return;
+  localStorage.removeItem('sas_student_dataset_sheet_id');
+  sdLastRowCount = 0;
+  stopStudentDatasetPolling();
+  const input = document.getElementById('sdSheetId');
+  if (input) input.value = '';
+  document.getElementById('sd-charts-area')?.classList.add('hidden');
+  document.getElementById('sd-placeholder')?.classList.remove('hidden');
+  setSDStatus('off', 'Not connected');
+  document.getElementById('sdRefreshBtn').style.display    = 'none';
+  document.getElementById('sdDisconnectBtn').style.display = 'none';
+}
+
+function startStudentDatasetPolling() {
+  stopStudentDatasetPolling();
+  sdPollTimer = setInterval(loadStudentDatasetData, SD_POLL_INTERVAL);
+}
+
+function stopStudentDatasetPolling() {
+  if (sdPollTimer) { clearInterval(sdPollTimer); sdPollTimer = null; }
 }
 
 // ─── Utilities ────────────────────────────────────────

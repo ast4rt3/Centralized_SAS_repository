@@ -59,3 +59,5 @@ docs/DOCUMENTS_SYSTEM_IMPLEMENTATION.md
 docs/Lost and Found Returned - all.csv
 docs/25-26 FEEDBACK MECHANISM ON THE EFFECTIVENESS OF STUDENT AFFAIRS AND SERVICES (Responses) - Form Responses 1.csv
 apps/analytics/README_DEFAULT_SHEET.md
+package-lock.json
+.kiro/settings/mcp.json

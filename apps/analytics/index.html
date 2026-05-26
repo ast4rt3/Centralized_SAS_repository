@@ -91,6 +91,14 @@
             <div class="an-kpi-sub" id="kv-survey-count">Client Surveys</div>
           </div>
         </div>
+        <div class="an-kpi-card" id="kpi-student-dataset">
+          <div class="an-kpi-icon" style="--kpi-color: #10b981;"><i class='bx bx-id-card'></i></div>
+          <div class="an-kpi-content">
+            <div class="an-kpi-value" id="kv-sd-total">—</div>
+            <div class="an-kpi-label">Student Profiles</div>
+            <div class="an-kpi-sub" id="kv-sd-sub">Dataset</div>
+          </div>
+        </div>
         <div class="an-kpi-card" id="kpi-attendance">
           <div class="an-kpi-icon" style="--kpi-color: #8b5cf6;"><i class='bx bx-group'></i></div>
           <div class="an-kpi-content">
@@ -107,6 +115,159 @@
             <div class="an-kpi-sub">Career & Placement</div>
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- Student Dataset Section -->
+    <section class="an-section">
+      <div class="an-section-header">
+        <h2 class="an-section-title"><i class='bx bx-group'></i> Student Dataset</h2>
+        <span class="an-section-subtitle">Students Socio-economic profile, demographics & welfare indicators</span>
+      </div>
+
+      <!-- Connect bar -->
+      <div class="an-survey-connect-bar">
+        <div class="an-survey-connect-left">
+          <i class='bx bx-link-alt'></i>
+          <span>Google Sheet</span>
+          <span class="an-survey-status-dot" id="sdStatusDot"></span>
+          <span class="an-survey-status-text" id="sdStatusText">Not connected</span>
+        </div>
+        <div class="an-survey-connect-right">
+          <input type="text" id="sdSheetId" class="an-input an-input-sm" placeholder="Paste Sheet URL or ID…">
+          <button class="an-btn an-btn-primary an-btn-sm" onclick="saveStudentDatasetSheetId()">
+            <i class='bx bx-plug'></i> Connect
+          </button>
+          <button class="an-btn an-btn-outline an-btn-sm" id="sdRefreshBtn" onclick="refreshStudentDatasetNow()" title="Refresh now" style="display:none;">
+            <i class='bx bx-refresh'></i>
+          </button>
+          <button class="an-btn an-btn-ghost an-btn-sm" id="sdDisconnectBtn" onclick="disconnectStudentDataset()" title="Disconnect" style="display:none;">
+            <i class='bx bx-x'></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Charts area (hidden until connected) -->
+      <div id="sd-charts-area" class="hidden">
+
+        <!-- KPI strip -->
+        <div class="an-stat-row" id="sd-kpi-strip">
+          <div class="an-stat-item">
+            <span class="an-stat-label">Total Respondents</span>
+            <span class="an-stat-value" id="sd-total">—</span>
+          </div>
+          <div class="an-stat-item">
+            <span class="an-stat-label">4Ps Beneficiaries</span>
+            <span class="an-stat-value" id="sd-4ps">—</span>
+          </div>
+          <div class="an-stat-item">
+            <span class="an-stat-label">Solo Parent Households</span>
+            <span class="an-stat-value" id="sd-solo">—</span>
+          </div>
+          <div class="an-stat-item">
+            <span class="an-stat-label">With Scholarship</span>
+            <span class="an-stat-value an-stat-success" id="sd-scholarship">—</span>
+          </div>
+          <div class="an-stat-item">
+            <span class="an-stat-label">Last Updated</span>
+            <span class="an-stat-value" id="sd-updated" style="font-size:0.85rem;">—</span>
+          </div>
+        </div>
+
+        <!-- Row 1: Course distribution + Sex at birth + Year level -->
+        <div class="an-chart-row">
+          <div class="an-chart-card an-chart-lg">
+            <div class="an-chart-card-header"><h3>Respondents by Course</h3></div>
+            <div class="an-chart-wrap" style="height:240px;"><canvas id="sdCourseChart"></canvas></div>
+          </div>
+          <div class="an-chart-card an-chart-md">
+            <div class="an-chart-card-header"><h3>Assigned Sex at Birth</h3></div>
+            <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdSexChart"></canvas></div>
+          </div>
+          <div class="an-chart-card an-chart-md">
+            <div class="an-chart-card-header"><h3>Year Level</h3></div>
+            <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdYearChart"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Row 2: Combined family income + Employment status -->
+        <div class="an-chart-row">
+          <div class="an-chart-card an-chart-lg">
+            <div class="an-chart-card-header">
+              <h3>Estimated Combined Family Income</h3>
+              <span class="an-chart-badge" style="background:rgba(16,185,129,0.15);color:#10b981;border-color:rgba(16,185,129,0.3);">Father + Mother</span>
+            </div>
+            <div class="an-chart-wrap"><canvas id="sdIncomeChart"></canvas></div>
+          </div>
+          <div class="an-chart-card an-chart-md">
+            <div class="an-chart-card-header"><h3>Student Employment</h3></div>
+            <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdEmployedChart"></canvas></div>
+          </div>
+          <div class="an-chart-card an-chart-md">
+            <div class="an-chart-card-header"><h3>Residence Type</h3></div>
+            <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdResidenceChart"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Row 3: Welfare indicators -->
+        <div class="an-chart-row">
+          <div class="an-chart-card an-chart-md">
+            <div class="an-chart-card-header"><h3>4Ps Beneficiaries</h3></div>
+            <div class="an-chart-wrap an-chart-sm-h"><canvas id="sd4psChart"></canvas></div>
+          </div>
+          <div class="an-chart-card an-chart-md">
+            <div class="an-chart-card-header"><h3>Indigenous Peoples (IP)</h3></div>
+            <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdIpChart"></canvas></div>
+          </div>
+          <div class="an-chart-card an-chart-md">
+            <div class="an-chart-card-header"><h3>PWD / Special Needs</h3></div>
+            <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdPwdChart"></canvas></div>
+          </div>
+          <div class="an-chart-card an-chart-md">
+            <div class="an-chart-card-header"><h3>Civil Status</h3></div>
+            <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdCivilChart"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Row 4: Internet access + Learning mode + Transportation -->
+        <div class="an-chart-row">
+          <div class="an-chart-card an-chart-md">
+            <div class="an-chart-card-header"><h3>Internet Access at Home</h3></div>
+            <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdInternetChart"></canvas></div>
+          </div>
+          <div class="an-chart-card an-chart-md">
+            <div class="an-chart-card-header"><h3>Preferred Learning Mode</h3></div>
+            <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdLearningChart"></canvas></div>
+          </div>
+          <div class="an-chart-card an-chart-lg">
+            <div class="an-chart-card-header"><h3>Daily Commute Duration</h3></div>
+            <div class="an-chart-wrap"><canvas id="sdCommuteChart"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Row 5: Scholarship + Financial difficulty -->
+        <div class="an-chart-row">
+          <div class="an-chart-card an-chart-md">
+            <div class="an-chart-card-header"><h3>Scholarship / Financial Aid</h3></div>
+            <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdScholarshipChart"></canvas></div>
+          </div>
+          <div class="an-chart-card an-chart-md">
+            <div class="an-chart-card-header"><h3>Financial Difficulty</h3></div>
+            <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdFinancialChart"></canvas></div>
+          </div>
+          <div class="an-chart-card an-chart-lg">
+            <div class="an-chart-card-header"><h3>Support Needed (Top Responses)</h3></div>
+            <div class="an-chart-wrap" style="height:220px;"><canvas id="sdSupportChart"></canvas></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Placeholder (shown when not connected) -->
+      <div class="an-data-placeholder" id="sd-placeholder">
+        <i class='bx bx-spreadsheet'></i>
+        <p>Connect your Student Dataset Google Sheet to activate this section.</p>
+        <span>Paste the Sheet URL or ID from your Google Form responses spreadsheet above, then click Connect.</span>
       </div>
     </section>
 
