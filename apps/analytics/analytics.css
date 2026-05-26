@@ -1,53 +1,32 @@
 /* =====================================================
    NBSC SAS — Analytics Dashboard
    analytics.css
+   Redesigned with UI Expert MCP for Analytics Focus
    ===================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
-:root {
-  --bg-base:      #0a0f1e;
-  --bg-surface:   #111827;
-  --bg-card:      #1a2236;
-  --bg-card-hover:#1f2a42;
-  --border:       rgba(255,255,255,0.07);
-  --border-hover: rgba(255,255,255,0.14);
-
-  --text-primary:   #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted:     #64748b;
-
-  --accent-blue:    #3b82f6;
-  --accent-purple:  #8b5cf6;
-  --accent-green:   #10b981;
-  --accent-gold:    #f59e0b;
-  --accent-pink:    #ec4899;
-  --accent-indigo:  #6366f1;
-
-  --nbsc-blue:  #004a99;
-  --nbsc-gold:  #f0ad4e;
-
-  --shadow-card: 0 4px 24px rgba(0,0,0,0.35);
-  --shadow-glow: 0 0 0 1px rgba(99,102,241,0.15), 0 4px 24px rgba(0,0,0,0.4);
-
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-
-  --font: 'Inter', system-ui, -apple-system, sans-serif;
+/* ── Base Styles ── */
+*, *::before, *::after { 
+  box-sizing: border-box; 
+  margin: 0; 
+  padding: 0; 
 }
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-html { scroll-behavior: smooth; }
+html { 
+  scroll-behavior: smooth;
+  font-size: 16px;
+}
 
 body {
-  font-family: var(--font);
-  background: var(--bg-base);
-  color: var(--text-primary);
+  font-family: var(--font-sans);
+  background: var(--color-bg-base);
+  color: var(--color-text-primary);
   min-height: 100vh;
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* ── Header ── */
@@ -55,14 +34,16 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 32px;
-  background: linear-gradient(135deg, #0d1b3e 0%, #0a0f1e 100%);
-  border-bottom: 1px solid var(--border);
+  padding: var(--space-4) var(--space-8);
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, var(--color-bg-base) 100%);
+  border-bottom: 1px solid var(--color-border-default);
   position: sticky;
   top: 0;
-  z-index: 100;
-  gap: 16px;
+  z-index: var(--z-sticky);
+  gap: var(--space-4);
   flex-wrap: wrap;
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-sm);
 }
 
 /* ── Dashboard Selector ── */
