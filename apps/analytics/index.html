@@ -220,6 +220,22 @@
             <span class="an-stat-value an-stat-success" id="sd-scholarship">—</span>
           </div>
           <div class="an-stat-item">
+            <span class="an-stat-label">PWD Count</span>
+            <span class="an-stat-value" id="sd-pwd">—</span>
+          </div>
+          <div class="an-stat-item">
+            <span class="an-stat-label">IP Count</span>
+            <span class="an-stat-value" id="sd-ip">—</span>
+          </div>
+          <div class="an-stat-item">
+            <span class="an-stat-label">First-Gen College</span>
+            <span class="an-stat-value" id="sd-firstgen">—</span>
+          </div>
+          <div class="an-stat-item">
+            <span class="an-stat-label">Employed</span>
+            <span class="an-stat-value" id="sd-employed">—</span>
+          </div>
+          <div class="an-stat-item">
             <span class="an-stat-label">Last Updated</span>
             <span class="an-stat-value" id="sd-updated" style="font-size:0.85rem;">—</span>
           </div>
@@ -241,7 +257,23 @@
           </div>
         </div>
 
-        <!-- Row 2: Combined family income + Employment status -->
+        <!-- Row 2: Age + Province + Religion -->
+        <div class="an-chart-row">
+          <div class="an-chart-card an-chart-md">
+            <div class="an-chart-card-header"><h3>Age Distribution</h3></div>
+            <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdAgeChart"></canvas></div>
+          </div>
+          <div class="an-chart-card an-chart-lg">
+            <div class="an-chart-card-header"><h3>Province of Origin</h3></div>
+            <div class="an-chart-wrap"><canvas id="sdProvinceChart"></canvas></div>
+          </div>
+          <div class="an-chart-card an-chart-md">
+            <div class="an-chart-card-header"><h3>Religion</h3></div>
+            <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdReligionChart"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Row 3: Combined family income + Employment status -->
         <div class="an-chart-row">
           <div class="an-chart-card an-chart-lg">
             <div class="an-chart-card-header">
@@ -260,7 +292,7 @@
           </div>
         </div>
 
-        <!-- Row 3: Welfare indicators -->
+        <!-- Row 4: Welfare indicators + First-Gen -->
         <div class="an-chart-row">
           <div class="an-chart-card an-chart-md">
             <div class="an-chart-card-header"><h3>4Ps Beneficiaries</h3></div>
@@ -273,6 +305,10 @@
           <div class="an-chart-card an-chart-md">
             <div class="an-chart-card-header"><h3>PWD / Special Needs</h3></div>
             <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdPwdChart"></canvas></div>
+          </div>
+          <div class="an-chart-card an-chart-md">
+            <div class="an-chart-card-header"><h3>First-Generation College</h3></div>
+            <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdFirstGenChart"></canvas></div>
           </div>
           <div class="an-chart-card an-chart-md">
             <div class="an-chart-card-header"><h3>Civil Status</h3></div>

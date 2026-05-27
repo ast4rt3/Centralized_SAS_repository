@@ -2150,6 +2150,60 @@ function sdNormalizeInternet(raw) {
   return 'Not stated'; // don't pass through garbage values
 }
 
+// Age bracket: computed from birthday string (col 8)
+// Handles: "MM/DD/YYYY", "YYYY-MM-DD", "Month DD, YYYY", etc.
+function sdComputeAgeBracket(raw) {
+  if (!raw) return null;
+  let d = null;
+
+  // Try ISO format YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+    d = new Date(raw);
+  }
+  // Try M/D/YYYY or MM/DD/YYYY
+  else if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(raw)) {
+    const parts = raw.split('/');
+    d = new Date(parseInt(parts[2]), parseInt(parts[0]) - 1, parseInt(parts[1]));
+  }
+  // Try "Month DD, YYYY" or "DD Month YYYY"
+  else {
+    d = new Date(raw);
+  }
+
+  if (!d || isNaN(d.getTime())) return null;
+
+  const today = new Date();
+  let age = today.getFullYear() - d.getFullYear();
+  const m = today.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age--;
+
+  if (age < 15 || age > 80) return null; // likely bad data
+  if (age < 18) return 'Under 18';
+  if (age < 21) return '18–20';
+  if (age < 25) return '21–24';
+  if (age < 30) return '25–29';
+  if (age < 35) return '30–34';
+  return '35 and above';
+}
+
+// Religion: normalize to major categories
+function sdNormalizeReligion(raw) {
+  if (!raw) return 'Not stated';
+  const s = String(raw).trim().toLowerCase();
+  if (s.includes('catholic') || s.includes('roman')) return 'Roman Catholic';
+  if (s.includes('iglesia') || s.includes('inc')) return 'Iglesia ni Cristo';
+  if (s.includes('protestant') || s.includes('baptist') || s.includes('methodist') ||
+      s.includes('adventist') || s.includes('evangelical') || s.includes('pentecostal') ||
+      s.includes('born again') || s.includes('christian')) return 'Protestant/Christian';
+  if (s.includes('islam') || s.includes('muslim')) return 'Islam';
+  if (s.includes('aglipayan') || s.includes('philippine independent')) return 'Aglipayan';
+  if (s.includes('jehovah') || s.includes('witness')) return "Jehovah's Witness";
+  if (s.includes('buddhis')) return 'Buddhism';
+  if (s.includes('none') || s.includes('atheist') || s.includes('agnostic') || s.includes('no religion')) return 'None/Atheist';
+  if (s.length < 2) return 'Not stated';
+  return 'Other';
+}
+
 function parseStudentDatasetRows(rows) {
   const data = rows.slice(1).filter(r => r.length > 5 && r.slice(2).some(c => c && c.trim()));
 
@@ -2158,6 +2212,7 @@ function parseStudentDatasetRows(rows) {
     byCourse: {},
     byYear: {},
     bySex: {},
+    byAge: {},
     byCivilStatus: {},
     byResidence: {},
     byIncome: {},
@@ -2171,29 +2226,78 @@ function parseStudentDatasetRows(rows) {
     byIP: { Yes: 0, No: 0 },
     byPWD: { Yes: 0, No: 0 },
     bySoloParent: { Yes: 0, No: 0 },
+    byFirstGenCollege: { Yes: 0, No: 0 },
+    byProvince: {},
+    byReligion: {},
     supportNeeded: {},
   };
 
   data.forEach(row => {
     const get = (i) => (row[i] || '').trim();
 
-    // Course — normalized
+    // ── Core demographics ──────────────────────────────────────────────────
+    // Course (col 5) — normalized
     const cat = sdNormalizeCourse(get(5));
     result.byCourse[cat] = (result.byCourse[cat] || 0) + 1;
 
-    // Year level  normalized
+    // Year level (col 6) — normalized
     const yr = sdNormalizeYear(get(6));
     result.byYear[yr] = (result.byYear[yr] || 0) + 1;
 
-    // Sex — normalized
+    // Sex (col 9) — normalized
     const sex = sdNormalizeSex(get(9));
     result.bySex[sex] = (result.bySex[sex] || 0) + 1;
 
-    // Civil status — normalized
-    const civil = sdNormalizeCivilStatus(get(89));
-    result.byCivilStatus[civil] = (result.byCivilStatus[civil] || 0) + 1;
+    // Age bracket (col 8 = BIRTHDAY) — compute from birthday
+    const ageRaw = get(8);
+    if (ageRaw) {
+      const ageBracket = sdComputeAgeBracket(ageRaw);
+      if (ageBracket) result.byAge[ageBracket] = (result.byAge[ageBracket] || 0) + 1;
+    }
 
-    // Residence type  normalized
+    // Province of origin (col 15) — for geographic distribution
+    const province = get(15);
+    if (province && province.length > 1) {
+      const pNorm = province.trim();
+      result.byProvince[pNorm] = (result.byProvince[pNorm] || 0) + 1;
+    }
+
+    // Religion (col 11)
+    const religion = get(11);
+    if (religion && religion.length > 1) {
+      const rNorm = sdNormalizeReligion(religion);
+      result.byReligion[rNorm] = (result.byReligion[rNorm] || 0) + 1;
+    }
+
+    // ── Family background ──────────────────────────────────────────────────
+    // Solo parent (col 30)
+    const solo = sdNormalizeYesNo(get(30));
+    if (solo === 'Yes') result.bySoloParent.Yes++;
+    else if (solo === 'No') result.bySoloParent.No++;
+
+    // 4Ps beneficiary (col 32)
+    const fps = sdNormalizeYesNo(get(32));
+    if (fps === 'Yes') result.by4ps.Yes++;
+    else if (fps === 'No') result.by4ps.No++;
+
+    // IP member (col 33)
+    const ip = sdNormalizeYesNo(get(33));
+    if (ip === 'Yes') result.byIP.Yes++;
+    else if (ip === 'No') result.byIP.No++;
+
+    // First-generation college student (col 36)
+    // "Did any parents/siblings attend college?" — No = first-gen
+    const parentCollege = sdNormalizeYesNo(get(36));
+    if (parentCollege === 'No') result.byFirstGenCollege.Yes++;   // No parent attended = first-gen
+    else if (parentCollege === 'Yes') result.byFirstGenCollege.No++;
+
+    // PWD / special needs (col 40)
+    const pwd = sdNormalizeYesNo(get(40));
+    if (pwd === 'Yes') result.byPWD.Yes++;
+    else if (pwd === 'No') result.byPWD.No++;
+
+    // ── Socioeconomic ──────────────────────────────────────────────────────
+    // Residence type (col 44)
     const res = sdNormalizeResidence(get(44));
     result.byResidence[res] = (result.byResidence[res] || 0) + 1;
 
@@ -2204,57 +2308,43 @@ function parseStudentDatasetRows(rows) {
     const bracket = combined > 0 ? sdIncomeBracket(String(combined)) : sdIncomeBracket(get(19) || get(26));
     result.byIncome[bracket] = (result.byIncome[bracket] || 0) + 1;
 
-    // Commute duration — normalized
-    const commute = sdNormalizeCommute(get(51));
+    // Commute duration (col 50)
+    const commute = sdNormalizeCommute(get(50));
     result.byCommute[commute] = (result.byCommute[commute] || 0) + 1;
 
-    // Learning mode  normalized
-    const learn = sdNormalizeLearningMode(get(88));
-    result.byLearningMode[learn] = (result.byLearningMode[learn] || 0) + 1;
-
-    // Internet access  normalized
-    const inet = sdNormalizeInternet(get(80));
-    result.byInternet[inet] = (result.byInternet[inet] || 0) + 1;
-
-    // All Yes/No fields — normalized
-    const schol = sdNormalizeYesNo(get(95));
-    if (schol === 'Yes') result.byScholarship.Yes++;
-    else if (schol === 'No') result.byScholarship.No++;
-
-    const emp = sdNormalizeYesNo(get(75));
+    // Employed while studying (col 71)
+    const emp = sdNormalizeYesNo(get(71));
     if (emp === 'Yes') result.byEmployed.Yes++;
     else if (emp === 'No') result.byEmployed.No++;
 
-    const fin = sdNormalizeYesNo(get(99));
+    // Internet reliability (col 80)
+    const inet = sdNormalizeInternet(get(80));
+    result.byInternet[inet] = (result.byInternet[inet] || 0) + 1;
+
+    // Learning mode preference (col 84)
+    const learn = sdNormalizeLearningMode(get(84));
+    result.byLearningMode[learn] = (result.byLearningMode[learn] || 0) + 1;
+
+    // Civil status (col 85)
+    const civil = sdNormalizeCivilStatus(get(85));
+    result.byCivilStatus[civil] = (result.byCivilStatus[civil] || 0) + 1;
+
+    // Scholarship (col 91)
+    const schol = sdNormalizeYesNo(get(91));
+    if (schol === 'Yes') result.byScholarship.Yes++;
+    else if (schol === 'No') result.byScholarship.No++;
+
+    // Financial difficulty (col 95)
+    const fin = sdNormalizeYesNo(get(95));
     if (fin === 'Yes') result.byFinancialDifficulty.Yes++;
     else if (fin === 'No') result.byFinancialDifficulty.No++;
 
-    const fps = sdNormalizeYesNo(get(32));
-    if (fps === 'Yes') result.by4ps.Yes++;
-    else if (fps === 'No') result.by4ps.No++;
-
-    const ip = sdNormalizeYesNo(get(33));
-    if (ip === 'Yes') result.byIP.Yes++;
-    else if (ip === 'No') result.byIP.No++;
-
-    const pwd = sdNormalizeYesNo(get(40));
-    if (pwd === 'Yes') result.byPWD.Yes++;
-    else if (pwd === 'No') result.byPWD.No++;
-
-    // Solo parent  "Yes, Mother" / "Yes, Father" / "No"
-    const solo = sdNormalizeYesNo(get(30));
-    if (solo === 'Yes') result.bySoloParent.Yes++;
-    else if (solo === 'No') result.bySoloParent.No++;
-
-    // Support needed (multi-select, semicolon or comma separated)
-    // Normalize common support type labels to avoid fragmentation
-    const support = get(100);
+    // Support needed (col 96)
+    const support = get(96);
     if (support) {
-      // Split on comma or semicolon
       support.split(/[,;]/).forEach(s => {
         const t = s.trim();
         if (t.length < 3) return;
-        // Normalize to canonical labels
         const tl = t.toLowerCase();
         let label = t;
         if (tl.includes('financial') || tl.includes('monetary') || tl.includes('allowance')) label = 'Financial Assistance';
@@ -2285,18 +2375,22 @@ function renderStudentDatasetCharts(parsed) {
 
   setSDStatus('ok', `${parsed.total} respondents · auto-refreshes every 5 min`);
 
-  // KPI strip
+  // ── KPI strip ────────────────────────────────────────────────────────────
   setText('sd-total', parsed.total);
   setText('sd-4ps', parsed.by4ps.Yes);
   setText('sd-solo', parsed.bySoloParent.Yes);
   setText('sd-scholarship', parsed.byScholarship.Yes);
+  setText('sd-pwd', parsed.byPWD.Yes);
+  setText('sd-ip', parsed.byIP.Yes);
+  setText('sd-firstgen', parsed.byFirstGenCollege.Yes);
+  setText('sd-employed', parsed.byEmployed.Yes);
   setText('sd-updated', new Date().toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' }));
 
   // Global KPI card
   setText('kv-sd-total', parsed.total);
-  setText('kv-sd-sub', `${parsed.by4ps.Yes} on 4Ps`);
+  setText('kv-sd-sub', `${parsed.by4ps.Yes} on 4Ps · ${parsed.byPWD.Yes} PWD · ${parsed.byIP.Yes} IP`);
 
-  // ── Course (horizontal bar, top 10)
+  // ── Course (horizontal bar, top 10) ──────────────────────────────────────
   const courseEntries = Object.entries(parsed.byCourse).sort((a,b) => b[1]-a[1]).slice(0,10);
   makeChart('sdCourseChart', {
     type: 'bar',
@@ -2315,7 +2409,7 @@ function renderStudentDatasetCharts(parsed) {
     }
   });
 
-  // ── Sex at birth (doughnut)
+  // ── Sex at birth (doughnut) ───────────────────────────────────────────────
   const sexKeys = Object.keys(parsed.bySex);
   makeChart('sdSexChart', {
     type: 'doughnut',
@@ -2327,6 +2421,77 @@ function renderStudentDatasetCharts(parsed) {
     },
     options: { cutout: '65%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
   });
+
+  // ── Age brackets (bar) — CHED reporting ──────────────────────────────────
+  const ageOrder = ['Under 18', '18–20', '21–24', '25–29', '30–34', '35 and above'];
+  const ageKeys = ageOrder.filter(k => parsed.byAge && parsed.byAge[k]);
+  if (ageKeys.length > 0) {
+    makeChart('sdAgeChart', {
+      type: 'bar',
+      data: {
+        labels: ageKeys,
+        datasets: [{ label: 'Students', data: ageKeys.map(k => parsed.byAge[k] || 0),
+          backgroundColor: [PALETTE.blue, PALETTE.indigo, PALETTE.purple, PALETTE.pink, PALETTE.red, PALETTE.gold],
+          borderRadius: 5, borderSkipped: false }]
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false } },
+          y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } }
+        }
+      }
+    });
+  }
+
+  // ── Province of origin (horizontal bar, top 10) — geographic distribution ─
+  const provEntries = Object.entries(parsed.byProvince || {}).sort((a,b) => b[1]-a[1]).slice(0,10);
+  if (provEntries.length > 0) {
+    makeChart('sdProvinceChart', {
+      type: 'bar',
+      data: {
+        labels: provEntries.map(e => e[0]),
+        datasets: [{ label: 'Students', data: provEntries.map(e => e[1]),
+          backgroundColor: PALETTE.cyan, borderRadius: 4, borderSkipped: false }]
+      },
+      options: {
+        indexAxis: 'y',
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } },
+          y: { grid: { display: false }, ticks: { font: { size: 10 } } }
+        }
+      }
+    });
+  }
+
+  // ── Religion (doughnut) ───────────────────────────────────────────────────
+  const relKeys = Object.keys(parsed.byReligion || {}).filter(k => k !== 'Not stated');
+  if (relKeys.length > 0) {
+    makeChart('sdReligionChart', {
+      type: 'doughnut',
+      data: {
+        labels: relKeys,
+        datasets: [{ data: relKeys.map(k => parsed.byReligion[k]),
+          backgroundColor: PALETTE_LIST, borderWidth: 2, hoverOffset: 6 }]
+      },
+      options: { cutout: '55%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+    });
+  }
+
+  // ── First-generation college students (doughnut) ──────────────────────────
+  const fgTotal = parsed.byFirstGenCollege.Yes + parsed.byFirstGenCollege.No;
+  if (fgTotal > 0) {
+    makeChart('sdFirstGenChart', {
+      type: 'doughnut',
+      data: {
+        labels: ['First-Gen College', 'Parents Attended College'],
+        datasets: [{ data: [parsed.byFirstGenCollege.Yes, parsed.byFirstGenCollege.No],
+          backgroundColor: [PALETTE.gold, '#1f2a42'], borderWidth: 2, hoverOffset: 6 }]
+      },
+      options: { cutout: '65%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+    });
+  }
 
   // ── Year level (bar)
   const yearOrder = ['1st Year','2nd Year','3rd Year','4th Year','5th Year'];
