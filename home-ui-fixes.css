@@ -1,0 +1,241 @@
+/* =====================================================
+   SAS Portal — Homepage UI Fixes
+   Implements all UI Expert recommendations
+   May 27, 2026
+   ===================================================== */
+
+/* ── 1. Scrollbar: Subtle, gold only on hover ── */
+::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  border-radius: var(--radius-full) !important;
+  border: none !important;
+  background-clip: unset !important;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 215, 0, 0.45) !important;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+/* ── 2. Posts header: prevent title wrap, proper layout ── */
+.posts-header {
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.posts-header h2 {
+  white-space: nowrap;
+  font-size: clamp(1.1rem, 2.5vw, 1.5rem);
+  line-height: 1.2;
+}
+
+/* ── 3. Action bar: unified button style ── */
+/* Override the per-button inline background colors with a consistent system */
+.add-post-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  border: 1.5px solid rgba(255, 255, 255, 0.18) !important;
+  background: rgba(255, 255, 255, 0.07) !important;
+  color: #e2e8f0 !important;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  white-space: nowrap;
+  box-shadow: none !important;
+  border-radius: var(--radius-md) !important;
+  text-transform: none;
+  letter-spacing: 0.2px;
+}
+
+.add-post-btn:hover {
+  background: rgba(255, 255, 255, 0.13) !important;
+  border-color: rgba(255, 215, 0, 0.45) !important;
+  color: #ffd700 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+}
+
+.add-post-btn:active {
+  transform: translateY(0) !important;
+}
+
+/* ADD POST stays gold as the primary CTA */
+#add-post-btn.add-post-btn {
+  background: var(--nbsc-gold) !important;
+  color: var(--nbsc-navy-dark) !important;
+  border-color: transparent !important;
+}
+
+#add-post-btn.add-post-btn:hover {
+  background: var(--nbsc-gold-light) !important;
+  color: var(--nbsc-navy-dark) !important;
+  border-color: transparent !important;
+  box-shadow: var(--shadow-gold) !important;
+}
+
+/* ── 4. View menu button: match action bar style ── */
+.view-menu-btn {
+  background: rgba(255, 255, 255, 0.07) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.18) !important;
+  color: #e2e8f0 !important;
+  padding: 7px 13px !important;
+  border-radius: var(--radius-md) !important;
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+  gap: 6px !important;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease !important;
+}
+
+.view-menu-btn:hover {
+  background: rgba(255, 255, 255, 0.13) !important;
+  border-color: rgba(255, 215, 0, 0.45) !important;
+  color: #ffd700 !important;
+}
+
+.view-menu.is-open .view-menu-btn {
+  background: rgba(255, 215, 0, 0.15) !important;
+  border-color: rgba(255, 215, 0, 0.6) !important;
+  color: #ffd700 !important;
+}
+
+/* ── 5. Sidebar section labels: clear visual hierarchy ── */
+.nav-section-label {
+  font-size: 0.65rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 1.1px !important;
+  text-transform: uppercase !important;
+  color: rgba(255, 255, 255, 0.28) !important;
+  transition: color var(--transition-fast) !important;
+}
+
+.nav-section-header {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  margin-top: 2px;
+}
+
+/* First section doesn't need a top border */
+.nav-section:first-child .nav-section-header {
+  border-top: none;
+  margin-top: 0;
+}
+
+.nav-section-header:hover .nav-section-label {
+  color: rgba(255, 255, 255, 0.55) !important;
+}
+
+/* ── 6. Nav item: consistent icon alignment ── */
+.nav-item {
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+}
+
+.nav-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── 7. Post cards: consistent hover border, no gold overuse ── */
+.post-card:hover {
+  border-color: rgba(255, 215, 0, 0.5);
+  transform: translateY(-6px) scale(1.015);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+
+/* ── 8. Sidebar footer: proper status bar styling ── */
+.sidebar-footer {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.3);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sidebar-footer code {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.68rem;
+}
+
+/* ── 9. Error badge: subtle when 0 errors ── */
+#error-count-badge,
+.error-badge,
+[id*="error"][id*="badge"],
+[class*="error-badge"] {
+  background: rgba(15, 23, 42, 0.82) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: rgba(255, 255, 255, 0.35) !important;
+  font-size: 0.72rem !important;
+  padding: 5px 11px !important;
+  border-radius: 20px !important;
+  backdrop-filter: blur(8px) !important;
+  box-shadow: none !important;
+}
+
+/* ── 10. Home header subtitle: lighter weight for hierarchy ── */
+.home-header-subtitle {
+  font-weight: var(--font-semibold);
+  opacity: 0.75;
+  font-size: 0.78rem;
+  letter-spacing: 0.8px;
+}
+
+/* ── 11. Action bar wrapper: ensure no wrapping on desktop ── */
+.posts-header > div:last-child {
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Divider between view menu and action buttons */
+.posts-header-divider {
+  width: 1px;
+  height: 22px;
+  background: rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+}
+
+/* ── 12. Post card title: consistent casing and sizing ── */
+.post-title {
+  font-size: clamp(1rem, 2vw, 1.4rem);
+  text-transform: none; /* no forced all-caps */
+  letter-spacing: -0.2px;
+}
+
+/* ── 13. Topbar clock: slightly reduced to breathe ── */
+.header-clock {
+  line-height: 1.2;
+}
+
+.header-time {
+  font-size: 0.88rem;
+}
+
+.header-date {
+  font-size: 0.68rem;
+  opacity: 0.65;
+}

@@ -810,6 +810,164 @@
         .user-search-item .name { font-size: 14px; font-weight: 600; color: white; }
         .user-search-item .uname { font-size: 11px; color: var(--text-muted); }
 
+    /* ============================================================
+       FILE HUB VISUAL IMPROVEMENTS
+       ============================================================ */
+
+    /* Richer background */
+    body {
+      background: #080f1e !important;
+      background-image:
+        radial-gradient(circle at 20% 20%, rgba(0, 51, 102, 0.4) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(0, 30, 70, 0.5) 0%, transparent 50%),
+        radial-gradient(circle at 50% 50%, rgba(0, 20, 50, 0.3) 0%, transparent 70%) !important;
+    }
+
+    /* Header — polished glass */
+    .app-header {
+      background: rgba(5, 15, 35, 0.85) !important;
+      backdrop-filter: blur(24px) !important;
+      -webkit-backdrop-filter: blur(24px) !important;
+      border-bottom: 1px solid rgba(255, 215, 0, 0.15) !important;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4) !important;
+      padding: 20px 40px 20px 90px !important;
+    }
+
+    .header-brand h1 {
+      font-size: 22px !important;
+      letter-spacing: -0.3px !important;
+    }
+
+    .header-brand h1 span {
+      color: #ffd700 !important;
+    }
+
+    .header-brand p {
+      color: rgba(255, 255, 255, 0.5) !important;
+      letter-spacing: 1.5px !important;
+    }
+
+    /* Upload button — gold gradient */
+    .btn-upload {
+      background: linear-gradient(135deg, #ffd700 0%, #f59e0b 100%) !important;
+      color: #001a3d !important;
+      border-radius: 14px !important;
+      font-weight: 800 !important;
+      box-shadow: 0 4px 20px rgba(255, 215, 0, 0.3) !important;
+      letter-spacing: 0.5px !important;
+    }
+
+    .btn-upload:hover {
+      box-shadow: 0 8px 30px rgba(255, 215, 0, 0.5) !important;
+      transform: translateY(-2px) !important;
+    }
+
+    /* Filter pills */
+    .filter-bar {
+      padding: 20px 40px !important;
+      background: rgba(0, 10, 25, 0.3) !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    }
+
+    .filter-pill {
+      background: rgba(255, 255, 255, 0.05) !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      border-radius: 50px !important;
+      font-size: 11px !important;
+      font-weight: 700 !important;
+      letter-spacing: 0.8px !important;
+      transition: all 0.25s !important;
+    }
+
+    .filter-pill:hover {
+      background: rgba(255, 255, 255, 0.1) !important;
+      border-color: rgba(255, 215, 0, 0.3) !important;
+      transform: translateY(-2px) !important;
+    }
+
+    .filter-pill[data-cat="all"].active {
+      background: linear-gradient(135deg, #ffd700, #f59e0b) !important;
+      color: #001a3d !important;
+      border-color: transparent !important;
+      box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3) !important;
+    }
+
+    /* File cards — improved glass */
+    .file-card {
+      background: rgba(255, 255, 255, 0.04) !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      border-radius: 18px !important;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+      overflow: hidden !important;
+    }
+
+    .file-card:hover {
+      background: rgba(255, 255, 255, 0.07) !important;
+      border-color: rgba(255, 215, 0, 0.3) !important;
+      transform: translateY(-6px) !important;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 215, 0, 0.15) !important;
+    }
+
+    /* Details panel */
+    .details-panel {
+      background: rgba(5, 15, 35, 0.7) !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      border-radius: 20px !important;
+      backdrop-filter: blur(20px) !important;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+    }
+
+    /* Side action buttons */
+    .btn-side-action {
+      border-radius: 14px !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      background: rgba(255, 255, 255, 0.05) !important;
+      transition: all 0.25s !important;
+    }
+
+    .btn-side-action:hover {
+      background: rgba(255, 255, 255, 0.1) !important;
+      border-color: rgba(255, 215, 0, 0.3) !important;
+      transform: translateY(-2px) !important;
+    }
+
+    /* View menu button */
+    .view-menu-btn {
+      background: rgba(255, 255, 255, 0.06) !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      border-radius: 12px !important;
+      color: rgba(255, 255, 255, 0.9) !important;
+      font-weight: 700 !important;
+      transition: all 0.2s !important;
+    }
+
+    .view-menu-btn:hover {
+      background: rgba(255, 255, 255, 0.12) !important;
+      border-color: rgba(255, 215, 0, 0.3) !important;
+    }
+
+    /* Empty state */
+    .empty-state {
+      background: rgba(255, 255, 255, 0.03) !important;
+      border: 2px dashed rgba(255, 255, 255, 0.1) !important;
+      border-radius: 24px !important;
+    }
+
+    /* Upload drop zone */
+    .upload-zone, .drop-zone {
+      border: 2px dashed rgba(255, 215, 0, 0.3) !important;
+      border-radius: 20px !important;
+      background: rgba(255, 215, 0, 0.03) !important;
+      transition: all 0.3s !important;
+    }
+
+    .upload-zone:hover, .drop-zone:hover,
+    .upload-zone.drag-over, .drop-zone.drag-over {
+      border-color: rgba(255, 215, 0, 0.6) !important;
+      background: rgba(255, 215, 0, 0.06) !important;
+    }
+
     </style>
 
 </head>

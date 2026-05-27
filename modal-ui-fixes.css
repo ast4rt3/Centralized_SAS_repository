@@ -1,0 +1,478 @@
+/* =====================================================
+   SAS Portal — Modal & Uploader UI Fixes
+   Implements all UI Expert recommendations
+   May 27, 2026
+   ===================================================== */
+
+/* ── 1. Modal overlay: lighter, more refined backdrop ── */
+.modal-overlay {
+  background: rgba(5, 15, 35, 0.6) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+}
+
+/* ── 2. Modal card: consistent entry animation ── */
+.modal-card {
+  animation: modal-slide-in 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modal-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ── 3. Modal header: add close button layout support ── */
+#add-post-modal .modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 28px 32px 10px;
+  gap: 12px;
+}
+
+#add-post-modal .modal-header-text {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Close button in modal header */
+.modal-close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1.5px solid rgba(0, 26, 51, 0.1);
+  background: transparent;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  font-size: 1.1rem;
+  margin-top: 2px;
+}
+
+.modal-close-btn:hover {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+}
+
+body.dark-theme .modal-close-btn {
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.5);
+}
+
+body.dark-theme .modal-close-btn:hover {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+
+/* ── 4. Upload tabs: wrap gracefully, icon-only on small screens ── */
+#add-post-modal .upload-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  background: rgba(0, 26, 51, 0.04);
+  border-radius: 14px;
+  margin-bottom: 16px;
+}
+
+body.dark-theme #add-post-modal .upload-tabs {
+  background: rgba(15, 23, 42, 0.45);
+}
+
+#add-post-modal .upload-tab {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 9px 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+#add-post-modal .upload-tab svg {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+}
+
+/* On narrow modals, hide tab text and show icon only */
+@media (max-width: 520px) {
+  #add-post-modal .upload-tab .tab-label {
+    display: none;
+  }
+
+  #add-post-modal .upload-tab {
+    padding: 9px 8px;
+    flex: 0 0 auto;
+  }
+}
+
+/* ── 5. Drop zone: cleaner, more balanced layout ── */
+#add-post-modal .file-upload-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+  border: 2px dashed rgba(0, 74, 153, 0.18);
+  background: rgba(0, 74, 153, 0.02);
+  border-radius: 16px;
+  min-height: 160px;
+  padding: 28px 24px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+body.dark-theme #add-post-modal .file-upload-label {
+  border-color: rgba(255, 215, 0, 0.15);
+  background: rgba(255, 215, 0, 0.02);
+}
+
+#add-post-modal .file-upload-label:hover {
+  border-color: var(--nbsc-navy, #003366);
+  background: rgba(0, 74, 153, 0.04);
+  transform: none; /* remove the translateY that causes layout shift */
+  box-shadow: 0 0 0 4px rgba(0, 74, 153, 0.06);
+}
+
+body.dark-theme #add-post-modal .file-upload-label:hover {
+  border-color: var(--nbsc-gold, #ffd700);
+  background: rgba(255, 215, 0, 0.04);
+  box-shadow: 0 0 0 4px rgba(255, 215, 0, 0.06);
+}
+
+#add-post-modal .upload-icon-wrapper {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: rgba(0, 74, 153, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--nbsc-navy, #003366);
+  transition: transform 0.25s ease;
+  flex-shrink: 0;
+}
+
+body.dark-theme #add-post-modal .upload-icon-wrapper {
+  background: rgba(255, 215, 0, 0.1);
+  color: var(--nbsc-gold, #ffd700);
+}
+
+#add-post-modal .file-upload-label:hover .upload-icon-wrapper {
+  transform: translateY(-3px);
+  background: rgba(0, 74, 153, 0.12);
+}
+
+body.dark-theme #add-post-modal .file-upload-label:hover .upload-icon-wrapper {
+  background: rgba(255, 215, 0, 0.15);
+}
+
+#add-post-modal .upload-text-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+#add-post-modal .upload-text-content #file-label-text {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+#add-post-modal .upload-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  opacity: 0.8;
+}
+
+/* Select File button: outlined style, not competing gradient */
+#add-post-modal .upload-btn-styled {
+  background: transparent !important;
+  border: 1.5px solid rgba(0, 74, 153, 0.25) !important;
+  color: var(--nbsc-navy, #003366) !important;
+  border-radius: 8px !important;
+  padding: 7px 18px !important;
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.2px !important;
+  box-shadow: none !important;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease !important;
+}
+
+body.dark-theme #add-post-modal .upload-btn-styled {
+  border-color: rgba(255, 215, 0, 0.3) !important;
+  color: var(--nbsc-gold, #ffd700) !important;
+}
+
+#add-post-modal .file-upload-label:hover .upload-btn-styled {
+  background: var(--nbsc-navy, #003366) !important;
+  border-color: var(--nbsc-navy, #003366) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+body.dark-theme #add-post-modal .file-upload-label:hover .upload-btn-styled {
+  background: var(--nbsc-gold, #ffd700) !important;
+  border-color: var(--nbsc-gold, #ffd700) !important;
+  color: var(--nbsc-navy-dark, #002244) !important;
+}
+
+/* File selected state */
+#add-post-modal .file-upload-label.file-selected {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.04);
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.08);
+}
+
+#add-post-modal .file-upload-label.file-selected .upload-icon-wrapper {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+#add-post-modal .file-upload-label.file-selected .upload-btn-styled {
+  background: #10b981 !important;
+  border-color: #10b981 !important;
+  color: white !important;
+}
+
+/* ── 6. Preview container: consistent with modal theme ── */
+#upload-preview-container,
+#url-preview-container {
+  border: 1.5px solid rgba(0, 26, 51, 0.12) !important;
+  border-radius: 10px !important;
+  background: rgba(0, 26, 51, 0.04) !important;
+}
+
+body.dark-theme #upload-preview-container,
+body.dark-theme #url-preview-container {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  background: rgba(15, 23, 42, 0.4) !important;
+}
+
+/* ── 7. Zoom controls: polished, not developer-UI ── */
+#upload-img-controls,
+#url-img-controls {
+  background: rgba(0, 26, 51, 0.03);
+  border: 1px solid rgba(0, 26, 51, 0.06);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-top: 10px;
+}
+
+body.dark-theme #upload-img-controls,
+body.dark-theme #url-img-controls {
+  background: rgba(15, 23, 42, 0.2);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Hide the debug position readout from end users */
+#upload-preview-coords,
+#url-preview-coords {
+  display: none !important;
+}
+
+/* Hide the "Position: " label too */
+#upload-img-controls > div:last-child > div,
+#url-img-controls > div:last-child > div {
+  display: none !important;
+}
+
+/* Range slider: consistent cross-browser styling */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(0, 26, 51, 0.12);
+  outline: none;
+  cursor: pointer;
+}
+
+body.dark-theme input[type="range"] {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--nbsc-navy, #003366);
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s ease;
+}
+
+body.dark-theme input[type="range"]::-webkit-slider-thumb {
+  background: var(--nbsc-gold, #ffd700);
+  border-color: rgba(15, 23, 42, 0.8);
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--nbsc-navy, #003366);
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+body.dark-theme input[type="range"]::-moz-range-thumb {
+  background: var(--nbsc-gold, #ffd700);
+}
+
+/* ── 8. Advanced settings accordion: shorter label ── */
+#add-post-modal .advanced-settings-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 13px 18px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--nbsc-navy, #003366);
+  border-radius: 14px;
+  transition: background 0.15s ease;
+  gap: 8px;
+}
+
+body.dark-theme #add-post-modal .advanced-settings-toggle {
+  color: var(--nbsc-gold, #ffd700);
+}
+
+/* ── 9. Modal footer: natural left/right button layout ── */
+#add-post-modal .modal-actions {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  grid-template-columns: unset !important;
+  gap: var(--space-3) !important;
+}
+
+#add-post-modal #cancel-post-btn {
+  grid-column: unset !important;
+  justify-self: unset !important;
+}
+
+#add-post-modal #submit-post-btn {
+  grid-column: unset !important;
+  justify-self: unset !important;
+  margin-left: auto;
+}
+
+/* ── 10. Multi-image batch settings: match modal aesthetic ── */
+#multi-settings-group > div {
+  background: rgba(0, 26, 51, 0.03) !important;
+  border: 1px solid rgba(0, 26, 51, 0.08) !important;
+  border-radius: 12px !important;
+}
+
+body.dark-theme #multi-settings-group > div {
+  background: rgba(15, 23, 42, 0.25) !important;
+  border-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* ── 11. QR preview: consistent padding ── */
+.qr-preview-wrapper-outer {
+  padding: 4px;
+}
+
+.qr-preview-container {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* ── 12. Modal title: improved gradient for readability ── */
+#add-post-modal .modal-title {
+  background: linear-gradient(90deg, var(--nbsc-navy, #003366) 0%, #1d4ed8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-size: 1.45rem;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+
+body.dark-theme #add-post-modal .modal-title {
+  background: linear-gradient(90deg, #ffd700 0%, #fbbf24 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ── 13. Video range sliders: styled track ── */
+#upload-video-slider-start,
+#upload-video-slider-end,
+#url-video-slider-start,
+#url-video-slider-end {
+  background: linear-gradient(
+    to right,
+    var(--nbsc-navy, #003366) 0%,
+    var(--nbsc-navy, #003366) var(--val, 0%),
+    rgba(0, 26, 51, 0.12) var(--val, 0%),
+    rgba(0, 26, 51, 0.12) 100%
+  );
+}
+
+body.dark-theme #upload-video-slider-start,
+body.dark-theme #upload-video-slider-end,
+body.dark-theme #url-video-slider-start,
+body.dark-theme #url-video-slider-end {
+  background: linear-gradient(
+    to right,
+    var(--nbsc-gold, #ffd700) 0%,
+    var(--nbsc-gold, #ffd700) var(--val, 0%),
+    rgba(255, 255, 255, 0.1) var(--val, 0%),
+    rgba(255, 255, 255, 0.1) 100%
+  );
+}
+
+/* ── 14. Consistent backdrop blur across all modals ── */
+.modal-overlay {
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+/* The add-post modal keeps its stronger blur since it's the primary modal */
+#add-post-modal {
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+}

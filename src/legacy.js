@@ -3964,6 +3964,15 @@ document.addEventListener('DOMContentLoaded', () => {
         modal.classList.add('hidden');
         window.resetAddPostForm();
       });
+
+      // X close button in modal header
+      const cancelBtnX = document.getElementById('cancel-post-btn-x');
+      if (cancelBtnX) {
+        cancelBtnX.addEventListener('click', () => {
+          modal.classList.add('hidden');
+          window.resetAddPostForm();
+        });
+      }
     }
 
     if (form) {

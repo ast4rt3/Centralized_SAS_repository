@@ -35,8 +35,11 @@
     href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&family=Outfit:wght@400;600;800&display=swap"
     rel="stylesheet">
   <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+  <link rel="stylesheet" href="portal-tokens.css?v=2.0">
   <link rel="stylesheet" href="styles.css?v=24.1">
   <link rel="stylesheet" href="navbar-dropdown.css?v=1.0">
+  <link rel="stylesheet" href="home-ui-fixes.css?v=1.0">
+  <link rel="stylesheet" href="modal-ui-fixes.css?v=1.0">
   <script>
     // Automatically unregister stale Service Workers to prevent caching loops
     if ('serviceWorker' in navigator) {
@@ -1074,23 +1077,23 @@
     }
 
     .lp-se-activity-date {
-      font-size: 0.75rem;
-      color: var(--lp-primary);
-      font-weight: 700;
-      margin-bottom: 5px;
+      font-size: var(--text-xs);
+      color: var(--nbsc-navy);
+      font-weight: var(--font-bold);
+      margin-bottom: var(--space-1);
     }
 
     .lp-se-activity-title {
-      font-weight: 700;
-      font-size: 0.95rem;
-      color: #1e293b;
-      margin-bottom: 4px;
+      font-weight: var(--font-bold);
+      font-size: var(--text-base);
+      color: var(--gray-900);
+      margin-bottom: var(--space-1);
     }
 
     .lp-se-activity-desc {
-      font-size: 0.85rem;
-      color: #64748b;
-      line-height: 1.5;
+      font-size: var(--text-sm);
+      color: var(--gray-600);
+      line-height: var(--leading-normal);
     }
 
     /* Office Details View Enhancements */
@@ -1222,18 +1225,19 @@
     }
 
     .lp-se-activity-mini {
-      padding: clamp(15px, 3vw, 20px);
-      border-left: 4px solid #e2e8f0;
-      background: #f8fafc;
-      border-radius: 0 16px 16px 0;
-      margin-bottom: 12px;
-      transition: all 0.3s ease;
+      padding: clamp(12px, 3vw, 18px);
+      border-left: 4px solid var(--gray-200);
+      background: var(--gray-50);
+      border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
+      margin-bottom: var(--space-3);
+      transition: all var(--transition-base);
     }
 
     .lp-se-activity-mini:hover {
-      border-left-color: var(--lp-primary);
+      border-left-color: var(--nbsc-navy);
       background: white;
       transform: translateX(5px);
+      box-shadow: var(--shadow-sm);
     }
 
     @keyframes slideUpFade {
@@ -1315,16 +1319,22 @@
     .lp-service-icon {
       width: 70px;
       height: 70px;
-      background: #f1f5f9;
-      border-radius: 50%;
+      background: var(--nbsc-light-blue);
+      border-radius: var(--radius-full);
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 1.8rem;
-      color: var(--lp-accent);
-      /* Synchronized with portal accent */
-      margin-bottom: 15px;
+      color: var(--nbsc-navy);
+      margin-bottom: var(--space-4);
       flex-shrink: 0;
+      transition: all var(--transition-base);
+    }
+
+    .lp-service-card:hover .lp-service-icon {
+      background: var(--nbsc-navy);
+      color: var(--nbsc-gold);
+      transform: scale(1.1);
     }
 
     .lp-service-card {
@@ -1332,15 +1342,21 @@
       overflow: hidden;
       display: flex;
       flex-direction: column;
-      align-items: center; /* Back to centered */
+      align-items: center;
       text-align: center;
-      padding: 30px !important; /* Back to original padding */
-      background: white !important;
-      border: 1px solid #e2e8f0 !important;
-      border-radius: 32px !important;
-      transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+      padding: var(--space-8) !important;
+      background: var(--card-bg) !important;
+      border: 1px solid var(--gray-200) !important;
+      border-radius: var(--card-radius) !important;
+      transition: all var(--transition-base) !important;
+      box-shadow: var(--card-shadow);
       height: 100%;
+    }
+
+    .lp-service-card:hover {
+      border-color: var(--nbsc-navy) !important;
+      box-shadow: var(--card-shadow-hover) !important;
+      transform: translateY(-4px) !important;
     }
 
     /* Keep the cover CSS for office cards but remove body wrapper if needed or adapt */
@@ -1406,33 +1422,28 @@
     }
 
     .lp-service-title {
-      font-size: 1.25rem !important;
-      font-weight: 800 !important;
-      color: #003366 !important;
-      margin-bottom: 12px !important;
-      font-family: 'Outfit', sans-serif;
+      font-size: var(--text-xl) !important;
+      font-weight: var(--font-extrabold) !important;
+      color: var(--nbsc-navy) !important;
+      margin-bottom: var(--space-3) !important;
+      font-family: var(--font-primary);
       min-height: 4.8rem;
-      /* Further standardized to ensure symmetry across all card titles */
       display: flex;
       align-items: center;
       justify-content: center;
-      line-height: 1.25;
+      line-height: var(--leading-tight);
       width: 100%;
       text-transform: capitalize;
     }
 
     .lp-service-sub-container {
       height: 46px;
-      /* Exact match to item height to prevent ghosting */
       width: 100%;
       overflow: hidden;
       position: relative;
-      margin-top: 8px;
-      border-top: 1px solid rgba(0, 51, 102, 0.08);
+      margin-top: var(--space-2);
+      border-top: 1px solid var(--gray-200);
       padding-top: 0;
-      /* Removed padding to align perfectly with scroll steps */
-
-
     }
 
     .lp-service-sub-list {
@@ -1461,35 +1472,33 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      /* Center text inside pill */
-      gap: 12px;
+      gap: var(--space-3);
       height: 46px;
-      font-size: 0.8rem;
-      font-weight: 700;
-      color: #003366;
-      padding: 0 20px;
-      background: #f1f5f9;
-      border-radius: 12px;
+      font-size: var(--text-sm);
+      font-weight: var(--font-bold);
+      color: var(--nbsc-navy);
+      padding: 0 var(--space-5);
+      background: var(--gray-50);
+      border-radius: var(--radius-lg);
       white-space: normal;
-      line-height: 1.2;
-      transition: all 0.3s ease;
-      border: 1px solid #e2e8f0;
+      line-height: var(--leading-tight);
+      transition: all var(--transition-base);
+      border: 1px solid var(--gray-200);
       flex-shrink: 0;
       cursor: pointer;
       width: 100%;
-      /* Ensure pill takes full container width */
     }
 
     .lp-service-sub-item:hover {
-      background: var(--lp-primary);
+      background: var(--nbsc-navy);
       color: white;
-      border-color: var(--lp-primary);
+      border-color: var(--nbsc-navy);
       transform: scale(1.02);
+      box-shadow: var(--shadow-navy);
     }
 
     .lp-service-sub-item i {
-      color: #f59e0b;
-      /* Matching Amber/Gold */
+      color: var(--nbsc-gold);
       font-size: 1rem;
     }
 
@@ -1499,19 +1508,18 @@
 
     .lp-service-card .lp-service-action {
       margin-top: auto;
-      font-weight: 800;
-      color: var(--lp-primary);
+      font-weight: var(--font-extrabold);
+      color: var(--nbsc-navy);
       display: flex;
       align-items: center;
-      gap: 5px;
-      font-size: 0.9rem;
-      transition: gap 0.3s;
+      gap: var(--space-2);
+      font-size: var(--text-sm);
+      transition: gap var(--transition-base);
     }
 
-
-
     .lp-service-card:hover .lp-service-action {
-      gap: 10px;
+      gap: var(--space-3);
+      color: var(--nbsc-navy-light);
     }
 
     .lp-se-export-btn {
@@ -1557,6 +1565,272 @@
       background-clip: text;
       -webkit-text-fill-color: transparent;
       font-family: 'Outfit', sans-serif;
+    }
+
+    /* ============================================================
+       HOME PAGE VISUAL IMPROVEMENTS — Applied directly for visibility
+       ============================================================ */
+
+    /* Home page background — richer gradient */
+    #home.page {
+      background: linear-gradient(160deg, #001a3d 0%, #002a5c 40%, #003a7a 100%) !important;
+    }
+
+    /* Home header — cleaner, more polished */
+    .home-header {
+      background: rgba(0, 20, 50, 0.85) !important;
+      backdrop-filter: blur(20px) !important;
+      -webkit-backdrop-filter: blur(20px) !important;
+      border-bottom: 1px solid rgba(255, 215, 0, 0.2) !important;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3) !important;
+      padding: 14px 28px !important;
+    }
+
+    .home-header-title {
+      font-size: 1.1rem !important;
+      font-weight: 800 !important;
+      letter-spacing: 1px !important;
+      text-transform: uppercase !important;
+    }
+
+    .home-header-subtitle {
+      font-size: 0.72rem !important;
+      color: #ffd700 !important;
+      letter-spacing: 1.5px !important;
+      text-transform: uppercase !important;
+      opacity: 1 !important;
+    }
+
+    /* Recent Updates header */
+    .posts-header h2 {
+      font-size: 1.5rem !important;
+      font-weight: 800 !important;
+      color: #ffffff !important;
+      letter-spacing: -0.3px !important;
+      position: relative !important;
+      white-space: nowrap !important;
+    }
+
+    .posts-header h2::after {
+      content: '';
+      display: block;
+      width: 40px;
+      height: 3px;
+      background: linear-gradient(90deg, #ffd700, transparent);
+      border-radius: 2px;
+      margin-top: 6px;
+    }
+
+    /* Post cards — improved dark glass style */
+    .post-card {
+      border-radius: 20px !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+      transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1) !important;
+      background: #0a1628 !important;
+    }
+
+    .post-card:hover {
+      transform: translateY(-8px) scale(1.02) !important;
+      border-color: rgba(255, 215, 0, 0.4) !important;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 215, 0, 0.2) !important;
+    }
+
+    /* Dark tint over ALL post images — prevents white bg images from clashing */
+    .post-image-container::after {
+      content: '' !important;
+      position: absolute !important;
+      inset: 0 !important;
+      background: rgba(0, 10, 30, 0.45) !important;
+      z-index: 1 !important;
+      pointer-events: none !important;
+    }
+
+    .post-image {
+      filter: saturate(0.85) brightness(0.88) !important;
+      transition: filter 0.4s ease !important;
+    }
+
+    .post-card:hover .post-image {
+      filter: saturate(1) brightness(0.82) !important;
+    }
+
+    .post-title {
+      font-size: 1.25rem !important;
+      font-weight: 800 !important;
+      letter-spacing: -0.3px !important;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8) !important;
+    }
+
+    .post-desc {
+      font-size: 0.875rem !important;
+      opacity: 0.85 !important;
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6) !important;
+    }
+
+    /* Add Post button — gold pill */
+    .add-post-btn {
+      background: linear-gradient(135deg, #ffd700 0%, #f59e0b 100%) !important;
+      color: #001a3d !important;
+      font-weight: 800 !important;
+      font-size: 0.75rem !important;
+      padding: 8px 18px !important;
+      border-radius: 50px !important;
+      box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3) !important;
+      letter-spacing: 0.5px !important;
+      text-transform: uppercase !important;
+    }
+
+    .add-post-btn:hover {
+      transform: translateY(-2px) !important;
+      box-shadow: 0 8px 25px rgba(255, 215, 0, 0.5) !important;
+      filter: brightness(1.1) !important;
+    }
+
+    /* View menu button */
+    .view-menu-btn {
+      background: rgba(255, 255, 255, 0.08) !important;
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      color: rgba(255, 255, 255, 0.9) !important;
+      border-radius: 10px !important;
+      padding: 7px 14px !important;
+      font-size: 0.78rem !important;
+      font-weight: 700 !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 6px !important;
+      cursor: pointer !important;
+      transition: all 0.2s !important;
+    }
+
+    .view-menu-btn:hover {
+      background: rgba(255, 255, 255, 0.15) !important;
+      border-color: rgba(255, 215, 0, 0.4) !important;
+    }
+
+    /* Home content area */
+    .home-content-area {
+      padding: 24px 32px 40px !important;
+    }
+
+    /* Posts container spacing */
+    .posts-container {
+      gap: 20px !important;
+    }
+
+    /* Portal Access widget — improved */
+    #portal-access-widget {
+      background: rgba(0, 20, 50, 0.7) !important;
+      border: 1px solid rgba(255, 215, 0, 0.25) !important;
+      border-radius: 20px !important;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+      backdrop-filter: blur(12px) !important;
+    }
+
+    /* User menu button */
+    .user-menu-btn {
+      background: rgba(255, 255, 255, 0.08) !important;
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      border-radius: 12px !important;
+      padding: 6px 12px !important;
+      transition: all 0.2s !important;
+    }
+
+    .user-menu-btn:hover {
+      background: rgba(255, 255, 255, 0.15) !important;
+      border-color: rgba(255, 215, 0, 0.4) !important;
+    }
+
+    /* Notification bell */
+    .notif-btn {
+      background: rgba(255, 255, 255, 0.08) !important;
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      border-radius: 12px !important;
+      transition: all 0.2s !important;
+    }
+
+    .notif-btn:hover {
+      background: rgba(255, 255, 255, 0.15) !important;
+      border-color: rgba(255, 215, 0, 0.4) !important;
+    }
+
+    /* Home news track */
+    .home-news-track {
+      border-radius: 20px !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+    }
+
+    /* Sidebar improvements */
+    .sidebar {
+      background: linear-gradient(180deg, #001a3d 0%, #002244 60%, #001530 100%) !important;
+      border-right: 1px solid rgba(255, 215, 0, 0.1) !important;
+    }
+
+    .sidebar-header {
+      border-bottom: 1px solid rgba(255, 215, 0, 0.1) !important;
+      padding: 16px 18px !important;
+    }
+
+    .nav-item.active {
+      background: rgba(255, 215, 0, 0.15) !important;
+      border-left: 3px solid #ffd700 !important;
+      color: #ffffff !important;
+    }
+
+    .nav-item:hover {
+      background: rgba(255, 255, 255, 0.07) !important;
+    }
+
+    .nav-icon {
+      color: #ffd700 !important;
+    }
+
+    /* Sidebar footer */
+    .sidebar-footer {
+      border-top: 1px solid rgba(255, 215, 0, 0.1) !important;
+    }
+
+    /* Action buttons in posts header — more polished */
+    #manage-lp-docs-btn,
+    #manage-lp-activities-btn,
+    #home-converter-btn,
+    #clear-cache-btn,
+    #add-post-btn-main,
+    button[id$="-btn"].add-post-btn {
+      border-radius: 50px !important;
+      font-size: 0.72rem !important;
+      font-weight: 800 !important;
+      padding: 7px 16px !important;
+      letter-spacing: 0.5px !important;
+      text-transform: uppercase !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+      transition: all 0.2s ease !important;
+      border: none !important;
+    }
+
+    button.add-post-btn:hover {
+      transform: translateY(-2px) !important;
+      filter: brightness(1.15) !important;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4) !important;
+    }
+
+    /* Posts header layout */
+    .posts-header {
+      padding-bottom: 16px !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+      margin-bottom: 24px !important;
+    }
+
+    /* Home news section */
+    .home-news {
+      margin-bottom: 28px !important;
+    }
+
+    /* Spinner */
+    .spinner {
+      border-color: rgba(255, 255, 255, 0.08) !important;
+      border-top-color: #ffd700 !important;
     }
   </style>
 
@@ -3020,10 +3294,8 @@
 
         <div class="home-content-area">
           <div class="posts-header">
-            <div style="display: flex; flex-direction: column; gap: 4px;">
-              <h2>Recent Updates</h2>
-            </div>
-            <div style="display:flex; align-items:center; gap:12px;">
+            <h2>Recent Updates</h2>
+            <div style="display:flex; align-items:center; gap:8px; flex-shrink:0; flex-wrap:nowrap;">
               <div class="view-menu" id="view-menu">
                 <button class="view-menu-btn" id="view-menu-btn" aria-haspopup="true" aria-expanded="false">
                   <span class="view-menu-icon">
@@ -3078,7 +3350,8 @@
                   </button>
                 </div>
               </div>
-              <button id="clear-cache-btn" class="add-post-btn hidden" style="background:#dc2626; color:#fff;"
+              <div class="posts-header-divider"></div>
+              <button id="clear-cache-btn" class="add-post-btn hidden"
                 aria-label="Clear System Data">
                 <span class="plus-icon">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
@@ -3092,7 +3365,7 @@
                 </span>
                 Clear Data
               </button>
-              <button id="manage-lp-docs-btn" class="add-post-btn hidden" style="background:#7c3aed; color:#fff;"
+              <button id="manage-lp-docs-btn" class="add-post-btn hidden"
                 aria-label="Manage Documents">
                 <span class="plus-icon">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
@@ -3103,7 +3376,7 @@
                 </span>
                 Documents
               </button>
-              <button id="manage-lp-activities-btn" class="add-post-btn hidden" style="background:#0d9488; color:#fff;"
+              <button id="manage-lp-activities-btn" class="add-post-btn hidden"
                 aria-label="Manage Landing Page Activities">
                 <span class="plus-icon">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
@@ -3115,7 +3388,7 @@
                 </span>
                 Activities
               </button>
-              <button id="home-converter-btn" class="add-post-btn hidden" style="background:#ea580c; color:#fff;"
+              <button id="home-converter-btn" class="add-post-btn hidden"
                 aria-label="Tools">
                 <span class="plus-icon">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
@@ -3739,7 +4012,12 @@
     <div id="add-post-modal" class="modal-overlay hidden">
       <div class="modal-card">
         <div class="modal-header">
-          <h3 class="modal-title">Create New Update</h3>
+          <div class="modal-header-text">
+            <h3 class="modal-title">Create New Update</h3>
+          </div>
+          <button type="button" class="modal-close-btn" id="cancel-post-btn-x" aria-label="Close modal" title="Close">
+            <i class='bx bx-x'></i>
+          </button>
         </div>
         <form id="add-post-form" class="modal-form">
           <div class="modal-body">
@@ -3776,7 +4054,7 @@
                     <polyline points="17 8 12 3 7 8"></polyline>
                     <line x1="12" y1="3" x2="12" y2="15"></line>
                   </svg>
-                  Single Media
+                  <span class="tab-label">Single Media</span>
                 </button>
                 <button type="button" class="upload-tab" data-tab="multi">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -3784,7 +4062,7 @@
                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                   </svg>
-                  Multiple Images
+                  <span class="tab-label">Multiple</span>
                 </button>
                 <button type="button" class="upload-tab" data-tab="url">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -3792,7 +4070,7 @@
                     <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
                     <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
                   </svg>
-                  Use URL
+                  <span class="tab-label">Use URL</span>
                 </button>
                 <button type="button" class="upload-tab" data-tab="live">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -3800,7 +4078,7 @@
                     <circle cx="12" cy="12" r="10"></circle>
                     <circle cx="12" cy="12" r="3" fill="currentColor"></circle>
                   </svg>
-                  Live Video
+                  <span class="tab-label">Live</span>
                 </button>
                 <button type="button" class="upload-tab" data-tab="qr">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -3812,7 +4090,7 @@
                     <line x1="7" y1="17" x2="7" y2="17"></line>
                     <line x1="17" y1="7" x2="17" y2="7"></line>
                   </svg>
-                  QR Link
+                  <span class="tab-label">QR Link</span>
                 </button>
               </div>
               <!-- File Upload Tab -->
@@ -4080,7 +4358,7 @@
             <!-- Advanced Settings Accordion -->
             <div class="advanced-settings-accordion">
               <button type="button" class="advanced-settings-toggle" id="advanced-settings-toggle">
-                <span>Advanced Settings (TV Duration, Visibility Schedule)</span>
+                <span>Advanced Settings</span>
                 <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>
