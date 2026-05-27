@@ -47,6 +47,7 @@ jobs:
           echo "  SYSTEM_THEME: \"nbsc-modern\"," >> env.js
           echo "  TV_AUDIO_ENABLED: false," >> env.js
           echo "  TV_THEATER_MODE: false," >> env.js
+          echo "  GOOGLE_ANALYTICS_ID: \"G-GHDRN4E0B7\"," >> env.js
           echo "  systems: $(cat systems.json || echo '[]')" >> env.js
           echo "};" >> env.js
 
@@ -172,6 +173,7 @@ jobs:
           echo "  SYSTEM_THEME: \"nbsc-modern\"," >> env.js
           echo "  TV_AUDIO_ENABLED: false," >> env.js
           echo "  TV_THEATER_MODE: false," >> env.js
+          echo "  GOOGLE_ANALYTICS_ID: \"G-GHDRN4E0B7\"," >> env.js
           echo "  systems: $(cat systems.json || echo '[]')" >> env.js
           echo "};" >> env.js
 

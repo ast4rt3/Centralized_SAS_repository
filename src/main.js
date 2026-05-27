@@ -50,6 +50,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Version Check
   setInterval(checkForUpdates, 3600000); // 1 hour
+
+  // Initialize Analytics
+  initGoogleAnalytics();
 });
 
 async function fetchSystems() {
@@ -75,4 +78,21 @@ async function checkForUpdates() {
       setTimeout(() => window.location.reload(true), 1000);
     }
   } catch (err) { }
+}
+
+function initGoogleAnalytics() {
+  const gaId = window.ENV?.GOOGLE_ANALYTICS_ID;
+  if (!gaId || gaId.includes('XXXX')) return; // Skip if missing or placeholder
+
+  const script = document.createElement('script');
+  script.async = true;
+  script.src = `https://www.googletagmanager.com/gtag/js?id=${gaId}`;
+  document.head.appendChild(script);
+
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  window.gtag = gtag;
+  gtag('js', new Date());
+  gtag('config', gaId);
+  console.log(`[Analytics] Google Analytics initialized (${gaId})`);
 }
