@@ -241,118 +241,115 @@
           </div>
         </div>
 
-        <!-- Row 1: Course distribution + Sex at birth + Year level -->
-        <div class="an-chart-row">
-          <div class="an-chart-card an-chart-lg">
-            <div class="an-chart-card-header"><h3>Respondents by Course</h3></div>
-            <div class="an-chart-wrap" style="height:240px;"><canvas id="sdCourseChart"></canvas></div>
-          </div>
-          <div class="an-chart-card an-chart-md">
-            <div class="an-chart-card-header"><h3>Assigned Sex at Birth</h3></div>
-            <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdSexChart"></canvas></div>
-          </div>
-          <div class="an-chart-card an-chart-md">
-            <div class="an-chart-card-header"><h3>Year Level</h3></div>
-            <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdYearChart"></canvas></div>
-          </div>
+        <!-- Sub Tabs -->
+        <div class="an-sub-tabs">
+          <button class="an-sub-tab-btn active" onclick="switchSDTab('sd-demographics', this)">Demographics</button>
+          <button class="an-sub-tab-btn" onclick="switchSDTab('sd-academics', this)">Academics & Logistics</button>
+          <button class="an-sub-tab-btn" onclick="switchSDTab('sd-socioeconomic', this)">Socio-Economic & Welfare</button>
         </div>
 
-        <!-- Row 2: Age + Province + Religion -->
-        <div class="an-chart-row">
-          <div class="an-chart-card an-chart-md">
-            <div class="an-chart-card-header"><h3>Age Distribution</h3></div>
-            <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdAgeChart"></canvas></div>
-          </div>
-          <div class="an-chart-card an-chart-lg">
-            <div class="an-chart-card-header"><h3>Province of Origin</h3></div>
-            <div class="an-chart-wrap"><canvas id="sdProvinceChart"></canvas></div>
-          </div>
-          <div class="an-chart-card an-chart-md">
-            <div class="an-chart-card-header"><h3>Religion</h3></div>
-            <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdReligionChart"></canvas></div>
-          </div>
-        </div>
-
-        <!-- Row 3: Combined family income + Employment status -->
-        <div class="an-chart-row">
-          <div class="an-chart-card an-chart-lg">
-            <div class="an-chart-card-header">
-              <h3>Estimated Combined Family Income</h3>
-              <span class="an-chart-badge" style="background:rgba(16,185,129,0.15);color:#10b981;border-color:rgba(16,185,129,0.3);">Father + Mother</span>
+        <!-- TAB: DEMOGRAPHICS -->
+        <div id="sd-demographics" class="an-tab-content">
+          <div class="an-chart-row">
+            <div class="an-chart-card an-chart-md">
+              <div class="an-chart-card-header"><h3>Assigned Sex at Birth</h3></div>
+              <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdSexChart"></canvas></div>
             </div>
-            <div class="an-chart-wrap"><canvas id="sdIncomeChart"></canvas></div>
+            <div class="an-chart-card an-chart-md">
+              <div class="an-chart-card-header"><h3>Age Distribution</h3></div>
+              <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdAgeChart"></canvas></div>
+            </div>
+            <div class="an-chart-card an-chart-md">
+              <div class="an-chart-card-header"><h3>Civil Status</h3></div>
+              <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdCivilChart"></canvas></div>
+            </div>
           </div>
-          <div class="an-chart-card an-chart-md">
-            <div class="an-chart-card-header"><h3>Student Employment</h3></div>
-            <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdEmployedChart"></canvas></div>
+          <div class="an-chart-row">
+            <div class="an-chart-card an-chart-lg">
+              <div class="an-chart-card-header"><h3>Province of Origin</h3></div>
+              <div class="an-chart-wrap"><canvas id="sdProvinceChart"></canvas></div>
+            </div>
+            <div class="an-chart-card an-chart-md">
+              <div class="an-chart-card-header"><h3>Religion</h3></div>
+              <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdReligionChart"></canvas></div>
+            </div>
           </div>
-          <div class="an-chart-card an-chart-md">
-            <div class="an-chart-card-header"><h3>Residence Type</h3></div>
-            <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdResidenceChart"></canvas></div>
-          </div>
-        </div>
-
-        <!-- Row 4: Welfare indicators + First-Gen -->
-        <div class="an-chart-row">
-          <div class="an-chart-card an-chart-md">
-            <div class="an-chart-card-header"><h3>4Ps Beneficiaries</h3></div>
-            <div class="an-chart-wrap an-chart-sm-h"><canvas id="sd4psChart"></canvas></div>
-          </div>
-          <div class="an-chart-card an-chart-md">
-            <div class="an-chart-card-header"><h3>Indigenous Peoples (IP)</h3></div>
-            <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdIpChart"></canvas></div>
-          </div>
-          <div class="an-chart-card an-chart-md">
-            <div class="an-chart-card-header"><h3>PWD / Special Needs</h3></div>
-            <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdPwdChart"></canvas></div>
-          </div>
-          <div class="an-chart-card an-chart-md">
-            <div class="an-chart-card-header"><h3>First-Generation College</h3></div>
-            <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdFirstGenChart"></canvas></div>
-          </div>
-          <div class="an-chart-card an-chart-md">
-            <div class="an-chart-card-header"><h3>Civil Status</h3></div>
-            <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdCivilChart"></canvas></div>
+          <div class="an-chart-row">
+            <div class="an-chart-card an-chart-full">
+              <div class="an-chart-card-header"><h3>Residence Type</h3></div>
+              <div class="an-chart-wrap"><canvas id="sdResidenceChart"></canvas></div>
+            </div>
           </div>
         </div>
 
-        <!-- Row 4: Internet access + Learning mode + Transportation -->
-        <div class="an-chart-row">
-          <div class="an-chart-card an-chart-md">
-            <div class="an-chart-card-header"><h3>Internet Access at Home</h3></div>
-            <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdInternetChart"></canvas></div>
+        <!-- TAB: ACADEMICS & LOGISTICS -->
+        <div id="sd-academics" class="an-tab-content hidden">
+          <div class="an-chart-row">
+            <div class="an-chart-card an-chart-lg">
+              <div class="an-chart-card-header"><h3>Respondents by Course</h3></div>
+              <div class="an-chart-wrap" style="height:240px;"><canvas id="sdCourseChart"></canvas></div>
+            </div>
+            <div class="an-chart-card an-chart-md">
+              <div class="an-chart-card-header"><h3>Year Level</h3></div>
+              <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdYearChart"></canvas></div>
+            </div>
           </div>
-          <div class="an-chart-card an-chart-md">
-            <div class="an-chart-card-header"><h3>Preferred Learning Mode</h3></div>
-            <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdLearningChart"></canvas></div>
+          <div class="an-chart-row">
+            <div class="an-chart-card an-chart-md">
+              <div class="an-chart-card-header"><h3>Internet Access at Home</h3></div>
+              <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdInternetChart"></canvas></div>
+            </div>
+            <div class="an-chart-card an-chart-md">
+              <div class="an-chart-card-header"><h3>Preferred Learning Mode</h3></div>
+              <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdLearningChart"></canvas></div>
+            </div>
+            <div class="an-chart-card an-chart-md">
+              <div class="an-chart-card-header"><h3>First-Generation College</h3></div>
+              <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdFirstGenChart"></canvas></div>
+            </div>
           </div>
-          <div class="an-chart-card an-chart-lg">
-            <div class="an-chart-card-header"><h3>Daily Commute Duration</h3></div>
-            <div class="an-chart-wrap"><canvas id="sdCommuteChart"></canvas></div>
+          <div class="an-chart-row">
+            <div class="an-chart-card an-chart-full">
+              <div class="an-chart-card-header"><h3>Daily Commute Duration</h3></div>
+              <div class="an-chart-wrap"><canvas id="sdCommuteChart"></canvas></div>
+            </div>
           </div>
         </div>
 
-        <!-- Row 5: Scholarship + Financial difficulty -->
-        <div class="an-chart-row">
-          <div class="an-chart-card an-chart-md">
-            <div class="an-chart-card-header"><h3>Scholarship / Financial Aid</h3></div>
-            <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdScholarshipChart"></canvas></div>
+        <!-- TAB: SOCIO-ECONOMIC & WELFARE -->
+        <div id="sd-socioeconomic" class="an-tab-content hidden">
+          <div class="an-chart-row">
+            <div class="an-chart-card an-chart-lg">
+              <div class="an-chart-card-header">
+                <h3>Estimated Combined Family Income</h3>
+                <span class="an-chart-badge" style="background:rgba(16,185,129,0.15);color:#10b981;border-color:rgba(16,185,129,0.3);">Father + Mother</span>
+              </div>
+              <div class="an-chart-wrap"><canvas id="sdIncomeChart"></canvas></div>
+            </div>
+            <div class="an-chart-card an-chart-lg">
+              <div class="an-chart-card-header"><h3>Vulnerable & Special Groups</h3></div>
+              <div class="an-chart-wrap"><canvas id="sdVulnerableChart"></canvas></div>
+            </div>
           </div>
-          <div class="an-chart-card an-chart-md">
-            <div class="an-chart-card-header"><h3>Financial Difficulty</h3></div>
-            <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdFinancialChart"></canvas></div>
+          <div class="an-chart-row">
+            <div class="an-chart-card an-chart-md">
+              <div class="an-chart-card-header"><h3>Scholarship / Financial Aid</h3></div>
+              <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdScholarshipChart"></canvas></div>
+            </div>
+            <div class="an-chart-card an-chart-md">
+              <div class="an-chart-card-header"><h3>Financial Difficulty</h3></div>
+              <div class="an-chart-wrap an-chart-sm-h"><canvas id="sdFinancialChart"></canvas></div>
+            </div>
+            <div class="an-chart-card an-chart-lg">
+              <div class="an-chart-card-header"><h3>Scholarship / Grant Types</h3></div>
+              <div class="an-chart-wrap" style="height:220px;"><canvas id="sdScholarshipTypeChart"></canvas></div>
+            </div>
           </div>
-          <div class="an-chart-card an-chart-lg">
-            <div class="an-chart-card-header"><h3>Support Needed (Top Responses)</h3></div>
-            <div class="an-chart-wrap" style="height:220px;"><canvas id="sdSupportChart"></canvas></div>
-          </div>
-        </div>
-
-        <!-- Row 6: Scholarship Types -->
-        <div class="an-chart-row">
-          <div class="an-chart-card an-chart-lg" style="flex: 1;">
-            <div class="an-chart-card-header"><h3>Scholarship / Grant Types</h3></div>
-            <div class="an-chart-wrap" style="height:220px;"><canvas id="sdScholarshipTypeChart"></canvas></div>
+          <div class="an-chart-row">
+            <div class="an-chart-card an-chart-full">
+              <div class="an-chart-card-header"><h3>Support Needed (Top Responses)</h3></div>
+              <div class="an-chart-wrap" style="height:300px;"><canvas id="sdSupportChart"></canvas></div>
+            </div>
           </div>
         </div>
 

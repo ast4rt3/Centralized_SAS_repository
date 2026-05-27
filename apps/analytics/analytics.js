@@ -20,14 +20,14 @@ Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
 Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
 
 const PALETTE = {
-  blue:   '#3b82f6',
-  purple: '#8b5cf6',
-  green:  '#10b981',
-  gold:   '#f59e0b',
-  pink:   '#ec4899',
-  indigo: '#6366f1',
-  cyan:   '#06b6d4',
-  red:    '#ef4444',
+  blue:   '#4361EE', // Modern vibrant blue
+  purple: '#7209B7', // Deep purple
+  green:  '#2EC4B6', // Teal/Mint
+  gold:   '#FFB703', // Warm yellow/gold
+  pink:   '#F72585', // Magenta/pink
+  indigo: '#3A0CA3', // Deep indigo
+  cyan:   '#4CC9F0', // Sky blue
+  red:    '#E63946', // Soft red
 };
 
 const PALETTE_LIST = Object.values(PALETTE);
@@ -458,6 +458,8 @@ function renderLFData(d) {
     },
     options: {
       indexAxis: 'y',
+      maintainAspectRatio: false,
+      layout: { padding: { left: 10, right: 10, bottom: 10 } },
       plugins: { legend: { display: false } },
       scales: {
         x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } },
@@ -548,6 +550,8 @@ function renderBorrowersData(d) {
     },
     options: {
       indexAxis: 'y',
+      maintainAspectRatio: false,
+      layout: { padding: { left: 10, right: 10, bottom: 10 } },
       plugins: { legend: { display: false } },
       scales: {
         x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } },
@@ -1054,6 +1058,8 @@ function renderSurveyData(parsed) {
     },
     options: {
       indexAxis: 'y',
+      maintainAspectRatio: false,
+      layout: { padding: { left: 10, right: 10, bottom: 10 } },
       plugins: { legend: { display: false } },
       scales: {
         x: { min: 1, max: 5, ticks: { stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.04)' } },
@@ -1130,6 +1136,8 @@ function renderSurveyData(parsed) {
     },
     options: {
       indexAxis: 'y',
+      maintainAspectRatio: false,
+      layout: { padding: { left: 10, right: 10, bottom: 10 } },
       plugins: { legend: { display: false } },
       scales: {
         x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } },
@@ -1649,6 +1657,8 @@ async function loadAttendanceData() {
       },
       options: {
         indexAxis: 'y',
+      maintainAspectRatio: false,
+      layout: { padding: { left: 10, right: 10, bottom: 10 } },
         plugins: { legend: { display: false } },
         scales: {
           x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } },
@@ -1763,10 +1773,12 @@ function renderAttendanceFromCache({ totalEventAttendees, sortedEvents, byCourse
     data: {
       labels: topN.map(e => e[0]),
       datasets: [{ label: 'Attendees', data: topN.map(e => e[1]),
-        backgroundColor: PALETTE.purple, borderRadius: 6, borderSkipped: false }]
+        backgroundColor: PALETTE.purple, borderRadius: 6, borderSkipped: false, maxBarThickness: 32 }]
     },
     options: {
       indexAxis: 'y',
+      maintainAspectRatio: false,
+      layout: { padding: { left: 10, right: 10, bottom: 10 } },
       plugins: { legend: { display: false } },
       scales: {
         x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } },
@@ -1793,7 +1805,7 @@ function renderAttendanceFromCache({ totalEventAttendees, sortedEvents, byCourse
       labels: Object.keys(byYear),
       datasets: [{ label: 'Students', data: Object.values(byYear),
         backgroundColor: [PALETTE.blue, PALETTE.purple, PALETTE.green, PALETTE.gold],
-        borderRadius: 6, borderSkipped: false }]
+        borderRadius: 6, borderSkipped: false, maxBarThickness: 32 }]
     },
     options: {
       plugins: { legend: { display: false } },
@@ -2333,12 +2345,12 @@ function parseStudentDatasetRows(rows) {
     const bracket = combined > 0 ? sdIncomeBracket(String(combined)) : sdIncomeBracket(get(19) || get(26));
     result.byIncome[bracket] = (result.byIncome[bracket] || 0) + 1;
 
-    // Commute duration (col 50)
-    const commute = sdNormalizeCommute(get(50));
+    // Commute duration (col 51)
+    const commute = sdNormalizeCommute(get(51));
     result.byCommute[commute] = (result.byCommute[commute] || 0) + 1;
 
-    // Employed while studying (col 71)
-    const emp = sdNormalizeYesNo(get(71));
+    // Employed while studying (col 75)
+    const emp = sdNormalizeYesNo(get(75));
     if (emp === 'Yes') result.byEmployed.Yes++;
     else if (emp === 'No') result.byEmployed.No++;
 
@@ -2346,32 +2358,32 @@ function parseStudentDatasetRows(rows) {
     const inet = sdNormalizeInternet(get(80));
     result.byInternet[inet] = (result.byInternet[inet] || 0) + 1;
 
-    // Learning mode preference (col 84)
-    const learn = sdNormalizeLearningMode(get(84));
+    // Learning mode preference (col 88)
+    const learn = sdNormalizeLearningMode(get(88));
     result.byLearningMode[learn] = (result.byLearningMode[learn] || 0) + 1;
 
-    // Civil status (col 85)
-    const civil = sdNormalizeCivilStatus(get(85));
+    // Civil status (col 89)
+    const civil = sdNormalizeCivilStatus(get(89));
     result.byCivilStatus[civil] = (result.byCivilStatus[civil] || 0) + 1;
 
-    // Scholarship (col 91)
-    const schol = sdNormalizeYesNo(get(91));
+    // Scholarship (col 95)
+    const schol = sdNormalizeYesNo(get(95));
     if (schol === 'Yes') result.byScholarship.Yes++;
     else if (schol === 'No') result.byScholarship.No++;
 
-    // Scholarship Type (col 92)
+    // Scholarship Type (col 96)
     if (schol === 'Yes') {
-      const sType = sdNormalizeScholarshipType(get(92));
+      const sType = sdNormalizeScholarshipType(get(96));
       result.byScholarshipType[sType] = (result.byScholarshipType[sType] || 0) + 1;
     }
 
-    // Financial difficulty (col 95)
-    const fin = sdNormalizeYesNo(get(95));
+    // Financial difficulty (col 99)
+    const fin = sdNormalizeYesNo(get(99));
     if (fin === 'Yes') result.byFinancialDifficulty.Yes++;
     else if (fin === 'No') result.byFinancialDifficulty.No++;
 
-    // Support needed (col 96)
-    const support = get(96);
+    // Support needed (col 100)
+    const support = get(100);
     if (support && support.toLowerCase() !== 'n/a' && support.toLowerCase() !== 'none') {
       support.split(/[,;]/).forEach(s => {
         const t = s.trim();
@@ -2430,10 +2442,12 @@ function renderStudentDatasetCharts(parsed) {
     data: {
       labels: courseEntries.map(e => e[0]),
       datasets: [{ label: 'Students', data: courseEntries.map(e => e[1]),
-        backgroundColor: PALETTE_LIST, borderRadius: 5, borderSkipped: false }]
+        backgroundColor: PALETTE_LIST, borderRadius: 5, borderSkipped: false, maxBarThickness: 32 }]
     },
     options: {
       indexAxis: 'y',
+      maintainAspectRatio: false,
+      layout: { padding: { left: 10, right: 10, bottom: 10 } },
       plugins: { legend: { display: false } },
       scales: {
         x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } },
@@ -2466,7 +2480,7 @@ function renderStudentDatasetCharts(parsed) {
         labels: ageKeys,
         datasets: [{ label: 'Students', data: ageKeys.map(k => parsed.byAge[k] || 0),
           backgroundColor: [PALETTE.blue, PALETTE.indigo, PALETTE.purple, PALETTE.pink, PALETTE.red, PALETTE.gold],
-          borderRadius: 5, borderSkipped: false }]
+          borderRadius: 5, borderSkipped: false, maxBarThickness: 32 }]
       },
       options: {
         plugins: { legend: { display: false } },
@@ -2486,10 +2500,12 @@ function renderStudentDatasetCharts(parsed) {
       data: {
         labels: provEntries.map(e => e[0]),
         datasets: [{ label: 'Students', data: provEntries.map(e => e[1]),
-          backgroundColor: PALETTE.cyan, borderRadius: 4, borderSkipped: false }]
+          backgroundColor: PALETTE.cyan, borderRadius: 4, borderSkipped: false, maxBarThickness: 32 }]
       },
       options: {
         indexAxis: 'y',
+      maintainAspectRatio: false,
+      layout: { padding: { left: 10, right: 10, bottom: 10 } },
         plugins: { legend: { display: false } },
         scales: {
           x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } },
@@ -2536,7 +2552,7 @@ function renderStudentDatasetCharts(parsed) {
       labels: yearKeys.length ? yearKeys : ['No data'],
       datasets: [{ label: 'Students', data: yearKeys.map(k => parsed.byYear[k] || 0),
         backgroundColor: [PALETTE.blue, PALETTE.purple, PALETTE.green, PALETTE.gold, PALETTE.pink],
-        borderRadius: 5, borderSkipped: false }]
+        borderRadius: 5, borderSkipped: false, maxBarThickness: 32 }]
     },
     options: { plugins: { legend: { display: false } },
       scales: { x: { grid: { display: false } }, y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } } } }
@@ -2550,70 +2566,65 @@ function renderStudentDatasetCharts(parsed) {
     data: {
       labels: incomeKeys.length ? incomeKeys : ['No data'],
       datasets: [{ label: 'Families', data: incomeKeys.map(k => parsed.byIncome[k] || 0),
-        backgroundColor: PALETTE.green, borderRadius: 5, borderSkipped: false }]
+        backgroundColor: PALETTE.green, borderRadius: 5, borderSkipped: false, maxBarThickness: 32 }]
     },
     options: { plugins: { legend: { display: false } },
       scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } },
         y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } } } }
   });
 
-  // ── Employed (doughnut)
-  makeChart('sdEmployedChart', {
-    type: 'doughnut',
+  // ── Vulnerable & Special Groups (horizontal bar)
+  makeChart('sdVulnerableChart', {
+    type: 'bar',
     data: {
-      labels: ['Employed', 'Not Employed'],
-      datasets: [{ data: [parsed.byEmployed.Yes, parsed.byEmployed.No],
-        backgroundColor: [PALETTE.gold, '#1f2a42'], borderWidth: 2, hoverOffset: 6 }]
+      labels: ['Employed Students', 'Solo Parent Household', '4Ps Beneficiaries', 'IP Member', 'PWD / Special Needs'],
+      datasets: [{ 
+        label: 'Count', 
+        data: [
+          parsed.byEmployed.Yes, 
+          parsed.bySoloParent.Yes,
+          parsed.by4ps.Yes, 
+          parsed.byIP.Yes, 
+          parsed.byPWD.Yes
+        ],
+        backgroundColor: [PALETTE.gold, PALETTE.pink, PALETTE.indigo, PALETTE.cyan, PALETTE.red],
+        borderRadius: 4, borderSkipped: false, maxBarThickness: 32 
+      }]
     },
-    options: { cutout: '65%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+    options: {
+      indexAxis: 'y',
+      maintainAspectRatio: false,
+      layout: { padding: { left: 10, right: 10, bottom: 10 } },
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } },
+        y: { grid: { display: false }, ticks: { font: { size: 10 } } }
+      }
+    }
   });
 
-  // ── Residence type (doughnut)
-  const resEntries = Object.entries(parsed.byResidence).sort((a,b) => b[1] - a[1]);
-  const resKeys = resEntries.map(e => e[0]);
-  makeChart('sdResidenceChart', {
-    type: 'doughnut',
-    data: {
-      labels: resKeys.length ? resKeys : ['No data'],
-      datasets: [{ data: resKeys.length ? resEntries.map(e => e[1]) : [1],
-        backgroundColor: resKeys.length ? PALETTE_LIST : ['rgba(255,255,255,0.05)'],
-        borderWidth: 2, hoverOffset: 6 }]
-    },
-    options: { cutout: '60%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
-  });
-
-  // ── 4Ps (doughnut)
-  makeChart('sd4psChart', {
-    type: 'doughnut',
-    data: {
-      labels: ['4Ps Beneficiary', 'Not 4Ps'],
-      datasets: [{ data: [parsed.by4ps.Yes, parsed.by4ps.No],
-        backgroundColor: [PALETTE.indigo, '#1f2a42'], borderWidth: 2, hoverOffset: 6 }]
-    },
-    options: { cutout: '65%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
-  });
-
-  // ── IP (doughnut)
-  makeChart('sdIpChart', {
-    type: 'doughnut',
-    data: {
-      labels: ['IP Member', 'Non-IP'],
-      datasets: [{ data: [parsed.byIP.Yes, parsed.byIP.No],
-        backgroundColor: [PALETTE.cyan, '#1f2a42'], borderWidth: 2, hoverOffset: 6 }]
-    },
-    options: { cutout: '65%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
-  });
-
-  // ── PWD / Special needs (doughnut)
-  makeChart('sdPwdChart', {
-    type: 'doughnut',
-    data: {
-      labels: ['PWD / Special Needs', 'None'],
-      datasets: [{ data: [parsed.byPWD.Yes, parsed.byPWD.No],
-        backgroundColor: [PALETTE.red, '#1f2a42'], borderWidth: 2, hoverOffset: 6 }]
-    },
-    options: { cutout: '65%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
-  });
+  // ── Residence type (horizontal bar)
+  const resEntries = Object.entries(parsed.byResidence).sort((a,b) => b[1] - a[1]).slice(0,8);
+  if (resEntries.length > 0 && document.getElementById('sdResidenceChart')) {
+    makeChart('sdResidenceChart', {
+      type: 'bar',
+      data: {
+        labels: resEntries.map(e => e[0]),
+        datasets: [{ label: 'Students', data: resEntries.map(e => e[1]),
+          backgroundColor: PALETTE.pink, borderRadius: 4, borderSkipped: false, maxBarThickness: 32 }]
+      },
+      options: {
+        indexAxis: 'y',
+      maintainAspectRatio: false,
+      layout: { padding: { left: 10, right: 10, bottom: 10 } },
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } },
+          y: { grid: { display: false }, ticks: { font: { size: 10 } } }
+        }
+      }
+    });
+  }
 
   // ── Civil status (doughnut)
   const civilEntries = Object.entries(parsed.byCivilStatus).sort((a,b) => b[1] - a[1]);
@@ -2664,11 +2675,18 @@ function renderStudentDatasetCharts(parsed) {
     data: {
       labels: commuteEntries.length ? commuteEntries.map(e => e[0]) : ['No data'],
       datasets: [{ label: 'Students', data: commuteEntries.length ? commuteEntries.map(e => e[1]) : [0],
-        backgroundColor: PALETTE.cyan, borderRadius: 5, borderSkipped: false }]
+        backgroundColor: PALETTE.cyan, borderRadius: 5, borderSkipped: false, maxBarThickness: 32 }]
     },
-    options: { plugins: { legend: { display: false } },
-      scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } },
-        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } } } }
+    options: {
+      indexAxis: 'y',
+      maintainAspectRatio: false,
+      layout: { padding: { left: 10, right: 10, bottom: 10 } },
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } },
+        y: { grid: { display: false }, ticks: { font: { size: 10 } } }
+      }
+    }
   });
 
   // ── Scholarship (doughnut)
@@ -2690,10 +2708,12 @@ function renderStudentDatasetCharts(parsed) {
       data: {
         labels: scholTypeEntries.map(e => e[0]),
         datasets: [{ label: 'Students', data: scholTypeEntries.map(e => e[1]),
-          backgroundColor: PALETTE.gold, borderRadius: 4, borderSkipped: false }]
+          backgroundColor: PALETTE.gold, borderRadius: 4, borderSkipped: false, maxBarThickness: 32 }]
       },
       options: {
         indexAxis: 'y',
+      maintainAspectRatio: false,
+      layout: { padding: { left: 10, right: 10, bottom: 10 } },
         plugins: { legend: { display: false } },
         scales: {
           x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } },
@@ -2721,10 +2741,12 @@ function renderStudentDatasetCharts(parsed) {
     data: {
       labels: supportEntries.length ? supportEntries.map(e => e[0]) : ['No data'],
       datasets: [{ label: 'Respondents', data: supportEntries.length ? supportEntries.map(e => e[1]) : [0],
-        backgroundColor: PALETTE.purple, borderRadius: 4, borderSkipped: false }]
+        backgroundColor: PALETTE.purple, borderRadius: 4, borderSkipped: false, maxBarThickness: 32 }]
     },
     options: {
       indexAxis: 'y',
+      maintainAspectRatio: false,
+      layout: { padding: { left: 10, right: 10, bottom: 10 } },
       plugins: { legend: { display: false } },
       scales: {
         x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } },
@@ -3058,3 +3080,19 @@ function renderTopRoles(roles) {
       <span class="an-kpi-list-val">${count}</span>
     </div>`).join('');
 }
+
+// ── Student Dataset UI Tabs ──
+window.switchSDTab = function(tabId, btnElem) {
+  // Hide all tab contents
+  document.querySelectorAll('.an-tab-content').forEach(el => el.classList.add('hidden'));
+  
+  // Show target tab
+  const target = document.getElementById(tabId);
+  if (target) target.classList.remove('hidden');
+
+  // Update active button state
+  if (btnElem) {
+    document.querySelectorAll('.an-sub-tab-btn').forEach(btn => btn.classList.remove('active'));
+    btnElem.classList.add('active');
+  }
+};
