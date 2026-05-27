@@ -2010,7 +2010,7 @@ function sdNormalizeYear(raw) {
 
 // Course: collapses common NBSC program name variants into canonical abbreviations
 function sdNormalizeCourse(raw) {
-  if (!raw) return 'Unknown';
+  if (!raw) return 'Not stated';
   const s = String(raw).trim().toUpperCase().replace(/[.\-_]/g, ' ').replace(/\s+/g, ' ');
 
   // Strip leading year indicators like "1ST YEAR BSIT" → "BSIT"
@@ -2043,7 +2043,7 @@ function sdNormalizeCourse(raw) {
   // Fallback: extract initials from remaining words (skip filler words)
   const words = stripped.split(' ').filter(w => w.length > 1 && !['OF','IN','THE','AND','FOR','WITH'].includes(w));
   if (words.length >= 2) return words.map(w => w[0]).join('').substring(0, 5);
-  return stripped.split(' ')[0] || 'Unknown';
+  return stripped.split(' ')[0] || 'Not stated';
 }
 
 // Sex: normalize casing/spacing variants
@@ -2058,12 +2058,42 @@ function sdNormalizeSex(raw) {
 
 // Yes/No: handles "Yes", "YES", "yes", "No", "NO", "no", blank
 function sdNormalizeYesNo(raw) {
-  if (!raw) return null;
+  if (!raw) return 'Not stated';
   const s = String(raw).trim().toLowerCase();
   if (s === 'yes' || s === 'y' || s === '1' || s === 'true') return 'Yes';
   if (s === 'no'  || s === 'n' || s === '0' || s === 'false') return 'No';
   if (s.startsWith('yes')) return 'Yes'; // "Yes, ..." (solo parent field)
-  return null; // unanswered / ambiguous
+  return 'Not stated'; // unanswered / ambiguous
+}
+
+// Province of Origin
+function sdNormalizeProvince(raw) {
+  if (!raw) return 'Not stated';
+  let s = String(raw).trim().toLowerCase();
+  if (s === '' || s === 'n/a' || s === 'none') return 'Not stated';
+  
+  // Fuzzy deduction / Typo fixing
+  if (s.includes('bukidon') || s.includes('bukidn') || s === 'buk') s = 'bukidnon';
+  if (s.includes('misamis') && s.includes('or')) s = 'misamis oriental';
+  if (s.includes('cdo') || s.includes('cagayan')) s = 'misamis oriental';
+  
+  // Title case
+  return s.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.substring(1)).join(' ');
+}
+
+// Scholarship Type Deduction
+function sdNormalizeScholarshipType(raw) {
+  if (!raw) return 'Not stated';
+  const s = String(raw).trim().toLowerCase();
+  if (s === '' || s === 'n/a' || s === 'none') return 'Not stated';
+  if (s.includes('tes') || s.includes('tertiary')) return 'TES (Tertiary Education Subsidy)';
+  if (s.includes('ched') || s.includes('tdp') || s.includes('stufap')) return 'CHED Scholarship';
+  if (s.includes('school') || s.includes('academic') || s.includes('nbsc')) return 'School-based Scholarship';
+  if (s.includes('dost')) return 'DOST Scholarship';
+  if (s.includes('lgu') || s.includes('mayor') || s.includes('provincial')) return 'LGU/Provincial Scholarship';
+  
+  // Provide capitalized fallback for everything else
+  return s.charAt(0).toUpperCase() + s.substring(1);
 }
 
 // Income bracket helper
@@ -2153,7 +2183,7 @@ function sdNormalizeInternet(raw) {
 // Age bracket: computed from birthday string (col 8)
 // Handles: "MM/DD/YYYY", "YYYY-MM-DD", "Month DD, YYYY", etc.
 function sdComputeAgeBracket(raw) {
-  if (!raw) return null;
+  if (!raw || String(raw).trim().toLowerCase() === 'n/a') return 'Not stated';
   let d = null;
 
   // Try ISO format YYYY-MM-DD
@@ -2170,14 +2200,14 @@ function sdComputeAgeBracket(raw) {
     d = new Date(raw);
   }
 
-  if (!d || isNaN(d.getTime())) return null;
+  if (!d || isNaN(d.getTime())) return 'Invalid/Unrealistic Date';
 
   const today = new Date();
   let age = today.getFullYear() - d.getFullYear();
   const m = today.getMonth() - d.getMonth();
   if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age--;
 
-  if (age < 15 || age > 80) return null; // likely bad data
+  if (age < 15 || age > 80) return 'Invalid/Unrealistic Date'; // likely bad data (e.g. 2026)
   if (age < 18) return 'Under 18';
   if (age < 21) return '18–20';
   if (age < 25) return '21–24';
@@ -2229,6 +2259,7 @@ function parseStudentDatasetRows(rows) {
     byFirstGenCollege: { Yes: 0, No: 0 },
     byProvince: {},
     byReligion: {},
+    byScholarshipType: {},
     supportNeeded: {},
   };
 
@@ -2248,19 +2279,13 @@ function parseStudentDatasetRows(rows) {
     const sex = sdNormalizeSex(get(9));
     result.bySex[sex] = (result.bySex[sex] || 0) + 1;
 
-    // Age bracket (col 8 = BIRTHDAY) — compute from birthday
-    const ageRaw = get(8);
-    if (ageRaw) {
-      const ageBracket = sdComputeAgeBracket(ageRaw);
-      if (ageBracket) result.byAge[ageBracket] = (result.byAge[ageBracket] || 0) + 1;
-    }
+    // Age (col 8)
+    const ageBracket = sdComputeAgeBracket(get(8));
+    result.byAge[ageBracket] = (result.byAge[ageBracket] || 0) + 1;
 
-    // Province of origin (col 15) — for geographic distribution
-    const province = get(15);
-    if (province && province.length > 1) {
-      const pNorm = province.trim();
-      result.byProvince[pNorm] = (result.byProvince[pNorm] || 0) + 1;
-    }
+    // Province of origin (col 15)
+    const province = sdNormalizeProvince(get(15));
+    result.byProvince[province] = (result.byProvince[province] || 0) + 1;
 
     // Religion (col 11)
     const religion = get(11);
@@ -2334,6 +2359,12 @@ function parseStudentDatasetRows(rows) {
     if (schol === 'Yes') result.byScholarship.Yes++;
     else if (schol === 'No') result.byScholarship.No++;
 
+    // Scholarship Type (col 92)
+    if (schol === 'Yes') {
+      const sType = sdNormalizeScholarshipType(get(92));
+      result.byScholarshipType[sType] = (result.byScholarshipType[sType] || 0) + 1;
+    }
+
     // Financial difficulty (col 95)
     const fin = sdNormalizeYesNo(get(95));
     if (fin === 'Yes') result.byFinancialDifficulty.Yes++;
@@ -2341,7 +2372,7 @@ function parseStudentDatasetRows(rows) {
 
     // Support needed (col 96)
     const support = get(96);
-    if (support) {
+    if (support && support.toLowerCase() !== 'n/a' && support.toLowerCase() !== 'none') {
       support.split(/[,;]/).forEach(s => {
         const t = s.trim();
         if (t.length < 3) return;
@@ -2361,6 +2392,8 @@ function parseStudentDatasetRows(rows) {
         else if (tl.includes('job') || tl.includes('employ') || tl.includes('work') || tl.includes('livelihood')) label = 'Employment/Livelihood';
         result.supportNeeded[label] = (result.supportNeeded[label] || 0) + 1;
       });
+    } else {
+      result.supportNeeded['Not stated'] = (result.supportNeeded['Not stated'] || 0) + 1;
     }
   });
 
@@ -2410,12 +2443,13 @@ function renderStudentDatasetCharts(parsed) {
   });
 
   // ── Sex at birth (doughnut) ───────────────────────────────────────────────
-  const sexKeys = Object.keys(parsed.bySex);
+  const sexEntries = Object.entries(parsed.bySex).sort((a,b) => b[1] - a[1]);
+  const sexKeys = sexEntries.map(e => e[0]);
   makeChart('sdSexChart', {
     type: 'doughnut',
     data: {
       labels: sexKeys.length ? sexKeys : ['No data'],
-      datasets: [{ data: sexKeys.length ? sexKeys.map(k => parsed.bySex[k]) : [1],
+      datasets: [{ data: sexKeys.length ? sexEntries.map(e => e[1]) : [1],
         backgroundColor: sexKeys.length ? [PALETTE.blue, PALETTE.pink, PALETTE.purple] : ['rgba(255,255,255,0.05)'],
         borderWidth: 2, hoverOffset: 6 }]
     },
@@ -2466,13 +2500,13 @@ function renderStudentDatasetCharts(parsed) {
   }
 
   // ── Religion (doughnut) ───────────────────────────────────────────────────
-  const relKeys = Object.keys(parsed.byReligion || {}).filter(k => k !== 'Not stated');
-  if (relKeys.length > 0) {
+  const relEntries = Object.entries(parsed.byReligion || {}).filter(e => e[0] !== 'Not stated').sort((a,b) => b[1] - a[1]);
+  if (relEntries.length > 0) {
     makeChart('sdReligionChart', {
       type: 'doughnut',
       data: {
-        labels: relKeys,
-        datasets: [{ data: relKeys.map(k => parsed.byReligion[k]),
+        labels: relEntries.map(e => e[0]),
+        datasets: [{ data: relEntries.map(e => e[1]),
           backgroundColor: PALETTE_LIST, borderWidth: 2, hoverOffset: 6 }]
       },
       options: { cutout: '55%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
@@ -2535,12 +2569,13 @@ function renderStudentDatasetCharts(parsed) {
   });
 
   // ── Residence type (doughnut)
-  const resKeys = Object.keys(parsed.byResidence);
+  const resEntries = Object.entries(parsed.byResidence).sort((a,b) => b[1] - a[1]);
+  const resKeys = resEntries.map(e => e[0]);
   makeChart('sdResidenceChart', {
     type: 'doughnut',
     data: {
       labels: resKeys.length ? resKeys : ['No data'],
-      datasets: [{ data: resKeys.length ? resKeys.map(k => parsed.byResidence[k]) : [1],
+      datasets: [{ data: resKeys.length ? resEntries.map(e => e[1]) : [1],
         backgroundColor: resKeys.length ? PALETTE_LIST : ['rgba(255,255,255,0.05)'],
         borderWidth: 2, hoverOffset: 6 }]
     },
@@ -2581,12 +2616,13 @@ function renderStudentDatasetCharts(parsed) {
   });
 
   // ── Civil status (doughnut)
-  const civilKeys = Object.keys(parsed.byCivilStatus);
+  const civilEntries = Object.entries(parsed.byCivilStatus).sort((a,b) => b[1] - a[1]);
+  const civilKeys = civilEntries.map(e => e[0]);
   makeChart('sdCivilChart', {
     type: 'doughnut',
     data: {
       labels: civilKeys.length ? civilKeys : ['No data'],
-      datasets: [{ data: civilKeys.length ? civilKeys.map(k => parsed.byCivilStatus[k]) : [1],
+      datasets: [{ data: civilKeys.length ? civilEntries.map(e => e[1]) : [1],
         backgroundColor: civilKeys.length ? PALETTE_LIST : ['rgba(255,255,255,0.05)'],
         borderWidth: 2, hoverOffset: 6 }]
     },
@@ -2594,12 +2630,13 @@ function renderStudentDatasetCharts(parsed) {
   });
 
   // ── Internet access (doughnut)
-  const inetKeys = Object.keys(parsed.byInternet);
+  const inetEntries = Object.entries(parsed.byInternet).sort((a,b) => b[1] - a[1]);
+  const inetKeys = inetEntries.map(e => e[0]);
   makeChart('sdInternetChart', {
     type: 'doughnut',
     data: {
       labels: inetKeys.length ? inetKeys : ['No data'],
-      datasets: [{ data: inetKeys.length ? inetKeys.map(k => parsed.byInternet[k]) : [1],
+      datasets: [{ data: inetKeys.length ? inetEntries.map(e => e[1]) : [1],
         backgroundColor: inetKeys.length ? [PALETTE.green, PALETTE.red, PALETTE.gold] : ['rgba(255,255,255,0.05)'],
         borderWidth: 2, hoverOffset: 6 }]
     },
@@ -2607,12 +2644,13 @@ function renderStudentDatasetCharts(parsed) {
   });
 
   // ── Learning mode (doughnut)
-  const learnKeys = Object.keys(parsed.byLearningMode);
+  const learnEntries = Object.entries(parsed.byLearningMode).sort((a,b) => b[1] - a[1]);
+  const learnKeys = learnEntries.map(e => e[0]);
   makeChart('sdLearningChart', {
     type: 'doughnut',
     data: {
       labels: learnKeys.length ? learnKeys : ['No data'],
-      datasets: [{ data: learnKeys.length ? learnKeys.map(k => parsed.byLearningMode[k]) : [1],
+      datasets: [{ data: learnKeys.length ? learnEntries.map(e => e[1]) : [1],
         backgroundColor: learnKeys.length ? PALETTE_LIST : ['rgba(255,255,255,0.05)'],
         borderWidth: 2, hoverOffset: 6 }]
     },
@@ -2643,6 +2681,27 @@ function renderStudentDatasetCharts(parsed) {
     },
     options: { cutout: '65%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
   });
+
+  // ── Scholarship Type (horizontal bar)
+  const scholTypeEntries = Object.entries(parsed.byScholarshipType || {}).filter(e => e[0] !== 'Not stated').sort((a,b) => b[1]-a[1]).slice(0,8);
+  if (scholTypeEntries.length > 0 && document.getElementById('sdScholarshipTypeChart')) {
+    makeChart('sdScholarshipTypeChart', {
+      type: 'bar',
+      data: {
+        labels: scholTypeEntries.map(e => e[0]),
+        datasets: [{ label: 'Students', data: scholTypeEntries.map(e => e[1]),
+          backgroundColor: PALETTE.gold, borderRadius: 4, borderSkipped: false }]
+      },
+      options: {
+        indexAxis: 'y',
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } },
+          y: { grid: { display: false }, ticks: { font: { size: 10 } } }
+        }
+      }
+    });
+  }
 
   // ── Financial difficulty (doughnut)
   makeChart('sdFinancialChart', {
