@@ -2760,6 +2760,47 @@ document.addEventListener('DOMContentLoaded', () => {
       if (navAnalytics) {
         navAnalytics.style.display = 'flex';
         navAnalytics.classList.remove('hidden');
+
+        // ── Preload analytics data on hover ──────────────────────────────
+        // When the admin hovers the Analytics nav item, kick off background
+        // fetches so the data is cached by the time the iframe finishes loading.
+        // Uses a hidden <iframe> trick: load analytics in background, it will
+        // run paintFromCache + loadAllData and populate localStorage caches.
+        // On subsequent real navigation the page renders instantly from cache.
+        let analyticsPreloaded = false;
+        navAnalytics.addEventListener('mouseenter', function () {
+          if (analyticsPreloaded) return;
+          analyticsPreloaded = true;
+
+          // Find the analytics system config
+          const analyticsSys = systems.find(s => s.id === 'analytics');
+          if (!analyticsSys) return;
+
+          // Create a hidden background iframe to warm the caches
+          const preloadFrame = document.createElement('iframe');
+          preloadFrame.style.cssText = 'position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;border:none;';
+          preloadFrame.setAttribute('aria-hidden', 'true');
+          preloadFrame.setAttribute('tabindex', '-1');
+
+          const userObj = JSON.parse(localStorage.getItem('sas_user_data') || '{}');
+          const currentUser = userObj.username || 'Unknown';
+          const currentToken = userObj.token || userObj.jwt || '';
+          const glue = analyticsSys.url.includes('?') ? '&' : '?';
+          preloadFrame.src = analyticsSys.url + glue +
+            'portalUser=' + encodeURIComponent(currentUser) +
+            (currentToken ? '&portalToken=' + encodeURIComponent(currentToken) : '') +
+            '&preload=1';
+
+          document.body.appendChild(preloadFrame);
+
+          // Remove the hidden frame after 30s — it's done its job
+          setTimeout(() => {
+            if (preloadFrame.parentNode) preloadFrame.parentNode.removeChild(preloadFrame);
+          }, 30000);
+
+          console.log('[Analytics] Preload triggered on hover');
+        }, { once: false });
+        // ─────────────────────────────────────────────────────────────────
       }
     } else {
       if (navAnalytics) {

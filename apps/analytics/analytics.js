@@ -36,51 +36,157 @@ const PALETTE_LIST = Object.values(PALETTE);
 let charts = {};
 let manualServices = JSON.parse(localStorage.getItem('sas_manual_services') || '[]');
 
+// ─── Cache Layer ──────────────────────────────────────
+// All network data is cached in localStorage so the next page load
+// renders instantly from cache, then refreshes in the background.
+const CACHE_TTL = {
+  lostFound:   10 * 60 * 1000,  // 10 min  — external API
+  attendance:   5 * 60 * 1000,  //  5 min  — Supabase (live data)
+  jobVacancy:  30 * 60 * 1000,  // 30 min  — rarely changes
+  survey:       5 * 60 * 1000,  //  5 min  — matches poll interval
+  studentData:  5 * 60 * 1000,  //  5 min
+  pantry:      10 * 60 * 1000,  // 10 min
+};
+
+const CACHE_KEYS = {
+  lostFound:   'sas_analytics_cache_lf',
+  attendance:  'sas_analytics_cache_att',
+  jobVacancy:  'sas_analytics_cache_jv',
+  survey:      'sas_analytics_cache_survey',
+  studentData: 'sas_analytics_cache_sd',
+  pantry:      'sas_analytics_cache_pantry',
+};
+
+function cacheWrite(key, data) {
+  try {
+    localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data }));
+  } catch (e) {
+    // localStorage full — clear old analytics caches and retry
+    Object.values(CACHE_KEYS).forEach(k => localStorage.removeItem(k));
+    try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch (_) {}
+  }
+}
+
+function cacheRead(key, ttl) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const { ts, data } = JSON.parse(raw);
+    if (Date.now() - ts > ttl) return null; // expired
+    return data;
+  } catch (e) {
+    return null;
+  }
+}
+
+function cacheAge(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const { ts } = JSON.parse(raw);
+    const ageMs = Date.now() - ts;
+    if (ageMs < 60000) return 'just now';
+    if (ageMs < 3600000) return `${Math.floor(ageMs / 60000)}m ago`;
+    return `${Math.floor(ageMs / 3600000)}h ago`;
+  } catch (e) { return null; }
+}
+
 // ─── Init ─────────────────────────────────────────────
+// Detect if we're running as a background preload (hidden iframe)
+const IS_PRELOAD = new URLSearchParams(window.location.search).get('preload') === '1';
+
 document.addEventListener('DOMContentLoaded', async () => {
+  // If preloading in background, just warm the caches silently — no UI work
+  if (IS_PRELOAD) {
+    loadAllDataForPreload();
+    return;
+  }
+
   document.getElementById('semesterBadge').textContent = SEMESTER_LABEL;
   document.getElementById('printDate').textContent = new Date().toLocaleDateString('en-PH', {
     year: 'numeric', month: 'long', day: 'numeric'
   });
-  
+
   // Initialize dashboard view
   initializeDashboardView();
-  
   renderManualServices();
+
+  // ── Step 1: Paint from cache instantly (zero wait) ──
+  paintFromCache();
+
+  // ── Step 2: Refresh stale/missing data in background ──
   loadAllData();
-  
-  // Start survey polling if a sheet was previously connected OR if global default exists
+
+  // Survey + student dataset polling setup
   const hasLocalSheet = !!localStorage.getItem('sas_survey_sheet_id');
   let hasGlobalDefault = false;
-  
   if (!hasLocalSheet) {
-    // Check if there's a global default
     const defaultData = await safeFetch(BACKEND_URL + '?action=getDefaultSurveySheet');
-    if (defaultData && defaultData.success && defaultData.sheetId) {
-      hasGlobalDefault = true;
-    }
+    if (defaultData && defaultData.success && defaultData.sheetId) hasGlobalDefault = true;
   }
-  
-  if (hasLocalSheet || hasGlobalDefault) {
-    startSurveyPolling();
-  }
+  if (hasLocalSheet || hasGlobalDefault) startSurveyPolling();
 
-  // Start student dataset polling if a sheet was previously connected OR if global default exists
   const hasLocalSDSheet = !!localStorage.getItem('sas_student_dataset_sheet_id');
   let hasGlobalSDDefault = false;
-
   if (!hasLocalSDSheet) {
     const sdDefaultData = await safeFetch(BACKEND_URL + '?action=getDefaultStudentDatasetSheet');
-    if (sdDefaultData && sdDefaultData.success && sdDefaultData.sheetId) {
-      hasGlobalSDDefault = true;
-    }
+    if (sdDefaultData && sdDefaultData.success && sdDefaultData.sheetId) hasGlobalSDDefault = true;
+  }
+  loadStudentDatasetData();
+  if (hasLocalSDSheet || hasGlobalSDDefault) startStudentDatasetPolling();
+});
+
+// Paint whatever is in cache right now — called before any network request
+function paintFromCache() {
+  const lf = cacheRead(CACHE_KEYS.lostFound, CACHE_TTL.lostFound);
+  if (lf) { renderLFData(lf); showCacheAge('lf', CACHE_KEYS.lostFound); }
+
+  const att = cacheRead(CACHE_KEYS.attendance, CACHE_TTL.attendance);
+  if (att) { renderAttendanceFromCache(att); showCacheAge('att', CACHE_KEYS.attendance); }
+
+  const jv = cacheRead(CACHE_KEYS.jobVacancy, CACHE_TTL.jobVacancy);
+  if (jv) { renderJobVacancyFromCache(jv); showCacheAge('jv', CACHE_KEYS.jobVacancy); }
+
+  const pantry = cacheRead(CACHE_KEYS.pantry, CACHE_TTL.pantry);
+  if (pantry) { renderPantryFromCache(pantry); }
+
+  // Survey — render parsed data directly from cache (no re-fetch needed)
+  const survey = cacheRead(CACHE_KEYS.survey, CACHE_TTL.survey);
+  if (survey) {
+    renderSurveyData(survey);
+    setSurveyStatus('ok', `${survey.total} responses · cached ${cacheAge(CACHE_KEYS.survey)}`);
+    // Restore sheet ID into input if present
+    const sheetId = localStorage.getItem('sas_survey_sheet_id');
+    const input = document.getElementById('surveySheetId');
+    if (input && sheetId && !input.value) input.value = sheetId;
+    const refreshBtn    = document.getElementById('surveyRefreshBtn');
+    const disconnectBtn = document.getElementById('surveyDisconnectBtn');
+    if (refreshBtn)    refreshBtn.style.display    = 'inline-flex';
+    if (disconnectBtn) disconnectBtn.style.display = 'inline-flex';
   }
 
-  loadStudentDatasetData();
-  if (hasLocalSDSheet || hasGlobalSDDefault) {
-    startStudentDatasetPolling();
+  // Student dataset — same pattern
+  const sd = cacheRead(CACHE_KEYS.studentData, CACHE_TTL.studentData);
+  if (sd) {
+    renderStudentDatasetCharts(sd);
+    setSDStatus('ok', `${sd.total} respondents · cached ${cacheAge(CACHE_KEYS.studentData)}`);
+    const sdSheetId = localStorage.getItem('sas_student_dataset_sheet_id');
+    const sdInput = document.getElementById('sdSheetId');
+    if (sdInput && sdSheetId && !sdInput.value) sdInput.value = sdSheetId;
+    const sdRefreshBtn    = document.getElementById('sdRefreshBtn');
+    const sdDisconnectBtn = document.getElementById('sdDisconnectBtn');
+    if (sdRefreshBtn)    sdRefreshBtn.style.display    = 'inline-flex';
+    if (sdDisconnectBtn) sdDisconnectBtn.style.display = 'inline-flex';
   }
-});
+}
+
+function showCacheAge(section, cacheKey) {
+  const age = cacheAge(cacheKey);
+  if (!age) return;
+  // Show a subtle "cached X ago" badge if the element exists
+  const el = document.getElementById(`cache-age-${section}`);
+  if (el) { el.textContent = `cached ${age}`; el.style.display = 'inline'; }
+}
 
 // ─── Dashboard View Management ───────────────────────
 function initializeDashboardView() {
@@ -128,15 +234,43 @@ function toggleCustomizeMode() {
 
 async function loadAllData() {
   showRefreshSpin(true);
-  await Promise.allSettled([
-    loadLostFoundData(),
-    loadAttendanceData(),
-    loadJobVacancyData(),
-  ]);
-  loadBorrowersData();  // graceful — no await
+
+  // Only re-fetch sections whose cache has expired — skip fresh ones
+  const tasks = [];
+  if (!cacheRead(CACHE_KEYS.lostFound,  CACHE_TTL.lostFound))  tasks.push(loadLostFoundData());
+  if (!cacheRead(CACHE_KEYS.attendance, CACHE_TTL.attendance))  tasks.push(loadAttendanceData());
+  if (!cacheRead(CACHE_KEYS.jobVacancy, CACHE_TTL.jobVacancy))  tasks.push(loadJobVacancyData());
+
+  if (tasks.length > 0) {
+    await Promise.allSettled(tasks);
+  }
+
+  // These are always lightweight / self-managing
+  if (!cacheRead(CACHE_KEYS.pantry, CACHE_TTL.pantry)) loadPantryData();
+
+  // Survey and student dataset manage their own staleness via row-count check
   loadSurveyData();
-  loadPantryData();
+  loadBorrowersData(); // graceful — no await
+
   showRefreshSpin(false);
+}
+
+// Silent background preload — only fetches, no UI rendering
+// Called when analytics.js is loaded in a hidden iframe on nav hover
+async function loadAllDataForPreload() {
+  const tasks = [];
+  if (!cacheRead(CACHE_KEYS.lostFound,  CACHE_TTL.lostFound))  tasks.push(loadLostFoundData());
+  if (!cacheRead(CACHE_KEYS.attendance, CACHE_TTL.attendance))  tasks.push(loadAttendanceData());
+  if (!cacheRead(CACHE_KEYS.jobVacancy, CACHE_TTL.jobVacancy))  tasks.push(loadJobVacancyData());
+  if (!cacheRead(CACHE_KEYS.pantry,     CACHE_TTL.pantry))      tasks.push(loadPantryData());
+
+  await Promise.allSettled(tasks);
+
+  // Survey + student dataset — fetch and cache silently
+  await loadSurveyData();
+  await loadStudentDatasetData();
+
+  console.log('[Analytics] Preload complete — caches warmed');
 }
 
 function showRefreshSpin(on) {
@@ -176,10 +310,16 @@ async function loadLostFoundData() {
   if (!data || !data.success) {
     // Try direct API as fallback
     const direct = await safeFetch(LF_API_BASE + '/admin/stats');
-    if (direct && direct.data) { renderLFData(direct.data); return; }
-    renderLFPlaceholder();
+    if (direct && direct.data) {
+      cacheWrite(CACHE_KEYS.lostFound, direct.data);
+      renderLFData(direct.data);
+      return;
+    }
+    // Only show placeholder if nothing is cached
+    if (!cacheRead(CACHE_KEYS.lostFound, CACHE_TTL.lostFound)) renderLFPlaceholder();
     return;
   }
+  cacheWrite(CACHE_KEYS.lostFound, data.data);
   renderLFData(data.data);
 }
 
@@ -1057,7 +1197,15 @@ async function loadSurveyData() {
   setSurveyStatus('loading', 'Fetching sheet (large dataset, may take 10–30s)…');
 
   const startTime = Date.now();
-  const rows = await fetchSurveySheet(sheetId);
+  let rows = await fetchSurveySheet(sheetId);
+
+  // Auto-retry once on failure before giving up
+  if (!rows) {
+    setSurveyStatus('loading', 'Retrying sheet fetch…');
+    await new Promise(r => setTimeout(r, 3000));
+    rows = await fetchSurveySheet(sheetId);
+  }
+
   const fetchDuration = ((Date.now() - startTime) / 1000).toFixed(1);
   
   if (!rows) {
@@ -1080,6 +1228,8 @@ async function loadSurveyData() {
   // Parse in next tick to avoid blocking UI
   setTimeout(() => {
     const parsed = parseSurveyRows(rows);
+    // Cache the parsed result so next load is instant
+    cacheWrite(CACHE_KEYS.survey, parsed);
     renderSurveyData(parsed);
   }, 50);
 }
@@ -1173,43 +1323,50 @@ function loadPantryData() {
   if (el) el.classList.add('hidden');
   safeFetch(BACKEND_URL + '?action=getPantryStats&sheetId=' + encodeURIComponent(sheetId)).then(res => {
     if (res && res.success) {
-      setText('kv-pantry', res.count || 0);
-
-      const monthly = res.monthly || {};
-      makeChart('pantryMonthlyChart', {
-        type: 'bar',
-        data: {
-          labels: Object.keys(monthly),
-          datasets: [{ label: 'Students', data: Object.values(monthly), backgroundColor: PALETTE.pink, borderRadius: 5 }]
-        },
-        options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { precision: 0 } } } }
-      });
-
-      const course = res.byCourse || {};
-      makeChart('pantryCourseChart', {
-        type: 'doughnut',
-        data: {
-          labels: Object.keys(course),
-          datasets: [{ data: Object.values(course), backgroundColor: PALETTE_LIST, borderWidth: 2 }]
-        },
-        options: { cutout: '60%', plugins: { legend: { position: 'bottom' } } }
-      });
-
-      const year = res.byYear || {};
-      makeChart('pantryYearChart', {
-        type: 'bar',
-        data: {
-          labels: Object.keys(year),
-          datasets: [{ label: 'Students', data: Object.values(year), backgroundColor: [PALETTE.blue, PALETTE.purple, PALETTE.green, PALETTE.gold], borderRadius: 5 }]
-        },
-        options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { precision: 0 } } } }
-      });
+      cacheWrite(CACHE_KEYS.pantry, res);
+      renderPantryFromCache(res);
     } else {
-      setText('kv-pantry', '—');
-      renderEmptyChart('pantryMonthlyChart', 'bar');
-      renderEmptyChart('pantryCourseChart',  'doughnut');
-      renderEmptyChart('pantryYearChart',    'bar');
+      if (!cacheRead(CACHE_KEYS.pantry, CACHE_TTL.pantry)) {
+        setText('kv-pantry', '—');
+        renderEmptyChart('pantryMonthlyChart', 'bar');
+        renderEmptyChart('pantryCourseChart',  'doughnut');
+        renderEmptyChart('pantryYearChart',    'bar');
+      }
     }
+  });
+}
+
+function renderPantryFromCache(res) {
+  setText('kv-pantry', res.count || 0);
+
+  const monthly = res.monthly || {};
+  makeChart('pantryMonthlyChart', {
+    type: 'bar',
+    data: {
+      labels: Object.keys(monthly),
+      datasets: [{ label: 'Students', data: Object.values(monthly), backgroundColor: PALETTE.pink, borderRadius: 5 }]
+    },
+    options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { precision: 0 } } } }
+  });
+
+  const course = res.byCourse || {};
+  makeChart('pantryCourseChart', {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(course),
+      datasets: [{ data: Object.values(course), backgroundColor: PALETTE_LIST, borderWidth: 2 }]
+    },
+    options: { cutout: '60%', plugins: { legend: { position: 'bottom' } } }
+  });
+
+  const year = res.byYear || {};
+  makeChart('pantryYearChart', {
+    type: 'bar',
+    data: {
+      labels: Object.keys(year),
+      datasets: [{ label: 'Students', data: Object.values(year), backgroundColor: [PALETTE.blue, PALETTE.purple, PALETTE.green, PALETTE.gold], borderRadius: 5 }]
+    },
+    options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { precision: 0 } } } }
   });
 }
 
@@ -1500,6 +1657,14 @@ async function loadAttendanceData() {
 
     renderEmptyTopEvents(sortedEvents.slice(0, 5));
 
+    // Cache the rendered payload for instant next load
+    cacheWrite(CACHE_KEYS.attendance, {
+      totalEventAttendees,
+      sortedEvents,
+      byCourse,
+      byYear,
+    });
+
   } catch (err) {
     console.error('[Analytics] Supabase attendance error:', err?.message ?? err, err?.stack);
     if (elPh) elPh.classList.remove('hidden');
@@ -1509,6 +1674,61 @@ async function loadAttendanceData() {
     renderEmptyChart('attendanceYearChart',   'bar');
     renderEmptyTopEvents([]);
   }
+}
+
+function renderAttendanceFromCache({ totalEventAttendees, sortedEvents, byCourse, byYear }) {
+  const elPh = document.getElementById('attendance-placeholder');
+  if (elPh) elPh.classList.add('hidden');
+  setText('kv-attendance', totalEventAttendees);
+
+  const topN = sortedEvents.slice(0, 10);
+  makeChart('attendanceEventChart', {
+    type: 'bar',
+    data: {
+      labels: topN.map(e => e[0]),
+      datasets: [{ label: 'Attendees', data: topN.map(e => e[1]),
+        backgroundColor: PALETTE.purple, borderRadius: 6, borderSkipped: false }]
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } },
+        y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+      }
+    }
+  });
+
+  const sortedCourses = Object.entries(byCourse).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  makeChart('attendanceCourseChart', {
+    type: 'doughnut',
+    data: {
+      labels: sortedCourses.length ? sortedCourses.map(c => c[0]) : ['No data'],
+      datasets: [{ data: sortedCourses.length ? sortedCourses.map(c => c[1]) : [1],
+        backgroundColor: sortedCourses.length ? PALETTE_LIST : ['rgba(255,255,255,0.05)'],
+        borderWidth: sortedCourses.length ? 2 : 0, hoverOffset: sortedCourses.length ? 6 : 0 }]
+    },
+    options: { cutout: '60%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+  });
+
+  makeChart('attendanceYearChart', {
+    type: 'bar',
+    data: {
+      labels: Object.keys(byYear),
+      datasets: [{ label: 'Students', data: Object.values(byYear),
+        backgroundColor: [PALETTE.blue, PALETTE.purple, PALETTE.green, PALETTE.gold],
+        borderRadius: 6, borderSkipped: false }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false } },
+        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } }
+      }
+    }
+  });
+
+  renderEmptyTopEvents(sortedEvents.slice(0, 5));
 }
 
 function renderEmptyTopEvents(rows) {
@@ -2255,7 +2475,15 @@ async function loadStudentDatasetData() {
 
   setSDStatus('loading', 'Fetching sheet…');
 
-  const rows = await fetchSurveySheet(sheetId); // reuse the same gviz fetcher
+  let rows = await fetchSurveySheet(sheetId); // reuse the same gviz fetcher
+
+  // Auto-retry once on failure before giving up
+  if (!rows) {
+    setSDStatus('loading', 'Retrying sheet fetch…');
+    await new Promise(r => setTimeout(r, 3000));
+    rows = await fetchSurveySheet(sheetId);
+  }
+
   if (!rows) {
     setSDStatus('error', 'Could not load sheet — make sure it is shared as "Anyone with the link → Viewer"');
     document.getElementById('sd-charts-area')?.classList.add('hidden');
@@ -2273,6 +2501,8 @@ async function loadStudentDatasetData() {
   setSDStatus('loading', `Parsing ${dataRows} respondents…`);
   setTimeout(() => {
     const parsed = parseStudentDatasetRows(rows);
+    // Cache the parsed result so next load is instant
+    cacheWrite(CACHE_KEYS.studentData, parsed);
     renderStudentDatasetCharts(parsed);
   }, 50);
 }
@@ -2401,88 +2631,95 @@ async function loadJobVacancyData() {
   const elPh = document.getElementById('vacancies-placeholder');
 
   try {
-    // Read structured vacancy data from GAS (which proxies Supabase)
-    // Only fetches non-low-content records (skips QR/image-only posters)
     const res = await safeFetch(`${BACKEND_URL}?action=getVacancyData`);
 
     if (!res || !res.success) {
       console.warn('[Job Vacancies] getVacancyData failed:', res?.message);
-      throw new Error(res?.message || 'Failed to load vacancy data');
-    }
-
-    const vacancies = res.vacancies || [];
-    setText('kv-vacancies', res.total || vacancies.length);
-
-    if (vacancies.length === 0) {
-      renderEmptyChart('vacanciesChart', 'doughnut');
-      renderTopRoles([]);
-      if (elPh) {
-        elPh.classList.remove('hidden');
-        elPh.querySelector('p').textContent = 'No vacancy data yet. Run the sync script to process posters.';
-        const span = elPh.querySelector('span');
-        if (span) span.textContent = 'node scripts/sync-vacancies.js';
+      // Only show placeholder if nothing is cached
+      if (!cacheRead(CACHE_KEYS.jobVacancy, CACHE_TTL.jobVacancy)) {
+        throw new Error(res?.message || 'Failed to load vacancy data');
       }
       return;
     }
 
-    if (elPh) elPh.classList.add('hidden');
-
-    // ── Industry breakdown ──
-    const industryCounts = {};
-    vacancies.forEach(v => {
-      const bucket = v.industry || 'Others';
-      industryCounts[bucket] = (industryCounts[bucket] || 0) + 1;
-    });
-
-    const chartEntries = Object.entries(industryCounts)
-      .filter(([k]) => k !== 'Others')
-      .sort((a, b) => b[1] - a[1]);
-    if (industryCounts['Others']) chartEntries.push(['Others', industryCounts['Others']]);
-
-    makeChart('vacanciesChart', {
-      type: 'doughnut',
-      data: {
-        labels: chartEntries.map(e => e[0]),
-        datasets: [{
-          data: chartEntries.map(e => e[1]),
-          backgroundColor: PALETTE_LIST,
-          borderWidth: 2,
-          hoverOffset: 6
-        }]
-      },
-      options: {
-        cutout: '60%',
-        plugins: {
-          legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
-          tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} poster${ctx.parsed !== 1 ? 's' : ''}` } }
-        }
-      }
-    });
-
-    // ── Top positions (from structured positions[] array) ──
-    const positionCounts = {};
-    vacancies.forEach(v => {
-      if (Array.isArray(v.positions)) {
-        v.positions.forEach(p => {
-          const key = p.trim();
-          if (key.length > 1) positionCounts[key] = (positionCounts[key] || 0) + 1;
-        });
-      }
-    });
-
-    const topRoles = Object.entries(positionCounts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8);
-
-    renderTopRoles(topRoles);
+    const payload = { vacancies: res.vacancies || [], total: res.total || (res.vacancies || []).length };
+    cacheWrite(CACHE_KEYS.jobVacancy, payload);
+    renderJobVacancyFromCache(payload);
 
   } catch (err) {
     console.error('[Job Vacancies] Error:', err);
-    if (elPh) elPh.classList.remove('hidden');
-    setText('kv-vacancies', '—');
+    if (!cacheRead(CACHE_KEYS.jobVacancy, CACHE_TTL.jobVacancy)) {
+      if (elPh) elPh.classList.remove('hidden');
+      setText('kv-vacancies', '—');
+      renderEmptyChart('vacanciesChart', 'doughnut');
+      renderTopRoles([]);
+    }
+  }
+}
+
+function renderJobVacancyFromCache({ vacancies, total }) {
+  const elPh = document.getElementById('vacancies-placeholder');
+  setText('kv-vacancies', total || vacancies.length);
+
+  if (vacancies.length === 0) {
     renderEmptyChart('vacanciesChart', 'doughnut');
     renderTopRoles([]);
+    if (elPh) {
+      elPh.classList.remove('hidden');
+      const p = elPh.querySelector('p');
+      if (p) p.textContent = 'No vacancy data yet. Run the sync script to process posters.';
+    }
+    return;
   }
+
+  if (elPh) elPh.classList.add('hidden');
+
+  const industryCounts = {};
+  vacancies.forEach(v => {
+    const bucket = v.industry || 'Others';
+    industryCounts[bucket] = (industryCounts[bucket] || 0) + 1;
+  });
+
+  const chartEntries = Object.entries(industryCounts)
+    .filter(([k]) => k !== 'Others')
+    .sort((a, b) => b[1] - a[1]);
+  if (industryCounts['Others']) chartEntries.push(['Others', industryCounts['Others']]);
+
+  makeChart('vacanciesChart', {
+    type: 'doughnut',
+    data: {
+      labels: chartEntries.map(e => e[0]),
+      datasets: [{
+        data: chartEntries.map(e => e[1]),
+        backgroundColor: PALETTE_LIST,
+        borderWidth: 2,
+        hoverOffset: 6
+      }]
+    },
+    options: {
+      cutout: '60%',
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} poster${ctx.parsed !== 1 ? 's' : ''}` } }
+      }
+    }
+  });
+
+  const positionCounts = {};
+  vacancies.forEach(v => {
+    if (Array.isArray(v.positions)) {
+      v.positions.forEach(p => {
+        const key = p.trim();
+        if (key.length > 1) positionCounts[key] = (positionCounts[key] || 0) + 1;
+      });
+    }
+  });
+
+  const topRoles = Object.entries(positionCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8);
+
+  renderTopRoles(topRoles);
 }
 
 function renderTopRoles(roles) {
