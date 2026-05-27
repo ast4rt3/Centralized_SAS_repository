@@ -65,6 +65,26 @@ html {
   scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
 
+/* TV mode: restore gold scrollbar so the TV display looks correct */
+body.tv-mode ::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+}
+
+body.tv-mode ::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 215, 0, 0.4) !important;
+  border-radius: var(--radius-full) !important;
+  border: none !important;
+}
+
+body.tv-mode ::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 215, 0, 0.65) !important;
+}
+
+body.tv-mode * {
+  scrollbar-color: rgba(255, 215, 0, 0.4) transparent;
+}
+
 @keyframes pulse-live {
   0% {
     transform: scale(1);
@@ -1734,6 +1754,7 @@ body.dark-theme .user-settings-btn:hover {
 }
 
 /* Dark tint overlay — prevents white/light images from clashing with dark theme */
+/* Disabled in TV mode so images display at full brightness on the display screen */
 .post-image-container::after {
   content: '';
   position: absolute;
@@ -1743,6 +1764,10 @@ body.dark-theme .user-settings-btn:hover {
   pointer-events: none;
 }
 
+body.tv-mode .post-image-container::after {
+  display: none;
+}
+
 .post-image {
   width: 100%;
   height: 100%;
@@ -1750,6 +1775,11 @@ body.dark-theme .user-settings-btn:hover {
   /* Slight desaturation so bright images blend better */
   filter: saturate(0.85) brightness(0.9);
   transition: filter 0.4s ease;
+}
+
+/* Full color and brightness in TV mode */
+body.tv-mode .post-image {
+  filter: none;
 }
 
 .post-card:hover .post-image {
@@ -3110,19 +3140,14 @@ body.tv-mode .home-news-image-wrap {
   inset: -10%;
   background-size: cover;
   background-position: center;
-  filter: blur(30px) brightness(0.3) saturate(1.1);
+  filter: blur(30px) brightness(0.15) saturate(1.1);
   z-index: 1;
   transition: background-image 0.8s ease;
 }
 
-/* Dark overlay on top of the blurred bg — prevents white images from blowing out */
+/* Dark overlay removed — images display at full brightness in TV mode */
 body.tv-mode .home-news-image-wrap::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 5, 20, 0.55);
-  z-index: 2;
-  pointer-events: none;
+  display: none;
 }
 
 /* The actual image sits above the overlay */
@@ -3136,8 +3161,7 @@ body.tv-mode .home-news-image,
 body.tv-mode video.home-news-image,
 body.tv-mode iframe.home-news-image {
   object-fit: contain !important;
-  /* Subtle dark tint on the image itself for white-bg images */
-  filter: brightness(0.92) drop-shadow(0 0 40px rgba(0, 0, 0, 0.6)) !important;
+  filter: drop-shadow(0 0 40px rgba(0, 0, 0, 0.4)) !important;
 }
 
 body.fullscreen-active .home-news-image,

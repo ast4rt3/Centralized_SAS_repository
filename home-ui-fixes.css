@@ -4,8 +4,10 @@
    May 27, 2026
    ===================================================== */
 
-/* ── 1. Scrollbar: Subtle, gold only on hover ── */
-::-webkit-scrollbar {
+/* ── 1. Scrollbar: Subtle, gold only on hover ──
+   Scoped to non-TV-mode so TV display is unaffected ── */
+:not(body.tv-mode) ::-webkit-scrollbar,
+body:not(.tv-mode) ::-webkit-scrollbar {
   width: 6px !important;
   height: 6px !important;
 }
@@ -25,8 +27,8 @@
   background-color: rgba(255, 215, 0, 0.45) !important;
 }
 
-/* Firefox */
-* {
+/* Firefox — only apply thin scrollbar outside TV mode */
+body:not(.tv-mode) * {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
@@ -158,8 +160,9 @@
   justify-content: center;
 }
 
-/* ── 7. Post cards: consistent hover border, no gold overuse ── */
-.post-card:hover {
+/* ── 7. Post cards: consistent hover border, no gold overuse ──
+   Scoped to non-TV-mode ── */
+body:not(.tv-mode) .post-card:hover {
   border-color: rgba(255, 215, 0, 0.5);
   transform: translateY(-6px) scale(1.015);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
