@@ -3097,3 +3097,34 @@ window.switchSDTab = function(tabId, btnElem) {
     btnElem.classList.add('active');
   }
 };
+// ── Print Mode Chart Updates ──
+window.addEventListener('beforeprint', () => {
+  Chart.defaults.color = '#000';
+  for (let id in charts) {
+    if (charts[id]) {
+      if (charts[id].options.scales) {
+        for (let axis in charts[id].options.scales) {
+          if (charts[id].options.scales[axis].grid) {
+            charts[id].options.scales[axis].grid.color = 'rgba(0,0,0,0.1)';
+          }
+        }
+      }
+      charts[id].update();
+    }
+  }
+});
+window.addEventListener('afterprint', () => {
+  Chart.defaults.color = 'rgba(255, 255, 255, 0.7)';
+  for (let id in charts) {
+    if (charts[id]) {
+      if (charts[id].options.scales) {
+        for (let axis in charts[id].options.scales) {
+          if (charts[id].options.scales[axis].grid) {
+            charts[id].options.scales[axis].grid.color = 'rgba(255,255,255,0.04)';
+          }
+        }
+      }
+      charts[id].update();
+    }
+  }
+});
