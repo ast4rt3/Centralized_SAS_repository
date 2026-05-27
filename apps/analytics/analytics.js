@@ -2432,6 +2432,7 @@ function renderStudentDatasetCharts(parsed) {
   setText('sd-updated', new Date().toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' }));
 
   // Global KPI card
+  window.sdTotalRespondents = parsed.total;
   setText('kv-sd-total', parsed.total);
   setText('kv-sd-sub', `${parsed.by4ps.Yes} on 4Ps · ${parsed.byPWD.Yes} PWD · ${parsed.byIP.Yes} IP`);
 
