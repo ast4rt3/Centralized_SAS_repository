@@ -91,6 +91,22 @@ function cacheAge(key) {
   } catch (e) { return null; }
 }
 
+// Read the raw rows cache written by the main portal's background poller.
+// TTL is 6 minutes — slightly longer than the 5-min poll interval to avoid
+// a gap where both the poller and the iframe try to fetch at the same time.
+const _ROWS_CACHE_TTL = 6 * 60 * 1000;
+function _readRowsCache(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const { ts, rows } = JSON.parse(raw);
+    if (Date.now() - ts > _ROWS_CACHE_TTL) return null; // stale
+    return rows;
+  } catch (e) {
+    return null;
+  }
+}
+
 // ─── Init ─────────────────────────────────────────────
 // Detect if we're running as a background preload (hidden iframe)
 const IS_PRELOAD = new URLSearchParams(window.location.search).get('preload') === '1';
@@ -150,33 +166,71 @@ function paintFromCache() {
   const pantry = cacheRead(CACHE_KEYS.pantry, CACHE_TTL.pantry);
   if (pantry) { renderPantryFromCache(pantry); }
 
-  // Survey — render parsed data directly from cache (no re-fetch needed)
+  // ── Survey ──────────────────────────────────────────────────────────────
+  // Priority 1: parsed cache (fastest — no re-parse needed)
+  // Priority 2: raw rows cache from background poller (needs parse, but no network)
   const survey = cacheRead(CACHE_KEYS.survey, CACHE_TTL.survey);
   if (survey) {
     renderSurveyData(survey);
     setSurveyStatus('ok', `${survey.total} responses · cached ${cacheAge(CACHE_KEYS.survey)}`);
-    // Restore sheet ID into input if present
-    const sheetId = localStorage.getItem('sas_survey_sheet_id');
-    const input = document.getElementById('surveySheetId');
-    if (input && sheetId && !input.value) input.value = sheetId;
-    const refreshBtn    = document.getElementById('surveyRefreshBtn');
-    const disconnectBtn = document.getElementById('surveyDisconnectBtn');
-    if (refreshBtn)    refreshBtn.style.display    = 'inline-flex';
-    if (disconnectBtn) disconnectBtn.style.display = 'inline-flex';
+    _restoreSheetUI('survey');
+  } else {
+    // Try rows cache from background poller
+    const surveyRows = _readRowsCache(CACHE_KEYS.survey + '_rows');
+    if (surveyRows) {
+      const count = surveyRows.length - 1;
+      setSurveyStatus('loading', `Parsing ${count} responses from background cache…`);
+      _restoreSheetUI('survey');
+      setTimeout(() => {
+        const parsed = parseSurveyRows(surveyRows);
+        cacheWrite(CACHE_KEYS.survey, parsed);
+        surveyLastRowCount = count;
+        renderSurveyData(parsed);
+      }, 50);
+    }
   }
 
-  // Student dataset — same pattern
+  // ── Student Dataset ─────────────────────────────────────────────────────
   const sd = cacheRead(CACHE_KEYS.studentData, CACHE_TTL.studentData);
   if (sd) {
     renderStudentDatasetCharts(sd);
     setSDStatus('ok', `${sd.total} respondents · cached ${cacheAge(CACHE_KEYS.studentData)}`);
-    const sdSheetId = localStorage.getItem('sas_student_dataset_sheet_id');
-    const sdInput = document.getElementById('sdSheetId');
-    if (sdInput && sdSheetId && !sdInput.value) sdInput.value = sdSheetId;
-    const sdRefreshBtn    = document.getElementById('sdRefreshBtn');
-    const sdDisconnectBtn = document.getElementById('sdDisconnectBtn');
-    if (sdRefreshBtn)    sdRefreshBtn.style.display    = 'inline-flex';
-    if (sdDisconnectBtn) sdDisconnectBtn.style.display = 'inline-flex';
+    _restoreSheetUI('sd');
+  } else {
+    // Try rows cache from background poller
+    const sdRows = _readRowsCache(CACHE_KEYS.studentData + '_rows');
+    if (sdRows) {
+      const count = sdRows.length - 1;
+      setSDStatus('loading', `Parsing ${count} respondents from background cache…`);
+      _restoreSheetUI('sd');
+      setTimeout(() => {
+        const parsed = parseStudentDatasetRows(sdRows);
+        cacheWrite(CACHE_KEYS.studentData, parsed);
+        sdLastRowCount = count;
+        renderStudentDatasetCharts(parsed);
+      }, 100); // slight offset from survey parse to avoid blocking
+    }
+  }
+}
+
+// Restore sheet input + button visibility for a connected sheet section
+function _restoreSheetUI(section) {
+  if (section === 'survey') {
+    const sheetId = localStorage.getItem('sas_survey_sheet_id');
+    const input = document.getElementById('surveySheetId');
+    if (input && sheetId && !input.value) input.value = sheetId;
+    const rb = document.getElementById('surveyRefreshBtn');
+    const db = document.getElementById('surveyDisconnectBtn');
+    if (rb) rb.style.display = 'inline-flex';
+    if (db) db.style.display = 'inline-flex';
+  } else if (section === 'sd') {
+    const sheetId = localStorage.getItem('sas_student_dataset_sheet_id');
+    const input = document.getElementById('sdSheetId');
+    if (input && sheetId && !input.value) input.value = sheetId;
+    const rb = document.getElementById('sdRefreshBtn');
+    const db = document.getElementById('sdDisconnectBtn');
+    if (rb) rb.style.display = 'inline-flex';
+    if (db) db.style.display = 'inline-flex';
   }
 }
 
@@ -1193,6 +1247,28 @@ async function loadSurveyData() {
 
   if (refreshBtn)    refreshBtn.style.display    = 'inline-flex';
   if (disconnectBtn) disconnectBtn.style.display = 'inline-flex';
+
+  // ── Check if background poller already fetched fresh rows ──────────────
+  // The main portal's background poller writes to 'sas_analytics_cache_survey_rows'
+  // every 5 minutes. If those rows are fresh, use them instantly — no gviz fetch needed.
+  const rowsCacheKey = CACHE_KEYS.survey + '_rows';
+  const cachedRows = _readRowsCache(rowsCacheKey);
+  if (cachedRows) {
+    const dataRowsCached = cachedRows.length - 1;
+    if (dataRowsCached !== surveyLastRowCount || surveyLastRowCount === 0) {
+      surveyLastRowCount = dataRowsCached;
+      setSurveyStatus('loading', `Parsing ${dataRowsCached} responses from background cache…`);
+      setTimeout(() => {
+        const parsed = parseSurveyRows(cachedRows);
+        cacheWrite(CACHE_KEYS.survey, parsed);
+        renderSurveyData(parsed);
+      }, 50);
+    } else {
+      setSurveyStatus('ok', `${dataRowsCached} responses · cached ${cacheAge(rowsCacheKey)}`);
+    }
+    return;
+  }
+  // ── No background cache — fall back to direct gviz fetch ───────────────
 
   setSurveyStatus('loading', 'Fetching sheet (large dataset, may take 10–30s)…');
 
@@ -2472,6 +2548,26 @@ async function loadStudentDatasetData() {
 
   if (refreshBtn)    refreshBtn.style.display    = 'inline-flex';
   if (disconnectBtn) disconnectBtn.style.display = 'inline-flex';
+
+  // ── Check if background poller already fetched fresh rows ──────────────
+  const sdRowsCacheKey = CACHE_KEYS.studentData + '_rows';
+  const sdCachedRows = _readRowsCache(sdRowsCacheKey);
+  if (sdCachedRows) {
+    const dataRowsCached = sdCachedRows.length - 1;
+    if (dataRowsCached !== sdLastRowCount || sdLastRowCount === 0) {
+      sdLastRowCount = dataRowsCached;
+      setSDStatus('loading', `Parsing ${dataRowsCached} respondents from background cache…`);
+      setTimeout(() => {
+        const parsed = parseStudentDatasetRows(sdCachedRows);
+        cacheWrite(CACHE_KEYS.studentData, parsed);
+        renderStudentDatasetCharts(parsed);
+      }, 50);
+    } else {
+      setSDStatus('ok', `${dataRowsCached} respondents · cached ${cacheAge(sdRowsCacheKey)}`);
+    }
+    return;
+  }
+  // ── No background cache — fall back to direct gviz fetch ───────────────
 
   setSDStatus('loading', 'Fetching sheet…');
 

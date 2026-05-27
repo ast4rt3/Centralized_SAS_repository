@@ -2218,7 +2218,161 @@ document.addEventListener('DOMContentLoaded', () => {
     if (myUsername && myUsername !== 'Unknown') {
       syncLoggedInUserMetadata(myUsername);
     }
+
+    // ── Background Analytics Pre-fetcher ─────────────────────────────────
+    // Runs in the main portal context (not the analytics iframe) so data
+    // stays warm even when the admin is on a different page.
+    // Writes parsed results to localStorage — analytics iframe reads instantly.
+    const _role = (userObj?.role || '').toLowerCase();
+    if (_role === 'admin' || _role === 'superadmin') {
+      startAnalyticsBackgroundPoller();
+    }
+    // ─────────────────────────────────────────────────────────────────────
   }
+
+  // ── Analytics Background Poller ────────────────────────────────────────
+  // Fetches Google Sheet data (survey + student dataset) every 5 minutes
+  // using plain fetch() + JSONP text parsing — no script tag injection needed.
+  // Writes to the same localStorage keys that analytics.js reads from.
+
+  const _AN_CACHE_KEYS = {
+    survey:      'sas_analytics_cache_survey',
+    studentData: 'sas_analytics_cache_sd',
+  };
+  const _AN_POLL_MS = 5 * 60 * 1000; // 5 minutes
+  let _anPollerTimer = null;
+  let _anPollerRunning = false;
+
+  function startAnalyticsBackgroundPoller() {
+    if (_anPollerRunning) return;
+    _anPollerRunning = true;
+
+    // Run immediately on login, then every 5 minutes
+    _runAnalyticsPoller();
+    _anPollerTimer = setInterval(_runAnalyticsPoller, _AN_POLL_MS);
+    console.log('[Analytics BG] Background poller started (every 5 min)');
+  }
+
+  async function _runAnalyticsPoller() {
+    const surveySheetId   = await _getAnalyticsSheetId('survey');
+    const sdSheetId       = await _getAnalyticsSheetId('studentDataset');
+
+    const tasks = [];
+    if (surveySheetId)  tasks.push(_fetchAndCacheSheet(surveySheetId,  _AN_CACHE_KEYS.survey,      'Survey'));
+    if (sdSheetId)      tasks.push(_fetchAndCacheSheet(sdSheetId,       _AN_CACHE_KEYS.studentData, 'StudentDataset'));
+
+    if (tasks.length > 0) {
+      await Promise.allSettled(tasks);
+    }
+  }
+
+  // Get sheet ID: check localStorage first, then ask the backend for the global default
+  async function _getAnalyticsSheetId(type) {
+    const localKey = type === 'survey' ? 'sas_survey_sheet_id' : 'sas_student_dataset_sheet_id';
+    const local = localStorage.getItem(localKey);
+    if (local) return local;
+
+    // Ask backend for global default (same endpoint analytics.js uses)
+    const action = type === 'survey' ? 'getDefaultSurveySheet' : 'getDefaultStudentDatasetSheet';
+    try {
+      const backendUrl = window.ENV?.BACKEND_GAS_URL;
+      if (!backendUrl) return null;
+      const res = await fetch(backendUrl + '?action=' + action, { signal: AbortSignal.timeout(8000) });
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (data && data.success && data.sheetId) return data.sheetId;
+    } catch (e) { /* silent */ }
+    return null;
+  }
+
+  // Fetch a Google Sheet via gviz/tq as plain text, parse it, and write to localStorage
+  async function _fetchAndCacheSheet(sheetId, cacheKey, label) {
+    // Check if cache is still fresh (< 5 min old) — skip if so
+    try {
+      const existing = localStorage.getItem(cacheKey);
+      if (existing) {
+        const { ts } = JSON.parse(existing);
+        if (Date.now() - ts < _AN_POLL_MS) {
+          console.log(`[Analytics BG] ${label} cache still fresh — skipping fetch`);
+          return;
+        }
+      }
+    } catch (e) { /* continue */ }
+
+    const url = `https://docs.google.com/spreadsheets/d/${encodeURIComponent(sheetId)}/gviz/tq?tqx=out:json`;
+
+    let text;
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(20000) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      text = await res.text();
+    } catch (e) {
+      console.warn(`[Analytics BG] ${label} fetch failed:`, e.message);
+      return;
+    }
+
+    // Strip the JSONP wrapper: google.visualization.Query.setResponse({...});
+    // The response looks like: /*O_o*/\ngoogle.visualization.Query.setResponse({...});
+    let jsonStr = text;
+    const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)\s*;?\s*$/);
+    if (match) {
+      jsonStr = match[1];
+    } else {
+      // Try stripping leading comment
+      jsonStr = text.replace(/^\/\*.*?\*\/\s*/s, '').replace(/^google\.visualization\.Query\.setResponse\(/, '').replace(/\);\s*$/, '');
+    }
+
+    let raw;
+    try {
+      raw = JSON.parse(jsonStr);
+    } catch (e) {
+      console.warn(`[Analytics BG] ${label} JSON parse failed:`, e.message);
+      return;
+    }
+
+    // Parse the gviz DataTable into rows array (same format analytics.js uses)
+    const rows = _parseGvizTable(raw);
+    if (!rows) {
+      console.warn(`[Analytics BG] ${label} gviz table parse failed`);
+      return;
+    }
+
+    // Write raw rows to a separate key so analytics.js can re-parse with its full logic
+    // Also write a "rows_ts" key so analytics.js knows fresh rows are available
+    const rowsCacheKey = cacheKey + '_rows';
+    try {
+      localStorage.setItem(rowsCacheKey, JSON.stringify({ ts: Date.now(), rows }));
+      console.log(`[Analytics BG] ${label} rows cached (${rows.length - 1} data rows)`);
+    } catch (e) {
+      // localStorage full — clear rows caches only and retry
+      localStorage.removeItem(rowsCacheKey);
+      try { localStorage.setItem(rowsCacheKey, JSON.stringify({ ts: Date.now(), rows })); } catch (_) {}
+    }
+  }
+
+  // Minimal gviz table parser — same logic as analytics.js parseGvizResponse
+  function _parseGvizTable(raw) {
+    try {
+      const table = raw.table;
+      if (!table) return null;
+      const headers = (table.cols || []).map(c => c.label || '');
+      const dataRows = (table.rows || []).map(r =>
+        (r.c || []).map(cell => {
+          if (!cell || cell.v === null || cell.v === undefined) return '';
+          if (typeof cell.v === 'string' && cell.v.startsWith('Date(')) {
+            const parts = cell.v.slice(5, -1).split(',').map(Number);
+            const d = new Date(parts[0], parts[1], parts[2] || 1, parts[3] || 0, parts[4] || 0, parts[5] || 0);
+            return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
+          }
+          return cell.f !== undefined && cell.f !== null ? String(cell.f) : String(cell.v);
+        })
+      );
+      return [headers, ...dataRows];
+    } catch (e) {
+      return null;
+    }
+  }
+  // ── End Analytics Background Poller ────────────────────────────────────
 
 
 
