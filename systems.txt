@@ -48,7 +48,7 @@
     "id": "lost-and-found",
     "name": "Lost and Found",
     "description": "NBSC Lost and Found reporting system.",
-    "url": "https://lost-and-found-liart-seven.vercel.app/sas-auto-login",
+    "url": "https://lost-and-found-liart-seven.vercel.app/dashboard",
     "external": false,
     "section": "General Services",
     "roles": [

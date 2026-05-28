@@ -954,8 +954,58 @@ setInterval(() => {
 // console.log('--- SAS APP LOADING (v11 + Sidebar Fix) ---');
 document.addEventListener('DOMContentLoaded', () => {
 
-  // --- TV Clock Logic ---
-  // Utility to extract Drive ID
+  // --- End of Error Handling ---
+
+// --- System Search Bar Logic ---
+(function() {
+  function initSystemSearch() {
+    const searchInput = document.getElementById('system-search-input');
+    const searchResults = document.getElementById('system-search-results');
+    
+    if (!searchInput || !searchResults) return;
+
+    searchInput.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase().trim();
+      if (!query) {
+        searchResults.classList.add('hidden');
+        return;
+      }
+      
+      const systems = window.ENV?.systems || [];
+      const matches = systems.filter(s => 
+        s.name.toLowerCase().includes(query) || 
+        (s.section && s.section.toLowerCase().includes(query)) ||
+        (s.description && s.description.toLowerCase().includes(query))
+      );
+      
+      if (matches.length === 0) {
+        searchResults.innerHTML = '<div style="padding: 10px 15px; color: var(--text-secondary);">No systems found</div>';
+      } else {
+        searchResults.innerHTML = matches.map(s => `
+          <a href="#${s.id}" class="search-result-item" onclick="document.getElementById('system-search-input').value=''; document.getElementById('system-search-results').classList.add('hidden');">
+            <div class="search-result-item-name">${s.name}</div>
+            <div class="search-result-item-section">${s.section || 'General Services'}</div>
+          </a>
+        `).join('');
+      }
+      searchResults.classList.remove('hidden');
+    });
+    
+    // Hide when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.system-search-container')) {
+        searchResults.classList.add('hidden');
+      }
+    });
+  }
+
+  // Initialize once DOM is ready or immediately if already loaded
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSystemSearch);
+  } else {
+    initSystemSearch();
+  }
+})();  // Utility to extract Drive ID
   function getDriveId(url) {
     if (!url) return null;
     const match = url.match(/[?&]id=([^&#]+)/) || url.match(/\/file\/d\/([^/?#]+)/);
