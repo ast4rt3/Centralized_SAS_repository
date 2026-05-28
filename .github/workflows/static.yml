@@ -113,10 +113,10 @@ jobs:
             scripts/
             index.html
             styles.css
-            manifest.json
+            manifest.webmanifest
             serviceWorker.js
             systems.json
-            version.json
+            version.txt
             vercel.json
             env.example.js
             package.json
