@@ -2085,7 +2085,8 @@ function sdNormalizeProvince(raw) {
   if (s === '' || s === 'n/a' || s === 'none') return 'Not stated';
   
   // Fuzzy deduction / Typo fixing
-  if (s.includes('bukidon') || s.includes('bukidn') || s === 'buk') s = 'bukidnon';
+  const bukidnonTowns = ['manolo', 'malaybalay', 'valencia', 'maramag', 'quezon', 'kibawe', 'don carlos', 'kitaotao', 'dangcagan', 'kadingilan', 'kalilangan', 'pangantucan', 'san fernando', 'cabanglasan', 'imapasug', 'sumilao', 'baungon', 'talakag', 'lantapan', 'libona', 'malitbog', 'damulog'];
+  if (s.includes('bukidon') || s.includes('bukidn') || s === 'buk' || bukidnonTowns.some(t => s.includes(t))) s = 'bukidnon';
   if (s.includes('misamis') && s.includes('or')) s = 'misamis oriental';
   if (s.includes('cdo') || s.includes('cagayan')) s = 'misamis oriental';
   
@@ -2516,7 +2517,17 @@ function renderStudentDatasetCharts(parsed) {
       layout: { padding: { left: 10, right: 10, bottom: 10 } },
         plugins: { legend: { display: false } },
         scales: {
-          x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } },
+          x: { 
+            type: 'logarithmic',
+            grid: { color: 'rgba(255,255,255,0.04)' }, 
+            ticks: { 
+              autoSkip: true,
+              maxTicksLimit: 8,
+              callback: function(value) {
+                return value === 1 || value === 10 || value === 100 || value === 1000 || value === 10000 ? value : '';
+              }
+            } 
+          },
           y: { grid: { display: false }, ticks: { font: { size: 10 } } }
         }
       }
