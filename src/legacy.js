@@ -839,10 +839,13 @@ function initFullMessenger() {
         }
 
         item.innerHTML = `
-          <div style="width:36px; height:36px; ${avatarBg} color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.9rem; font-weight:800; flex-shrink:0; overflow:hidden;">${avatarHtml}</div>
+          <div style="position:relative; flex-shrink:0;">
+            <div style="width:36px; height:36px; ${avatarBg} color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.9rem; font-weight:800; overflow:hidden; ${info.isOnline && user !== 'admin-group' ? 'box-shadow: 0 0 0 2px #22c55e;' : ''}">${avatarHtml}</div>
+            ${user !== 'admin-group' ? `<span style="position:absolute; bottom:-2px; right:-2px; width:10px; height:10px; border-radius:50%; border:2px solid #ffffff; background:${info.isOnline ? '#22c55e' : '#94a3b8'};"></span>` : ''}
+          </div>
           <div style="display:flex; flex-direction:column;">
             <span style="font-weight:700; color:#1e293b;">${displayName}</span>
-            <span style="font-size:0.7rem; color:#94a3b8;">${statusText}</span>
+            <span style="font-size:0.7rem; color:${info.isOnline && user !== 'admin-group' ? '#22c55e' : '#94a3b8'};">${statusText}</span>
           </div>
         `;
         item.onclick = () => { selectContact(user); closeNewMessageModal(); };
