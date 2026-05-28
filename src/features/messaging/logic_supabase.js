@@ -241,11 +241,15 @@ function handleIncomingMessage(data, onMessageReceived, notify = true) {
         // console.log(`[Messaging] Checking notify: currentChat=${currentChat}, otherUser=${otherUser}, sender=${data.sender}`);
         if (currentChat !== otherUser && isIncoming) {
           // console.log(`[Messaging] SUCCESS: Triggering notification for ${otherUser}`);
-          window.showNotification(otherUser, data.text, (sender) => {
-             if (typeof window.selectContact === 'function') {
-               window.selectContact(sender);
-             }
-          });
+          if (data.receiver === 'admin-group' && typeof window.showBroadcastBanner === 'function') {
+            window.showBroadcastBanner(data.sender, data.text, (sender) => {
+               if (typeof window.selectContact === 'function') window.selectContact('admin-group');
+            });
+          } else {
+            window.showNotification(otherUser, data.text, (sender) => {
+               if (typeof window.selectContact === 'function') window.selectContact(sender);
+            });
+          }
         } else {
           // console.log(`[Messaging] Skip notify: currentChat matches otherUser or sender is NOT otherUser`);
         }

@@ -117,6 +117,78 @@ export function updateUnreadBadges() {
       from { opacity: 0; transform: translateX(30px) scale(0.9); }
       to { opacity: 1; transform: translateX(0) scale(1); }
     }
+    .fb-broadcast-banner-container {
+      position: fixed;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9999999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+      padding-top: 20px;
+      width: 100%;
+      max-width: 600px;
+      align-items: center;
+    }
+    .fb-broadcast-banner {
+      pointer-events: auto;
+      background: linear-gradient(135deg, rgba(220, 38, 38, 0.95), rgba(185, 28, 28, 0.95));
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: white;
+      padding: 16px 24px;
+      border-radius: 16px;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.5), inset 0 2px 4px rgba(255,255,255,0.3);
+      cursor: pointer;
+      width: 90%;
+      animation: fb-banner-drop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .fb-broadcast-banner:hover {
+      transform: scale(1.02);
+      box-shadow: 0 20px 40px rgba(220, 38, 38, 0.6), inset 0 2px 4px rgba(255,255,255,0.4);
+    }
+    .fb-broadcast-icon {
+      font-size: 1.5rem;
+      background: rgba(255,255,255,0.2);
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .fb-broadcast-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .fb-broadcast-title {
+      font-weight: 800;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: rgba(255,255,255,0.8);
+    }
+    .fb-broadcast-text {
+      font-size: 1.05rem;
+      font-weight: 600;
+      line-height: 1.4;
+      margin: 0;
+      color: white;
+    }
+    @keyframes fb-banner-drop {
+      from { opacity: 0; transform: translateY(-50px) scale(0.9); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
   `;
   document.head.appendChild(style);
 })();
@@ -156,6 +228,39 @@ export function showNotification(sender, text, onClick) {
 }
 
 /**
+ * Show a top-down news banner for Broadcasts
+ */
+export function showBroadcastBanner(sender, text, onClick) {
+  let container = getEl('fb-broadcast-banner-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'fb-broadcast-banner-container';
+    container.className = 'fb-broadcast-banner-container';
+    document.body.appendChild(container);
+  }
+  
+  const banner = document.createElement('div');
+  banner.className = 'fb-broadcast-banner';
+  banner.onclick = () => {
+    if (onClick) onClick(sender);
+    banner.remove();
+  };
+  
+  banner.innerHTML = `
+    <div class="fb-broadcast-icon">📢</div>
+    <div class="fb-broadcast-content">
+      <span class="fb-broadcast-title">SYSTEM BROADCAST FROM ${sender}</span>
+      <p class="fb-broadcast-text">${text}</p>
+    </div>
+  `;
+  
+  container.appendChild(banner);
+  
+  // Banner stays a bit longer (12s) to read
+  setTimeout(() => { if (banner.parentNode) banner.remove(); }, 12000);
+}
+
+/**
  * Create a chat bubble element
  */
 export function createMessageBubble(data, isMe) {
@@ -186,4 +291,5 @@ export function refreshFullMessengerUI() {
 // Expose to window for legacy compatibility
 window.updateUnreadBadges = updateUnreadBadges;
 window.showNotification = showNotification;
+window.showBroadcastBanner = showBroadcastBanner;
 window.refreshFullMessengerUI = refreshFullMessengerUI;

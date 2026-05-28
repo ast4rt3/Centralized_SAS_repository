@@ -131,6 +131,78 @@
                       from { opacity: 0; transform: translateX(30px) scale(0.9); }
                       to { opacity: 1; transform: translateX(0) scale(1); }
                     }
+                    .fb-broadcast-banner-container {
+                      position: fixed;
+                      top: 0;
+                      left: 50%;
+                      transform: translateX(-50%);
+                      z-index: 9999999;
+                      display: flex;
+                      flex-direction: column;
+                      gap: 10px;
+                      pointer-events: none;
+                      padding-top: 20px;
+                      width: 100%;
+                      max-width: 600px;
+                      align-items: center;
+                    }
+                    .fb-broadcast-banner {
+                      pointer-events: auto;
+                      background: linear-gradient(135deg, rgba(220, 38, 38, 0.95), rgba(185, 28, 28, 0.95));
+                      backdrop-filter: blur(20px);
+                      -webkit-backdrop-filter: blur(20px);
+                      border: 1px solid rgba(255, 255, 255, 0.2);
+                      color: white;
+                      padding: 16px 24px;
+                      border-radius: 16px;
+                      box-shadow: 0 15px 35px rgba(0,0,0,0.5), inset 0 2px 4px rgba(255,255,255,0.3);
+                      cursor: pointer;
+                      width: 90%;
+                      animation: fb-banner-drop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+                      transition: all 0.3s ease;
+                      display: flex;
+                      align-items: center;
+                      gap: 16px;
+                    }
+                    .fb-broadcast-banner:hover {
+                      transform: scale(1.02);
+                      box-shadow: 0 20px 40px rgba(220, 38, 38, 0.6), inset 0 2px 4px rgba(255,255,255,0.4);
+                    }
+                    .fb-broadcast-icon {
+                      font-size: 1.5rem;
+                      background: rgba(255,255,255,0.2);
+                      width: 48px;
+                      height: 48px;
+                      border-radius: 50%;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      flex-shrink: 0;
+                    }
+                    .fb-broadcast-content {
+                      flex: 1;
+                      display: flex;
+                      flex-direction: column;
+                      gap: 4px;
+                    }
+                    .fb-broadcast-title {
+                      font-weight: 800;
+                      font-size: 0.8rem;
+                      text-transform: uppercase;
+                      letter-spacing: 1px;
+                      color: rgba(255,255,255,0.8);
+                    }
+                    .fb-broadcast-text {
+                      font-size: 1.05rem;
+                      font-weight: 600;
+                      line-height: 1.4;
+                      margin: 0;
+                      color: white;
+                    }
+                    @keyframes fb-banner-drop {
+                      from { opacity: 0; transform: translateY(-50px) scale(0.9); }
+                      to { opacity: 1; transform: translateY(0) scale(1); }
+                    }
                   `;
                   document.head.appendChild(style);
                 })();
@@ -169,6 +241,38 @@
                   
                   setTimeout(() => { if (toast.parentNode) toast.remove(); }, 8000);
                 }
+
+                function showGlobalBroadcastBanner(sender, text) {
+                  if (typeof window.showBroadcastBanner === 'function') return;
+
+                  let container = document.getElementById('fb-broadcast-banner-container');
+                  if (!container) {
+                    container = document.createElement('div');
+                    container.id = 'fb-broadcast-banner-container';
+                    container.className = 'fb-broadcast-banner-container';
+                    document.body.appendChild(container);
+                  }
+                  
+                  const banner = document.createElement('div');
+                  banner.className = 'fb-broadcast-banner';
+                  banner.onclick = () => {
+                     const depth = window.location.pathname.split('/').filter(Boolean).length;
+                     const rootPrefix = depth > 0 ? '../'.repeat(depth) : '/';
+                     window.location.href = rootPrefix + "index.html"; 
+                  };
+                  
+                  banner.innerHTML = `
+                    <div class="fb-broadcast-icon">📢</div>
+                    <div class="fb-broadcast-content">
+                      <span class="fb-broadcast-title">SYSTEM BROADCAST FROM ${sender}</span>
+                      <p class="fb-broadcast-text">${text}</p>
+                    </div>
+                  `;
+                  
+                  container.appendChild(banner);
+                  
+                  setTimeout(() => { if (banner.parentNode) banner.remove(); }, 12000);
+                }
                 const client = window.supabase.createClient(window.ENV.SUPABASE_URL, window.ENV.SUPABASE_ANON_KEY);
                 const channel = client.channel('online-users', {
                     config: { presence: { key: user.username } }
@@ -196,19 +300,16 @@
                             }
                         }
                     );
-                    
-                    const role = user.role ? user.role.toLowerCase().trim() : '';
-                    if (role === 'admin' || role === 'superadmin') {
-                        msgChannel.on(
-                            'postgres_changes',
-                            { event: 'INSERT', schema: 'public', table: 'user_messages', filter: `receiver=eq.admin-group` },
-                            (payload) => {
-                                if (payload.new && payload.new.sender !== user.username) {
-                                    showGlobalToast(payload.new.sender, payload.new.text);
-                                }
+                    // Broadcasts are sent to 'admin-group' and meant for everyone
+                    msgChannel.on(
+                        'postgres_changes',
+                        { event: 'INSERT', schema: 'public', table: 'user_messages', filter: `receiver=eq.admin-group` },
+                        (payload) => {
+                            if (payload.new && payload.new.sender !== user.username) {
+                                showGlobalBroadcastBanner(payload.new.sender, payload.new.text);
                             }
-                        );
-                    }
+                        }
+                    );
                     msgChannel.subscribe();
                 }
 

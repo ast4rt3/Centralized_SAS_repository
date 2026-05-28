@@ -30,7 +30,6 @@ graph LR
 
     FH[File Hub] -->|upload / getFiles| GAS
     FH -->|file bytes| GDrive[Google Drive API]
-    FH -->|file bytes| FBStorage[Firebase Storage]
 
     Scanner[Attendance Scanner] -->|validation| GAS
     GAS -->|lookup| Supabase[(Supabase)]
@@ -39,7 +38,7 @@ graph LR
     ScheduleMgr[Schedule Manager] -->|direct| Supabase
     MasterlistMgr[Masterlist Manager] -->|upsert| Supabase
 
-    Messaging[Messaging] -->|read/write| FBRTDB[Firebase RTDB]
+    Messaging[Messaging & Global Presence] -->|Realtime Channels| Supabase
 
     TV[TV Mode] -->|fetch items| GAS
     TV -->|weather| OpenMeteo[Open-Meteo API]
@@ -61,10 +60,9 @@ graph TD
     A[Browser / PWA Shell<br/>index.html + serviceWorker.js] --> B[src/ Runtime Layer]
     B --> C[apps/ Sub-Applications]
     C --> D[backend.gs<br/>Google Apps Script API]
-    D --> E[Supabase<br/>PostgreSQL Database]
-    D --> F[Firebase RTDB<br/>Real-time Messaging]
-    D --> G[Google Drive & Firebase Storage<br/>File Hub]
-    B --> F
+    D --> E[Supabase<br/>PostgreSQL & Realtime]
+    D --> G[Google Drive<br/>File Hub]
+    B --> E
 ```
 
 ### Technology Stack
@@ -72,16 +70,22 @@ graph TD
 - **Offline Support:** Progressive Web App (PWA) with Service Worker caching
 - **Backend API:** Google Apps Script (`backend.gs`) acting as the REST API
 - **Database:** Supabase (PostgreSQL) for student records, schedules, and attendance logs
-- **Real-time Services:** Firebase Realtime Database for the internal messaging system
-- **File Storage:** Google Drive and Firebase Storage
-- **Hosting:** Configured for Vercel deployment (`vercel.json`)
+- **Real-time Services:** Supabase Realtime for global messaging, presence tracking, and system-wide broadcasts
+- **File Storage:** Google Drive
+- **Hosting:** Configured for automated CI/CD deployment via GitHub Actions (Trivy Security Scans, Obfuscation, and FTP publishing)
+
+## Security & Routing
+- **URL Route Guards:** Protected client-side routing intercepts unauthorized access and legacy domain requests, safely redirecting traffic.
+- **XSS Prevention:** Strict `escapeHtml()` sanitization prevents DOM injection attacks.
+- **Dynamic Secrets:** Production API keys are managed by GitHub Secrets and injected dynamically at build-time.
 
 ## Codebase Statistics
 
 Based on the latest GitNexus index scan (May 2026):
-- **Files:** 78
-- **Symbols/Nodes:** 3,147 tracked components
-- **Execution Flows:** 200 traced workflows
+- **Symbols/Nodes:** 3,196 tracked components
+- **Relationships:** 4,703 edges
+- **Functional Clusters:** 112
+- **Execution Flows:** 199 traced workflows
 
 ## Repository Structure
 
@@ -118,7 +122,7 @@ Centralized_SAS_repository/
 ## Setup & Configuration
 
 1. **Environment Variables:** 
-   Copy `env.example.js` to `env.js` and fill in the required keys (`BACKEND_GAS_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and Firebase configurations).
+   Copy `env.example.js` to `env.js` and fill in the required keys (`BACKEND_GAS_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, etc.).
 2. **Local Development:**
    Run the setup script to initialize the environment:
    ```bash
