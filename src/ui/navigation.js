@@ -339,7 +339,7 @@ export function syncFromHash(systems) {
     const currentToken = userData.token || userData.jwt || '';
     
     console.log(`[Portal] Loading system: ${pageId} | User: ${currentUser} | Token: ${currentToken ? 'Present' : 'MISSING'}`);
-    systemFrame.src = targetUrl + glue + 'portalUser=' + encodeURIComponent(currentUser) + '&portalToken=' + encodeURIComponent(currentToken);
+    systemFrame.src = targetUrl + glue + 'portalUser=' + encodeURIComponent(currentUser) + '&token=' + encodeURIComponent(currentToken) + '&portalToken=' + encodeURIComponent(currentToken);
   }
 }
 
