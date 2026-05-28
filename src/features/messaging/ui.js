@@ -54,52 +54,68 @@ export function updateUnreadBadges() {
   style.textContent = `
     .fb-chat-notifications {
       position: fixed;
-      bottom: 20px;
-      right: 20px;
+      bottom: 24px;
+      right: 24px;
       z-index: 999999;
       display: flex;
       flex-direction: column-reverse;
-      gap: 10px;
+      gap: 12px;
       pointer-events: none;
     }
     .fb-chat-toast {
       pointer-events: auto;
-      background: rgba(15, 23, 42, 0.95);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-left: 4px solid #7c3aed;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-left: 4px solid #f59e0b;
       color: white;
-      padding: 12px 16px;
-      border-radius: 8px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      padding: 16px 20px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px -5px rgba(0,0,0,0.5), inset 0 2px 4px rgba(255, 255, 255, 0.1);
       cursor: pointer;
-      min-width: 250px;
-      max-width: 350px;
-      animation: fb-toast-in 0.3s ease-out;
-      transition: all 0.2s;
+      min-width: 280px;
+      max-width: 380px;
+      animation: fb-toast-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
     }
     .fb-chat-toast:hover {
-      transform: translateX(-5px);
-      background: rgba(30, 41, 59, 1);
+      transform: translateY(-4px) scale(1.02);
+      background: rgba(15, 23, 42, 0.95);
+      box-shadow: 0 15px 35px -5px rgba(245, 158, 11, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.1);
     }
     .fb-chat-toast-sender {
       font-weight: 800;
-      font-size: 0.85rem;
-      margin-bottom: 4px;
-      color: #a78bfa;
-      display: block;
+      font-size: 0.95rem;
+      color: #f59e0b;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .fb-chat-toast-sender::before {
+      content: '';
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: #22c55e;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #22c55e;
     }
     .fb-chat-toast-text {
-      font-size: 0.9rem;
-      color: #e2e8f0;
-      display: block;
+      font-size: 0.95rem;
+      color: #f8fafc;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      margin: 0;
+      font-weight: 400;
     }
     @keyframes fb-toast-in {
-      from { opacity: 0; transform: translateX(30px); }
-      to { opacity: 1; transform: translateX(0); }
+      from { opacity: 0; transform: translateX(30px) scale(0.9); }
+      to { opacity: 1; transform: translateX(0) scale(1); }
     }
   `;
   document.head.appendChild(style);
