@@ -1,4 +1,4 @@
-name: NBSC SAS Industrial CI/CD Pipeline
+name: NBSC SAS CI/CD Pipeline
 
 on:
   push:
