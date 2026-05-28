@@ -2297,7 +2297,9 @@ function parseStudentDatasetRows(rows) {
 
     // Province of origin (col 15)
     const province = sdNormalizeProvince(get(15));
-    result.byProvince[province] = (result.byProvince[province] || 0) + 1;
+    if (province.toLowerCase() !== 'bukidnon' && province.toLowerCase() !== 'bukinon') {
+      result.byProvince[province] = (result.byProvince[province] || 0) + 1;
+    }
 
     // Religion (col 11)
     const religion = get(11);
@@ -2347,7 +2349,9 @@ function parseStudentDatasetRows(rows) {
 
     // Commute duration (col 51)
     const commute = sdNormalizeCommute(get(51));
-    result.byCommute[commute] = (result.byCommute[commute] || 0) + 1;
+    if (commute.toLowerCase() !== 'not stated') {
+      result.byCommute[commute] = (result.byCommute[commute] || 0) + 1;
+    }
 
     // Employed while studying (col 75)
     const emp = sdNormalizeYesNo(get(75));
@@ -2383,8 +2387,11 @@ function parseStudentDatasetRows(rows) {
     else if (fin === 'No') result.byFinancialDifficulty.No++;
 
     // Support needed (col 100)
-    const support = get(100);
-    if (support && support.toLowerCase() !== 'n/a' && support.toLowerCase() !== 'none') {
+    let support = get(100);
+    if (support && support.includes('Scholarship opportunities, I truly need financial support')) {
+      support = support.replace(/Scholarship opportunities, I truly need financial support[\s\S]*?program\./i, '');
+    }
+    if (support && support.trim().toLowerCase() !== 'n/a' && support.trim().toLowerCase() !== 'none' && support.trim() !== '') {
       support.split(/[,;]/).forEach(s => {
         const t = s.trim();
         if (t.length < 3) return;
@@ -2531,18 +2538,7 @@ function renderStudentDatasetCharts(parsed) {
   }
 
   // ── First-generation college students (doughnut) ──────────────────────────
-  const fgTotal = parsed.byFirstGenCollege.Yes + parsed.byFirstGenCollege.No;
-  if (fgTotal > 0) {
-    makeChart('sdFirstGenChart', {
-      type: 'doughnut',
-      data: {
-        labels: ['First-Gen College', 'Parents Attended College'],
-        datasets: [{ data: [parsed.byFirstGenCollege.Yes, parsed.byFirstGenCollege.No],
-          backgroundColor: [PALETTE.gold, '#1f2a42'], borderWidth: 2, hoverOffset: 6 }]
-      },
-      options: { cutout: '65%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
-    });
-  }
+  // First-generation college chart removed per request
 
   // ── Year level (bar)
   const yearOrder = ['1st Year','2nd Year','3rd Year','4th Year','5th Year'];
@@ -2605,27 +2601,7 @@ function renderStudentDatasetCharts(parsed) {
   });
 
   // ── Residence type (horizontal bar)
-  const resEntries = Object.entries(parsed.byResidence).sort((a,b) => b[1] - a[1]).slice(0,8);
-  if (resEntries.length > 0 && document.getElementById('sdResidenceChart')) {
-    makeChart('sdResidenceChart', {
-      type: 'bar',
-      data: {
-        labels: resEntries.map(e => e[0]),
-        datasets: [{ label: 'Students', data: resEntries.map(e => e[1]),
-          backgroundColor: PALETTE.pink, borderRadius: 4, borderSkipped: false, maxBarThickness: 32 }]
-      },
-      options: {
-        indexAxis: 'y',
-      maintainAspectRatio: false,
-      layout: { padding: { left: 10, right: 10, bottom: 10 } },
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } },
-          y: { grid: { display: false }, ticks: { font: { size: 10 } } }
-        }
-      }
-    });
-  }
+  // Residence type chart removed per request
 
   // ── Civil status (doughnut)
   const civilEntries = Object.entries(parsed.byCivilStatus).sort((a,b) => b[1] - a[1]);
