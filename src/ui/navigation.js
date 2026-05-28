@@ -324,7 +324,7 @@ export function syncFromHash(systems) {
     let targetUrl = sys.url;
     
     // Add trailing slash if it's a directory (doesn't contain a dot in the last segment)
-    if (!targetUrl.includes('?') && !targetUrl.includes('#')) {
+    if (!targetUrl.startsWith('http') && !targetUrl.includes('?') && !targetUrl.includes('#')) {
       const segments = targetUrl.split('/');
       const lastSegment = segments[segments.length - 1];
       if (!lastSegment.includes('.') && lastSegment.length > 0) {
