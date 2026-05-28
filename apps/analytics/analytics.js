@@ -2297,7 +2297,7 @@ function parseStudentDatasetRows(rows) {
 
     // Province of origin (col 15)
     const province = sdNormalizeProvince(get(15));
-    if (province.toLowerCase() !== 'bukidnon' && province.toLowerCase() !== 'bukinon') {
+    if (province.toLowerCase() !== 'bukinon') {
       result.byProvince[province] = (result.byProvince[province] || 0) + 1;
     }
 
