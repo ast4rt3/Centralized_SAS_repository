@@ -648,7 +648,7 @@ function initFullMessenger() {
       const isOnline = user === 'admin-group' ? true : info.isOnline;
 
       card.innerHTML = `
-        <div class="contact-avatar" style="width:48px; height:48px; background:linear-gradient(135deg, #1e40af, #1e3a8a); color:white; border-radius:12px; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.1rem; position:relative; flex-shrink:0;">
+        <div class="contact-avatar">
           ${profilePicHtml}
           <span class="contact-status-dot ${isOnline ? 'online' : ''}" style="position:absolute; bottom:-2px; right:-2px; width:12px; height:12px; border-radius:50%; border:2px solid #0f172a; background:#94a3b8;"></span>
         </div>
