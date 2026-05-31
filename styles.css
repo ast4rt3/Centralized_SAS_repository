@@ -4470,6 +4470,105 @@ body.dark-theme .settings-preview-name { color: var(--text) !important; }
 
 body.dark-theme .login-success { background: #064e3b; color: #6ee7b7; }
 
+/* --- LAW THEME (Cyberpunk Violet) --- */
+body.law-theme {
+  --bg-main: #09090b;
+  --bg-sidebar: #050505; 
+  --bg-card: #121214; 
+  --border: #a855f7; 
+  --text: #f3e8ff; 
+  --text-muted: #c084fc; 
+  
+  --gray-50: #050505;
+  --gray-100: #09090b;
+  --gray-200: #121214;
+  --gray-300: #2b1138;
+  --gray-400: #6b21a8;
+  --gray-500: #9333ea;
+  --gray-600: #a855f7;
+  --gray-700: #c084fc;
+  --gray-800: #d8b4fe;
+  --gray-900: #f3e8ff;
+
+  --nbsc-navy: #a855f7;
+  --nbsc-gold: #c084fc;
+
+  /* Custom Scrollbar */
+  scrollbar-color: rgba(168, 85, 247, 0.4) transparent;
+}
+
+body.law-theme::-webkit-scrollbar-thumb { background: rgba(168, 85, 247, 0.4); }
+body.law-theme::-webkit-scrollbar-thumb:hover { background: rgba(168, 85, 247, 0.8); }
+
+/* Component Variable Mapping for Law Theme */
+body.law-theme #home.page { background: var(--bg-main); }
+body.law-theme .sidebar { background: linear-gradient(180deg, #09090b 0%, #050505 100%) !important; border-right: 1px solid rgba(168, 85, 247, 0.3) !important; }
+body.law-theme .sidebar-header { background: rgba(168, 85, 247, 0.05); border-bottom-color: rgba(168, 85, 247, 0.3); }
+body.law-theme .content { background: var(--bg-main); }
+body.law-theme .content-header { background: var(--bg-main); border-bottom-color: rgba(168, 85, 247, 0.3); }
+body.law-theme .nav-item { color: #a855f7; }
+body.law-theme .nav-item:hover { background: rgba(168, 85, 247, 0.12); color: var(--text); box-shadow: inset 3px 0 0 rgba(168, 85, 247, 0.5); }
+body.law-theme .nav-item.active { background: rgba(168, 85, 247, 0.2); color: var(--text); border-left-color: #a855f7; box-shadow: inset 3px 0 0 #a855f7, 0 0 20px rgba(168, 85, 247, 0.1); }
+body.law-theme .nav-label { color: inherit; }
+body.law-theme .nav-category { color: rgba(168, 85, 247, 0.5); }
+body.law-theme .sidebar-footer { border-top: 1px solid rgba(168, 85, 247, 0.2) !important; }
+
+body.law-theme .home-header { background: rgba(9, 9, 11, 0.95); border-bottom-color: var(--border); }
+body.law-theme .home-header-title, body.law-theme .home-header-subtitle, body.law-theme .tv-clock, body.law-theme .user-menu-btn { color: var(--text); }
+body.law-theme .user-menu-dropdown { background: var(--bg-card); border-color: var(--border); }
+body.law-theme .user-menu-info { color: var(--text-muted); }
+
+body.law-theme .posts-container .post-card { background: var(--bg-card); border-color: var(--border); box-shadow: 0 8px 32px rgba(168, 85, 247, 0.05); }
+body.law-theme .posts-container .post-title { color: var(--text); }
+body.law-theme .posts-container .post-desc { color: var(--gray-700); }
+body.law-theme .add-post-btn { background: var(--border); color: #000; font-weight: bold; }
+
+body.law-theme .login-overlay { background: var(--bg-main); }
+body.law-theme .login-card { background: var(--bg-card); border: 1px solid var(--border); box-shadow: 0 0 40px rgba(168, 85, 247, 0.2); }
+body.law-theme .login-title { color: var(--text); }
+body.law-theme .login-input-group label { color: var(--gray-600); }
+body.law-theme .login-input-group input { background: var(--bg-main); border-color: var(--border); color: var(--text); }
+
+body.law-theme .modal-card { background: var(--bg-card); border: 1px solid var(--border); box-shadow: 0 0 50px rgba(168, 85, 247, 0.15); }
+body.law-theme .modal-header, body.law-theme .modal-footer { border-color: var(--border); }
+body.law-theme .modal-title { color: var(--text); text-shadow: 0 0 10px rgba(168, 85, 247, 0.5); }
+body.law-theme .input-group label { color: var(--gray-600); }
+body.law-theme .input-group input, body.law-theme .input-group textarea { background: var(--bg-main); border-color: var(--border); color: var(--text); }
+body.law-theme .page-header h2 { color: var(--text); }
+
+body.law-theme .messenger-container { background: var(--bg-card) !important; border: 1px solid var(--border); }
+body.law-theme .messenger-sidebar { background: var(--bg-main) !important; border-right-color: var(--border) !important; }
+body.law-theme .messenger-sidebar-header { background: var(--bg-card) !important; border-bottom-color: var(--border) !important; }
+body.law-theme .messenger-sidebar-header h3 { color: var(--text) !important; }
+body.law-theme .contact-card { border-left-color: transparent !important; }
+body.law-theme .contact-card:hover, body.law-theme .contact-card.active { background: rgba(168, 85, 247, 0.1) !important; }
+body.law-theme .contact-card.active { border-left-color: var(--border) !important; box-shadow: inset 0 0 20px rgba(168, 85, 247, 0.1); }
+body.law-theme .contact-name { color: var(--text) !important; }
+body.law-theme .contact-preview { color: var(--text-muted) !important; }
+body.law-theme .messenger-main { background: var(--bg-card) !important; }
+body.law-theme .messenger-chat-header { background: var(--bg-main) !important; border-bottom-color: var(--border) !important; }
+body.law-theme .active-user-info h4 { color: var(--text) !important; }
+body.law-theme .messenger-messages { background: var(--bg-main) !important; }
+body.law-theme .msg-bubble-me { background: var(--border) !important; color: #000 !important; box-shadow: 0 0 15px rgba(168, 85, 247, 0.3) !important; }
+body.law-theme .msg-bubble-other { background: rgba(168, 85, 247, 0.1) !important; color: var(--text) !important; border: 1px solid var(--border) !important; }
+body.law-theme .messenger-form { background: var(--bg-main) !important; border-top-color: var(--border) !important; }
+body.law-theme .messenger-form input { background: var(--bg-card) !important; color: var(--text) !important; border: 1px solid var(--border) !important; }
+
+body.law-theme .settings-modal-card { background: var(--bg-card); border: 1px solid var(--border); box-shadow: 0 0 40px rgba(168, 85, 247, 0.2); }
+body.law-theme .settings-modal-header { border-bottom-color: var(--border); }
+body.law-theme .settings-modal-header h3 { color: var(--text); text-shadow: 0 0 10px rgba(168, 85, 247, 0.5); }
+body.law-theme .settings-tabs { border-bottom-color: var(--border); }
+body.law-theme .settings-tab { color: var(--text-muted); }
+body.law-theme .settings-tab.active { color: var(--text); border-bottom-color: var(--border); }
+body.law-theme .settings-theme-option { border-color: var(--border); }
+body.law-theme .settings-theme-option.selected { border-color: var(--border); background: rgba(168, 85, 247, 0.2); box-shadow: 0 0 15px rgba(168, 85, 247, 0.3); }
+body.law-theme .settings-theme-option span { color: var(--text-muted); }
+body.law-theme .settings-theme-option.selected span { color: var(--text); }
+body.law-theme .settings-preview-chat { background: var(--bg-main); border-color: var(--border); }
+body.law-theme .settings-preview-name { color: var(--text) !important; }
+
+body.law-theme .login-success { background: #3b0764; color: #d8b4fe; border: 1px solid #9333ea; }
+
 /* --- DATABASE MANAGEMENT STYLES --- */
 .db-tab-nav {
   display: inline-flex;

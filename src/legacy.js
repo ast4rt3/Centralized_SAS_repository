@@ -7268,10 +7268,11 @@ document.addEventListener('DOMContentLoaded', () => {
       opt.classList.add('selected');
 
       // Apply theme immediately
+      document.body.classList.remove('dark-theme', 'law-theme');
       if (theme === 'dark') {
         document.body.classList.add('dark-theme');
-      } else {
-        document.body.classList.remove('dark-theme');
+      } else if (theme === 'law') {
+        document.body.classList.add('law-theme');
       }
       localStorage.setItem('sas_theme', theme);
 
@@ -7319,8 +7320,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize theme on page load
   (function () {
     const savedTheme = localStorage.getItem('sas_theme') || 'light';
+    document.body.classList.remove('dark-theme', 'law-theme');
     if (savedTheme === 'dark') {
       document.body.classList.add('dark-theme');
+    } else if (savedTheme === 'law') {
+      document.body.classList.add('law-theme');
     }
   })();
 });
