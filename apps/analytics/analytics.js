@@ -2960,6 +2960,7 @@ window.addEventListener('beforeprint', () => {
     if (src && dest) dest.textContent = src.textContent;
   };
 
+  // Sync to tables
   copyText('kv-sd-total', 'fp-sd-total');
   copyText('kv-lf-total', 'fp-lf-total');
   copyText('kv-borrowers', 'fp-borrowers');
@@ -2967,6 +2968,15 @@ window.addEventListener('beforeprint', () => {
   copyText('kv-survey-score', 'fp-survey-score');
   copyText('kv-attendance', 'fp-attendance');
   copyText('kv-vacancies', 'fp-vacancies');
+
+  // Sync to narrative text paragraphs
+  copyText('kv-sd-total', 'fp-text-sd-total');
+  copyText('kv-survey-score', 'fp-text-survey-score');
+  copyText('kv-lf-total', 'fp-text-lf-total');
+  copyText('kv-borrowers', 'fp-text-borrowers');
+  copyText('kv-pantry', 'fp-text-pantry');
+  copyText('kv-vacancies', 'fp-text-vacancies');
+  copyText('kv-attendance', 'fp-text-attendance');
 
   copyText('sd-4ps', 'fp-sd-4ps');
   copyText('sd-solo', 'fp-sd-solo');
@@ -2978,10 +2988,13 @@ window.addEventListener('beforeprint', () => {
   // Clean up Recovery Rate formatting (strip the prefix if it exists)
   const lfRateSrc = document.getElementById('kv-lf-rate');
   const lfRateDest = document.getElementById('fp-lf-rate');
-  if (lfRateSrc && lfRateDest) {
+  const lfRateTextDest = document.getElementById('fp-text-lf-rate');
+  
+  if (lfRateSrc) {
     let txt = lfRateSrc.textContent;
     if (txt.includes(':')) txt = txt.split(':')[1].trim();
-    lfRateDest.textContent = txt;
+    if (lfRateDest) lfRateDest.textContent = txt;
+    if (lfRateTextDest) lfRateTextDest.textContent = txt;
   }
 });
 
