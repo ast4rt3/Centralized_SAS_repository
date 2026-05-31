@@ -51,7 +51,7 @@ const CACHE_TTL = {
 const CACHE_KEYS = {
   lostFound:   'sas_analytics_cache_lf',
   attendance:  'sas_analytics_cache_att',
-  jobVacancy:  'sas_analytics_cache_jv',
+  jobVacancy:  'sas_analytics_cache_jv_v3',
   survey:      'sas_analytics_cache_survey',
   studentData: 'sas_analytics_cache_sd',
   pantry:      'sas_analytics_cache_pantry',
@@ -3014,28 +3014,34 @@ async function loadJobVacancyData() {
   const elPh = document.getElementById('vacancies-placeholder');
 
   try {
-    const res = await safeFetch(`${BACKEND_URL}?action=getVacancyData`);
-
-    if (!res || !res.success) {
-      console.warn('[Job Vacancies] getVacancyData failed:', res?.message);
-      // Only show placeholder if nothing is cached
-      if (!cacheRead(CACHE_KEYS.jobVacancy, CACHE_TTL.jobVacancy)) {
-        throw new Error(res?.message || 'Failed to load vacancy data');
-      }
-      return;
+    if (!window.supabase || !window.ENV?.SUPABASE_URL) {
+      throw new Error('Supabase client or credentials not available in environment.');
     }
 
-    const payload = { vacancies: res.vacancies || [], total: res.total || (res.vacancies || []).length };
+    const sb = window.supabase.createClient(window.ENV.SUPABASE_URL, window.ENV.SUPABASE_ANON_KEY);
+    
+    // Fetch only the structured fields needed for the charts and feed
+    const { data, error, count } = await sb
+      .from('sas_job_vacancies')
+      .select('industry, positions, company, location, salary, slots, extracted_text, drive_file_id', { count: 'exact' })
+      .eq('is_low_content', false);
+
+    if (error) {
+      throw new Error(`Supabase query failed: ${error.message}`);
+    }
+
+    const payload = { vacancies: data || [], total: count || (data || []).length };
     cacheWrite(CACHE_KEYS.jobVacancy, payload);
     renderJobVacancyFromCache(payload);
 
   } catch (err) {
-    console.error('[Job Vacancies] Error:', err);
+    console.error('[Job Vacancies] Error fetching from Supabase:', err);
     if (!cacheRead(CACHE_KEYS.jobVacancy, CACHE_TTL.jobVacancy)) {
       if (elPh) elPh.classList.remove('hidden');
       setText('kv-vacancies', '—');
       renderEmptyChart('vacanciesChart', 'doughnut');
       renderTopRoles([]);
+      renderRecentPostings([]);
     }
   }
 }
@@ -3047,6 +3053,7 @@ function renderJobVacancyFromCache({ vacancies, total }) {
   if (vacancies.length === 0) {
     renderEmptyChart('vacanciesChart', 'doughnut');
     renderTopRoles([]);
+    renderRecentPostings([]);
     if (elPh) {
       elPh.classList.remove('hidden');
       const p = elPh.querySelector('p');
@@ -3056,6 +3063,49 @@ function renderJobVacancyFromCache({ vacancies, total }) {
   }
 
   if (elPh) elPh.classList.add('hidden');
+
+  // --- Client-Side Fallback Parser ---
+  // Recovers job titles from raw OCR text if the backend regex failed
+  const getFallbackTitle = (text) => {
+    if (!text) return null;
+    const lines = text.split('\n').map(l => l.trim().replace(/^[•\-\*]/, '').trim()).filter(l => l.length > 2);
+    for (let i = 0; i < lines.length - 1; i++) {
+      if (/^position\b/i.test(lines[i])) return lines[i+1];
+      if (/hiring/i.test(lines[i]) && !/we are hiring/i.test(lines[i])) {
+        if (lines[i+1].length < 50) return lines[i+1];
+      }
+    }
+    for (const line of lines) {
+      if (/(analyst|attendant|manager|clerk|staff|worker|driver|cashier|assistant|nurse|developer|engineer|teacher|technician)/i.test(line)) {
+        if (line.length < 50) return line;
+      }
+    }
+    const ignoreWords = /company|corporation|inc\.|office|pes|employment/i;
+    for (const line of lines) {
+      if (!ignoreWords.test(line) && line.length < 40 && /^[A-Z\s\-\/]+$/.test(line)) return line;
+    }
+    return null;
+  };
+
+  const getFallbackCompany = (text) => {
+    if (!text) return 'Unknown Company';
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 2);
+    for (const line of lines) {
+      if (/(inc\.|corporation|corp\.|enterprise|company|ltd\.)/i.test(line) && line.length < 60) return line;
+    }
+    return lines.length > 0 ? lines[0] : 'Unknown Company';
+  };
+
+  vacancies.forEach(v => {
+    if (!v.positions || v.positions.length === 0) {
+      const guess = getFallbackTitle(v.extracted_text);
+      if (guess) v.positions = [guess];
+    }
+    if (!v.company) v.company = getFallbackCompany(v.extracted_text);
+  });
+  // ------------------------------------
+
+  renderRecentPostings(vacancies);
 
   const industryCounts = {};
   vacancies.forEach(v => {
@@ -3120,6 +3170,42 @@ function renderTopRoles(roles) {
       <span class="an-kpi-list-name" style="text-transform:capitalize;">${escHtml(name.toLowerCase())}</span>
       <span class="an-kpi-list-val">${count}</span>
     </div>`).join('');
+}
+
+function renderRecentPostings(vacancies) {
+  const body = document.getElementById('recent-postings-body');
+  if (!body) return;
+
+  if (!vacancies || vacancies.length === 0) {
+    body.innerHTML = '<div class="an-loading-row" style="color:var(--an-text-muted,#64748b);">No recent postings found.</div>';
+    return;
+  }
+
+  // Show the last 15 postings that have parsed positions
+  const recent = vacancies
+    .filter(v => v.positions && v.positions.length > 0)
+    .slice(0, 15);
+
+  if (recent.length === 0) {
+    body.innerHTML = '<div class="an-loading-row" style="color:var(--an-text-muted,#64748b);">No parsed job roles available.</div>';
+    return;
+  }
+
+  body.innerHTML = recent.map(v => {
+    let rolesHTML = v.positions.map(p => `<span style="display:inline-block; background:rgba(255,255,255,0.1); padding:2px 8px; border-radius:12px; margin:2px 4px 2px 0; font-size:0.8rem;">${escHtml(p)}</span>`).join('');
+    let company = v.company ? escHtml(v.company) : 'Job Posting';
+    let location = v.location ? ` &bull; <i class='bx bx-map'></i> ${escHtml(v.location)}` : '';
+    let slots = v.slots ? ` &bull; <i class='bx bx-user'></i> ${v.slots} slot(s)` : '';
+    
+    return `
+    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 12px; margin-bottom: 12px;">
+      <strong style="display: block; color: #fff; margin-bottom: 4px; font-size: 0.95rem; text-transform: capitalize;">${company.toLowerCase()}</strong>
+      <div style="color: #94a3b8; font-size: 0.8rem; margin-bottom: 8px;">
+        <i class='bx bx-briefcase'></i> ${escHtml(v.industry || 'Others')}${location}${slots}
+      </div>
+      <div>${rolesHTML}</div>
+    </div>`;
+  }).join('');
 }
 
 // ── Student Dataset UI Tabs ──
