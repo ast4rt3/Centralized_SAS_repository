@@ -51,7 +51,7 @@ const CACHE_TTL = {
 const CACHE_KEYS = {
   lostFound:   'sas_analytics_cache_lf',
   attendance:  'sas_analytics_cache_att',
-  jobVacancy:  'sas_analytics_cache_jv_v3',
+  jobVacancy:  'sas_analytics_cache_jv_v4',
   survey:      'sas_analytics_cache_survey',
   studentData: 'sas_analytics_cache_sd',
   pantry:      'sas_analytics_cache_pantry',
@@ -3172,6 +3172,15 @@ function renderTopRoles(roles) {
     </div>`).join('');
 }
 
+window.openPosterModal = function(fileId) {
+  const modal = document.getElementById('an-image-modal');
+  const img = document.getElementById('an-image-modal-img');
+  if (modal && img && fileId) {
+    img.src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
+    modal.style.display = 'flex';
+  }
+};
+
 function renderRecentPostings(vacancies) {
   const body = document.getElementById('recent-postings-body');
   if (!body) return;
@@ -3196,9 +3205,10 @@ function renderRecentPostings(vacancies) {
     let company = v.company ? escHtml(v.company) : 'Job Posting';
     let location = v.location ? ` &bull; <i class='bx bx-map'></i> ${escHtml(v.location)}` : '';
     let slots = v.slots ? ` &bull; <i class='bx bx-user'></i> ${v.slots} slot(s)` : '';
+    let clickAttr = v.drive_file_id ? `onclick="openPosterModal('${v.drive_file_id}')" style="cursor: pointer; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 12px; margin-bottom: 12px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'"` : `style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 12px; margin-bottom: 12px;"`;
     
     return `
-    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 12px; margin-bottom: 12px;">
+    <div ${clickAttr}>
       <strong style="display: block; color: #fff; margin-bottom: 4px; font-size: 0.95rem; text-transform: capitalize;">${company.toLowerCase()}</strong>
       <div style="color: #94a3b8; font-size: 0.8rem; margin-bottom: 8px;">
         <i class='bx bx-briefcase'></i> ${escHtml(v.industry || 'Others')}${location}${slots}

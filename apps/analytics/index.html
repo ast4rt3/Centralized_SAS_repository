@@ -864,10 +864,10 @@
   </div>
 
   <!-- Job Poster Image Modal -->
-  <div id="an-image-modal" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
-    <div style="position: relative; max-width: 90vw; max-height: 90vh;">
-      <button onclick="document.getElementById('an-image-modal').classList.add('hidden')" style="position: absolute; top: -40px; right: 0; background: transparent; border: none; color: #fff; font-size: 2rem; cursor: pointer;">&times;</button>
-      <img id="an-image-modal-img" src="" alt="Job Poster" style="max-width: 100%; max-height: 90vh; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+  <div id="an-image-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(4px);" onclick="this.style.display='none'">
+    <div style="position: relative; max-width: 90vw; max-height: 90vh; padding: 20px;" onclick="event.stopPropagation()">
+      <button onclick="document.getElementById('an-image-modal').style.display='none'" style="position: absolute; top: -10px; right: -10px; background: #ef4444; border: none; color: #fff; width: 40px; height: 40px; border-radius: 50%; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 10000;">&times;</button>
+      <img id="an-image-modal-img" src="" alt="Job Poster" style="max-width: 100%; max-height: calc(90vh - 40px); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); background: #0f172a; min-width: 200px; min-height: 200px; object-fit: contain;">
     </div>
   </div>
 
