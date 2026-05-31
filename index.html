@@ -1601,12 +1601,12 @@
        ============================================================ */
 
     /* Home page background — richer gradient */
-    #home.page {
+    body:not(.dark-theme) #home.page {
       background: linear-gradient(160deg, #001a3d 0%, #002a5c 40%, #003a7a 100%) !important;
     }
 
     /* Home header — cleaner, more polished */
-    .home-header {
+    body:not(.dark-theme) .home-header {
       background: rgba(0, 20, 50, 0.85) !important;
       backdrop-filter: blur(20px) !important;
       -webkit-backdrop-filter: blur(20px) !important;
@@ -1651,7 +1651,7 @@
     }
 
     /* Post cards — improved dark glass style */
-    .post-card {
+    body:not(.dark-theme) .post-card {
       border-radius: 20px !important;
       border: 1px solid rgba(255, 255, 255, 0.08) !important;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
@@ -1659,7 +1659,7 @@
       background: #0a1628 !important;
     }
 
-    .post-card:hover {
+    body:not(.dark-theme) .post-card:hover {
       transform: translateY(-8px) scale(1.02) !important;
       border-color: rgba(255, 215, 0, 0.4) !important;
       box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 215, 0, 0.2) !important;
@@ -1748,7 +1748,7 @@
     }
 
     /* Portal Access widget — improved */
-    #portal-access-widget {
+    body:not(.dark-theme) #portal-access-widget {
       background: rgba(0, 20, 50, 0.7) !important;
       border: 1px solid rgba(255, 215, 0, 0.25) !important;
       border-radius: 20px !important;
@@ -1791,32 +1791,32 @@
     }
 
     /* Sidebar improvements */
-    .sidebar {
+    body:not(.dark-theme) .sidebar {
       background: linear-gradient(180deg, #001a3d 0%, #002244 60%, #001530 100%) !important;
       border-right: 1px solid rgba(255, 215, 0, 0.1) !important;
     }
 
-    .sidebar-header {
+    body:not(.dark-theme) .sidebar-header {
       border-bottom: 1px solid rgba(255, 215, 0, 0.1) !important;
       padding: 16px 18px !important;
     }
 
-    .nav-item.active {
+    body:not(.dark-theme) .nav-item.active {
       background: rgba(255, 215, 0, 0.15) !important;
       border-left: 3px solid #ffd700 !important;
       color: #ffffff !important;
     }
 
-    .nav-item:hover {
+    body:not(.dark-theme) .nav-item:hover {
       background: rgba(255, 255, 255, 0.07) !important;
     }
 
-    .nav-icon {
+    body:not(.dark-theme) .nav-icon {
       color: #ffd700 !important;
     }
 
     /* Sidebar footer */
-    .sidebar-footer {
+    body:not(.dark-theme) .sidebar-footer {
       border-top: 1px solid rgba(255, 215, 0, 0.1) !important;
     }
 
@@ -4709,14 +4709,14 @@
                 <div class="theme-preview-header"></div>
                 <div class="theme-preview-content"></div>
               </div>
-              <span>Light</span>
+              <span>Default</span>
             </div>
             <div class="settings-theme-option" data-theme="dark">
               <div class="settings-theme-preview dark-preview">
                 <div class="theme-preview-header"></div>
                 <div class="theme-preview-content"></div>
               </div>
-              <span>Dark</span>
+              <span>Dark Mode</span>
             </div>
           </div>
           <p style="font-size:0.8rem; color:#64748b; margin-top:15px;">Theme preference is saved automatically.</p>
