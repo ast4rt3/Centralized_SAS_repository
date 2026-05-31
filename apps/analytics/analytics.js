@@ -118,8 +118,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  document.getElementById('semesterBadge').textContent = SEMESTER_LABEL;
-  document.getElementById('printDate').textContent = new Date().toLocaleDateString('en-PH', {
+  const semesterBadge = document.getElementById('semesterBadge');
+  if (semesterBadge) semesterBadge.textContent = SEMESTER_LABEL;
+  
+  const printDate = document.getElementById('printDate');
+  if (printDate) printDate.textContent = new Date().toLocaleDateString('en-PH', {
     year: 'numeric', month: 'long', day: 'numeric'
   });
 
