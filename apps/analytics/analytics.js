@@ -2952,6 +2952,39 @@ function printReport() {
   window.print();
 }
 
+// ─── Formal Print Report Sync ──────────────────────────
+window.addEventListener('beforeprint', () => {
+  const copyText = (srcId, destId) => {
+    const src = document.getElementById(srcId);
+    const dest = document.getElementById(destId);
+    if (src && dest) dest.textContent = src.textContent;
+  };
+
+  copyText('kv-sd-total', 'fp-sd-total');
+  copyText('kv-lf-total', 'fp-lf-total');
+  copyText('kv-borrowers', 'fp-borrowers');
+  copyText('kv-pantry', 'fp-pantry');
+  copyText('kv-survey-score', 'fp-survey-score');
+  copyText('kv-attendance', 'fp-attendance');
+  copyText('kv-vacancies', 'fp-vacancies');
+
+  copyText('sd-4ps', 'fp-sd-4ps');
+  copyText('sd-solo', 'fp-sd-solo');
+  copyText('sd-scholarship', 'fp-sd-scholarship');
+  copyText('sd-pwd', 'fp-sd-pwd');
+  copyText('sd-ip', 'fp-sd-ip');
+  copyText('sd-employed', 'fp-sd-employed');
+  
+  // Clean up Recovery Rate formatting (strip the prefix if it exists)
+  const lfRateSrc = document.getElementById('kv-lf-rate');
+  const lfRateDest = document.getElementById('fp-lf-rate');
+  if (lfRateSrc && lfRateDest) {
+    let txt = lfRateSrc.textContent;
+    if (txt.includes(':')) txt = txt.split(':')[1].trim();
+    lfRateDest.textContent = txt;
+  }
+});
+
 // ─── SECTION 8: Job Vacancies Analytics ──────────────────
 // Reads pre-processed structured data from Supabase (sas_job_vacancies).
 // Data is populated by running: node scripts/sync-vacancies.js

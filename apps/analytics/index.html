@@ -47,12 +47,7 @@
     </div>
   </header>
 
-  <!-- Print Header (Hidden on screen, shown in print) -->
-  <div class="an-print-header" style="display: none;">
-    <h1 style="margin: 12px 0 0 0; font-size: 1.5rem; font-weight: 700;">Northern Bukidnon State College</h1>
-    <h2 style="margin: 4px 0 0 0; font-size: 1.1rem; font-weight: 500;">Student Affairs and Services (SAS) Data Analytics Report</h2>
-    <p style="margin: 4px 0 16px 0; font-size: 0.9rem; font-weight: 400; color: #555;">Academic Year 2025–2026</p>
-  </div>
+
 
   <!-- Dashboard Selector -->
   <div class="an-dashboard-selector">
@@ -787,10 +782,68 @@
 
   </main>
 
-  <!-- Print footer -->
-  <div class="an-print-footer" id="printFooter">
-    <p>Northern Bukidnon State College — Student Affairs and Services</p>
-    <p>Service Utilization Report — Generated: <span id="printDate"></span></p>
+  <!-- Formal Print Report (Hidden on screen) -->
+  <div id="formal-print-report" class="print-only">
+    <div class="fp-letterhead">
+      <p>Republic of the Philippines</p>
+      <p class="fp-bold">NORTHERN BUKIDNON STATE COLLEGE</p>
+      <p>Student Affairs and Services</p>
+    </div>
+    
+    <div class="fp-title">
+      <h2>OFFICIAL DATA ANALYTICS REPORT</h2>
+      <p>Academic Year 2025–2026</p>
+    </div>
+
+    <div class="fp-section">
+      <h3>1. Executive Summary</h3>
+      <p>This report presents a comprehensive overview of the Student Affairs and Services utilization, tracking key performance indicators across various service channels including lost and found recovery, student welfare (pantry), borrowing logs, and overall client satisfaction.</p>
+    </div>
+
+    <div class="fp-section">
+      <h3>2. Key Performance Indicators</h3>
+      <table class="fp-table">
+        <tbody>
+          <tr><td class="fp-label">Total Student Profiles Tracked</td><td class="fp-value" id="fp-sd-total">0</td></tr>
+          <tr><td class="fp-label">Lost & Found Items Reported</td><td class="fp-value" id="fp-lf-total">0</td></tr>
+          <tr><td class="fp-label">Lost & Found Recovery Rate</td><td class="fp-value" id="fp-lf-rate">0%</td></tr>
+          <tr><td class="fp-label">Borrowing Transactions</td><td class="fp-value" id="fp-borrowers">0</td></tr>
+          <tr><td class="fp-label">Pantry Beneficiaries</td><td class="fp-value" id="fp-pantry">0</td></tr>
+          <tr><td class="fp-label">Overall Satisfaction Score</td><td class="fp-value" id="fp-survey-score">0.0</td></tr>
+          <tr><td class="fp-label">Event Attendees</td><td class="fp-value" id="fp-attendance">0</td></tr>
+          <tr><td class="fp-label">Job Vacancies Tracked</td><td class="fp-value" id="fp-vacancies">0</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="fp-section">
+      <h3>3. Socio-Economic Profile (Student Dataset)</h3>
+      <table class="fp-table">
+        <tbody>
+          <tr><td class="fp-label">4Ps Beneficiaries</td><td class="fp-value" id="fp-sd-4ps">0</td></tr>
+          <tr><td class="fp-label">Solo Parent Households</td><td class="fp-value" id="fp-sd-solo">0</td></tr>
+          <tr><td class="fp-label">With Scholarship</td><td class="fp-value" id="fp-sd-scholarship">0</td></tr>
+          <tr><td class="fp-label">PWD Count</td><td class="fp-value" id="fp-sd-pwd">0</td></tr>
+          <tr><td class="fp-label">IP Count</td><td class="fp-value" id="fp-sd-ip">0</td></tr>
+          <tr><td class="fp-label">Employed Students</td><td class="fp-value" id="fp-sd-employed">0</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="fp-signatory-block">
+      <div class="fp-signatory">
+        <p>Prepared By:</p>
+        <div class="fp-signature-line"></div>
+        <p class="fp-name">______________________</p>
+        <p class="fp-role">Data Analyst / Coordinator</p>
+      </div>
+      <div class="fp-signatory">
+        <p>Noted By:</p>
+        <div class="fp-signature-line"></div>
+        <p class="fp-name">______________________</p>
+        <p class="fp-role">Director, Student Affairs and Services</p>
+      </div>
+    </div>
   </div>
 
   <script src="../../env.js"></script>
