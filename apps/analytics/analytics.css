@@ -842,18 +842,19 @@ body {
   body { background: #fff !important; color: #000 !important; }
   
   /* Hide interactive/unnecessary UI elements */
-  .an-header, .an-header-actions, .an-dashboard-selector, .an-sub-tabs, .an-btn-add { display: none !important; }
-  .an-data-placeholder .an-input-row, .an-chart-badge { display: none !important; }
+  .an-header, .an-header-actions, .an-dashboard-selector, .an-sub-tabs, .an-btn, .an-survey-connect-bar, .an-btn-add { display: none !important; }
+  .an-data-placeholder, .an-chart-badge { display: none !important; }
   
   /* Unhide all tab contents for continuous print */
   .an-tab-content.hidden { display: flex !important; }
+  .an-dashboard.hidden { display: block !important; }
   
   /* Print Header */
   .an-print-header { display: block !important; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; text-align: center; color: #000 !important; }
   .an-print-header h1, .an-print-header h2, .an-print-header p { color: #000 !important; }
   
   /* Make cards printer friendly */
-  .an-kpi-card, .an-chart-card, .an-stat-item, .an-manual-card {
+  .an-kpi-card, .an-chart-card, .an-stat-item, .an-manual-card, .an-kpi-list-row, .an-comment-item {
     background: #fff !important;
     border: 1px solid #ddd !important;
     box-shadow: none !important;
@@ -862,9 +863,9 @@ body {
   }
   
   /* Fix typography for print */
-  .an-chart-card-header h3, .an-stat-label, .an-kpi-val, .an-stat-value, .an-kpi-label, .an-section-title, .an-section-subtitle { color: #000 !important; }
+  .an-chart-card-header h3, .an-stat-label, .an-kpi-value, .an-stat-value, .an-kpi-label, .an-section-title, .an-section-subtitle, .an-kpi-sub, .an-kpi-list-name, .an-kpi-list-rank, .an-kpi-list-val, .an-comment-name, .an-comment-text, .an-manual-value, .an-manual-label { color: #000 !important; }
   
-  .an-chart-row, .an-section { page-break-inside: avoid; }
+  .an-chart-row, .an-section, .an-chart-card { page-break-inside: avoid; }
   
   .an-print-footer { display: block; text-align: center; padding: 20px; font-size: 0.85rem; color: #333; border-top: 1px solid #ccc; margin-top: 32px; }
 }
