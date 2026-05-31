@@ -51,7 +51,7 @@ const CACHE_TTL = {
 const CACHE_KEYS = {
   lostFound:   'sas_analytics_cache_lf',
   attendance:  'sas_analytics_cache_att',
-  jobVacancy:  'sas_analytics_cache_jv_v4',
+  jobVacancy:  'sas_analytics_cache_jv_v6',
   survey:      'sas_analytics_cache_survey',
   studentData: 'sas_analytics_cache_sd',
   pantry:      'sas_analytics_cache_pantry',
@@ -3096,12 +3096,34 @@ function renderJobVacancyFromCache({ vacancies, total }) {
     return lines.length > 0 ? lines[0] : 'Unknown Company';
   };
 
+  const getFallbackIndustry = (text) => {
+    if (!text) return 'Others';
+    const lower = text.toLowerCase();
+    if (/\b(nurse|medical|hospital|clinic|doctor|pharmacy|health)\b/.test(lower)) return 'Healthcare & Medicine';
+    if (/\b(developer|engineer|software|it|programmer|tech)\b/.test(lower)) return 'IT & Technology';
+    if (/\b(bank|finance|analyst|accounting|credit|loan|teller|budget)\b/.test(lower)) return 'Finance & Banking';
+    if (/\b(teacher|school|education|university|tutor|instructor|academic)\b/.test(lower)) return 'Education';
+    if (/\b(sales|marketing|retail|store|cashier|promodiser|merchandiser)\b/.test(lower)) return 'Retail & Sales';
+    if (/\b(construction|civil|architect|welder|carpenter|mason|laborer)\b/.test(lower)) return 'Construction';
+    if (/\b(restaurant|food|chef|cook|waiter|crew|kitchen|baker)\b/.test(lower)) return 'Food & Beverage';
+    if (/\b(driver|logistics|warehouse|delivery|truck|courier)\b/.test(lower)) return 'Logistics & Transport';
+    if (/\b(hotel|tour|resort|attendant|receptionist|front desk)\b/.test(lower)) return 'Hospitality & Tourism';
+    if (/\b(manufacturing|production|factory|operator|machine)\b/.test(lower)) return 'Manufacturing';
+    if (/\b(government|lgu|city|public|agency)\b/.test(lower)) return 'Government & Public Service';
+    if (/\b(clerk|admin|office|secretary|data entry|assistant|administrative)\b/.test(lower)) return 'Business & Administration';
+    if (/\b(guard|security|watchman|security officer)\b/.test(lower)) return 'Security Services';
+    return 'Others';
+  };
+
   vacancies.forEach(v => {
     if (!v.positions || v.positions.length === 0) {
       const guess = getFallbackTitle(v.extracted_text);
       if (guess) v.positions = [guess];
     }
     if (!v.company) v.company = getFallbackCompany(v.extracted_text);
+    if (!v.industry || v.industry === 'Others') {
+      v.industry = getFallbackIndustry(v.extracted_text);
+    }
   });
   // ------------------------------------
 
@@ -3131,8 +3153,9 @@ function renderJobVacancyFromCache({ vacancies, total }) {
     },
     options: {
       cutout: '60%',
+      maintainAspectRatio: false,
       plugins: {
-        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+        legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } },
         tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} poster${ctx.parsed !== 1 ? 's' : ''}` } }
       }
     }
@@ -3152,10 +3175,10 @@ function renderJobVacancyFromCache({ vacancies, total }) {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 8);
 
-  renderTopRoles(topRoles);
+  renderTopRoles(topRoles, vacancies);
 }
 
-function renderTopRoles(roles) {
+function renderTopRoles(roles, vacancies) {
   const body = document.getElementById('top-roles-body');
   if (!body) return;
 
@@ -3164,12 +3187,22 @@ function renderTopRoles(roles) {
     return;
   }
 
-  body.innerHTML = roles.map(([name, count], i) => `
-    <div class="an-kpi-list-row">
-      <span class="an-kpi-list-rank">#${i + 1}</span>
-      <span class="an-kpi-list-name" style="text-transform:capitalize;">${escHtml(name.toLowerCase())}</span>
-      <span class="an-kpi-list-val">${count}</span>
-    </div>`).join('');
+  body.innerHTML = roles.map(([name, count], i) => {
+    const matchingVacancies = (vacancies || []).filter(v => v.positions && v.positions.some(p => p.toLowerCase().trim() === name.toLowerCase().trim()));
+    const cardsHTML = matchingVacancies.map(v => createPostingCardHTML(v)).join('');
+    
+    return `
+    <details style="margin-bottom: 8px;">
+      <summary class="an-kpi-list-row" style="cursor: pointer; outline: none; border-radius: 6px;">
+        <span class="an-kpi-list-rank">#${i + 1}</span>
+        <span class="an-kpi-list-name" style="text-transform:capitalize; flex-grow: 1;">${escHtml(name.toLowerCase())}</span>
+        <span class="an-kpi-list-val" style="background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 12px; font-size: 0.85rem;">${count}</span>
+      </summary>
+      <div style="padding: 12px 0 4px 12px; border-left: 2px solid rgba(255,255,255,0.1); margin-left: 12px; margin-top: 4px;">
+        ${cardsHTML}
+      </div>
+    </details>`;
+  }).join('');
 }
 
 window.openPosterModal = function(fileId) {
@@ -3180,6 +3213,23 @@ window.openPosterModal = function(fileId) {
     modal.style.display = 'flex';
   }
 };
+
+function createPostingCardHTML(v) {
+  let rolesHTML = v.positions.map(p => `<span style="display:inline-block; background:rgba(255,255,255,0.1); padding:2px 8px; border-radius:12px; margin:2px 4px 2px 0; font-size:0.8rem;">${escHtml(p)}</span>`).join('');
+  let company = v.company ? escHtml(v.company) : 'Job Posting';
+  let location = v.location ? ` &bull; <i class='bx bx-map'></i> ${escHtml(v.location)}` : '';
+  let slots = v.slots ? ` &bull; <i class='bx bx-user'></i> ${v.slots} slot(s)` : '';
+  let clickAttr = v.drive_file_id ? `onclick="openPosterModal('${v.drive_file_id}')" style="cursor: pointer; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 12px; margin-bottom: 12px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'"` : `style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 12px; margin-bottom: 12px;"`;
+  
+  return `
+  <div ${clickAttr}>
+    <strong style="display: block; color: #fff; margin-bottom: 4px; font-size: 0.95rem; text-transform: capitalize;">${company.toLowerCase()}</strong>
+    <div style="color: #94a3b8; font-size: 0.8rem; margin-bottom: 8px;">
+      <i class='bx bx-briefcase'></i> ${escHtml(v.industry || 'Others')}${location}${slots}
+    </div>
+    <div>${rolesHTML}</div>
+  </div>`;
+}
 
 function renderRecentPostings(vacancies) {
   const body = document.getElementById('recent-postings-body');
@@ -3200,22 +3250,7 @@ function renderRecentPostings(vacancies) {
     return;
   }
 
-  body.innerHTML = recent.map(v => {
-    let rolesHTML = v.positions.map(p => `<span style="display:inline-block; background:rgba(255,255,255,0.1); padding:2px 8px; border-radius:12px; margin:2px 4px 2px 0; font-size:0.8rem;">${escHtml(p)}</span>`).join('');
-    let company = v.company ? escHtml(v.company) : 'Job Posting';
-    let location = v.location ? ` &bull; <i class='bx bx-map'></i> ${escHtml(v.location)}` : '';
-    let slots = v.slots ? ` &bull; <i class='bx bx-user'></i> ${v.slots} slot(s)` : '';
-    let clickAttr = v.drive_file_id ? `onclick="openPosterModal('${v.drive_file_id}')" style="cursor: pointer; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 12px; margin-bottom: 12px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'"` : `style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 12px; margin-bottom: 12px;"`;
-    
-    return `
-    <div ${clickAttr}>
-      <strong style="display: block; color: #fff; margin-bottom: 4px; font-size: 0.95rem; text-transform: capitalize;">${company.toLowerCase()}</strong>
-      <div style="color: #94a3b8; font-size: 0.8rem; margin-bottom: 8px;">
-        <i class='bx bx-briefcase'></i> ${escHtml(v.industry || 'Others')}${location}${slots}
-      </div>
-      <div>${rolesHTML}</div>
-    </div>`;
-  }).join('');
+  body.innerHTML = recent.map(v => createPostingCardHTML(v)).join('');
 }
 
 // ── Student Dataset UI Tabs ──
