@@ -41,20 +41,16 @@ let manualServices = JSON.parse(localStorage.getItem('sas_manual_services') || '
 // renders instantly from cache, then refreshes in the background.
 const CACHE_TTL = {
   lostFound:   10 * 60 * 1000,  // 10 min  — external API
-  attendance:   5 * 60 * 1000,  //  5 min  — Supabase (live data)
   jobVacancy:  30 * 60 * 1000,  // 30 min  — rarely changes
   survey:       5 * 60 * 1000,  //  5 min  — matches poll interval
   studentData:  5 * 60 * 1000,  //  5 min
-  pantry:      10 * 60 * 1000,  // 10 min
 };
 
 const CACHE_KEYS = {
   lostFound:   'sas_analytics_cache_lf',
-  attendance:  'sas_analytics_cache_att',
   jobVacancy:  'sas_analytics_cache_jv_v6',
   survey:      'sas_analytics_cache_survey',
   studentData: 'sas_analytics_cache_sd',
-  pantry:      'sas_analytics_cache_pantry',
 };
 
 function cacheWrite(key, data) {
@@ -160,14 +156,8 @@ function paintFromCache() {
   const lf = cacheRead(CACHE_KEYS.lostFound, CACHE_TTL.lostFound);
   if (lf) { renderLFData(lf); showCacheAge('lf', CACHE_KEYS.lostFound); }
 
-  const att = cacheRead(CACHE_KEYS.attendance, CACHE_TTL.attendance);
-  if (att) { renderAttendanceFromCache(att); showCacheAge('att', CACHE_KEYS.attendance); }
-
   const jv = cacheRead(CACHE_KEYS.jobVacancy, CACHE_TTL.jobVacancy);
   if (jv) { renderJobVacancyFromCache(jv); showCacheAge('jv', CACHE_KEYS.jobVacancy); }
-
-  const pantry = cacheRead(CACHE_KEYS.pantry, CACHE_TTL.pantry);
-  if (pantry) { renderPantryFromCache(pantry); }
 
   // ── Survey ──────────────────────────────────────────────────────────────
   // Priority 1: parsed cache (fastest — no re-parse needed)
@@ -295,7 +285,6 @@ async function loadAllData() {
   // Only re-fetch sections whose cache has expired — skip fresh ones
   const tasks = [];
   if (!cacheRead(CACHE_KEYS.lostFound,  CACHE_TTL.lostFound))  tasks.push(loadLostFoundData());
-  if (!cacheRead(CACHE_KEYS.attendance, CACHE_TTL.attendance))  tasks.push(loadAttendanceData());
   if (!cacheRead(CACHE_KEYS.jobVacancy, CACHE_TTL.jobVacancy))  tasks.push(loadJobVacancyData());
 
   if (tasks.length > 0) {
@@ -307,7 +296,6 @@ async function loadAllData() {
 
   // Survey and student dataset manage their own staleness via row-count check
   loadSurveyData();
-  loadBorrowersData(); // graceful — no await
 
   showRefreshSpin(false);
 }
@@ -317,9 +305,7 @@ async function loadAllData() {
 async function loadAllDataForPreload() {
   const tasks = [];
   if (!cacheRead(CACHE_KEYS.lostFound,  CACHE_TTL.lostFound))  tasks.push(loadLostFoundData());
-  if (!cacheRead(CACHE_KEYS.attendance, CACHE_TTL.attendance))  tasks.push(loadAttendanceData());
   if (!cacheRead(CACHE_KEYS.jobVacancy, CACHE_TTL.jobVacancy))  tasks.push(loadJobVacancyData());
-  if (!cacheRead(CACHE_KEYS.pantry,     CACHE_TTL.pantry))      tasks.push(loadPantryData());
 
   await Promise.allSettled(tasks);
 
@@ -513,98 +499,6 @@ function renderLFPlaceholder() {
   renderEmptyChart('lfRecoveryChart', 'doughnut');
   renderEmptyChart('lfCategoryChart', 'bar');
   renderEmptyChart('lfMonthlyChart',  'line');
-}
-
-// ─── SECTION 2: Borrowers Log ────────────────────────
-async function loadBorrowersData() {
-  // The Borrowers Log public API — update URL when available
-  const data = await safeFetch(BORROWERS_BASE + '/stats');
-  const el = document.getElementById('borrowers-placeholder');
-
-  if (!data || !data.success) {
-    if (el) el.classList.remove('hidden');
-    renderEmptyChart('borrowerItemsChart',   'bar');
-    renderEmptyChart('borrowerTypeChart',    'doughnut');
-    renderEmptyChart('borrowerMonthlyChart', 'bar');
-    return;
-  }
-
-  if (el) el.classList.add('hidden');
-  renderBorrowersData(data.data);
-}
-
-function renderBorrowersData(d) {
-  const total = d.totalTransactions ?? 0;
-  setText('kv-borrowers', total);
-
-  // Items chart
-  const items = d.itemBreakdown ?? {};
-  makeChart('borrowerItemsChart', {
-    type: 'bar',
-    data: {
-      labels: Object.keys(items),
-      datasets: [{
-        label: 'Times Borrowed',
-        data: Object.values(items),
-        backgroundColor: PALETTE.gold,
-        borderRadius: 6,
-        borderSkipped: false,
-      }]
-    },
-    options: {
-      indexAxis: 'y',
-      maintainAspectRatio: false,
-      layout: { padding: { left: 10, right: 10, bottom: 10 } },
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } },
-        y: { grid: { display: false } }
-      }
-    }
-  });
-
-  // Type doughnut
-  const byType = d.typeBreakdown ?? { Student: 0, Teacher: 0, Staff: 0 };
-  makeChart('borrowerTypeChart', {
-    type: 'doughnut',
-    data: {
-      labels: Object.keys(byType),
-      datasets: [{
-        data: Object.values(byType),
-        backgroundColor: [PALETTE.blue, PALETTE.gold, PALETTE.green],
-        borderWidth: 2,
-        hoverOffset: 6,
-      }]
-    },
-    options: {
-      cutout: '65%',
-      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } }
-    }
-  });
-
-  // Monthly
-  const monthly = d.monthlyTrend ?? {};
-  makeChart('borrowerMonthlyChart', {
-    type: 'bar',
-    data: {
-      labels: Object.keys(monthly),
-      datasets: [{
-        label: 'Transactions',
-        data: Object.values(monthly),
-        backgroundColor: 'rgba(245,158,11,0.7)',
-        borderColor: PALETTE.gold,
-        borderWidth: 1.5,
-        borderRadius: 5,
-      }]
-    },
-    options: {
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { display: false } },
-        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } }
-      }
-    }
-  });
 }
 
 // ─── SECTION 3: Client Satisfaction Surveys ──────────
@@ -1462,381 +1356,6 @@ function savePantrySheetId() {
   if (!val) return;
   localStorage.setItem('sas_pantry_sheet_id', val);
   loadPantryData();
-}
-
-// ─── SECTION 5: Event Attendance ─────────────────────
-let supabaseClient;
-function getSupabase() {
-  if (!supabaseClient && window.supabase && window.ENV?.SUPABASE_URL) {
-    supabaseClient = window.supabase.createClient(window.ENV.SUPABASE_URL, window.ENV.SUPABASE_ANON_KEY);
-  }
-  return supabaseClient;
-}
-
-async function fetchAll(sb, table, select) {
-  let all = [];
-  let from = 0;
-  let step = 1000;
-  let keepFetching = true;
-  while(keepFetching) {
-    const { data, error } = await sb.from(table).select(select).range(from, from + step - 1);
-    if (error) throw error;
-    if (data && data.length > 0) {
-      all = all.concat(data);
-      from += step;
-      if (data.length < step) keepFetching = false;
-    } else {
-      keepFetching = false;
-    }
-  }
-  return all;
-}
-
-async function loadAttendanceData() {
-  const sb = getSupabase();
-  const elPh = document.getElementById('attendance-placeholder');
-
-  if (!sb) {
-    if (elPh) elPh.classList.remove('hidden');
-    setText('kv-attendance', '—');
-    renderEmptyChart('attendanceEventChart',  'bar');
-    renderEmptyChart('attendanceCourseChart', 'doughnut');
-    renderEmptyChart('attendanceYearChart',   'bar');
-    renderEmptyTopEvents([]);
-    return;
-  }
-
-  try {
-    // Fetch all events and schedules
-    const events = await fetchAll(sb, 'sas_events', 'id, name');
-    const schedules = await fetchAll(sb, 'sas_schedules', 'id, event_id');
-
-    // Map schedules to events
-    const schedToEvent = {};
-    schedules.forEach(s => schedToEvent[s.id] = s.event_id);
-
-    // Pre-build attendance sets per event
-    const eventAttendees = {};
-    events.forEach(e => eventAttendees[e.id] = new Set());
-
-    const allUniqueAttendees = new Set();
-    const attendeeStudentIds = new Set();
-
-    // Fetch logs FILTERED by schedule IDs (much faster than full table scan)
-    const scheduleIds = schedules.map(s => s.id);
-    if (scheduleIds.length > 0) {
-      // Chunk the schedule IDs to avoid URL length limits
-      for (let i = 0; i < scheduleIds.length; i += 200) {
-        const chunk = scheduleIds.slice(i, i + 200);
-        let from = 0;
-        const step = 1000;
-        let keepGoing = true;
-        while (keepGoing) {
-          const { data: logsChunk, error: logErr } = await sb
-            .from('sas_attendance_logs')
-            .select('student_id, schedule_id')
-            .in('schedule_id', chunk)
-            .range(from, from + step - 1);
-          if (logErr) throw logErr;
-          if (logsChunk && logsChunk.length > 0) {
-            logsChunk.forEach(l => {
-              const evId = schedToEvent[l.schedule_id];
-              if (evId && eventAttendees[evId]) {
-                eventAttendees[evId].add(l.student_id);
-                allUniqueAttendees.add(l.student_id);
-              }
-              attendeeStudentIds.add(l.student_id);
-            });
-            from += step;
-            if (logsChunk.length < step) keepGoing = false;
-          } else {
-            keepGoing = false;
-          }
-        }
-      }
-    }
-
-    // -- LEGACY DATA INTEGRATION --
-    const legacyColsFd = [
-      'Day1_Parade_Mass', 'Day1Opening_Morning', 'Day1Afternoon_IN', 'Day1Afternoon_OUT',
-      'Day2Morning_IN', 'Day2Morning_OUT', 'Day2Afternoon_IN', 'Day2Afernoon_OUT',
-      'Day3Morning_IN', 'Day3Morning_OUT', 'Day3Afternoon_IN', 'Day3Afternoon_OUT',
-      'Day3_Scan_3', 'Day4_Scan_1', 'Day4_Scan_2', 'Day4_Scan_3'
-    ];
-    const legacyColsIt = ['Morning_Day2_IN', 'Afternoon_Day2_IN', 'Afternoon_Day2_OUT'];
-
-    let fdData = [];
-    let itData = [];
-    try {
-      const [fd, it] = await Promise.all([
-        fetchAll(sb, 'NBSC_attendance', 'ID,' + legacyColsFd.join(',')),
-        fetchAll(sb, 'NBSC_it_fest_attendance', 'ID,' + legacyColsIt.join(','))
-      ]);
-      fdData = fd;
-      itData = it;
-    } catch (e) {
-      console.warn('[Analytics] Legacy attendance tables missing or error:', e.message);
-    }
-
-    let fdCount = 0;
-    fdData.forEach(row => {
-      const hasAttended = legacyColsFd.some(c => row[c] && row[c] !== 'Not Checked In' && row[c] !== 'Empty');
-      if (hasAttended) {
-        fdCount++;
-        allUniqueAttendees.add(row.ID);
-        attendeeStudentIds.add(row.ID);
-      }
-    });
-
-    let itCount = 0;
-    itData.forEach(row => {
-      const hasAttended = legacyColsIt.some(c => row[c] && row[c] !== 'Not Checked In' && row[c] !== 'Empty');
-      if (hasAttended) {
-        itCount++;
-        allUniqueAttendees.add(row.ID);
-        attendeeStudentIds.add(row.ID);
-      }
-    });
-
-    if (fdCount > 0) {
-      events.push({ id: 'legacy-fd', name: 'Foundation Day 2026 (Legacy)' });
-      eventAttendees['legacy-fd'] = { size: fdCount }; // mock Set interface for count
-    }
-    if (itCount > 0) {
-      events.push({ id: 'legacy-it', name: 'IT Fest 2026 (Legacy)' });
-      eventAttendees['legacy-it'] = { size: itCount }; // mock Set interface for count
-    }
-    // -- END LEGACY --
-
-    // To get course/year level, we need student details
-    let students = [];
-    if (attendeeStudentIds.size > 0) {
-      // Chunk the 'in' query if there are thousands of students
-      const idsArray = Array.from(attendeeStudentIds);
-      for (let i = 0; i < idsArray.length; i += 500) {
-        const chunk = idsArray.slice(i, i + 500);
-        const { data: mlist, error: mErr } = await sb
-          .from('NBSC_masterlist')
-          .select('ID, Course, yearLevel')
-          .in('ID', chunk);
-        if (!mErr && mlist) {
-          students = students.concat(mlist);
-        }
-      }
-    }
-
-    const studentMap = {};
-    students.forEach(s => studentMap[s.ID] = { course: s.Course || 'Unknown', yearLevel: s.yearLevel || '' });
-
-    // Aggregate Data
-    let totalEventAttendees = 0;
-    const sortedEvents = [];
-    events.forEach(e => {
-      const slot = eventAttendees[e.id];
-      const count = slot ? (slot instanceof Set ? slot.size : (slot.size ?? 0)) : 0;
-      totalEventAttendees += count;
-      if (count > 0) {
-        sortedEvents.push([e.name, count]);
-      }
-    });
-
-    sortedEvents.sort((a, b) => b[1] - a[1]);
-    setText('kv-attendance', totalEventAttendees);
-
-    if (elPh) elPh.classList.add('hidden');
-
-    const topN = sortedEvents.slice(0, 10);
-    makeChart('attendanceEventChart', {
-      type: 'bar',
-      data: {
-        labels: topN.map(e => e[0]),
-        datasets: [{
-          label: 'Attendees',
-          data:  topN.map(e => e[1]),
-          backgroundColor: PALETTE.purple,
-          borderRadius: 6,
-          borderSkipped: false,
-        }]
-      },
-      options: {
-        indexAxis: 'y',
-      maintainAspectRatio: false,
-      layout: { padding: { left: 10, right: 10, bottom: 10 } },
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } },
-          y: { grid: { display: false }, ticks: { font: { size: 11 } } }
-        }
-      }
-    });
-
-    // By course (based on overall unique attendees)
-    const byCourse = {};
-    const byYear = { '1st': 0, '2nd': 0, '3rd': 0, '4th': 0 };
-
-    allUniqueAttendees.forEach(sid => {
-      const stu = studentMap[sid] || { course: 'Unknown', yearLevel: '' };
-      const courseStr = stu.course;
-      const uCourse = courseStr.toUpperCase();
-      
-      let cat = 'UNKNOWN';
-      if (uCourse.includes('INFORMATION TECHNOLOGY')) cat = 'BSIT';
-      else if (uCourse.includes('BUSINESS ADMINISTRATION')) cat = 'BSBA';
-      else if (uCourse.includes('EARLY CHILDHOOD')) cat = 'BECED';
-      else if (uCourse.includes('SECONDARY')) cat = 'BSED';
-      else if (uCourse.includes('ELEMENTARY')) cat = 'BEED';
-      else if (uCourse.includes('TEACHER EDUCATION')) cat = 'BSTE';
-      else if (uCourse.includes('TOURISM')) cat = 'BST';
-      else {
-        // Fallback: extract initials, ignoring minor words like OF, IN
-        const words = uCourse.split(/\s+/).filter(w => !['OF', 'IN', 'THE', 'AND'].includes(w));
-        const initials = words.map(w => w.charAt(0)).join('');
-        cat = initials.length >= 2 ? initials.substring(0, 4) : courseStr.split(' ')[0];
-      }
-      
-      byCourse[cat] = (byCourse[cat] || 0) + 1;
-      
-      // Year Aggregation
-      const yr = String(stu.yearLevel || courseStr).toLowerCase();
-      if (yr.includes('1') || yr.includes('first'))      byYear['1st']++;
-      else if (yr.includes('2') || yr.includes('second')) byYear['2nd']++;
-      else if (yr.includes('3') || yr.includes('third')) byYear['3rd']++;
-      else if (yr.includes('4') || yr.includes('fourth')) byYear['4th']++;
-    });
-
-    // Limit to top 8 courses
-    const sortedCourses = Object.entries(byCourse).sort((a, b) => b[1] - a[1]).slice(0, 8);
-    makeChart('attendanceCourseChart', {
-      type: 'doughnut',
-      data: {
-        labels: sortedCourses.length ? sortedCourses.map(c => c[0]) : ['No data'],
-        datasets: [{
-          data: sortedCourses.length ? sortedCourses.map(c => c[1]) : [1],
-          backgroundColor: sortedCourses.length ? PALETTE_LIST : ['rgba(255,255,255,0.05)'],
-          borderWidth: sortedCourses.length ? 2 : 0,
-          hoverOffset: sortedCourses.length ? 6 : 0,
-        }]
-      },
-      options: {
-        cutout: '60%',
-        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } }
-      }
-    });
-
-    makeChart('attendanceYearChart', {
-      type: 'bar',
-      data: {
-        labels: Object.keys(byYear),
-        datasets: [{
-          label: 'Students',
-          data:  Object.values(byYear),
-          backgroundColor: [PALETTE.blue, PALETTE.purple, PALETTE.green, PALETTE.gold],
-          borderRadius: 6,
-          borderSkipped: false,
-        }]
-      },
-      options: {
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { grid: { display: false } },
-          y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } }
-        }
-      }
-    });
-
-    renderEmptyTopEvents(sortedEvents.slice(0, 5));
-
-    // Cache the rendered payload for instant next load
-    cacheWrite(CACHE_KEYS.attendance, {
-      totalEventAttendees,
-      sortedEvents,
-      byCourse,
-      byYear,
-    });
-
-  } catch (err) {
-    console.error('[Analytics] Supabase attendance error:', err?.message ?? err, err?.stack);
-    if (elPh) elPh.classList.remove('hidden');
-    setText('kv-attendance', '—');
-    renderEmptyChart('attendanceEventChart',  'bar');
-    renderEmptyChart('attendanceCourseChart', 'doughnut');
-    renderEmptyChart('attendanceYearChart',   'bar');
-    renderEmptyTopEvents([]);
-  }
-}
-
-function renderAttendanceFromCache({ totalEventAttendees, sortedEvents, byCourse, byYear }) {
-  const elPh = document.getElementById('attendance-placeholder');
-  if (elPh) elPh.classList.add('hidden');
-  setText('kv-attendance', totalEventAttendees);
-
-  const topN = sortedEvents.slice(0, 10);
-  makeChart('attendanceEventChart', {
-    type: 'bar',
-    data: {
-      labels: topN.map(e => e[0]),
-      datasets: [{ label: 'Attendees', data: topN.map(e => e[1]),
-        backgroundColor: PALETTE.purple, borderRadius: 6, borderSkipped: false, maxBarThickness: 32 }]
-    },
-    options: {
-      indexAxis: 'y',
-      maintainAspectRatio: false,
-      layout: { padding: { left: 10, right: 10, bottom: 10 } },
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } },
-        y: { grid: { display: false }, ticks: { font: { size: 11 } } }
-      }
-    }
-  });
-
-  const sortedCourses = Object.entries(byCourse).sort((a, b) => b[1] - a[1]).slice(0, 8);
-  makeChart('attendanceCourseChart', {
-    type: 'doughnut',
-    data: {
-      labels: sortedCourses.length ? sortedCourses.map(c => c[0]) : ['No data'],
-      datasets: [{ data: sortedCourses.length ? sortedCourses.map(c => c[1]) : [1],
-        backgroundColor: sortedCourses.length ? PALETTE_LIST : ['rgba(255,255,255,0.05)'],
-        borderWidth: sortedCourses.length ? 2 : 0, hoverOffset: sortedCourses.length ? 6 : 0 }]
-    },
-    options: { cutout: '60%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
-  });
-
-  makeChart('attendanceYearChart', {
-    type: 'bar',
-    data: {
-      labels: Object.keys(byYear),
-      datasets: [{ label: 'Students', data: Object.values(byYear),
-        backgroundColor: [PALETTE.blue, PALETTE.purple, PALETTE.green, PALETTE.gold],
-        borderRadius: 6, borderSkipped: false, maxBarThickness: 32 }]
-    },
-    options: {
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { display: false } },
-        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } }
-      }
-    }
-  });
-
-  renderEmptyTopEvents(sortedEvents.slice(0, 5));
-}
-
-function renderEmptyTopEvents(rows) {
-  const body = document.getElementById('top-events-body');
-  if (!body) return;
-
-  if (!rows || !rows.length) {
-    body.innerHTML = '<div class="an-loading-row">No event data yet.</div>';
-    return;
-  }
-
-  body.innerHTML = rows.map(([name, count], i) => `
-    <div class="an-kpi-list-row">
-      <span class="an-kpi-list-rank">#${i + 1}</span>
-      <span class="an-kpi-list-name" title="${escHtml(name)}">${escHtml(name)}</span>
-      <span class="an-kpi-list-val">${count}</span>
-    </div>`).join('');
 }
 
 // ─── Manual Services ─────────────────────────────────
@@ -2966,20 +2485,14 @@ window.addEventListener('beforeprint', () => {
   // Sync to tables
   copyText('kv-sd-total', 'fp-sd-total');
   copyText('kv-lf-total', 'fp-lf-total');
-  copyText('kv-borrowers', 'fp-borrowers');
-  copyText('kv-pantry', 'fp-pantry');
   copyText('kv-survey-score', 'fp-survey-score');
-  copyText('kv-attendance', 'fp-attendance');
   copyText('kv-vacancies', 'fp-vacancies');
 
   // Sync to narrative text paragraphs
   copyText('kv-sd-total', 'fp-text-sd-total');
   copyText('kv-survey-score', 'fp-text-survey-score');
   copyText('kv-lf-total', 'fp-text-lf-total');
-  copyText('kv-borrowers', 'fp-text-borrowers');
-  copyText('kv-pantry', 'fp-text-pantry');
   copyText('kv-vacancies', 'fp-text-vacancies');
-  copyText('kv-attendance', 'fp-text-attendance');
 
   copyText('sd-4ps', 'fp-sd-4ps');
   copyText('sd-solo', 'fp-sd-solo');

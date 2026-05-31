@@ -72,14 +72,6 @@
         <i class='bx bx-package'></i>
         <span>Borrowers</span>
       </button>
-      <button class="an-selector-btn" onclick="showDashboard('pantry')" data-dashboard="pantry">
-        <i class='bx bx-dish'></i>
-        <span>Pantry</span>
-      </button>
-      <button class="an-selector-btn" onclick="showDashboard('attendance')" data-dashboard="attendance">
-        <i class='bx bx-calendar-event'></i>
-        <span>Attendance</span>
-      </button>
       <button class="an-selector-btn" onclick="showDashboard('vacancies')" data-dashboard="vacancies">
         <i class='bx bx-briefcase'></i>
         <span>Job Vacancies</span>
@@ -118,22 +110,6 @@
             <div class="an-kpi-sub" id="kv-lf-rate">Recovery Rate</div>
           </div>
         </div>
-        <div class="an-kpi-card" id="kpi-borrowers">
-          <div class="an-kpi-icon" style="--kpi-color: #f59e0b;"><i class='bx bx-package'></i></div>
-          <div class="an-kpi-content">
-            <div class="an-kpi-value" id="kv-borrowers">—</div>
-            <div class="an-kpi-label">Borrowing Transactions</div>
-            <div class="an-kpi-sub">Borrowers Log</div>
-          </div>
-        </div>
-        <div class="an-kpi-card" id="kpi-pantry">
-          <div class="an-kpi-icon" style="--kpi-color: #ec4899;"><i class='bx bx-dish'></i></div>
-          <div class="an-kpi-content">
-            <div class="an-kpi-value" id="kv-pantry">—</div>
-            <div class="an-kpi-label">Pantry Beneficiaries</div>
-            <div class="an-kpi-sub">Student Welfare</div>
-          </div>
-        </div>
         <div class="an-kpi-card" id="kpi-survey">
           <div class="an-kpi-icon" style="--kpi-color: #3b82f6;"><i class='bx bx-star'></i></div>
           <div class="an-kpi-content">
@@ -148,14 +124,6 @@
             <div class="an-kpi-value" id="kv-sd-total">—</div>
             <div class="an-kpi-label">Student Profiles</div>
             <div class="an-kpi-sub" id="kv-sd-sub">Dataset</div>
-          </div>
-        </div>
-        <div class="an-kpi-card" id="kpi-attendance">
-          <div class="an-kpi-icon" style="--kpi-color: #8b5cf6;"><i class='bx bx-group'></i></div>
-          <div class="an-kpi-content">
-            <div class="an-kpi-value" id="kv-attendance">—</div>
-            <div class="an-kpi-label">Event Attendees</div>
-            <div class="an-kpi-sub">Attendance Records</div>
           </div>
         </div>
         <div class="an-kpi-card" id="kpi-vacancies">
@@ -583,148 +551,6 @@
     </section>
     </div>
 
-    <!-- Borrowers Dashboard -->
-    <div class="an-dashboard hidden" id="dashboard-borrowers" data-dashboard="borrowers">
-    <!-- Borrowers Log Section -->
-    <section class="an-section">
-      <div class="an-section-header">
-        <h2 class="an-section-title"><i class='bx bx-package'></i> Borrowers Log</h2>
-        <span class="an-section-subtitle">Equipment and facility utilization</span>
-      </div>
-      <div class="an-chart-row">
-        <div class="an-chart-card an-chart-lg">
-          <div class="an-chart-card-header">
-            <h3>Most Borrowed Items</h3>
-          </div>
-          <div class="an-chart-wrap">
-            <canvas id="borrowerItemsChart"></canvas>
-          </div>
-        </div>
-        <div class="an-chart-card an-chart-md">
-          <div class="an-chart-card-header">
-            <h3>Borrower Type</h3>
-          </div>
-          <div class="an-chart-wrap an-chart-sm-h">
-            <canvas id="borrowerTypeChart"></canvas>
-          </div>
-        </div>
-        <div class="an-chart-card an-chart-md">
-          <div class="an-chart-card-header">
-            <h3>Monthly Transactions</h3>
-          </div>
-          <div class="an-chart-wrap">
-            <canvas id="borrowerMonthlyChart"></canvas>
-          </div>
-        </div>
-      </div>
-
-      <div class="an-data-placeholder" id="borrowers-placeholder">
-        <i class='bx bx-plug'></i>
-        <p>Borrowers Log data is ready to connect.</p>
-        <span>Once the Borrowers Log Vercel API is accessible, charts will populate automatically.</span>
-      </div>
-    </section>
-    </div>
-
-    <!-- Pantry Dashboard -->
-    <div class="an-dashboard hidden" id="dashboard-pantry" data-dashboard="pantry">
-    <!-- Pantry Logbook Section -->
-    <section class="an-section">
-      <div class="an-section-header">
-        <h2 class="an-section-title"><i class='bx bx-dish'></i> Pantry Logbook</h2>
-        <span class="an-section-subtitle">Student welfare & food assistance program reach</span>
-      </div>
-
-      <div class="an-chart-row">
-        <div class="an-chart-card an-chart-md">
-          <div class="an-chart-card-header">
-            <h3>Students Served / Month</h3>
-          </div>
-          <div class="an-chart-wrap">
-            <canvas id="pantryMonthlyChart"></canvas>
-          </div>
-        </div>
-        <div class="an-chart-card an-chart-md">
-          <div class="an-chart-card-header">
-            <h3>By Course / Program</h3>
-          </div>
-          <div class="an-chart-wrap">
-            <canvas id="pantryCourseChart"></canvas>
-          </div>
-        </div>
-        <div class="an-chart-card an-chart-md">
-          <div class="an-chart-card-header">
-            <h3>By Year Level</h3>
-          </div>
-          <div class="an-chart-wrap an-chart-sm-h">
-            <canvas id="pantryYearChart"></canvas>
-          </div>
-        </div>
-      </div>
-
-      <div class="an-data-placeholder" id="pantry-placeholder">
-        <i class='bx bx-spreadsheet'></i>
-        <p>Connect your Pantry Logbook Google Sheet.</p>
-        <span>Paste the Google Sheet ID from your pantry logbook spreadsheet URL.</span>
-        <div class="an-input-row">
-          <input type="text" id="pantrySheetId" class="an-input" placeholder="Google Sheet ID (from the URL)">
-          <button class="an-btn an-btn-primary" onclick="savePantrySheetId()">Connect</button>
-        </div>
-      </div>
-    </section>
-    </div>
-
-    <!-- Attendance Dashboard -->
-    <div class="an-dashboard hidden" id="dashboard-attendance" data-dashboard="attendance">
-    <!-- Event Attendance Section -->
-    <section class="an-section">
-      <div class="an-section-header">
-        <h2 class="an-section-title"><i class='bx bx-calendar-event'></i> Event Attendance</h2>
-        <span class="an-section-subtitle">Student participation in SAS-organized events</span>
-      </div>
-      <div class="an-chart-row">
-        <div class="an-chart-card an-chart-full">
-          <div class="an-chart-card-header">
-            <h3>Attendance per Event</h3>
-          </div>
-          <div class="an-chart-wrap">
-            <canvas id="attendanceEventChart"></canvas>
-          </div>
-        </div>
-      </div>
-      <div class="an-chart-row">
-        <div class="an-chart-card an-chart-md">
-          <div class="an-chart-card-header">
-            <h3>By Course / Program</h3>
-          </div>
-          <div class="an-chart-wrap">
-            <canvas id="attendanceCourseChart"></canvas>
-          </div>
-        </div>
-        <div class="an-chart-card an-chart-md">
-          <div class="an-chart-card-header">
-            <h3>By Year Level</h3>
-          </div>
-          <div class="an-chart-wrap an-chart-sm-h">
-            <canvas id="attendanceYearChart"></canvas>
-          </div>
-        </div>
-        <div class="an-chart-card an-chart-md">
-          <div class="an-kpi-list" id="attendance-event-list">
-            <div class="an-kpi-list-header">Top Events by Attendance</div>
-            <div class="an-kpi-list-body" id="top-events-body">
-              <div class="an-loading-row"><i class='bx bx-loader-alt bx-spin'></i> Loading...</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="an-data-placeholder hidden" id="attendance-placeholder">
-        <i class='bx bx-plug'></i>
-        <p>Attendance data will load from the SAS Masterlist.</p>
-      </div>
-    </section>
-    </div>
-
     <!-- Job Vacancies Dashboard -->
     <div class="an-dashboard hidden" id="dashboard-vacancies" data-dashboard="vacancies">
     <!-- Job Vacancies OCR Section -->
@@ -813,8 +639,8 @@
 
     <div class="fp-section">
       <h3>2. Service Utilization Highlights</h3>
-      <p>The Lost and Found service has processed <span class="fp-bold" id="fp-text-lf-total">0</span> reported items this semester, successfully resolving and returning items at a recovery rate of <span class="fp-bold" id="fp-text-lf-rate">0%</span>. The office also facilitated <span class="fp-bold" id="fp-text-borrowers">0</span> borrowing transactions for institutional equipment and facilities. Furthermore, Student Welfare initiatives, specifically the student pantry program, successfully provided assistance to <span class="fp-bold" id="fp-text-pantry">0</span> beneficiaries.</p>
-      <p>In terms of career and placement services, there are currently <span class="fp-bold" id="fp-text-vacancies">0</span> active job vacancies being tracked to support graduating students. Additionally, institutional and SAS-organized events have recorded a cumulative attendance of <span class="fp-bold" id="fp-text-attendance">0</span> student participants.</p>
+      <p>The Lost and Found service has processed <span class="fp-bold" id="fp-text-lf-total">0</span> reported items this semester, successfully resolving and returning items at a recovery rate of <span class="fp-bold" id="fp-text-lf-rate">0%</span>.</p>
+      <p>In terms of career and placement services, there are currently <span class="fp-bold" id="fp-text-vacancies">0</span> active job vacancies being tracked to support graduating students.</p>
     </div>
 
     <div class="fp-section">
@@ -824,10 +650,7 @@
           <tr><td class="fp-label">Total Student Profiles Tracked</td><td class="fp-value" id="fp-sd-total">0</td></tr>
           <tr><td class="fp-label">Lost & Found Items Reported</td><td class="fp-value" id="fp-lf-total">0</td></tr>
           <tr><td class="fp-label">Lost & Found Recovery Rate</td><td class="fp-value" id="fp-lf-rate">0%</td></tr>
-          <tr><td class="fp-label">Borrowing Transactions</td><td class="fp-value" id="fp-borrowers">0</td></tr>
-          <tr><td class="fp-label">Pantry Beneficiaries</td><td class="fp-value" id="fp-pantry">0</td></tr>
           <tr><td class="fp-label">Overall Satisfaction Score</td><td class="fp-value" id="fp-survey-score">0.0</td></tr>
-          <tr><td class="fp-label">Event Attendees</td><td class="fp-value" id="fp-attendance">0</td></tr>
           <tr><td class="fp-label">Job Vacancies Tracked</td><td class="fp-value" id="fp-vacancies">0</td></tr>
         </tbody>
       </table>
