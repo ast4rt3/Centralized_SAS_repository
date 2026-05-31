@@ -2995,7 +2995,11 @@ window.addEventListener('beforeprint', () => {
   
   if (lfRateSrc) {
     let txt = lfRateSrc.textContent;
-    if (txt.includes(':')) txt = txt.split(':')[1].trim();
+    if (txt.includes(':')) {
+      txt = txt.split(':')[1].trim();
+    } else if (txt === 'Recovery Rate') {
+      txt = '—'; // Data hasn't loaded yet
+    }
     if (lfRateDest) lfRateDest.textContent = txt;
     if (lfRateTextDest) lfRateTextDest.textContent = txt;
   }
