@@ -33,6 +33,7 @@ export default defineConfig({
         { src: '.htaccess', dest: '.' },
         { src: 'assets/', dest: '.' },
         { src: 'src/utils', dest: '.' },
+        { src: 'src/core/global-presence.js', dest: '.' },
         { src: ['apps/**/*', '!apps/**/index.html'], dest: '.' }
       ]
     }),
