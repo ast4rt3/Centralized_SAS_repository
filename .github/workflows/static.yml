@@ -113,7 +113,7 @@ jobs:
             scripts/
             index.html
             styles.css
-            manifest.webmanifest
+            manifest.json
             serviceWorker.js
             systems.json
             version.txt

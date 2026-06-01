@@ -10,7 +10,7 @@ const CACHE_MEDIA = 'sas-media-v2';
 
 // App shell — files to cache immediately on install
 const APP_SHELL = [
-  './manifest.webmanifest',
+  './manifest.json',
   './styles.css'
 ];
 
@@ -78,7 +78,7 @@ self.addEventListener('fetch', event => {
 
    // ---- Strategy: NETWORK FIRST → cache fallback ----
    // Used for: Configuration files (always get latest)
-   const configFiles = ['env.js', 'manifest.webmanifest', 'version.json'];
+   const configFiles = ['env.js', 'manifest.json', 'version.json'];
    
     // EXCLUDE: Sub-apps — let their own Service Workers handle them.
     // We return nothing here so the browser continues to the next listener or the network.

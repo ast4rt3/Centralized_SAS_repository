@@ -27,7 +27,7 @@ export default defineConfig({
       targets: [
         { src: 'systems.txt', dest: '.' },
         { src: 'version.txt', dest: '.' },
-        { src: 'manifest.webmanifest', dest: '.' },
+        { src: 'manifest.json', dest: '.' },
         { src: 'serviceWorker.js', dest: '.' },
         { src: 'env.js', dest: '.' },
         { src: '.htaccess', dest: '.' },
