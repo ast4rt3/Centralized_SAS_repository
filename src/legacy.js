@@ -6363,8 +6363,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!elements.storageTbody) return;
       const targetValues = {
         gas: BACKEND_GAS_URL || 'Not Configured',
-        fbMsg: window.ENV?.FIREBASE_CONFIG?.databaseURL || 'Not Configured',
-        fbStore: window.ENV?.STORAGE_CHECK_FIREBASE_CONFIG?.databaseURL || 'Not Configured',
         supabase: window.ENV?.SUPABASE_URL || 'Not Configured',
         cloudinary: window.ENV?.CLOUDINARY_CLOUD_NAME || 'Not Configured',
         cloudinaryOld: window.ENV?.OLD_CLOUDINARY_CLOUD_NAME || 'Not Configured'
@@ -6403,30 +6401,6 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
           </td>
           <td>${getRec(0.1)}</td>
-        </tr>
-        <tr>
-          <td>Firebase Messaging</td>
-          <td>${targetCellHtml('fbMsg')}</td>
-          <td>${escapeHtml(fbMsgState)}</td>
-          <td class="db-table-storage-cell">
-            <div class="db-mini-storage-text">1GB Limit (Free)</div>
-            <div class="db-mini-storage-bar">
-              <div class="db-mini-storage-fill" style="width:0.1%;"></div>
-            </div>
-          </td>
-          <td>${getRec(0.1)}</td>
-        </tr>
-        <tr>
-          <td>Firebase Storage DB</td>
-          <td>${targetCellHtml('fbStore')}</td>
-          <td>${escapeHtml(fbStoreState)}</td>
-          <td class="db-table-storage-cell">
-            <div class="db-mini-storage-text">1GB Limit (Free)</div>
-            <div class="db-mini-storage-bar">
-              <div class="db-mini-storage-fill" style="width:0.1%;"></div>
-            </div>
-          </td>
-          <td>${(fbStoreState === 'Optional / Not Linked' && !storageCheckDb) ? 'N/A' : getRec(0.1)}</td>
         </tr>
         <tr>
           <td>Supabase Database</td>
