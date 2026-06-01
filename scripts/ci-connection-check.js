@@ -29,7 +29,6 @@ async function checkURL(name, url) {
 async function runAudit() {
     const configs = {
         "Google Apps Script (Main)": process.env.BACKEND_GAS_URL,
-        "Google Apps Script (Scanner)": process.env.SCANNER_GAS_URL,
         "Supabase API": process.env.SUPABASE_URL,
         "Cloudinary API": "https://api.cloudinary.com/v1_1"
     };
