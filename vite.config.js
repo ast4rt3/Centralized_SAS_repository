@@ -17,12 +17,6 @@ function envJsPlugin() {
           res.setHeader('Content-Type', 'application/javascript');
           res.end(`window.ENV = ${JSON.stringify({
             BACKEND_GAS_URL: env.VITE_BACKEND_GAS_URL,
-            GAS_PROJECT_EDIT_URL: env.VITE_GAS_PROJECT_EDIT_URL,
-            CLOUDINARY_CLOUD_NAME: env.VITE_CLOUDINARY_CLOUD_NAME,
-            CLOUDINARY_UPLOAD_PRESET: env.VITE_CLOUDINARY_UPLOAD_PRESET,
-            SUPABASE_URL: env.VITE_SUPABASE_URL,
-            SUPABASE_ANON_KEY: env.VITE_SUPABASE_ANON_KEY,
-            YOUTUBE_PROXY_URL: env.VITE_YOUTUBE_PROXY_URL,
             SYSTEM_THEME: env.VITE_SYSTEM_THEME,
             TV_AUDIO_ENABLED: env.VITE_TV_AUDIO_ENABLED === 'true',
             TV_THEATER_MODE: env.VITE_TV_THEATER_MODE === 'true',
@@ -51,12 +45,6 @@ function envJsPlugin() {
         fileName: 'env.js',
         source: `window.ENV = ${JSON.stringify({
           BACKEND_GAS_URL: env.VITE_BACKEND_GAS_URL,
-          GAS_PROJECT_EDIT_URL: env.VITE_GAS_PROJECT_EDIT_URL,
-          CLOUDINARY_CLOUD_NAME: env.VITE_CLOUDINARY_CLOUD_NAME,
-          CLOUDINARY_UPLOAD_PRESET: env.VITE_CLOUDINARY_UPLOAD_PRESET,
-          SUPABASE_URL: env.VITE_SUPABASE_URL,
-          SUPABASE_ANON_KEY: env.VITE_SUPABASE_ANON_KEY,
-          YOUTUBE_PROXY_URL: env.VITE_YOUTUBE_PROXY_URL,
           SYSTEM_THEME: env.VITE_SYSTEM_THEME,
           TV_AUDIO_ENABLED: env.VITE_TV_AUDIO_ENABLED === 'true',
           TV_THEATER_MODE: env.VITE_TV_THEATER_MODE === 'true',

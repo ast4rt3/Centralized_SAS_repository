@@ -34,11 +34,6 @@ jobs:
       - name: Generate .env from Secrets
         run: |
           echo "VITE_BACKEND_GAS_URL=\"${{ secrets.BACKEND_GAS_URL }}\"" > .env
-          echo "VITE_YOUTUBE_PROXY_URL=\"${{ secrets.YOUTUBE_PROXY_URL }}\"" >> .env
-          echo "VITE_CLOUDINARY_CLOUD_NAME=\"${{ secrets.CLOUDINARY_CLOUD_NAME }}\"" >> .env
-          echo "VITE_CLOUDINARY_UPLOAD_PRESET=\"${{ secrets.CLOUDINARY_UPLOAD_PRESET }}\"" >> .env
-          echo "VITE_SUPABASE_URL=\"${{ secrets.SUPABASE_URL }}\"" >> .env
-          echo "VITE_SUPABASE_ANON_KEY=\"${{ secrets.SUPABASE_ANON_KEY }}\"" >> .env
           echo "VITE_SYSTEM_THEME=\"nbsc-modern\"" >> .env
           echo "VITE_TV_AUDIO_ENABLED=\"false\"" >> .env
           echo "VITE_TV_THEATER_MODE=\"false\"" >> .env
@@ -151,11 +146,6 @@ jobs:
       - name: Generate .env from Secrets
         run: |
           echo "VITE_BACKEND_GAS_URL=\"${{ secrets.BACKEND_GAS_URL }}\"" > .env
-          echo "VITE_YOUTUBE_PROXY_URL=\"${{ secrets.YOUTUBE_PROXY_URL }}\"" >> .env
-          echo "VITE_CLOUDINARY_CLOUD_NAME=\"${{ secrets.CLOUDINARY_CLOUD_NAME }}\"" >> .env
-          echo "VITE_CLOUDINARY_UPLOAD_PRESET=\"${{ secrets.CLOUDINARY_UPLOAD_PRESET }}\"" >> .env
-          echo "VITE_SUPABASE_URL=\"${{ secrets.SUPABASE_URL }}\"" >> .env
-          echo "VITE_SUPABASE_ANON_KEY=\"${{ secrets.SUPABASE_ANON_KEY }}\"" >> .env
           echo "VITE_SYSTEM_THEME=\"nbsc-modern\"" >> .env
           echo "VITE_TV_AUDIO_ENABLED=\"false\"" >> .env
           echo "VITE_TV_THEATER_MODE=\"false\"" >> .env
@@ -180,12 +170,6 @@ jobs:
       - name: Install and Build (Obfuscation)
         env:
           VITE_BACKEND_GAS_URL: ${{ secrets.BACKEND_GAS_URL }}
-          VITE_GAS_PROJECT_EDIT_URL: ${{ secrets.GAS_PROJECT_EDIT_URL }}
-          VITE_YOUTUBE_PROXY_URL: ${{ secrets.YOUTUBE_PROXY_URL }}
-          VITE_CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
-          VITE_CLOUDINARY_UPLOAD_PRESET: ${{ secrets.CLOUDINARY_UPLOAD_PRESET }}
-          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           VITE_SYSTEM_THEME: "nbsc-modern"
           VITE_TV_AUDIO_ENABLED: "false"
           VITE_TV_THEATER_MODE: "false"

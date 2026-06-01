@@ -2614,7 +2614,8 @@ document.addEventListener('DOMContentLoaded', () => {
               token: responseData.token || responseData.jwt || "",
               displayName: responseData.displayName || responseData.username,
               profilePic: responseData.profilePic ? sanitizeCloudinaryUrl(responseData.profilePic) : "",
-              theme: responseData.theme || "light"
+              theme: responseData.theme || "light",
+              env: responseData.env || {}
             };
             // console.log("[Auth] Saving session object:", sessionObj);
             localStorage.setItem('sas_user_data', JSON.stringify(sessionObj));
