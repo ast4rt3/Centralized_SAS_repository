@@ -178,6 +178,17 @@ jobs:
           cache: 'npm'
 
       - name: Install and Build (Obfuscation)
+        env:
+          VITE_BACKEND_GAS_URL: ${{ secrets.BACKEND_GAS_URL }}
+          VITE_GAS_PROJECT_EDIT_URL: ${{ secrets.GAS_PROJECT_EDIT_URL }}
+          VITE_YOUTUBE_PROXY_URL: ${{ secrets.YOUTUBE_PROXY_URL }}
+          VITE_CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          VITE_CLOUDINARY_UPLOAD_PRESET: ${{ secrets.CLOUDINARY_UPLOAD_PRESET }}
+          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          VITE_SYSTEM_THEME: "nbsc-modern"
+          VITE_TV_AUDIO_ENABLED: "false"
+          VITE_TV_THEATER_MODE: "false"
         run: |
           npm ci
           npm run build
