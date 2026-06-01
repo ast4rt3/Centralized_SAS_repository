@@ -31,7 +31,7 @@ export default defineConfig({
         { src: 'serviceWorker.js', dest: '.' },
         { src: 'env.js', dest: '.' },
         { src: '.htaccess', dest: '.' },
-        { src: 'assets/*', dest: 'assets' },
+        { src: 'assets/', dest: '.' },
         { src: 'src/utils', dest: '.' },
         { src: ['apps/**/*', '!apps/**/index.html'], dest: '.' }
       ]
