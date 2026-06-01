@@ -14,18 +14,19 @@
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
 
   <script>
+    const origin = window.location.origin + window.location.pathname.replace(/\/([^\/]*)$/, '/');
     const manifestData = {
       name: "SAS Portal",
       short_name: "SAS Portal",
       description: "Centralized Hub for NBSC Systems and Announcements",
-      start_url: "./index.html",
+      start_url: origin + "index.html",
       display: "standalone",
       background_color: "#001a33",
       theme_color: "#003366",
       orientation: "any",
       icons: [
-        { src: "assets/sas_logo_real.png", sizes: "192x192", type: "image/png", purpose: "any maskable" },
-        { src: "assets/sas_logo_real.png", sizes: "512x512", type: "image/png", purpose: "any maskable" }
+        { src: origin + "assets/sas_logo_real.png", sizes: "192x192", type: "image/png", purpose: "any maskable" },
+        { src: origin + "assets/sas_logo_real.png", sizes: "512x512", type: "image/png", purpose: "any maskable" }
       ]
     };
     const blob = new Blob([JSON.stringify(manifestData)], { type: 'application/manifest+json' });
