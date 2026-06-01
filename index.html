@@ -14,10 +14,24 @@
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
 
   <script>
+    const manifestData = {
+      name: "SAS Portal",
+      short_name: "SAS Portal",
+      description: "Centralized Hub for NBSC Systems and Announcements",
+      start_url: "./index.html",
+      display: "standalone",
+      background_color: "#001a33",
+      theme_color: "#003366",
+      orientation: "any",
+      icons: [
+        { src: "assets/sas_logo_real.png", sizes: "192x192", type: "image/png", purpose: "any maskable" },
+        { src: "assets/sas_logo_real.png", sizes: "512x512", type: "image/png", purpose: "any maskable" }
+      ]
+    };
+    const blob = new Blob([JSON.stringify(manifestData)], { type: 'application/manifest+json' });
     const mLink = document.createElement('link');
     mLink.rel = 'manifest';
-    mLink.crossOrigin = 'use-credentials';
-    mLink.href = 'manifest.json?v=' + new Date().getTime();
+    mLink.href = URL.createObjectURL(blob);
     document.head.appendChild(mLink);
   </script>
   <meta name="apple-mobile-web-app-capable" content="yes">
