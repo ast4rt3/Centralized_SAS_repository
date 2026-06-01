@@ -56,6 +56,7 @@
     href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&family=Outfit:wght@400;600;800&display=swap"
     rel="stylesheet">
   <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="stylesheet" href="portal-tokens.css?v=2.0">
   <link rel="stylesheet" href="styles.css?v=24.1">
   <link rel="stylesheet" href="navbar-dropdown.css?v=1.0">
@@ -1884,6 +1885,186 @@
       border-color: rgba(255, 255, 255, 0.08) !important;
       border-top-color: #ffd700 !important;
     }
+    /* Job Vacancy Cards */
+    .lp-job-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 25px;
+      width: 100%;
+      margin-top: 20px;
+    }
+    .lp-job-card {
+      background: #ffffff;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      border-radius: 20px;
+      padding: 0;
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+    }
+    .lp-job-card:hover {
+      transform: translateY(-5px);
+      border-color: rgba(0, 51, 102, 0.2);
+      box-shadow: 0 12px 30px rgba(0, 51, 102, 0.1);
+      background: #ffffff;
+    }
+    .lp-job-card-image {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      background: #f8fafc;
+    }
+    .lp-job-card-content {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    .lp-job-card-header {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .lp-job-card-title {
+      color: #0f172a;
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin: 0;
+      font-family: 'Outfit', sans-serif;
+    }
+    .lp-job-card-company {
+      color: #003366;
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+    .lp-job-card-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 5px;
+    }
+    .lp-job-badge {
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      padding: 5px 12px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      color: #475569;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .lp-job-badge.highlight {
+      background: rgba(245, 158, 11, 0.1);
+      border-color: rgba(245, 158, 11, 0.3);
+      color: #b45309;
+    }
+    
+    /* Job Modal */
+    .lp-job-modal-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(8px);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 1;
+      transition: opacity 0.3s ease;
+    }
+    .lp-job-modal-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .lp-job-modal-card {
+      background: #ffffff;
+      border: 1px solid rgba(0,0,0,0.1);
+      border-radius: 24px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+      overflow: hidden;
+      transform: scale(1);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .lp-job-modal-overlay.hidden .lp-job-modal-card {
+      transform: scale(0.95);
+    }
+    .lp-job-modal-header {
+      padding: 25px 30px;
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .lp-job-modal-title {
+      font-size: 1.6rem;
+      color: #0f172a;
+      margin: 0 0 5px 0;
+      font-family: 'Outfit', sans-serif;
+    }
+    .lp-job-modal-company {
+      color: #003366;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    .lp-job-modal-close {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 2rem;
+      cursor: pointer;
+      transition: color 0.2s ease;
+      line-height: 1;
+    }
+    .lp-job-modal-close:hover { color: #0f172a; }
+    .lp-job-modal-badges {
+      padding: 20px 30px 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .lp-job-modal-image-container {
+      width: 100%;
+      background: #f8fafc;
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+      display: flex;
+      justify-content: center;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 12px;
+    }
+    .lp-job-modal-poster {
+      max-height: 400px;
+      max-width: 100%;
+      object-fit: contain;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    .lp-job-modal-body {
+      padding: 25px 30px;
+      overflow-y: auto;
+      color: #334155;
+    }
+    .lp-job-modal-body h4 {
+      color: #0f172a;
+      margin: 0 0 15px 0;
+      font-size: 1.1rem;
+    }
+    .lp-job-modal-desc-text {
+      line-height: 1.7;
+      font-size: 0.95rem;
+      white-space: pre-wrap;
+    }
+
   </style>
 
 
@@ -2601,12 +2782,8 @@
               </button>
             </div>
             
-            <div class="lp-se-month-tabs" id="se-career-month-tabs">
-              <!-- Tabs will be injected here -->
-            </div>
-
-            <div class="lp-se-vacancy-grid" id="se-career-vacancy-grid">
-              <!-- Images will be injected here -->
+            <div class="lp-job-grid" id="lp-job-cards-grid">
+              <!-- Job Cards will be injected here -->
             </div>
           </div>
           
@@ -2614,10 +2791,29 @@
       </div>
     </div>
 
-    <!-- Lightbox Modal -->
-    <div class="lp-se-lightbox" id="se-lightbox">
-      <div class="lp-se-lightbox-close" onclick="closeSeLightbox()">&times;</div>
-      <img id="se-lightbox-img" src="" alt="Full size view">
+    <!-- Job Details Modal -->
+    <div class="lp-job-modal-overlay hidden" id="lp-job-details-modal">
+      <div class="lp-job-modal-card">
+        <div class="lp-job-modal-header">
+          <div style="display:flex; flex-direction:column;">
+            <h3 class="lp-job-modal-title" id="lp-job-modal-title">Job Title</h3>
+            <span class="lp-job-modal-company" id="lp-job-modal-company">Company Name</span>
+          </div>
+          <button class="lp-job-modal-close" onclick="closeJobDetailsModal()">&times;</button>
+        </div>
+        <div class="lp-job-modal-badges">
+          <span class="lp-job-badge" id="lp-job-modal-location"><i class='bx bx-map'></i> Location</span>
+          <span class="lp-job-badge highlight" id="lp-job-modal-salary"><i class='bx bx-money'></i> Salary</span>
+          <span class="lp-job-badge" id="lp-job-modal-type"><i class='bx bx-briefcase'></i> Type</span>
+        </div>
+        <div class="lp-job-modal-body">
+          <div class="lp-job-modal-image-container">
+            <img id="lp-job-modal-poster" class="lp-job-modal-poster" src="" alt="Job Poster" onerror="this.parentElement.style.display='none'">
+          </div>
+          <h4>Job Description</h4>
+          <p id="lp-job-modal-description" class="lp-job-modal-desc-text">Full text goes here...</p>
+        </div>
+      </div>
     </div>
 
     <script>
@@ -2698,18 +2894,18 @@
       };
 
       // --- Career View Logic for Landing Page ---
-      let seCareerFolders = [];
+      let cachedJobVacancies = [];
 
       async function loadSeCareerView() {
         const careerViewEl = document.getElementById('se-career-view');
         const activeCategory = seCurrentCategoryName;
 
-        const cacheKey = 'sas_cache_vacancies';
+        const cacheKey = 'sas_cache_job_vacancies';
         const cachedData = getSasCache(cacheKey);
         
-        if (cachedData) {
-          seCareerFolders = cachedData;
-          renderSeCareerFolders();
+        if (cachedData && cachedData.length > 0) {
+          cachedJobVacancies = cachedData;
+          renderJobCards(cachedJobVacancies);
           resetExplorerViews();
           careerViewEl.style.display = 'flex';
         } else {
@@ -2718,128 +2914,106 @@
         }
         
         try {
-          const res = await sasFetch('getDriveVacancies');
-          // Double check category hasn't changed during fetch
-          const currentCat = localStorage.getItem('sas_selected_service_category');
-          if (activeCategory !== seCurrentCategoryName || currentCat !== activeCategory) {
-            console.log("[Career] Aborting render: Category changed during fetch");
+          if (!window.supabase) {
+            console.error("Supabase client not loaded.");
             return;
           }
+          const sb = window.supabase.createClient(window.ENV.SUPABASE_URL, window.ENV.SUPABASE_ANON_KEY);
+          
+          const { data, error } = await sb
+            .from('sas_job_vacancies')
+            .select('drive_file_id, industry, positions, company, location, salary, slots, extracted_text')
+            .eq('is_low_content', false)
+            .order('created_at', { ascending: false });
 
-          if (res.success) {
-            seCareerFolders = res.folders || [];
-            setSasCache(cacheKey, seCareerFolders);
-            renderSeCareerFolders();
+          if (activeCategory !== seCurrentCategoryName) return; // Category changed during fetch
+
+          if (error) {
+            throw error;
+          }
+
+          if (data) {
+            cachedJobVacancies = data;
+            setSasCache(cacheKey, data);
+            renderJobCards(data);
             resetExplorerViews();
-            careerViewEl.style.display = 'flex';
-          } else if (!cachedData) {
-            resetExplorerViews();
-            careerViewEl.innerHTML = `<p style="color:red; text-align:center; width:100%;">Error: ${res.message}</p>`;
             careerViewEl.style.display = 'flex';
           }
         } catch (err) {
           if (activeCategory !== seCurrentCategoryName) return;
           if (!cachedData) {
             resetExplorerViews();
-            careerViewEl.innerHTML = `<p style="color:red; text-align:center; width:100%;">Network Error.</p>`;
+            careerViewEl.innerHTML = `<p style="color:red; text-align:center; width:100%;">Network Error: ${err.message}</p>`;
             careerViewEl.style.display = 'flex';
           }
         }
       }
 
-      function renderSeCareerFolders() {
-        const tabsContainer = document.getElementById('se-career-month-tabs');
-        const gridContainer = document.getElementById('se-career-vacancy-grid');
-
-        if (!seCareerFolders || seCareerFolders.length === 0) {
-          tabsContainer.innerHTML = '';
-          gridContainer.innerHTML = '<p style="color:#64748b; text-align:center; width: 100%;">No folders found in Drive.</p>';
+      function renderJobCards(vacancies) {
+        const grid = document.getElementById('lp-job-cards-grid');
+        
+        if (!vacancies || vacancies.length === 0) {
+          grid.innerHTML = '<p style="color:#64748b; text-align:center; width: 100%;">No job vacancies available at the moment.</p>';
           return;
         }
 
-        tabsContainer.innerHTML = seCareerFolders.map((f, index) => `
-          <div class="lp-se-month-tab ${index === 0 ? 'active' : ''}" data-id="${f.id}" onclick="selectSeCareerFolder('${f.id}')">
-            ${f.name}
-          </div>
-        `).join('');
+        grid.innerHTML = vacancies.map((job, index) => {
+          const position = job.positions || 'Open Position';
+          const company = job.company || 'Unknown Company';
+          const location = job.location || 'Location not specified';
+          const salary = job.salary && job.salary.toLowerCase() !== 'not specified' ? job.salary : 'Salary Negotiable';
+          const industry = job.industry || 'General';
 
-        renderSeCareerImages(seCareerFolders[0].id);
-      }
-
-      window.selectSeCareerFolder = (folderId) => {
-        document.querySelectorAll('.lp-se-month-tab').forEach(tab => {
-          if (tab.getAttribute('data-id') === folderId) {
-            tab.classList.add('active');
-          } else {
-            tab.classList.remove('active');
-          }
-        });
-        renderSeCareerImages(folderId);
-      };
-
-      function renderSeCareerImages(folderId) {
-        const gridContainer = document.getElementById('se-career-vacancy-grid');
-        const folder = seCareerFolders.find(f => f.id === folderId);
-
-        if (!folder || (!folder.files.length && (!folder.subfolders || !folder.subfolders.length))) {
-          gridContainer.innerHTML = '<p style="color:#64748b; text-align:center; width: 100%;">No images found in this folder.</p>';
-          return;
-        }
-
-        let html = '';
-
-        // Helper to generate a grid of files
-        const generateGrid = (files) => {
-          return files.map(file => {
-            const thumbUrl = `https://drive.google.com/thumbnail?id=${file.id}&sz=w1000`;
-            return `
-              <div class="lp-se-vacancy-card" onclick="openSeLightbox('${thumbUrl}')">
-                <img src="${thumbUrl}" alt="${file.name}" loading="lazy" onerror="this.onerror=null; this.src='assets/sas_logo_real.png'; this.style.padding='40px'; this.style.objectFit='contain';">
-              </div>
-            `;
-          }).join('');
-        };
-
-        // Render direct files first
-        if (folder.files && folder.files.length > 0) {
-          html += generateGrid(folder.files);
-        }
-
-        // Render nested subfolders as sections
-        if (folder.subfolders && folder.subfolders.length > 0) {
-          folder.subfolders.forEach(sub => {
-            if (sub.files && sub.files.length > 0) {
-              html += `
-                <div style="grid-column: 1 / -1; margin-top: 20px;">
-                  <div class="lp-se-subfolder-header"><i class='bx bx-folder'></i> ${sub.name}</div>
-                  <div class="lp-se-vacancy-grid" style="margin-top: 15px;">
-                    ${generateGrid(sub.files)}
-                  </div>
+          return `
+            <div class="lp-job-card" onclick="openJobDetailsModal(${index})">
+              <img class="lp-job-card-image" src="https://drive.google.com/thumbnail?id=${job.drive_file_id}&sz=w600" alt="Job Poster" loading="lazy" onerror="this.style.display='none'">
+              <div class="lp-job-card-content">
+                <div class="lp-job-card-header">
+                  <h3 class="lp-job-card-title">${position}</h3>
+                  <span class="lp-job-card-company">${company}</span>
                 </div>
-              `;
-            }
-          });
-        }
-
-        gridContainer.innerHTML = html;
+                <div class="lp-job-card-badges">
+                  <span class="lp-job-badge"><i class='bx bx-map'></i> ${location}</span>
+                  <span class="lp-job-badge highlight"><i class='bx bx-money'></i> ${salary}</span>
+                  <span class="lp-job-badge"><i class='bx bx-briefcase'></i> ${industry}</span>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
       }
 
-      window.openSeLightbox = (url) => {
-        const lightbox = document.getElementById('se-lightbox');
-        const img = document.getElementById('se-lightbox-img');
-        img.src = url;
-        lightbox.classList.add('active');
+      window.openJobDetailsModal = (index) => {
+        const job = cachedJobVacancies[index];
+        if (!job) return;
+
+        document.getElementById('lp-job-modal-title').textContent = job.positions || 'Open Position';
+        document.getElementById('lp-job-modal-company').textContent = job.company || 'Unknown Company';
+        
+        document.getElementById('lp-job-modal-location').innerHTML = `<i class='bx bx-map'></i> ${job.location || 'Location not specified'}`;
+        
+        const salary = job.salary && job.salary.toLowerCase() !== 'not specified' ? job.salary : 'Salary Negotiable';
+        document.getElementById('lp-job-modal-salary').innerHTML = `<i class='bx bx-money'></i> ${salary}`;
+        
+        document.getElementById('lp-job-modal-type').innerHTML = `<i class='bx bx-briefcase'></i> ${job.industry || 'General'}`;
+
+        document.getElementById('lp-job-modal-description').textContent = job.extracted_text || 'No description provided.';
+        
+        const posterImg = document.getElementById('lp-job-modal-poster');
+        posterImg.parentElement.style.display = 'flex';
+        posterImg.src = 'https://drive.google.com/thumbnail?id=' + job.drive_file_id + '&sz=w1000';
+
+        document.getElementById('lp-job-details-modal').classList.remove('hidden');
       };
 
-      window.closeSeLightbox = () => {
-        const lightbox = document.getElementById('se-lightbox');
-        lightbox.classList.remove('active');
-        document.getElementById('se-lightbox-img').src = '';
+      window.closeJobDetailsModal = () => {
+        document.getElementById('lp-job-details-modal').classList.add('hidden');
       };
 
-      document.getElementById('se-lightbox').addEventListener('click', (e) => {
-        if (e.target.id === 'se-lightbox') {
-          window.closeSeLightbox();
+      // Close modal on click outside
+      document.getElementById('lp-job-details-modal').addEventListener('click', (e) => {
+        if (e.target.id === 'lp-job-details-modal') {
+          closeJobDetailsModal();
         }
       });
 
