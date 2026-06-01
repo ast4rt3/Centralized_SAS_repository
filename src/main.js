@@ -53,6 +53,39 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Initialize Analytics
   initGoogleAnalytics();
+
+  // PWA Install Logic
+  let deferredPrompt;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    const installContainer = document.getElementById('pwa-install-container');
+    if (installContainer) {
+      installContainer.style.display = 'block';
+    }
+  });
+
+  const installBtn = document.getElementById('pwa-install-btn');
+  if (installBtn) {
+    installBtn.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          console.log('User accepted the install prompt');
+          const installContainer = document.getElementById('pwa-install-container');
+          if (installContainer) installContainer.style.display = 'none';
+        }
+        deferredPrompt = null;
+      }
+    });
+  }
+
+  window.addEventListener('appinstalled', () => {
+    const installContainer = document.getElementById('pwa-install-container');
+    if (installContainer) installContainer.style.display = 'none';
+    console.log('PWA was installed');
+  });
 });
 
 async function fetchSystems() {
