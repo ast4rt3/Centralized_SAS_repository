@@ -11,5 +11,5 @@
   { "id": "uploader-management", "name": "Content Upload", "url": "#uploader-management", "section": "Data Management", "roles": ["admin", "superadmin", "uploader"] },
   { "id": "service-manager", "name": "Service Manager", "url": "apps/service-manager/index.html", "section": "Data Management", "roles": ["admin"] },
   { "id": "analytics", "name": "Analytics Dashboard", "url": "apps/analytics/index.html", "section": "Data Management", "roles": ["admin", "superadmin"] },
-  { "id": "border-templating", "name": "Border Templating Tool", "url": "https://border-templating.vercel.app/", "section": "Communications", "roles": ["admin", "uploader", "superadmin"] }
+  { "id": "border-templating", "name": "Border Templating Tool", "url": "https://border-templating.vercel.app/", "section": "General Services", "roles": ["admin", "uploader", "superadmin"] }
 ]
