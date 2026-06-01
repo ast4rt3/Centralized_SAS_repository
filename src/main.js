@@ -13,6 +13,18 @@ initErrorMonitor();
 // 1. Immediate Auth Check
 performImmediateAuthCheck();
 
+// Global PWA State
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // If DOM is already loaded, update UI immediately
+  const installContainer = document.getElementById('pwa-install-container');
+  if (installContainer) {
+    installContainer.style.display = 'block';
+  }
+});
+
 // 2. Global State & Initialization
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('--- SAS APP INITIALIZING (Modular) ---');
@@ -55,15 +67,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   initGoogleAnalytics();
 
   // PWA Install Logic
-  let deferredPrompt;
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
+  // Show button if prompt event already fired before DOM was ready
+  if (deferredPrompt) {
     const installContainer = document.getElementById('pwa-install-container');
     if (installContainer) {
       installContainer.style.display = 'block';
     }
-  });
+  }
 
   const installBtn = document.getElementById('pwa-install-btn');
   if (installBtn) {
