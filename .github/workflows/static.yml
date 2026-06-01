@@ -31,25 +31,17 @@ jobs:
       - name: Install Dependencies
         run: npm ci --omit=dev
 
-      - name: Generate env.js from Secrets
-        env:
-          FIREBASE_CONFIG: "${{ secrets['FIREBASE_CONFIG'] }}"
+      - name: Generate .env from Secrets
         run: |
-          echo "window.ENV = {" > env.js
-          echo "  BACKEND_GAS_URL: \"${{ secrets.BACKEND_GAS_URL }}\"," >> env.js
-          echo "  SCANNER_GAS_URL: \"${{ secrets.SCANNER_GAS_URL }}\"," >> env.js
-          echo "  YOUTUBE_PROXY_URL: \"${{ secrets.YOUTUBE_PROXY_URL }}\"," >> env.js
-          echo "  CLOUDINARY_CLOUD_NAME: \"${{ secrets.CLOUDINARY_CLOUD_NAME }}\"," >> env.js
-          echo "  CLOUDINARY_UPLOAD_PRESET: \"${{ secrets.CLOUDINARY_UPLOAD_PRESET }}\"," >> env.js
-          echo "  SUPABASE_URL: \"${{ secrets.SUPABASE_URL }}\"," >> env.js
-          echo "  SUPABASE_ANON_KEY: \"${{ secrets.SUPABASE_ANON_KEY }}\"," >> env.js
-          echo "  FIREBASE_CONFIG: $FIREBASE_CONFIG," >> env.js
-          echo "  SYSTEM_THEME: \"nbsc-modern\"," >> env.js
-          echo "  TV_AUDIO_ENABLED: false," >> env.js
-          echo "  TV_THEATER_MODE: false," >> env.js
-          echo "  GOOGLE_ANALYTICS_ID: \"G-GHDRN4E0B7\"," >> env.js
-          echo "  systems: $(cat systems.json || echo '[]')" >> env.js
-          echo "};" >> env.js
+          echo "VITE_BACKEND_GAS_URL=\"${{ secrets.BACKEND_GAS_URL }}\"" > .env
+          echo "VITE_YOUTUBE_PROXY_URL=\"${{ secrets.YOUTUBE_PROXY_URL }}\"" >> .env
+          echo "VITE_CLOUDINARY_CLOUD_NAME=\"${{ secrets.CLOUDINARY_CLOUD_NAME }}\"" >> .env
+          echo "VITE_CLOUDINARY_UPLOAD_PRESET=\"${{ secrets.CLOUDINARY_UPLOAD_PRESET }}\"" >> .env
+          echo "VITE_SUPABASE_URL=\"${{ secrets.SUPABASE_URL }}\"" >> .env
+          echo "VITE_SUPABASE_ANON_KEY=\"${{ secrets.SUPABASE_ANON_KEY }}\"" >> .env
+          echo "VITE_SYSTEM_THEME=\"nbsc-modern\"" >> .env
+          echo "VITE_TV_AUDIO_ENABLED=\"false\"" >> .env
+          echo "VITE_TV_THEATER_MODE=\"false\"" >> .env
 
 
   # 2. AUTOMATED TESTS
@@ -140,8 +132,8 @@ jobs:
         run: npm ci --omit=dev
       - name: Run Staging Connection Audit
         env:
-          BACKEND_GAS_URL: ${{ secrets.BACKEND_GAS_URL }}
-          SCANNER_GAS_URL: ${{ secrets.SCANNER_GAS_URL }}
+          VITE_BACKEND_GAS_URL: ${{ secrets.BACKEND_GAS_URL }}
+          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
         run: node scripts/ci-connection-check.js
 
   # 6. DEPLOYMENT TO PRODUCTION
@@ -156,26 +148,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Finalize env.js
-        env:
-          FIREBASE_CONFIG: "${{ secrets['FIREBASE_CONFIG'] }}"
+      - name: Generate .env from Secrets
         run: |
-          # Create a clean env.js. We use printf to avoid escaping issues with cat <<EOF
-          echo "window.ENV = {" > env.js
-          echo "  BACKEND_GAS_URL: \"${{ secrets.BACKEND_GAS_URL }}\"," >> env.js
-          echo "  SCANNER_GAS_URL: \"${{ secrets.SCANNER_GAS_URL }}\"," >> env.js
-          echo "  YOUTUBE_PROXY_URL: \"${{ secrets.YOUTUBE_PROXY_URL }}\"," >> env.js
-          echo "  CLOUDINARY_CLOUD_NAME: \"${{ secrets.CLOUDINARY_CLOUD_NAME }}\"," >> env.js
-          echo "  CLOUDINARY_UPLOAD_PRESET: \"${{ secrets.CLOUDINARY_UPLOAD_PRESET }}\"," >> env.js
-          echo "  SUPABASE_URL: \"${{ secrets.SUPABASE_URL }}\"," >> env.js
-          echo "  SUPABASE_ANON_KEY: \"${{ secrets.SUPABASE_ANON_KEY }}\"," >> env.js
-          echo "  FIREBASE_CONFIG: $FIREBASE_CONFIG," >> env.js
-          echo "  SYSTEM_THEME: \"nbsc-modern\"," >> env.js
-          echo "  TV_AUDIO_ENABLED: false," >> env.js
-          echo "  TV_THEATER_MODE: false," >> env.js
-          echo "  GOOGLE_ANALYTICS_ID: \"G-GHDRN4E0B7\"," >> env.js
-          echo "  systems: $(cat systems.json || echo '[]')" >> env.js
-          echo "};" >> env.js
+          echo "VITE_BACKEND_GAS_URL=\"${{ secrets.BACKEND_GAS_URL }}\"" > .env
+          echo "VITE_YOUTUBE_PROXY_URL=\"${{ secrets.YOUTUBE_PROXY_URL }}\"" >> .env
+          echo "VITE_CLOUDINARY_CLOUD_NAME=\"${{ secrets.CLOUDINARY_CLOUD_NAME }}\"" >> .env
+          echo "VITE_CLOUDINARY_UPLOAD_PRESET=\"${{ secrets.CLOUDINARY_UPLOAD_PRESET }}\"" >> .env
+          echo "VITE_SUPABASE_URL=\"${{ secrets.SUPABASE_URL }}\"" >> .env
+          echo "VITE_SUPABASE_ANON_KEY=\"${{ secrets.SUPABASE_ANON_KEY }}\"" >> .env
+          echo "VITE_SYSTEM_THEME=\"nbsc-modern\"" >> .env
+          echo "VITE_TV_AUDIO_ENABLED=\"false\"" >> .env
+          echo "VITE_TV_THEATER_MODE=\"false\"" >> .env
 
       - name: Debug — Verify deployment files
         run: |
@@ -185,8 +168,8 @@ jobs:
           echo "=== apps/file-hub/ ==="
           ls -la apps/file-hub/
           echo ""
-          echo "=== env.js exists? ==="
-          test -f env.js && echo "YES — env.js is present" || echo "NO — env.js is MISSING"
+          echo "=== .env exists? ==="
+          test -f .env && echo "YES — .env is present" || echo "NO — .env is MISSING"
 
       - name: Setup Node
         uses: actions/setup-node@v4

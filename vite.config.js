@@ -8,7 +8,8 @@ function envJsPlugin() {
   return {
     name: 'env-js-plugin',
     configResolved(config) {
-      env = loadEnv(config.mode, process.cwd(), 'VITE_');
+      const loaded = loadEnv(config.mode, process.cwd(), 'VITE_');
+      env = { ...process.env, ...loaded };
     },
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
