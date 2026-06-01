@@ -304,16 +304,34 @@
 
     // 1. Resolve Configuration
     // Priority: window.parent.ENV -> window.ENV -> localStorage
-    window.ENV = window.parent.ENV || window.ENV || null;
+    try {
+        window.ENV = window.parent.ENV || window.ENV || null;
+    } catch(e) {
+        // Handle cross-origin errors if iframe is isolated
+        window.ENV = window.ENV || null;
+    }
 
-    if (!window.ENV) {
+    // Try to recover env from the new secure session data first
+    try {
+        const sessionSaved = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
+        if (sessionSaved && sessionSaved !== "undefined") {
+            const parsed = JSON.parse(sessionSaved);
+            if (parsed && parsed.env) {
+                window.ENV = { ...window.ENV, ...parsed.env };
+            }
+        }
+    } catch(e) {
+        console.error("❌ Failed to parse secure session env from storage:", e);
+    }
+
+    if (!window.ENV || !window.ENV.SUPABASE_URL) {
         try {
             const saved = localStorage.getItem('sas_env_config');
             if (saved && saved !== "undefined") {
-                window.ENV = JSON.parse(saved);
+                window.ENV = { ...window.ENV, ...JSON.parse(saved) };
             }
         } catch(e) {
-            console.error("❌ Failed to parse environment from localStorage:", e);
+            console.error("❌ Failed to parse legacy environment from localStorage:", e);
         }
     }
 

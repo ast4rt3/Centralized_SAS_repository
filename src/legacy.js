@@ -17,7 +17,20 @@ import { supabase } from "./core/supabase.js";
   }
 })();
 
+// Merge session secure env keys into window.ENV on load
+try {
+  const savedSession = localStorage.getItem('sas_user_data') || sessionStorage.getItem('sas_user_data');
+  if (savedSession) {
+    const parsed = JSON.parse(savedSession);
+    if (parsed && parsed.env) {
+      window.ENV = { ...window.ENV, ...parsed.env };
+    }
+  }
+} catch (e) { console.error("Error parsing session env", e); }
+
 const BACKEND_GAS_URL = window.ENV?.BACKEND_GAS_URL || "YOUR_NEW_BACKEND_GAS_URL_HERE";
+const SYSTEM_THEME = window.ENV?.SYSTEM_THEME || "nbsc-modern";
+const TV_AUDIO_ENABLED = window.ENV?.TV_AUDIO_ENABLED === true;
 
 // --- sasSmartFetch: Request Coalescing & SWR Caching ---
 const originalFetch = window.fetch;
@@ -2617,6 +2630,12 @@ document.addEventListener('DOMContentLoaded', () => {
               theme: responseData.theme || "light",
               env: responseData.env || {}
             };
+            
+            // Hydrate window.ENV immediately for legacy scripts
+            if (responseData.env) {
+              window.ENV = { ...window.ENV, ...responseData.env };
+            }
+
             // console.log("[Auth] Saving session object:", sessionObj);
             localStorage.setItem('sas_user_data', JSON.stringify(sessionObj));
             sessionStorage.setItem('sas_just_logged_in', 'true');
