@@ -124,5 +124,18 @@
       "admin",
       "superadmin"
     ]
+  },
+  {
+    "id": "border-templating",
+    "name": "Border Templating Tool",
+    "description": "Tool for FB images border templating.",
+    "url": "https://border-templating.vercel.app/",
+    "external": false,
+    "section": "General Services",
+    "roles": [
+      "admin",
+      "uploader",
+      "superadmin"
+    ]
   }
 ]
