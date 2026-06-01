@@ -13,7 +13,12 @@
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
 
-  <link rel="manifest" href="manifest.json">
+  <script>
+    const mLink = document.createElement('link');
+    mLink.rel = 'manifest';
+    mLink.href = 'manifest.json?v=' + new Date().getTime();
+    document.head.appendChild(mLink);
+  </script>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
