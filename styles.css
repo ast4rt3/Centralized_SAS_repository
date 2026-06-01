@@ -2219,10 +2219,6 @@ body.tv-mode .post-image {
   gap: var(--space-3);
 }
 
-#add-post-modal #cancel-post-btn {
-  /* natural left position in flex */
-}
-
 #add-post-modal #submit-post-btn {
   margin-left: auto;
 }

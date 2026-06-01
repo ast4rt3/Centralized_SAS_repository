@@ -41,15 +41,17 @@
   <link rel="stylesheet" href="home-ui-fixes.css?v=1.0">
   <link rel="stylesheet" href="modal-ui-fixes.css?v=1.0">
   <script>
-    // Automatically unregister stale Service Workers to prevent caching loops
+    // Register Service Worker for PWA functionality and offline caching
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(registrations => {
-        for (let registration of registrations) {
-          registration.unregister().then(() => {
-            console.log('Stale Service Worker successfully purged.');
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/serviceWorker.js')
+          .then(registration => {
+            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+          })
+          .catch(err => {
+            console.warn('ServiceWorker registration failed: ', err);
           });
-        }
-      }).catch(err => console.warn('SW purge failed:', err));
+      });
     }
   </script>
 
