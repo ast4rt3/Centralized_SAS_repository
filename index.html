@@ -16,6 +16,7 @@
   <script>
     const mLink = document.createElement('link');
     mLink.rel = 'manifest';
+    mLink.crossOrigin = 'use-credentials';
     mLink.href = 'manifest.json?v=' + new Date().getTime();
     document.head.appendChild(mLink);
   </script>
