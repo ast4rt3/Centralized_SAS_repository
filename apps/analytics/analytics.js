@@ -325,6 +325,11 @@ function showRefreshSpin(on) {
 // ─── Helper: safe fetch ───────────────────────────────
 async function safeFetch(url, opts = {}) {
   try {
+    // Force text/plain for POST to avoid CORS preflight (Google Apps Script requirement)
+    if (opts.method && opts.method.toUpperCase() === 'POST') {
+      opts.headers = opts.headers || {};
+      opts.headers['Content-Type'] = 'text/plain;charset=utf-8';
+    }
     const r = await fetch(url, { ...opts, signal: AbortSignal.timeout(12000) });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     return await r.json();
