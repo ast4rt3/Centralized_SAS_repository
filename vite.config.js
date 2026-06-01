@@ -16,6 +16,12 @@ function envJsPlugin() {
         if (req.url.endsWith('env.js')) {
           res.setHeader('Content-Type', 'application/javascript');
           res.end(`window.ENV = ${JSON.stringify({
+            /*
+            Stop looking at my env you sick bastard 
+            shoooooo 
+            GETOUT
+
+            */
             BACKEND_GAS_URL: env.VITE_BACKEND_GAS_URL,
             SYSTEM_THEME: env.VITE_SYSTEM_THEME,
             TV_AUDIO_ENABLED: env.VITE_TV_AUDIO_ENABLED === 'true',
