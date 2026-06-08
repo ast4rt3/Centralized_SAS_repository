@@ -23,6 +23,8 @@ function envJsPlugin() {
 
             */
             BACKEND_GAS_URL: env.VITE_BACKEND_GAS_URL,
+            SUPABASE_URL: env.VITE_SUPABASE_URL,
+            SUPABASE_ANON_KEY: env.VITE_SUPABASE_ANON_KEY,
             SYSTEM_THEME: env.VITE_SYSTEM_THEME,
             TV_AUDIO_ENABLED: env.VITE_TV_AUDIO_ENABLED === 'true',
             TV_THEATER_MODE: env.VITE_TV_THEATER_MODE === 'true',
@@ -51,6 +53,8 @@ function envJsPlugin() {
         fileName: 'env.js',
         source: `window.ENV = ${JSON.stringify({
           BACKEND_GAS_URL: env.VITE_BACKEND_GAS_URL,
+          SUPABASE_URL: env.VITE_SUPABASE_URL,
+          SUPABASE_ANON_KEY: env.VITE_SUPABASE_ANON_KEY,
           SYSTEM_THEME: env.VITE_SYSTEM_THEME,
           TV_AUDIO_ENABLED: env.VITE_TV_AUDIO_ENABLED === 'true',
           TV_THEATER_MODE: env.VITE_TV_THEATER_MODE === 'true',
