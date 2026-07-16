@@ -15,10 +15,12 @@ export function initSupabase(env) {
   }
 }
 
-// Auto-initialize if session exists on load
+// Auto-initialize if session exists on load, or fallback to window.ENV for public routes
 const sessionData = getUserData();
 if (sessionData && sessionData.env) {
   initSupabase(sessionData.env);
+} else if (window.ENV) {
+  initSupabase(window.ENV);
 }
 
 export { supabase };

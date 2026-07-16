@@ -59,10 +59,19 @@ html {
   background-color: rgba(255, 215, 0, 0.45) !important;
 }
 
-/* Firefox Support */
-* {
+/* Firefox Support — exclude lp-mode so the landing page keeps its unique gold scrollbar */
+body:not(.lp-mode) * {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+/* Landing page (lp-mode): restore the gold scrollbar for Firefox */
+body.lp-mode {
+  scrollbar-width: auto;
+  scrollbar-color: #ffd700 transparent;
+}
+body.lp-mode.scrolled {
+  scrollbar-color: #003366 transparent;
 }
 
 /* TV mode: restore gold scrollbar so the TV display looks correct */

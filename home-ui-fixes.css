@@ -5,30 +5,29 @@
    ===================================================== */
 
 /* ── 1. Scrollbar: Subtle, gold only on hover ──
-   Scoped to non-TV-mode so TV display is unaffected ── */
-:not(body.tv-mode) ::-webkit-scrollbar,
-body:not(.tv-mode) ::-webkit-scrollbar {
+   Scoped to non-TV-mode and non-LP-mode so TV and landing page displays are unaffected ── */
+body:not(.tv-mode):not(.lp-mode) ::-webkit-scrollbar {
   width: 6px !important;
   height: 6px !important;
 }
 
-::-webkit-scrollbar-track {
+body:not(.tv-mode):not(.lp-mode) ::-webkit-scrollbar-track {
   background: transparent !important;
 }
 
-::-webkit-scrollbar-thumb {
+body:not(.tv-mode):not(.lp-mode) ::-webkit-scrollbar-thumb {
   background-color: rgba(255, 255, 255, 0.15) !important;
   border-radius: var(--radius-full) !important;
   border: none !important;
   background-clip: unset !important;
 }
 
-::-webkit-scrollbar-thumb:hover {
+body:not(.tv-mode):not(.lp-mode) ::-webkit-scrollbar-thumb:hover {
   background-color: rgba(255, 215, 0, 0.45) !important;
 }
 
-/* Firefox — only apply thin scrollbar outside TV mode */
-body:not(.tv-mode) * {
+/* Firefox — only apply thin scrollbar outside TV mode and LP mode */
+body:not(.tv-mode):not(.lp-mode) * {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
