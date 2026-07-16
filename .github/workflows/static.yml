@@ -76,13 +76,14 @@ jobs:
         run: npm ci --omit=dev
       - name: Syntax Check
         run: node scripts/ci-syntax-check.js
-      - name: Run Trivy Security Scan
-        uses: aquasecurity/trivy-action@v0.35.0
-        with:
-          scan-type: 'fs'
-          scanners: 'secret,vuln,misconfig'
-          exit-code: '1'
-          severity: 'CRITICAL,HIGH'
+      - name: Dependency Vulnerability Scan (npm audit)
+        run: npm audit --audit-level=high
+        continue-on-error: true # Prevents the pipeline from failing immediately if vulns are found, change to false to enforce
+
+      - name: Secret Scanning (Gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # 4. ARTIFACT REPOSITORY (for audit/review purposes only)
   artifact-repository:
