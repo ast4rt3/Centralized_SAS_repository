@@ -109,8 +109,8 @@ self.addEventListener('fetch', event => {
   if (skip.some(h => url.hostname.includes(h))) return;
 
   // ---- Strategy: NETWORK FIRST → cache fallback ----
-  // Used for: Google Apps Script backend (post data)
-  if (url.hostname === 'script.google.com') {
+  // Used for: Google Apps Script backend (post data) and Supabase API
+  if (url.hostname === 'script.google.com' || url.hostname.includes('supabase.co')) {
     event.respondWith(
       fetch(req)
         .then(res => {
@@ -120,7 +120,9 @@ self.addEventListener('fetch', event => {
           return res;
         })
         .catch(() => {
-          return caches.match(req, { ignoreSearch: true })
+          // For Supabase, we shouldn't ignore search params because they define the query (e.g. ?select=*)
+          const matchOptions = url.hostname.includes('supabase.co') ? {} : { ignoreSearch: true };
+          return caches.match(req, matchOptions)
             .then(cached => cached || new Response(JSON.stringify({ success: false, message: "Offline — connection failed." }), { 
               status: 503, 
               statusText: 'Service Unavailable',
