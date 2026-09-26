@@ -4,12 +4,8 @@ AddType application/javascript .mjs
 AddType application/manifest+json .webmanifest
 AddType text/css .css
 
-# Enable directory access for apps
-<Directory "apps">
-   Options Indexes FollowSymLinks
-   AllowOverride None
-   Require all granted
-</Directory>
+# Directory settings for apps are not allowed in .htaccess, moving them to server config or apps/.htaccess if needed
+
 
 <IfModule mod_rewrite.c>
    RewriteEngine On
