@@ -172,18 +172,36 @@ function setState(state, msg = '') {
 function processTimeValue(v) {
   if (!v || v === 'Not Checked In' || v === 'Empty') return '<span class="status-badge">Not Checked In</span>';
   const str = v.toString();
-  if (str.toLowerCase() === 'not checked in') return '<span class="status-badge">Not Checked In</span>';
-  if (str.includes('Flagged')) {
-    const reason = str.split('(')[0].replace('Flagged:', '').trim();
-    return `<span class="status-badge flagged" title="${str}">Flagged: ${reason}</span>`;
+  
+  let manualFlags = '';
+  let displayStr = str;
+  if (str.includes('|MANUAL_FLAG|')) {
+    const parts = str.split('|MANUAL_FLAG|');
+    displayStr = parts[0];
+    manualFlags = parts[1];
   }
-  if (str.includes('(LATE)')) {
-    const time = str.split('(LATE)')[0].trim();
-    return `<span class="status-badge late" title="${str}">${time} (Late)</span>`;
+
+  let html = '';
+  if (displayStr.toLowerCase() === 'not checked in') {
+    html = '<span class="status-badge">Not Checked In</span>';
+  } else if (displayStr.includes('Flagged')) {
+    const reason = displayStr.split('(')[0].replace('Flagged:', '').trim();
+    html = `<span class="status-badge flagged" title="${displayStr}">Flagged: ${reason}</span>`;
+  } else if (displayStr.includes('(LATE)')) {
+    const time = displayStr.split('(LATE)')[0].trim();
+    html = `<span class="status-badge late" title="${displayStr}">${time} (Late)</span>`;
+  } else {
+    // Standard entry e.g. "8:45 AM [StaffName]"
+    const time = displayStr.split('[')[0].trim();
+    html = `<span class="status-badge present" title="${displayStr}">${time}</span>`;
   }
-  // Standard entry e.g. "8:45 AM [StaffName]"
-  const time = str.split('[')[0].trim();
-  return `<span class="status-badge present" title="${str}">${time}</span>`;
+
+  if (manualFlags) {
+    const safeFlags = manualFlags.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    html += ` <i class='bx bxs-flag-alt' style='color:#ef4444; cursor:pointer; font-size:1.1rem; vertical-align:middle; margin-left:4px;' onclick="alert('MANUAL FLAG:\\n' + '${safeFlags}')" title="Manual Flag: Click to view details"></i>`;
+  }
+
+  return html;
 }
 
 function processYearValue(v) {
@@ -214,13 +232,13 @@ function renderTable(filter = '', selectedColumnIndex = 'all') {
   let html = '';
 
   masterData.forEach(row => {
-    // 1. Search Filter (ID, Name, Course, Flags)
-    const searchable = row.slice(0, 4).map(c => (c || '').toString().toLowerCase()).join(' ');
+    // 1. Search Filter (ID, Name, Course)
+    const searchable = row.slice(0, 3).map(c => (c || '').toString().toLowerCase()).join(' ');
     if (term && !searchable.includes(term)) return;
 
     // 2. "Present Only" Filter: Check if student has at least one check-in
-    // Attendance columns now start at index 4 (ID=0, Name=1, Course=2, Flags=3)
-    const attendanceValues = row.slice(4);
+    // Attendance columns now start at index 3 (ID=0, Name=1, Course=2)
+    const attendanceValues = row.slice(3);
     const isPresent = attendanceValues.some(v => v && v !== 'Not Checked In' && v !== 'Empty');
     
     if (!isPresent) return;
@@ -232,20 +250,14 @@ function renderTable(filter = '', selectedColumnIndex = 'all') {
       // Column filter logic
       if (selectedColumnIndex !== 'all') {
         const targetIdx = parseInt(selectedColumnIndex);
-        if (i > 3 && i !== targetIdx) return; // Keep ID, Name, Course, Flags
+        if (i > 2 && i !== targetIdx) return; // Keep ID, Name, Course
       }
 
       let content = '';
       let style = '';
       
-      if (i > 3) {
+      if (i > 2) {
         content = processTimeValue(cell);
-      } else if (i === 3) {
-        if (cell) {
-          content = `<span class="status-badge flagged" title="${cell}">Flagged: ${cell}</span>`;
-        } else {
-          content = '';
-        }
       } else {
         content = cell || '';
         if (i === 1) style = ' style="font-weight: 600;"'; // Name
@@ -321,15 +333,28 @@ async function fetchLegacyData() {
     'Day3_Scan_3', 'Day4_Scan_1', 'Day4_Scan_2', 'Day4_Scan_3'
   ];
 
-  const headers = ['ID', 'Name', 'Course', 'Flags', ...attendanceCols.map(c => c.replace(/_/g, ' '))];
+  const headers = ['ID', 'Name', 'Course', ...attendanceCols.map(c => c.replace(/_/g, ' '))];
   const flagMap = await fetchFlaggedNotes();
   
   const rows = allData.map(m => {
     const att = m.attendance && m.attendance.length > 0 ? m.attendance[0] : {};
     const flags = flagMap[String(m.ID).toLowerCase()] || '';
+    
+    // Find the last index that is not 'Not Checked In'
+    let lastCheckedInIndex = -1;
+    attendanceCols.forEach((c, i) => {
+      if (att[c] && att[c] !== 'Not Checked In') lastCheckedInIndex = i;
+    });
+
     return [
-      m.ID, m.Name, m.Course, flags,
-      ...attendanceCols.map(c => att[c] || 'Not Checked In')
+      m.ID, m.Name, m.Course,
+      ...attendanceCols.map((c, i) => {
+        let val = att[c] || 'Not Checked In';
+        if (flags && i === lastCheckedInIndex) {
+          val += `|MANUAL_FLAG|${flags}`;
+        }
+        return val;
+      })
     ];
   });
 
@@ -370,15 +395,28 @@ async function fetchITFestData() {
     'Morning_Day2_IN', 'Afternoon_Day2_IN', 'Afternoon_Day2_OUT'
   ];
 
-  const headers = ['ID', 'Name', 'Course', 'Flags', ...attendanceCols.map(c => c.replace(/_/g, ' '))];
+  const headers = ['ID', 'Name', 'Course', ...attendanceCols.map(c => c.replace(/_/g, ' '))];
   const flagMap = await fetchFlaggedNotes();
   
   const rows = allData.map(m => {
     const att = m.attendance && m.attendance.length > 0 ? m.attendance[0] : {};
     const flags = flagMap[String(m.ID).toLowerCase()] || '';
+    
+    // Find the last index that is not 'Not Checked In'
+    let lastCheckedInIndex = -1;
+    attendanceCols.forEach((c, i) => {
+      if (att[c] && att[c] !== 'Not Checked In') lastCheckedInIndex = i;
+    });
+
     return [
-      m.ID, m.Name, m.Course, flags,
-      ...attendanceCols.map(c => att[c] || 'Not Checked In')
+      m.ID, m.Name, m.Course,
+      ...attendanceCols.map((c, i) => {
+        let val = att[c] || 'Not Checked In';
+        if (flags && i === lastCheckedInIndex) {
+          val += `|MANUAL_FLAG|${flags}`;
+        }
+        return val;
+      })
     ];
   });
 
@@ -458,23 +496,44 @@ async function fetchGenericData(eventId) {
     logMap[l.student_id][l.schedule_id] = l;
   });
 
-  const headers = ['ID', 'Name', 'Course', 'Flags', ...schedules.map(s => s.label)];
+  const headers = ['ID', 'Name', 'Course', ...schedules.map(s => s.label)];
   const flagMap = await fetchFlaggedNotes();
   
   const rows = masterlist.map(s => {
     const studentLogs = logMap[s.ID] || {};
     const flags = flagMap[String(s.ID).toLowerCase()] || '';
+    
+    // Find the ID of the last schedule this student checked into
+    let lastCheckedInScheduleId = null;
+    let latestScanTime = 0;
+    Object.keys(studentLogs).forEach(schId => {
+      const entry = studentLogs[schId];
+      if (entry && entry.scanned_at) {
+        const time = new Date(entry.scanned_at).getTime();
+        if (time > latestScanTime) {
+          latestScanTime = time;
+          lastCheckedInScheduleId = schId;
+        }
+      }
+    });
+
     return [
-      s.ID, s.Name, s.Course, flags,
+      s.ID, s.Name, s.Course,
       ...schedules.map(sch => {
         const entry = studentLogs[sch.id];
         if (!entry) return 'Not Checked In';
         
         const time = new Date(entry.scanned_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        let cellContent = `${time} [${entry.scanner_user}]`;
         if (entry.status === 'flagged') {
-          return `Flagged: ${entry.flag_reason || 'Unknown'} (${time}) [${entry.scanner_user}]`;
+          cellContent = `Flagged: ${entry.flag_reason || 'Unknown'} (${time}) [${entry.scanner_user}]`;
         }
-        return `${time} [${entry.scanner_user}]`;
+        
+        if (flags && sch.id === lastCheckedInScheduleId) {
+          cellContent += `|MANUAL_FLAG|${flags}`;
+        }
+        
+        return cellContent;
       })
     ];
   });
@@ -548,7 +607,7 @@ async function exportToPDF() {
     // Apply column filter to headers
     if (selectedColumnIndex !== 'all') {
       const targetIdx = parseInt(selectedColumnIndex);
-      if (i > 3 && i !== targetIdx) return;
+      if (i > 2 && i !== targetIdx) return;
     }
     headers.push(th.textContent);
   });
@@ -556,11 +615,11 @@ async function exportToPDF() {
   const body = [];
   masterData.forEach(row => {
     // Apply Search Filter
-    const searchable = row.slice(0, 4).map(c => (c || '').toString().toLowerCase()).join(' ');
+    const searchable = row.slice(0, 3).map(c => (c || '').toString().toLowerCase()).join(' ');
     if (term && !searchable.includes(term)) return;
 
     // Apply Present Only Filter
-    const attendanceValues = row.slice(4);
+    const attendanceValues = row.slice(3);
     const isPresent = attendanceValues.some(v => v && v !== 'Not Checked In' && v !== 'Empty');
     if (!isPresent) return;
 
@@ -569,16 +628,20 @@ async function exportToPDF() {
       // Apply column filter to cells
       if (selectedColumnIndex !== 'all') {
         const targetIdx = parseInt(selectedColumnIndex);
-        if (i > 3 && i !== targetIdx) return;
+        if (i > 2 && i !== targetIdx) return;
       }
       
       // Clean up cell content for PDF (strip staff names/extra info)
-      if (i > 3) {
+      if (i > 2) {
         if (!cell || cell === 'Not Checked In' || cell === 'Empty') {
           filteredRow.push('ABSENT');
         } else {
-          // Extract time only, strip [StaffName]
-          const timeOnly = cell.toString().split('[')[0].trim();
+          // Extract time only, strip [StaffName] and |MANUAL_FLAG|
+          let cleanCell = cell.toString();
+          if (cleanCell.includes('|MANUAL_FLAG|')) {
+             cleanCell = cleanCell.split('|MANUAL_FLAG|')[0];
+          }
+          const timeOnly = cleanCell.split('[')[0].trim();
           filteredRow.push(timeOnly);
         }
       } else {
