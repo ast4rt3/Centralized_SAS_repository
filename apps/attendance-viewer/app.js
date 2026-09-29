@@ -214,13 +214,13 @@ function renderTable(filter = '', selectedColumnIndex = 'all') {
   let html = '';
 
   masterData.forEach(row => {
-    // 1. Search Filter (ID, Name, Course)
-    const searchable = row.slice(0, 3).map(c => (c || '').toString().toLowerCase()).join(' ');
+    // 1. Search Filter (ID, Name, Course, Flags)
+    const searchable = row.slice(0, 4).map(c => (c || '').toString().toLowerCase()).join(' ');
     if (term && !searchable.includes(term)) return;
 
     // 2. "Present Only" Filter: Check if student has at least one check-in
-    // Attendance columns now start at index 3 (ID=0, Name=1, Course=2)
-    const attendanceValues = row.slice(3);
+    // Attendance columns now start at index 4 (ID=0, Name=1, Course=2, Flags=3)
+    const attendanceValues = row.slice(4);
     const isPresent = attendanceValues.some(v => v && v !== 'Not Checked In' && v !== 'Empty');
     
     if (!isPresent) return;
@@ -232,14 +232,20 @@ function renderTable(filter = '', selectedColumnIndex = 'all') {
       // Column filter logic
       if (selectedColumnIndex !== 'all') {
         const targetIdx = parseInt(selectedColumnIndex);
-        if (i > 2 && i !== targetIdx) return; // Keep ID, Name, Course
+        if (i > 3 && i !== targetIdx) return; // Keep ID, Name, Course, Flags
       }
 
       let content = '';
       let style = '';
       
-      if (i > 2) {
+      if (i > 3) {
         content = processTimeValue(cell);
+      } else if (i === 3) {
+        if (cell) {
+          content = `<span class="status-badge flagged" title="${cell}">Flagged: ${cell}</span>`;
+        } else {
+          content = '';
+        }
       } else {
         content = cell || '';
         if (i === 1) style = ' style="font-weight: 600;"'; // Name
@@ -315,12 +321,14 @@ async function fetchLegacyData() {
     'Day3_Scan_3', 'Day4_Scan_1', 'Day4_Scan_2', 'Day4_Scan_3'
   ];
 
-  const headers = ['ID', 'Name', 'Course', ...attendanceCols.map(c => c.replace(/_/g, ' '))];
+  const headers = ['ID', 'Name', 'Course', 'Flags', ...attendanceCols.map(c => c.replace(/_/g, ' '))];
+  const flagMap = await fetchFlaggedNotes();
   
   const rows = allData.map(m => {
     const att = m.attendance && m.attendance.length > 0 ? m.attendance[0] : {};
+    const flags = flagMap[String(m.ID).toLowerCase()] || '';
     return [
-      m.ID, m.Name, m.Course,
+      m.ID, m.Name, m.Course, flags,
       ...attendanceCols.map(c => att[c] || 'Not Checked In')
     ];
   });
@@ -362,12 +370,14 @@ async function fetchITFestData() {
     'Morning_Day2_IN', 'Afternoon_Day2_IN', 'Afternoon_Day2_OUT'
   ];
 
-  const headers = ['ID', 'Name', 'Course', ...attendanceCols.map(c => c.replace(/_/g, ' '))];
+  const headers = ['ID', 'Name', 'Course', 'Flags', ...attendanceCols.map(c => c.replace(/_/g, ' '))];
+  const flagMap = await fetchFlaggedNotes();
   
   const rows = allData.map(m => {
     const att = m.attendance && m.attendance.length > 0 ? m.attendance[0] : {};
+    const flags = flagMap[String(m.ID).toLowerCase()] || '';
     return [
-      m.ID, m.Name, m.Course,
+      m.ID, m.Name, m.Course, flags,
       ...attendanceCols.map(c => att[c] || 'Not Checked In')
     ];
   });
@@ -448,12 +458,14 @@ async function fetchGenericData(eventId) {
     logMap[l.student_id][l.schedule_id] = l;
   });
 
-  const headers = ['ID', 'Name', 'Course', ...schedules.map(s => s.label)];
+  const headers = ['ID', 'Name', 'Course', 'Flags', ...schedules.map(s => s.label)];
+  const flagMap = await fetchFlaggedNotes();
   
   const rows = masterlist.map(s => {
     const studentLogs = logMap[s.ID] || {};
+    const flags = flagMap[String(s.ID).toLowerCase()] || '';
     return [
-      s.ID, s.Name, s.Course,
+      s.ID, s.Name, s.Course, flags,
       ...schedules.map(sch => {
         const entry = studentLogs[sch.id];
         if (!entry) return 'Not Checked In';
@@ -471,6 +483,47 @@ async function fetchGenericData(eventId) {
   buildHeaders(headers);
   setState('loaded');
   renderTable();
+}
+
+async function fetchFlaggedNotes() {
+  let rejectedScans = [];
+  let from = 0;
+  let step = 1000;
+  let keepFetching = true;
+
+  while (keepFetching) {
+    const { data, error } = await supabaseClient
+      .from('rejected_scans')
+      .select('scanned_id, notes')
+      .ilike('status', '%flagged%')
+      .range(from, from + step - 1);
+
+    if (error) {
+      console.warn("Could not fetch rejected_scans:", error);
+      keepFetching = false;
+    } else if (data && data.length > 0) {
+      rejectedScans = rejectedScans.concat(data);
+      from += step;
+      if (data.length < step) keepFetching = false;
+    } else {
+      keepFetching = false;
+    }
+  }
+
+  const flagMap = {};
+  rejectedScans.forEach(r => {
+    if (r.scanned_id) {
+      const key = r.scanned_id.toString().toLowerCase();
+      if (flagMap[key]) {
+        if (!flagMap[key].includes(r.notes)) {
+           flagMap[key] += '; ' + (r.notes || 'Flagged');
+        }
+      } else {
+        flagMap[key] = r.notes || 'Flagged';
+      }
+    }
+  });
+  return flagMap;
 }
 
 async function exportToPDF() {
@@ -495,7 +548,7 @@ async function exportToPDF() {
     // Apply column filter to headers
     if (selectedColumnIndex !== 'all') {
       const targetIdx = parseInt(selectedColumnIndex);
-      if (i > 2 && i !== targetIdx) return;
+      if (i > 3 && i !== targetIdx) return;
     }
     headers.push(th.textContent);
   });
@@ -503,11 +556,11 @@ async function exportToPDF() {
   const body = [];
   masterData.forEach(row => {
     // Apply Search Filter
-    const searchable = row.slice(0, 3).map(c => (c || '').toString().toLowerCase()).join(' ');
+    const searchable = row.slice(0, 4).map(c => (c || '').toString().toLowerCase()).join(' ');
     if (term && !searchable.includes(term)) return;
 
     // Apply Present Only Filter
-    const attendanceValues = row.slice(3);
+    const attendanceValues = row.slice(4);
     const isPresent = attendanceValues.some(v => v && v !== 'Not Checked In' && v !== 'Empty');
     if (!isPresent) return;
 
@@ -516,11 +569,11 @@ async function exportToPDF() {
       // Apply column filter to cells
       if (selectedColumnIndex !== 'all') {
         const targetIdx = parseInt(selectedColumnIndex);
-        if (i > 2 && i !== targetIdx) return;
+        if (i > 3 && i !== targetIdx) return;
       }
       
       // Clean up cell content for PDF (strip staff names/extra info)
-      if (i > 2) {
+      if (i > 3) {
         if (!cell || cell === 'Not Checked In' || cell === 'Empty') {
           filteredRow.push('ABSENT');
         } else {
