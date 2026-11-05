@@ -1,7 +1,7 @@
 # --- Dependencies ---
 node_modules/
 
-
+//rebuild
 # --- Environment & Sensitive (DO NOT UPLOAD) ---
 # NOTE: Ensure you manually upload env.js to your hosting if not using Git to deploy
 env.js
